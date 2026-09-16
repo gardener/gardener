@@ -82,7 +82,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_reconcile_total{job="$job",controller=~"$controller"}[$__range])) by (controller)
+                  seriesNameFormat: '{{controller}}'
     "0_1":
       kind: Panel
       spec:
@@ -107,7 +110,9 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(controller_runtime_max_concurrent_reconciles{job="$job",controller=~"$controller"}) by (controller)
     "0_2":
       kind: Panel
       spec:
@@ -128,7 +133,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_reconcile_time_seconds_sum{job="$job",controller=~"$controller"}[$__range])) by (controller)
+                  seriesNameFormat: '{{controller}}'
     "1_0":
       kind: Panel
       spec:
@@ -160,7 +168,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_reconcile_total{job="$job",controller=~"$controller"}[$__rate_interval])) by (controller)
+                  seriesNameFormat: '{{controller}}'
     "1_1":
       kind: Panel
       spec:
@@ -186,7 +197,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_reconcile_total{job="$job",controller=~"$controller"}[$__rate_interval])) by (result)
+                  seriesNameFormat: '{{result}}'
     "1_2":
       kind: Panel
       spec:
@@ -213,7 +227,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_reconcile_errors_total{job="$job",controller=~"$controller"}[$__rate_interval])) by (controller)
+                  seriesNameFormat: '{{controller}}'
     "1_3":
       kind: Panel
       spec:
@@ -239,7 +256,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile($percentile/100, sum(rate(controller_runtime_reconcile_time_seconds_bucket{job="$job",controller=~"$controller"}[$__rate_interval])) by (controller,le))
+                  seriesNameFormat: '{{controller}}'
     "2_0":
       kind: Panel
       spec:
@@ -266,7 +286,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(controller_runtime_active_workers{job="$job",controller=~"$controller"}) by (controller)
+                  seriesNameFormat: '{{pod}}'
     "2_1":
       kind: Panel
       spec:
@@ -286,7 +309,9 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(controller_runtime_max_concurrent_reconciles{job="$job",controller=~"$controller"}) by (controller)
     "2_2":
       kind: Panel
       spec:
@@ -313,7 +338,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: max(workqueue_longest_running_processor_seconds{job="$job",name=~"$controller"}) by (name)
+                  seriesNameFormat: '{{name}}'
     "2_3":
       kind: Panel
       spec:
@@ -341,7 +369,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(workqueue_unfinished_work_seconds{job="$job",name=~"$controller"}[$__rate_interval])) by (name)
+                  seriesNameFormat: '{{name}}'
     "3_0":
       kind: Panel
       spec:
@@ -369,7 +400,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(workqueue_adds_total{job="$job",name=~"$controller"}[$__rate_interval])) by (name)
+                  seriesNameFormat: '{{name}}'
     "3_1":
       kind: Panel
       spec:
@@ -398,7 +432,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(workqueue_retries_total{job="$job",name=~"$controller"}[$__rate_interval])) by (name)
+                  seriesNameFormat: '{{name}}'
     "3_2":
       kind: Panel
       spec:
@@ -425,7 +462,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile($percentile/100, sum(rate(workqueue_queue_duration_seconds_bucket{job="$job",name=~"$controller"}[$__rate_interval])) by (name,le))
+                  seriesNameFormat: '{{name}}'
     "3_3":
       kind: Panel
       spec:
@@ -452,7 +492,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile($percentile/100, sum(rate(workqueue_work_duration_seconds_bucket{job="$job",name=~"$controller"}[$__rate_interval])) by (name,le))
+                  seriesNameFormat: '{{name}}'
     "3_4":
       kind: Panel
       spec:
@@ -478,7 +521,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(workqueue_depth{job="$job",name=~"$controller"}) by (name)
+                  seriesNameFormat: '{{name}}'
   layouts:
     - kind: Grid
       spec:

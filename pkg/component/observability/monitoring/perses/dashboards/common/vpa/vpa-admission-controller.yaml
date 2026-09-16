@@ -39,7 +39,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(vpa_admission_controller_admission_pods_total[$__rate_interval])) by (applied)
+                  seriesNameFormat: Applied recommendation "{{ applied }}"
     "1":
       kind: Panel
       spec:

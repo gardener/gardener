@@ -90,7 +90,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: alertmanager_cluster_members{instance=~"$instance"}
+                  seriesNameFormat: '{{instance}}'
     "0_2":
       kind: Panel
       spec:
@@ -114,13 +117,17 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: time() - (alertmanager_build_info{instance=~"$instance"} * on (instance, cluster, job) group_left process_start_time_seconds{instance=~"$instance"})
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: time() - (alertmanager_build_info{instance=~"$instance"} * on (instance, cluster, job) group_left alertmanager_config_last_reload_success_timestamp_seconds{instance=~"$instance"})
     "0_3":
       kind: Panel
       spec:
@@ -141,7 +148,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: rate(alertmanager_cluster_peers_joined_total[$__rate_interval])
+                  seriesNameFormat: '{{instance}}'
     "0_4":
       kind: Panel
       spec:
@@ -162,7 +172,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: alertmanager_peer_position
+                  seriesNameFormat: '{{instance}}'
     "0_5":
       kind: Panel
       spec:
@@ -183,7 +196,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: alertmanager_config_hash
+                  seriesNameFormat: '{{instance}}'
     "1_0":
       kind: Panel
       spec:
@@ -206,7 +222,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(alertmanager_alerts_received_total{instance=~"$instance"}[$__rate_interval])) by (status)
+                  seriesNameFormat: '{{status}}'
     "2_0":
       kind: Panel
       spec:
@@ -227,7 +246,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: alertmanager_alerts{instance=~"$instance"}
+                  seriesNameFormat: '{{state}}'
     "3_0":
       kind: Panel
       spec:
@@ -250,7 +272,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: rate(alertmanager_notifications_total{instance=~"$instance"}[$__rate_interval])
+                  seriesNameFormat: '{{integration}}'
     "4_0":
       kind: Panel
       spec:
@@ -271,7 +296,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: alertmanager_silences{state="active", instance=~"$instance"}
+                  seriesNameFormat: '{{instance}}'
     "5_0":
       kind: Panel
       spec:
@@ -289,7 +317,9 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: process_resident_memory_bytes{instance=~"$instance"}
     "5_1":
       kind: Panel
       spec:
@@ -307,7 +337,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: rate(process_cpu_seconds_total{instance=~"$instance"}[$__rate_interval])
+                  seriesNameFormat: '{{instance}}'
   layouts:
     - kind: Grid
       spec:

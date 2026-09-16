@@ -82,7 +82,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_webhook_requests_total{job="$job",webhook=~"$webhook"}[$__range])) by (webhook)
+                  seriesNameFormat: '{{webhook}}'
     "1_0":
       kind: Panel
       spec:
@@ -114,7 +117,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_webhook_requests_total{job="$job",webhook=~"$webhook"}[$__rate_interval])) by (webhook)
+                  seriesNameFormat: '{{webhook}}'
     "1_1":
       kind: Panel
       spec:
@@ -145,7 +151,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(controller_runtime_webhook_requests_total{job="$job",webhook=~"$webhook"}[$__rate_interval])) by (code)
+                  seriesNameFormat: '{{code}}'
     "1_2":
       kind: Panel
       spec:
@@ -176,7 +185,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(controller_runtime_webhook_requests_in_flight{job="$job",webhook=~"$webhook"}) by (webhook)
+                  seriesNameFormat: '{{webhook}}'
     "1_3":
       kind: Panel
       spec:
@@ -208,7 +220,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile($percentile/100,sum(rate(controller_runtime_webhook_latency_seconds_bucket{job="$job",webhook=~"$webhook"}[$__rate_interval])) by(le,webhook))
+                  seriesNameFormat: '{{webhook}}'
   layouts:
     - kind: Grid
       spec:

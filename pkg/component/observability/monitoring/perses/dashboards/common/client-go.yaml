@@ -122,7 +122,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(rest_client_requests_total{job="$job",pod=~"$pod",method=~"$verb",code=~"$code"}[$__rate_interval])) by (pod)
+                  seriesNameFormat: '{{pod}}'
     "0_1":
       kind: Panel
       spec:
@@ -148,7 +151,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(rest_client_requests_total{job="$job",pod=~"$pod",method=~"$verb",code=~"$code"}[$__rate_interval])) by (code)
+                  seriesNameFormat: '{{result}}'
     "0_2":
       kind: Panel
       spec:
@@ -174,7 +180,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(rest_client_requests_total{job="$job",pod=~"$pod",method=~"$verb",code=~"$code"}[$__rate_interval])) by (method)
+                  seriesNameFormat: '{{method}}'
   layouts:
     - kind: Grid
       spec:

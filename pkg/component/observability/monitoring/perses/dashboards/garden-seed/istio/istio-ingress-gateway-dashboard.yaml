@@ -74,13 +74,19 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval]))
+                  seriesNameFormat: _total
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval])
+                  seriesNameFormat: '{{ pod }}'
     "1":
       kind: Panel
       spec:
@@ -101,13 +107,19 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(container_memory_working_set_bytes{pod=~"istio-ingress.*"})
+                  seriesNameFormat: _total
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: container_memory_working_set_bytes{pod=~"$istio_proxy_pod"}
+                  seriesNameFormat: '{{ pod }}'
     "2":
       kind: Panel
       spec:
@@ -128,7 +140,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{ namespace }}'
     "3":
       kind: Panel
       spec:
@@ -149,7 +164,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(container_memory_working_set_bytes{pod=~"$istio_proxy_pod"}[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{ namespace }}'
     "4":
       kind: Panel
       spec:
@@ -170,7 +188,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(istio_tcp_received_bytes_total{pod=~"$istio_proxy_pod" }[$__rate_interval])) by(pod)
+                  seriesNameFormat: '{{  pod }} '
     "5":
       kind: Panel
       spec:
@@ -191,7 +212,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(istio_tcp_sent_bytes_total{pod=~"$istio_proxy_pod"}[$__rate_interval])) by(pod)
+                  seriesNameFormat: '{{  pod }} '
     "6":
       kind: Panel
       spec:
@@ -212,7 +236,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(istio_tcp_received_bytes_total{pod=~"$istio_proxy_pod", namespace=~"$istio_proxy_namespace" }[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{  namespace }} '
     "7":
       kind: Panel
       spec:
@@ -233,7 +260,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(istio_tcp_sent_bytes_total{pod=~"$istio_proxy_pod", namespace=~"$istio_proxy_namespace" }[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{  namespace }} '
   layouts:
     - kind: Grid
       spec:

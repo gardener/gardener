@@ -110,7 +110,9 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: round(sum(irate(istio_requests_total{reporter=~"source",destination_service=~"$service"}[5m])), 0.001)
     "0_2":
       kind: Panel
       spec:
@@ -136,7 +138,9 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(irate(istio_requests_total{reporter=~"source",destination_service=~"$service",response_code!~"5.*"}[5m])) / (sum(irate(istio_requests_total{reporter=~"source",destination_service=~"$service"}[5m])) or on () vector(1))
     "0_3":
       kind: Panel
       spec:
@@ -166,7 +170,9 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(irate(istio_tcp_received_bytes_total{reporter=~"source", destination_service=~"$service"}[1m]))
     "0_4":
       kind: Panel
       spec:
@@ -196,7 +202,9 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(irate(istio_tcp_sent_bytes_total{reporter=~"source", destination_service=~"$service"}[1m]))
     "1_0":
       kind: Panel
       spec:
@@ -236,7 +244,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: round(sum(irate(istio_requests_total{destination_service=~"$service",reporter=~"source",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m])) by (source_workload, source_workload_namespace, response_code), 0.001)
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace }} : {{ response_code }}'
     "1_2":
       kind: Panel
       spec:
@@ -257,7 +268,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(irate(istio_requests_total{reporter=~"source", destination_service=~"$service",response_code!~"5.*", source_workload=~"$srcwl", source_workload_namespace=~"$srcns"}[5m])) by (source_workload, source_workload_namespace) / sum(irate(istio_requests_total{reporter=~"source", destination_service=~"$service", source_workload=~"$srcwl", source_workload_namespace=~"$srcns"}[5m])) by (source_workload, source_workload_namespace)
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace }}'
     "1_3":
       kind: Panel
       spec:
@@ -278,7 +292,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: round(sum(label_replace(irate(istio_requests_total{destination_service=~"$service",reporter=~"source",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m]), "pod_ip", "$1", "upstream_address", "(.*):.*")) by (source_workload, source_workload_namespace, pod_ip), 0.001) * on(pod_ip) group_left (pod) topk(1, kube_pod_info{host_network="false", pod_ip!=""}) by (pod_ip)
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace }} -> {{ pod }}'
     "1_4":
       kind: Panel
       spec:
@@ -299,7 +316,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(label_replace(irate(istio_requests_total{reporter=~"source", destination_service=~"$service",response_code!~"5.*", source_workload=~"$srcwl", source_workload_namespace=~"$srcns"}[5m]), "pod_ip", "$1", "upstream_address", "(.*):.*")) by (source_workload, source_workload_namespace, pod_ip) / sum(label_replace(irate(istio_requests_total{reporter=~"source", destination_service=~"$service", source_workload=~"$srcwl", source_workload_namespace=~"$srcns"}[5m]), "pod_ip", "$1", "upstream_address", "(.*):.*")) by (source_workload, source_workload_namespace, pod_ip) * on(pod_ip) group_left (pod) topk(1, kube_pod_info{host_network="false", pod_ip!=""}) by (pod_ip)
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace }} -> {{ pod }}'
     "1_5":
       kind: Panel
       spec:
@@ -320,7 +340,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: round(sum(irate(istio_tcp_received_bytes_total{reporter=~"source", destination_service=~"$service", source_workload=~"$srcwl", source_workload_namespace=~"$srcns"}[1m])) by (source_workload, source_workload_namespace), 0.001)
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace}}'
     "1_6":
       kind: Panel
       spec:
@@ -341,7 +364,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: round(sum(irate(istio_tcp_sent_bytes_total{reporter=~"source", destination_service=~"$service", source_workload=~"$srcwl", source_workload_namespace=~"$srcns"}[1m])) by (source_workload, source_workload_namespace), 0.001)
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace}}'
   layouts:
     - kind: Grid
       spec:

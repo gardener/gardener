@@ -72,7 +72,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(istio_build{component="pilot", pod=~"$istiod"}) by (tag)
+                  seriesNameFormat: '{{ tag }}'
     "1_0":
       kind: Panel
       spec:
@@ -93,49 +96,73 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(process_virtual_memory_bytes{job="istiod"})
+                  seriesNameFormat: Virtual Memory
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(process_resident_memory_bytes{job="istiod"})
+                  seriesNameFormat: Resident Memory
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(go_memstats_heap_sys_bytes{job="istiod"})
+                  seriesNameFormat: heap sys
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(go_memstats_heap_alloc_bytes{job="istiod"})
+                  seriesNameFormat: heap alloc
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(go_memstats_alloc_bytes{job="istiod"})
+                  seriesNameFormat: Alloc
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(go_memstats_heap_inuse_bytes{job="istiod"})
+                  seriesNameFormat: Heap in-use
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(go_memstats_stack_inuse_bytes{job="istiod"})
+                  seriesNameFormat: Stack in-use
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: seed:container_memory_working_set_bytes:sum_by_container{container="discovery"}
+                  seriesNameFormat: Discovery (container)
     "1_1":
       kind: Panel
       spec:
@@ -156,13 +183,20 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: |
+                    seed:container_cpu_usage_seconds_total:sum_by_container{container="discovery"}
+                  seriesNameFormat: Discovery (container)
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(irate(process_cpu_seconds_total{job="istiod"}[$__rate_interval]))
+                  seriesNameFormat: Discovery (process)
     "1_2":
       kind: Panel
       spec:
@@ -183,13 +217,19 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(container_fs_usage_bytes{container="discovery", pod=~"$istiod"})
+                  seriesNameFormat: Discovery
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(container_fs_usage_bytes{container="istio-proxy", pod=~"$istiod"})
+                  seriesNameFormat: Sidecar
     "1_3":
       kind: Panel
       spec:
@@ -207,7 +247,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(go_goroutines{job="istiod", pod=~"$istiod"})
+                  seriesNameFormat: Number of Goroutines
     "2_0":
       kind: Panel
       spec:
@@ -229,37 +272,55 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(pilot_xds_pushes{type="cds", pod=~"$istiod"} - pilot_xds_pushes{type="cds", pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Cluster
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(pilot_xds_pushes{type="eds", pod=~"$istiod"} - pilot_xds_pushes{type="eds", pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Endpoints
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(pilot_xds_pushes{type="lds", pod=~"$istiod"} - pilot_xds_pushes{type="lds", pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Listeners
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(pilot_xds_pushes{type="rds", pod=~"$istiod"} - pilot_xds_pushes{type="rds", pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Routes
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(pilot_xds_pushes{type="sds", pod=~"$istiod"} - pilot_xds_pushes{type="sds", pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Secrets
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(pilot_xds_pushes{type="nds", pod=~"$istiod"} - pilot_xds_pushes{type="nds", pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Nametables
     "2_1":
       kind: Panel
       spec:
@@ -281,55 +342,82 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(pilot_xds_cds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_cds_reject{job="istiod", pod=~"$istiod"}) - 1)
+                  seriesNameFormat: Rejected CDS Configs
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(pilot_xds_eds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_eds_reject{job="istiod", pod=~"$istiod"}) - 1)
+                  seriesNameFormat: Rejected EDS Configs
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(pilot_xds_rds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_rds_reject{job="istiod", pod=~"$istiod"}) - 1)
+                  seriesNameFormat: Rejected RDS Configs
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(pilot_xds_lds_reject{job="istiod", pod=~"$istiod"}) or (absent(pilot_xds_lds_reject{job="istiod", pod=~"$istiod"}) - 1)
+                  seriesNameFormat: Rejected LDS Configs
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(pilot_xds_write_timeout{job="istiod", pod=~"$istiod"}[$__rate_interval]))
+                  seriesNameFormat: Write Timeouts
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(pilot_total_xds_internal_errors{job="istiod", pod=~"$istiod"}[$__rate_interval]))
+                  seriesNameFormat: Internal Errors
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(pilot_total_xds_rejects{job="istiod", pod=~"$istiod"}[$__rate_interval]))
+                  seriesNameFormat: Config Rejection Rate
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(pilot_xds_push_context_errors{job="istiod", pod=~"$istiod"}[$__rate_interval]))
+                  seriesNameFormat: Push Context Errors
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(rate(pilot_xds_write_timeout{job="istiod", pod=~"$istiod"}[$__rate_interval]))
+                  seriesNameFormat: Push Timeouts
     "2_2":
       kind: Panel
       spec:
@@ -351,25 +439,37 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile(0.5, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
+                  seriesNameFormat: 'p50 '
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile(0.9, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
+                  seriesNameFormat: p90
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile(0.99, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
+                  seriesNameFormat: p99
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: histogram_quantile(0.999, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))
+                  seriesNameFormat: p99.9
     "2_3":
       kind: Panel
       spec:
@@ -390,25 +490,37 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: pilot_conflict_inbound_listener{job="istiod"}
+                  seriesNameFormat: Inbound Listeners
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: pilot_conflict_outbound_listener_http_over_current_tcp{job="istiod"}
+                  seriesNameFormat: Outbound Listeners (http over current tcp)
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: pilot_conflict_outbound_listener_tcp_over_current_tcp{job="istiod"}
+                  seriesNameFormat: Outbound Listeners (tcp over current tcp)
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: pilot_conflict_outbound_listener_tcp_over_current_http{job="istiod"}
+                  seriesNameFormat: Outbound Listeners (tcp over current http)
     "2_4":
       kind: Panel
       spec:
@@ -429,19 +541,28 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: avg(pilot_virt_services{job="istiod"})
+                  seriesNameFormat: Virtual Services
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: avg(pilot_services{job="istiod"})
+                  seriesNameFormat: Services
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(pilot_xds{job="istiod"}) by (pod)
+                  seriesNameFormat: Connected Endpoints {{pod}}
     "3_0":
       kind: Panel
       spec:
@@ -463,19 +584,28 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(envoy_cluster_upstream_cx_total{cluster_name="xds-grpc", pod=~"$igw"} - envoy_cluster_upstream_cx_total{cluster_name="xds-grpc", pod=~"$igw"} offset $__interval, 0))
+                  seriesNameFormat: XDS Connections
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(envoy_cluster_upstream_cx_connect_fail{cluster_name="xds-grpc", pod=~"$igw"} - envoy_cluster_upstream_cx_connect_fail{cluster_name="xds-grpc", pod=~"$igw"} offset $__interval, 0))
+                  seriesNameFormat: XDS Connection Failures
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(envoy_server_hot_restart_epoch{pod=~"$igw"} - envoy_server_hot_restart_epoch{pod=~"$igw"} offset $__interval, 0))
+                  seriesNameFormat: Envoy Restarts
     "3_1":
       kind: Panel
       spec:
@@ -496,7 +626,10 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(envoy_cluster_upstream_cx_active{cluster_name="xds-grpc"})
+                  seriesNameFormat: XDS Active Connections
     "3_2":
       kind: Panel
       spec:
@@ -518,25 +651,37 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: max(rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
+                  seriesNameFormat: XDS Response Bytes Max
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: quantile(0.5, rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
+                  seriesNameFormat: XDS Response Bytes Average
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: max(rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
+                  seriesNameFormat: XDS Request Bytes Max
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: quantile(.5, rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name="xds-grpc"}[$__rate_interval]))
+                  seriesNameFormat: XDS Request Bytes Average
     "4_0":
       kind: Panel
       spec:
@@ -557,13 +702,19 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(galley_validation_passed{pod=~"$istiod"} - galley_validation_passed{pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Validations (Success)
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: sum(clamp_min(galley_validation_failed{pod=~"$istiod"} - galley_validation_failed{pod=~"$istiod"} offset $__interval, 0))
+                  seriesNameFormat: Validation (Failure)
     "4_1":
       kind: Panel
       spec:
@@ -584,13 +735,19 @@ spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: (sum(rate(sidecar_injection_success_total{pod=~"$istiod"}[$__rate_interval]))) or absent(sidecar_injection_success_total{pod=~"$istiod"})-1
+                  seriesNameFormat: Injections (Success)
           - kind: TimeSeriesQuery
             spec:
               plugin:
                 kind: PrometheusTimeSeriesQuery
                 spec:
-                  query: migration_from_grafana_not_supported
+                  datasource:
+                    kind: PrometheusDatasource
+                  query: (sum(rate(sidecar_injection_failure_total{pod=~"$istiod"}[$__rate_interval]))) or absent(sidecar_injection_failure_total{pod=~"$istiod"})-1
+                  seriesNameFormat: Injections (Failure)
   layouts:
     - kind: Grid
       spec:
