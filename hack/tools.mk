@@ -119,7 +119,7 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
 # Use this "function" to add the version file as a prerequisite for the tool target: e.g.
 #   $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
-tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)
+tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)_$(GOTOOLCHAIN)
 
 # Use this function to get the version of a go module from go.mod
 version_gomod = $(shell $(SET_GOWORK) go list $(MODFILE_TOOL_MOD) -f '{{ .Version }}' -m $(1))
