@@ -11,7 +11,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -76,14 +75,6 @@ func (n *namespaces) WaitCleanup(ctx context.Context) error {
 }
 
 func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
-	zones := sets.New[string]()
-
-	for _, pool := range n.workerPools {
-		if v1beta1helper.SystemComponentsAllowed(&pool) && pool.Maximum > 0 {
-			zones.Insert(pool.Zones...)
-		}
-	}
-
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -95,7 +86,7 @@ func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 					resourcesv1alpha1.HighAvailabilityConfigConsider: "true",
 				},
 				Annotations: map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigZones: strings.Join(sets.List(zones), ","),
+					resourcesv1alpha1.HighAvailabilityConfigZones: strings.Join(v1beta1helper.ZonesWithSystemComponents(n.workerPools), ","),
 				},
 			},
 		}
