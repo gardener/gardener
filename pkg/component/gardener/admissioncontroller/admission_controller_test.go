@@ -1289,6 +1289,14 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 							Resources:   []string{"controllerinstallations"},
 						},
 					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"seedmanagement.gardener.cloud"},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"gardenlets"},
+						},
+					},
 				},
 				MatchConditions: []admissionregistrationv1.MatchCondition{
 					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
@@ -1336,6 +1344,14 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 							APIGroups:   []string{"operations.gardener.cloud"},
 							APIVersions: []string{"v1alpha1"},
 							Resources:   []string{"bastions"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"seedmanagement.gardener.cloud"},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"gardenlets"},
 						},
 					},
 				},
