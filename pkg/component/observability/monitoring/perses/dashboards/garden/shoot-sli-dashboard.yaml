@@ -133,8 +133,6 @@ spec:
               This dashboard is one possible
               visualisation for the error budgets
               of the shoots, grouped by the infrastructure.
-
-              Questions/comments: #gardener-monitoring
     "1":
       kind: Panel
       spec:
@@ -171,6 +169,8 @@ spec:
           kind: Table
           spec:
             columnSettings:
+              - name: timestamp
+                hide: true
               - header: IaaS
                 name: iaas
                 width: 118
@@ -254,6 +254,8 @@ spec:
           kind: Table
           spec:
             columnSettings:
+              - name: timestamp
+                hide: true
               - name: project
               - name: name
               - name: iaas

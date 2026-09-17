@@ -212,6 +212,8 @@ spec:
           kind: Table
           spec:
             columnSettings:
+              - name: timestamp
+                hide: true
               - name: project
               - name: name
               - format:
