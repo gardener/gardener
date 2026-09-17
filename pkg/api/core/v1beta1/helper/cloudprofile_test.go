@@ -226,36 +226,6 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
-	Context("UsesLegacyClassifications", func() {
-		It("returns false when version only has version field", func() {
-			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{Version: "1.28.0"})).To(BeFalse())
-		})
-
-		It("returns false when lifecycle is non-empty", func() {
-			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{
-				Version: "1.28.0",
-				Lifecycle: []gardencorev1beta1.LifecycleStage{
-					{Classification: gardencorev1beta1.ClassificationSupported},
-				},
-				Classification: new(gardencorev1beta1.ClassificationPreview),
-			})).To(BeFalse())
-		})
-
-		It("returns true when classification is set without lifecycle", func() {
-			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{
-				Version:        "1.28.0",
-				Classification: new(gardencorev1beta1.ClassificationPreview),
-			})).To(BeTrue())
-		})
-
-		It("returns true when expiration date is set without lifecycle", func() {
-			Expect(UsesLegacyClassifications(gardencorev1beta1.ExpirableVersion{
-				Version:        "1.28.0",
-				ExpirationDate: new(metav1.NewTime(now.Add(3 * time.Hour))),
-			})).To(BeTrue())
-		})
-	})
-
 	Context("ToLifecycleStages", func() {
 		It("returns unchanged lifecycle when lifecycle stages are already defined", func() {
 			stages := []gardencorev1beta1.LifecycleStage{
