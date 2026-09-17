@@ -6,6 +6,7 @@ package shootrestriction_test
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"fmt"
 	"net/http"
 
@@ -157,9 +158,52 @@ var _ = Describe("handler", func() {
 						}))
 					},
 
-					Entry("update", admissionv1.Update),
 					Entry("delete", admissionv1.Delete),
 				)
+
+				When("operation is update", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldBB := &gardencorev1beta1.BackupBucket{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+							Spec:       gardencorev1beta1.BackupBucketSpec{Provider: gardencorev1beta1.BackupBucketProvider{Type: "gcp", Region: "eu-west-1"}},
+						}
+						newBB := oldBB.DeepCopy()
+						newBB.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldBB)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newBB)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldBB := &gardencorev1beta1.BackupBucket{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+							Spec:       gardencorev1beta1.BackupBucketSpec{Provider: gardencorev1beta1.BackupBucketProvider{Type: "gcp", Region: "eu-west-1"}},
+						}
+						newBB := oldBB.DeepCopy()
+						newBB.Spec.Provider.Region = "us-east-1"
+
+						oldRaw, err := stdjson.Marshal(oldBB)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newBB)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of BackupBucket"))
+					})
+				})
 
 				When("operation is create", func() {
 					BeforeEach(func() {

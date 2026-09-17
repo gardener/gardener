@@ -297,24 +297,6 @@ var _ = Describe("handler", func() {
 					}
 				})
 
-				DescribeTable("should not allow the request because no allowed verb",
-					func(operation admissionv1.Operation) {
-						request.Operation = operation
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
-									Message: fmt.Sprintf("unexpected operation: %q", operation),
-								},
-							},
-						}))
-					},
-
-					Entry("update", admissionv1.Update),
-				)
-
 				Context("when operation is create", func() {
 					BeforeEach(func() {
 						request.Operation = admissionv1.Create
@@ -419,6 +401,58 @@ var _ = Describe("handler", func() {
 						request.Name = string(seed.UID)
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Resource = metav1.GroupVersionResource{
+							Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+							Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+							Resource: "backupbuckets",
+						}
+						request.Name = "bucket-" + seedName
+						request.UserInfo = gardenletUser
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldBucket := &gardencorev1beta1.BackupBucket{
+							ObjectMeta: metav1.ObjectMeta{Name: "bucket-" + seedName},
+							Spec:       gardencorev1beta1.BackupBucketSpec{SeedName: &seedName},
+						}
+						newBucket := oldBucket.DeepCopy()
+						newBucket.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldBucket)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newBucket)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						otherSeed := "other-seed"
+						oldBucket := &gardencorev1beta1.BackupBucket{
+							ObjectMeta: metav1.ObjectMeta{Name: "bucket-" + seedName},
+							Spec:       gardencorev1beta1.BackupBucketSpec{SeedName: &seedName},
+						}
+						newBucket := oldBucket.DeepCopy()
+						newBucket.Spec.SeedName = &otherSeed
+
+						oldRaw, err := stdjson.Marshal(oldBucket)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newBucket)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of BackupBucket"))
 					})
 				})
 			})

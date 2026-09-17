@@ -16,6 +16,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -127,20 +128,34 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 }
 
 func (h *Handler) admitBackupBucket(gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create {
+	switch request.Operation {
+	case admissionv1.Update:
+		oldBB := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldBB); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newBB := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.Decode(request, newBB); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !apiequality.Semantic.DeepEqual(oldBB.Spec, newBB.Spec) {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of BackupBucket"))
+		}
+		return admission.Allowed("")
+
+	case admissionv1.Create:
+		backupBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.Decode(request, backupBucket); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if backupBucket.Spec.ShootRef == nil {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
+		}
+		return h.admit(gardenletShootInfo, types.NamespacedName{Name: backupBucket.Spec.ShootRef.Name, Namespace: backupBucket.Spec.ShootRef.Namespace})
+
+	default:
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
-
-	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := h.Decoder.Decode(request, backupBucket); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-
-	if backupBucket.Spec.ShootRef == nil {
-		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
-	}
-
-	return h.admit(gardenletShootInfo, types.NamespacedName{Name: backupBucket.Spec.ShootRef.Name, Namespace: backupBucket.Spec.ShootRef.Namespace})
 }
 
 func (h *Handler) admitBackupEntry(ctx context.Context, gardenletShootInfo types.NamespacedName, request admission.Request) admission.Response {

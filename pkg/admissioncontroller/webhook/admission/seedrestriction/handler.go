@@ -129,6 +129,20 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 
 func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	switch request.Operation {
+	case admissionv1.Update:
+		oldBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldBucket); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.Decode(request, newBucket); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !apiequality.Semantic.DeepEqual(oldBucket.Spec, newBucket.Spec) {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of BackupBucket"))
+		}
+		return admission.Allowed("")
+
 	case admissionv1.Create:
 		// If a gardenlet tries to create a BackupBucket then the request may only be allowed if the used `.spec.seedName`
 		// is equal to the gardenlet's seed.

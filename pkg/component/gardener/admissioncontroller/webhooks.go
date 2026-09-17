@@ -338,7 +338,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						},
 					},
 					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Delete},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{gardencorev1beta1.GroupName},
 							APIVersions: []string{"v1beta1"},
@@ -394,6 +394,17 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 							Resources:   []string{"backupbuckets", "backupentries", "internalsecrets", "projects", "shoots"},
 						},
 					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{gardencorev1beta1.SchemeGroupVersion.Version},
+							Resources:   []string{"backupbuckets"},
+						},
+					},
+				},
+				MatchConditions: []admissionregistrationv1.MatchCondition{
+					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
 				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
