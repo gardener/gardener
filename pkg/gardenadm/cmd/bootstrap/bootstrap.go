@@ -238,26 +238,12 @@ func run(ctx context.Context, opts *Options) error {
 		bootstrapControlPlane = g.Add(flow.Task{
 			Name: "Bootstrapping control plane on the first control plane machine",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				machine, err := b.GetMachineByIndex(0)
-				if err != nil {
-					return fmt.Errorf("failed getting first control plane machine: %w", err)
-				}
-
-				zone, err := b.ZoneForMachine(ctx, machine)
-				if err != nil {
-					return fmt.Errorf("failed getting zone for first control plane machine: %w", err)
-				}
-
-				zoneFlag := ""
-				if zone != "" {
-					zoneFlag = fmt.Sprintf(" --zone=%q", zone)
-				}
 				return b.SSHConnection().
 					WithSignalProcess(nodeinit.GardenadmBinaryName).
 					RunWithStreams(ctx, nil, opts.Out, opts.ErrOut,
-						fmt.Sprintf("%s%s init -d %q --log-level=%s %s",
+						fmt.Sprintf("%s%s init -d %q --log-level=%s",
 							gardenadmbotanist.ImageVectorOverrideEnv(),
-							nodeinit.GardenadmBinaryPath, gardenadmbotanist.ManifestsDir, opts.LogLevel, zoneFlag,
+							nodeinit.GardenadmBinaryPath, gardenadmbotanist.ManifestsDir, opts.LogLevel,
 						),
 					)
 			}).Timeout(30 * time.Minute),
