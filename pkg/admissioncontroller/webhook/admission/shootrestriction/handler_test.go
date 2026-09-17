@@ -1177,6 +1177,45 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 					Entry("delete", admissionv1.Delete),
 				)
 
+				When("operation is create", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Create
+					})
+
+					It("should return an error because resource name is not prefixed", func() {
+						request.Name = "foo"
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: `the resource for self-hosted shoots must be prefixed with "self-hosted-shoot-"`,
+								},
+							},
+						}))
+					})
+
+					It("should return an error because the requestor is not responsible for the resource", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "object does not belong to shoot " + shootNamespace + "/" + shootName,
+								},
+							},
+						}))
+					})
+
+					It("should return success because the requestor is responsible for the resource", func() {
+						request.Name = "self-hosted-shoot-" + shootName
+						request.Namespace = shootNamespace
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+
 				When("operation is update", func() {
 					BeforeEach(func() {
 						request.Operation = admissionv1.Update
@@ -1218,46 +1257,7 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 
 						response := handler.Handle(ctx, request)
 						Expect(response.Allowed).To(BeFalse())
-						Expect(string(response.Result.Message)).To(ContainSubstring("must not modify .spec of Gardenlet"))
-					})
-				})
-
-				When("operation is create", func() {
-					BeforeEach(func() {
-						request.Operation = admissionv1.Create
-					})
-
-					It("should return an error because resource name is not prefixed", func() {
-						request.Name = "foo"
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
-									Message: `the resource for self-hosted shoots must be prefixed with "self-hosted-shoot-"`,
-								},
-							},
-						}))
-					})
-
-					It("should return an error because the requestor is not responsible for the resource", func() {
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusForbidden),
-									Message: "object does not belong to shoot " + shootNamespace + "/" + shootName,
-								},
-							},
-						}))
-					})
-
-					It("should return success because the requestor is responsible for the resource", func() {
-						request.Name = "self-hosted-shoot-" + shootName
-						request.Namespace = shootNamespace
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Gardenlet"))
 					})
 				})
 
