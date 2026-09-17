@@ -383,7 +383,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
 							APIVersions: []string{"v1alpha1"},
-							Resources:   []string{"gardenlets"},
+							Resources:   []string{"gardenlets", "managedseeds"},
 						},
 					},
 				},
@@ -441,6 +441,14 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
 							APIVersions: []string{"v1alpha1"},
 							Resources:   []string{"gardenlets"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"managedseeds"},
 						},
 					},
 				},

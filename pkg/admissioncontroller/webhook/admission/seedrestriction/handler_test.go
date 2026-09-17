@@ -1459,21 +1459,118 @@ var _ = Describe("handler", func() {
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
-					It("should deny when spec is changed", func() {
-						oldSeed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
-						newSeed := oldSeed.DeepCopy()
-						newSeed.Spec.Provider.Type = "changed-provider"
+					When("spec is changed", func() {
+						var (
+							oldRaw, newRaw []byte
+						)
 
-						oldRaw, err := stdjson.Marshal(oldSeed)
-						Expect(err).NotTo(HaveOccurred())
-						newRaw, err := stdjson.Marshal(newSeed)
-						Expect(err).NotTo(HaveOccurred())
-						request.OldObject = runtime.RawExtension{Raw: oldRaw}
-						request.Object = runtime.RawExtension{Raw: newRaw}
+						BeforeEach(func() {
+							oldSeed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
+							newSeed := oldSeed.DeepCopy()
+							newSeed.Spec.Provider.Type = "changed-provider"
 
-						response := handler.Handle(ctx, request)
-						Expect(response.Allowed).To(BeFalse())
-						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Seed"))
+							var err error
+							oldRaw, err = stdjson.Marshal(oldSeed)
+							Expect(err).NotTo(HaveOccurred())
+							newRaw, err = stdjson.Marshal(newSeed)
+							Expect(err).NotTo(HaveOccurred())
+							request.OldObject = runtime.RawExtension{Raw: oldRaw}
+							request.Object = runtime.RawExtension{Raw: newRaw}
+						})
+
+						It("should allow when neither ManagedSeed nor Gardenlet exists", func() {
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should deny when ManagedSeed exists and spec diverges from its seed template", func() {
+							managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+									Shoot: &seedmanagementv1alpha1.Shoot{Name: "some-shoot"},
+									Gardenlet: seedmanagementv1alpha1.GardenletConfig{
+										Config: runtime.RawExtension{
+											Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+												SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+													SeedTemplate: gardencorev1beta1.SeedTemplate{
+														Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "original-provider"}},
+													},
+												},
+											},
+										},
+									},
+								},
+							}
+							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+
+							response := handler.Handle(ctx, request)
+							Expect(response.Allowed).To(BeFalse())
+							Expect(response.Result.Message).To(ContainSubstring("different from the .spec in the ManagedSeed"))
+						})
+
+						It("should allow when ManagedSeed exists and spec matches its seed template", func() {
+							managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+									Shoot: &seedmanagementv1alpha1.Shoot{Name: "some-shoot"},
+									Gardenlet: seedmanagementv1alpha1.GardenletConfig{
+										Config: runtime.RawExtension{
+											Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+												SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+													SeedTemplate: gardencorev1beta1.SeedTemplate{
+														Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "changed-provider"}},
+													},
+												},
+											},
+										},
+									},
+								},
+							}
+							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should deny when Gardenlet exists and spec diverges from its seed template", func() {
+							gardenlet := &seedmanagementv1alpha1.Gardenlet{
+								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+								Spec: seedmanagementv1alpha1.GardenletSpec{
+									Config: runtime.RawExtension{
+										Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+											SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+												SeedTemplate: gardencorev1beta1.SeedTemplate{
+													Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "original-provider"}},
+												},
+											},
+										},
+									},
+								},
+							}
+							Expect(fakeClient.Create(ctx, gardenlet)).To(Succeed())
+
+							response := handler.Handle(ctx, request)
+							Expect(response.Allowed).To(BeFalse())
+							Expect(response.Result.Message).To(ContainSubstring("different from the .spec in the Gardenlet"))
+						})
+
+						It("should allow when Gardenlet exists and spec matches its seed template", func() {
+							gardenlet := &seedmanagementv1alpha1.Gardenlet{
+								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+								Spec: seedmanagementv1alpha1.GardenletSpec{
+									Config: runtime.RawExtension{
+										Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+											SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+												SeedTemplate: gardencorev1beta1.SeedTemplate{
+													Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "changed-provider"}},
+												},
+											},
+										},
+									},
+								},
+							}
+							Expect(fakeClient.Create(ctx, gardenlet)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
 					})
 				})
 			})
