@@ -44,10 +44,16 @@ var _ = Describe("Zone", func() {
 				},
 			}
 
-			It("should allow a provided zone", func() {
+			It("should reject a provided zone", func() {
 				zone, err := cmd.ValidateAndDetermineControlPlaneZone(managedShoot, "us-east-1a")
+				Expect(err).To(MatchError(ContainSubstring("zone can't be configured for shoot with managed infrastructure")))
+				Expect(zone).To(BeEmpty())
+			})
+
+			It("should not determine a zone if none is provided", func() {
+				zone, err := cmd.ValidateAndDetermineControlPlaneZone(managedShoot, "")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(zone).To(Equal("us-east-1a"))
+				Expect(zone).To(BeEmpty())
 			})
 		})
 

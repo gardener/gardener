@@ -200,7 +200,7 @@ spec:
 		})
 
 		It("should surface zone validation errors from the shared helper", func() {
-			createShootManifest("test-credentials", nil, false, statusUID)
+			createShootManifest("", nil, false, statusUID)
 
 			Expect(options.Validate()).To(MatchError(ContainSubstring("shoot doesn't have a control plane worker pool configured")))
 		})

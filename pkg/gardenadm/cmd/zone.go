@@ -14,9 +14,18 @@ import (
 
 // ValidateAndDetermineControlPlaneZone validates the provided zone against the Shoot's control plane worker pool and returns the
 // effective zone. The zone is validated and auto-applied via DetermineZone.
+// For shoots with managed infrastructure, the zone must not be configured because the node's zone label is maintained
+// by the cloud-controller-manager.
 func ValidateAndDetermineControlPlaneZone(shoot *gardencorev1beta1.Shoot, providedZone string) (string, error) {
 	if shoot == nil {
 		return "", fmt.Errorf("zone validation failed, shoot resource is missing in the manifests")
+	}
+
+	if v1beta1helper.HasManagedInfrastructure(shoot) {
+		if providedZone != "" {
+			return "", fmt.Errorf("zone can't be configured for shoot with managed infrastructure")
+		}
+		return "", nil
 	}
 
 	// This command is only for control plane nodes, therefore we look for the control plane pool.
