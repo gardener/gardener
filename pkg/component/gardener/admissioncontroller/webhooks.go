@@ -334,7 +334,15 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{gardencorev1beta1.GroupName},
 							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"backupentries", "internalsecrets", "shootstates"},
+							Resources:   []string{"internalsecrets", "shootstates"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"backupentries"},
 						},
 					},
 					{
@@ -399,7 +407,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{gardencorev1beta1.GroupName},
 							APIVersions: []string{gardencorev1beta1.SchemeGroupVersion.Version},
-							Resources:   []string{"backupbuckets"},
+							Resources:   []string{"backupbuckets", "backupentries"},
 						},
 					},
 				},
