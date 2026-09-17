@@ -23,6 +23,8 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -210,6 +212,11 @@ func NewAddToManagerOptions(
 	name := extensionName
 	if strings.HasPrefix(os.Getenv("WEBHOOK_CONFIG_NAMESPACE"), operator.ExtensionRuntimeNamespacePrefix) {
 		name += extensionswebhook.NameSuffixRuntime
+		// Runtime extension instances run in the garden runtime cluster and target the virtual garden control-plane
+		// namespace (role=garden) instead of the seed's shoot control-plane namespaces (role=shoot, the default scope in
+		// ReconcileWebhooksForAllNamespaces). Overriding the scope here keeps a runtime instance from reconciling - and
+		// clobbering - the shoot webhook configs owned by the corresponding seed instance.
+		shootNamespaceSelector = utils.MergeStringMaps(shootNamespaceSelector, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleGarden})
 	}
 
 	return &AddToManagerOptions{
