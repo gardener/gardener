@@ -1292,6 +1292,14 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
 						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"shoots"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{"seedmanagement.gardener.cloud"},
 							APIVersions: []string{"v1alpha1"},
 							Resources:   []string{"gardenlets", "managedseeds"},
@@ -1335,7 +1343,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{"core.gardener.cloud"},
 							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"backupbuckets", "backupentries", "controllerinstallations"},
+							Resources:   []string{"backupbuckets", "backupentries", "controllerinstallations", "shoots"},
 						},
 					},
 					{
