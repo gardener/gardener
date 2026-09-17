@@ -154,6 +154,11 @@ var _ = Describe("Reconciler", func() {
 			Expect(h2opts.Fields["initial_stream_window_size"].GetNumberValue()).To(Equal(float64(65536)))
 			Expect(h2opts.Fields["initial_connection_window_size"].GetNumberValue()).To(Equal(float64(1048576)))
 
+			keepalive := h2opts.Fields["connection_keepalive"].GetStructValue()
+			Expect(keepalive).NotTo(BeNil())
+			Expect(keepalive.Fields["interval"].GetStringValue()).To(Equal("120s"))
+			Expect(keepalive.Fields["timeout"].GetStringValue()).To(Equal("10s"))
+
 			commonOpts := httpOpts.Fields["common_http_protocol_options"].GetStructValue()
 			Expect(commonOpts).NotTo(BeNil())
 			Expect(commonOpts.Fields["max_connection_duration"].GetStringValue()).To(Equal("86400s"))
@@ -237,6 +242,11 @@ var _ = Describe("Reconciler", func() {
 			h2opts := downstreamConfig.Fields["http2_protocol_options"].GetStructValue()
 			Expect(h2opts.Fields["initial_stream_window_size"].GetNumberValue()).To(Equal(float64(65536)))
 			Expect(h2opts.Fields["initial_connection_window_size"].GetNumberValue()).To(Equal(float64(1048576)))
+
+			keepalive := h2opts.Fields["connection_keepalive"].GetStructValue()
+			Expect(keepalive).NotTo(BeNil())
+			Expect(keepalive.Fields["interval"].GetStringValue()).To(Equal("120s"))
+			Expect(keepalive.Fields["timeout"].GetStringValue()).To(Equal("10s"))
 
 			commonOpts := httpOpts.Fields["common_http_protocol_options"].GetStructValue()
 			Expect(commonOpts).NotTo(BeNil())

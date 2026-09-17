@@ -27,6 +27,14 @@ const TCPKeepaliveTime = 60
 const TCPKeepaliveInterval = 30
 const TCPKeepaliveProbes = 5
 
+// HTTP2ConnectionKeepaliveInterval is the interval between HTTP/2 keepalive PING frames sent on upstream (todo: check) connections.
+// HTTP2ConnectionKeepaliveTimeout is the timeout after which an unacknowledged HTTP/2 keepalive PING causes the connection to be closed.
+// => At the latest after 45s (earliest after 15s) of unsanswered pings, the connection will be considered dead and closed.
+// Values choosen in line with the kubernetes client defaults:
+// https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/net/http.go#L178
+const HTTP2ConnectionKeepaliveInterval = "30s"
+const HTTP2ConnectionKeepaliveTimeout = "15s"
+
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
 func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string) func() error {
 	return DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, exportTo, destinationHost, &istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE})
