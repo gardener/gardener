@@ -18,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -377,6 +378,14 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 							Resources:   []string{"controllerinstallations"},
 						},
 					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"gardenlets"},
+						},
+					},
 				},
 				MatchConditions: []admissionregistrationv1.MatchCondition{
 					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
@@ -424,6 +433,14 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 							APIGroups:   []string{operationsv1alpha1.GroupName},
 							APIVersions: []string{"v1alpha1"},
 							Resources:   []string{"bastions"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"gardenlets"},
 						},
 					},
 				},

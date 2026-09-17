@@ -1177,6 +1177,51 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 					Entry("delete", admissionv1.Delete),
 				)
 
+				When("operation is update", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Name = shootName
+						request.Namespace = shootNamespace
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldGardenlet := &seedmanagementv1alpha1.Gardenlet{
+							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
+						}
+						newGardenlet := oldGardenlet.DeepCopy()
+						newGardenlet.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldGardenlet := &seedmanagementv1alpha1.Gardenlet{
+							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
+						}
+						newGardenlet := oldGardenlet.DeepCopy()
+						replicaCount := int32(3)
+						newGardenlet.Spec.Deployment.ReplicaCount = &replicaCount
+
+						oldRaw, err := stdjson.Marshal(oldGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(string(response.Result.Message)).To(ContainSubstring("must not modify .spec of Gardenlet"))
+					})
+				})
+
 				When("operation is create", func() {
 					BeforeEach(func() {
 						request.Operation = admissionv1.Create
