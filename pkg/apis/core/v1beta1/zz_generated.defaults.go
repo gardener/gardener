@@ -120,7 +120,7 @@ func SetObjectDefaults_SecretBindingList(in *SecretBindingList) {
 }
 
 func SetObjectDefaults_Seed(in *Seed) {
-	SetDefaults_Seed(in)
+	SetDefaults_SeedSpec(&in.Spec)
 }
 
 func SetObjectDefaults_SeedList(in *SeedList) {

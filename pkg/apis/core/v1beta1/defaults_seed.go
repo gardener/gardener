@@ -10,14 +10,8 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// SetDefaults_Seed sets default values for Seed objects.
-func SetDefaults_Seed(obj *Seed) {
-	// Use an explicit, non-generated defaulter for the SeedSpec so it can be reused in the gardenlet.
-	DefaultSeedSpec(&obj.Spec)
-}
-
-// DefaultSeedSpec sets default values for SeedSpec objects.
-func DefaultSeedSpec(obj *SeedSpec) {
+// SetDefaults_SeedSpec sets default values for SeedSpec objects.
+func SetDefaults_SeedSpec(obj *SeedSpec) {
 	if obj.Settings == nil {
 		obj.Settings = &SeedSettings{}
 	}
@@ -25,7 +19,6 @@ func DefaultSeedSpec(obj *SeedSpec) {
 	setDefaults_SeedSettings(obj.Settings)
 }
 
-// setDefaults_SeedSettings sets default values for SeedSettings objects.
 func setDefaults_SeedSettings(obj *SeedSettings) {
 	if obj.ExcessCapacityReservation == nil {
 		obj.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{}
@@ -63,14 +56,12 @@ func setDefaults_SeedSettings(obj *SeedSettings) {
 	}
 }
 
-// setDefaults_SeedNetworks sets default values for SeedNetworks objects.
 func setDefaults_SeedNetworks(obj *SeedNetworks) {
 	if len(obj.IPFamilies) == 0 {
 		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
 	}
 }
 
-// setDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
 func setDefaults_DependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
 	if obj.Weeder == nil {
 		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
@@ -81,7 +72,6 @@ func setDefaults_DependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
 	}
 }
 
-// setDefaults_SeedSettingLoadBalancerServices sets defaults for SeedSettingLoadBalancerServices objects.
 func setDefaults_LoadBalancerServices(obj *SeedSettingLoadBalancerServices) {
 	if obj.ZonalIngress == nil {
 		obj.ZonalIngress = &SeedSettingLoadBalancerServicesZonalIngress{Enabled: new(true)}

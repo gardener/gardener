@@ -903,7 +903,7 @@ func ComputeExpectedGardenletConfiguration(
 	}
 
 	if seedConfig != nil {
-		gardencorev1beta1.DefaultSeedSpec(&seedConfig.Spec)
+		gardencorev1beta1.SetDefaults_SeedSpec(&seedConfig.Spec)
 		config.SeedConfig = seedConfig
 	}
 

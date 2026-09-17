@@ -425,7 +425,7 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 
 // SetDefaults_SeedConfig sets defaults for the seed spec.
 func SetDefaults_SeedConfig(obj *SeedConfig) {
-	gardencorev1beta1.DefaultSeedSpec(&obj.Spec)
+	gardencorev1beta1.SetDefaults_SeedSpec(&obj.Spec)
 }
 
 // SetDefaults_Logging sets defaults for the Logging stack.
