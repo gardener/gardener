@@ -72,7 +72,7 @@ KUSTOMIZE_VERSION ?= v5.8.1
 # renovate: datasource=github-releases depName=prometheus/prometheus
 PROMTOOL_VERSION ?= 3.14.0
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
-PROTOC_VERSION ?= v36.1
+PROTOC_VERSION ?= v36.2
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 SKAFFOLD_VERSION ?= v2.25.0
 # renovate: datasource=github-releases depName=mikefarah/yq
