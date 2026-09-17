@@ -98,14 +98,6 @@ spec:
               [99.95%]: https://uptime.is/99.95
 
 
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
-                spec:
-                  query: migration_from_grafana_not_supported
-                  datasource: null
     "1":
       kind: Panel
       spec:

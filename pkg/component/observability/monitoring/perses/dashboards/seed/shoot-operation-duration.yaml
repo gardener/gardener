@@ -109,7 +109,6 @@ spec:
           kind: Markdown
           spec:
             text: '**Migration from Grafana not supported !**'
-        queries: []
   layouts:
     - kind: Grid
       spec:

@@ -90,14 +90,6 @@ spec:
               <div class="dashboard-header text-center">
               <span>WORKLOAD: $workload.$namespace</span>
               </div>
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
-                spec:
-                  query: migration_from_grafana_not_supported
-                  datasource: null
     "0_1":
       kind: Panel
       spec:
@@ -244,14 +236,6 @@ spec:
               <div class="dashboard-header text-center">
               <span>INBOUND WORKLOADS</span>
               </div>
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
-                spec:
-                  query: migration_from_grafana_not_supported
-                  datasource: null
     "1_1":
       kind: Panel
       spec:
