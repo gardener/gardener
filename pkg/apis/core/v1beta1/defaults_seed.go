@@ -11,6 +11,11 @@ import (
 )
 
 // SetDefaults_SeedSpec sets default values for SeedSpec objects.
+// It is used for both `Seed` objects and `SeedConfig` in `GardenletConfiguration`, so the logic must not be duplicated.
+// The idiomatic approach would be a generated `SetObjectDefaults_SeedSpec`, but defaulter-gen only generates
+// `SetObjectDefaults_*` functions for API objects (i.e. types implementing `runtime.Object`), not for sub-types like `SeedSpec`.
+// The helper functions below are intentionally unexported: if they were named `SetDefaults_<Type>`, defaulter-gen would
+// add them to the generated `SetObjectDefaults_Seed`, causing them to run twice - once via this function and once again individually.
 func SetDefaults_SeedSpec(obj *SeedSpec) {
 	if obj.Settings == nil {
 		obj.Settings = &SeedSettings{}
