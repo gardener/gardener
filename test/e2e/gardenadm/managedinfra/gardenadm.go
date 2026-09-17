@@ -96,9 +96,17 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, Object(deployment)).Should(BeHealthy(health.CheckDeployment))
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy the worker", func(ctx SpecContext) {
+		It("should deploy the worker with the control plane pool only", func(ctx SpecContext) {
 			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}}
 			Eventually(ctx, Object(worker)).Should(BeHealthy(health.CheckExtensionObject))
+
+			// `gardenadm bootstrap` only deploys the control plane worker pool reduced to a single machine, no matter how
+			// many control plane machines the shoot is configured with.
+			Expect(worker.Spec.Pools).To(ConsistOf(And(
+				HaveField("Name", "control-plane"),
+				HaveField("Minimum", BeEquivalentTo(1)),
+				HaveField("Maximum", BeEquivalentTo(1)),
+			)))
 		}, SpecTimeout(5*time.Minute))
 
 		var initialControlPlaneMachineName string

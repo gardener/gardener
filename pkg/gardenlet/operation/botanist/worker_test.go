@@ -98,6 +98,71 @@ var _ = Describe("Worker", func() {
 		ctrl.Finish()
 	})
 
+	Describe("#WorkerPoolsForWorkerResource", func() {
+		var (
+			controlPlanePool, workerPool, workerPool2 gardencorev1beta1.Worker
+		)
+
+		BeforeEach(func() {
+			controlPlanePool = gardencorev1beta1.Worker{
+				Name:         "control-plane",
+				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				Minimum:      3,
+				Maximum:      3,
+				Zones:        []string{"a", "b", "c"},
+			}
+			workerPool = gardencorev1beta1.Worker{Name: "worker", Minimum: 1, Maximum: 2}
+			workerPool2 = gardencorev1beta1.Worker{Name: "worker2", Minimum: 1, Maximum: 2}
+
+			setWorkers(botanist, controlPlanePool, workerPool, workerPool2)
+			botanist.Shoot.ControlPlaneNamespace = namespace
+		})
+
+		When("the shoot is not self-hosted", func() {
+			BeforeEach(func() {
+				setWorkers(botanist, workerPool, workerPool2)
+			})
+
+			It("should return all worker pools unchanged", func() {
+				Expect(WorkerPoolsForWorkerResource(botanist)).To(ConsistOf(workerPool, workerPool2))
+			})
+		})
+
+		When("the self-hosted shoot runs the control plane (gardenadm init)", func() {
+			BeforeEach(func() {
+				botanist.Shoot.ControlPlaneNamespace = metav1.NamespaceSystem
+			})
+
+			It("should return all worker pools unchanged", func() {
+				Expect(WorkerPoolsForWorkerResource(botanist)).To(ConsistOf(controlPlanePool, workerPool, workerPool2))
+			})
+		})
+
+		When("the self-hosted shoot is bootstrapped (gardenadm bootstrap)", func() {
+			It("should only return the control plane worker pool reduced to a single machine", func() {
+				Expect(WorkerPoolsForWorkerResource(botanist)).To(ConsistOf(gardencorev1beta1.Worker{
+					Name:         "control-plane",
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+					Minimum:      1,
+					Maximum:      1,
+					Zones:        []string{"a"},
+				}))
+			})
+
+			It("should not add zones if the control plane worker pool has none", func() {
+				controlPlanePool.Zones = nil
+				setWorkers(botanist, controlPlanePool, workerPool)
+
+				Expect(WorkerPoolsForWorkerResource(botanist)).To(ConsistOf(HaveField("Zones", BeEmpty())))
+			})
+
+			It("should not mutate the shoot", func() {
+				Expect(WorkerPoolsForWorkerResource(botanist)).NotTo(BeEmpty())
+				Expect(botanist.Shoot.GetInfo().Spec.Provider.Workers).To(Equal([]gardencorev1beta1.Worker{controlPlanePool, workerPool, workerPool2}))
+			})
+		})
+	})
+
 	Describe("#DeployWorker", func() {
 		BeforeEach(func() {
 			infrastructure.EXPECT().ProviderStatus().Return(infrastructureProviderStatus)
@@ -887,3 +952,11 @@ var _ = Describe("Worker", func() {
 		})
 	})
 })
+
+func setWorkers(botanist *Botanist, workers ...gardencorev1beta1.Worker) {
+	GinkgoHelper()
+
+	shoot := botanist.Shoot.GetInfo()
+	shoot.Spec.Provider.Workers = workers
+	botanist.Shoot.SetInfo(shoot)
+}

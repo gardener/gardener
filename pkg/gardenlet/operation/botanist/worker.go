@@ -33,13 +33,6 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 		return nil
 	}
 
-	workers := b.Shoot.GetInfo().Spec.Provider.Workers
-	// In `gardenadm bootstrap` we only deploy the control plane worker pool. When running `gardenadm init` on the
-	// created control plane nodes, the full `Worker` with all pools will be deployed.
-	if b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane() {
-		workers = []gardencorev1beta1.Worker{*v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().DeepCopy().Spec.Provider.Workers)}
-	}
-
 	return worker.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -48,7 +41,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 			Name:                b.Shoot.GetInfo().Name,
 			Type:                b.Shoot.GetInfo().Spec.Provider.Type,
 			Region:              b.Shoot.GetInfo().Spec.Region,
-			Workers:             workers,
+			Workers:             b.workerPoolsForWorkerResource(),
 			KubernetesVersion:   b.Shoot.KubernetesVersion,
 			KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
 			MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
@@ -58,6 +51,35 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 		worker.DefaultSevereThreshold,
 		worker.DefaultTimeout,
 	)
+}
+
+// workerPoolsForWorkerResource returns the worker pools which should be part of the Worker resource.
+// In `gardenadm bootstrap`, we only deploy the control plane worker pool and reduce it to a single machine. The
+// bootstrap cluster is thrown away after `gardenadm init` was executed on this very machine. All other worker pools
+// and the remaining control plane machines are created when running `gardenadm init`, which deploys the full `Worker`
+// with all pools in their configured size.
+func (b *Botanist) workerPoolsForWorkerResource() []gardencorev1beta1.Worker {
+	if !b.isGardenadmBootstrap() {
+		return b.Shoot.GetInfo().Spec.Provider.Workers
+	}
+
+	// ControlPlaneWorkerPoolForShoot returns a pointer into the passed slice, hence we must work on a copy of the shoot
+	// to avoid mutating the pool of the shoot object shared with all other components.
+	pool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().DeepCopy().Spec.Provider.Workers)
+
+	// The Worker actuator sets the replicas of a new MachineDeployment to the pool's minimum and providers distribute
+	// the pool's minimum and maximum over the pool's zones. Accordingly, restricting the pool to minimum=maximum=1 and a
+	// single zone yields exactly one MachineDeployment with exactly one machine.
+	// Note that minimum and maximum must be equal. Otherwise, the actuator considers the pool to be managed by the
+	// cluster-autoscaler and stops pinning the MachineDeployment's replicas, which would break re-runs of
+	// `gardenadm bootstrap`.
+	pool.Minimum = 1
+	pool.Maximum = 1
+	if len(pool.Zones) > 1 {
+		pool.Zones = pool.Zones[:1]
+	}
+
+	return []gardencorev1beta1.Worker{*pool}
 }
 
 // DeployWorker deploys the Worker custom resource and triggers the restore operation in case
