@@ -313,16 +313,7 @@ func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 
 // DefaultShootNamespaces returns a deployer for the shoot namespaces.
 func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
-	shootNamespaces := namespaces.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo().Spec.Provider.Workers)
-
-	// In self-hosted shoot clusters running their own control plane, the kube-system namespace is fully managed by
-	// DeployControlPlaneNamespace. Destroy the ManagedResource in case it still exists from a previous version. Note
-	// that the kube-system namespace itself is kept (the ManagedResource is created with keepObjects=true).
-	if b.Shoot.IsSelfHosted() && b.Shoot.RunsControlPlane() {
-		return component.OpDestroyAndWait(shootNamespaces)
-	}
-
-	return shootNamespaces
+	return namespaces.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo().Spec.Provider.Workers)
 }
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.

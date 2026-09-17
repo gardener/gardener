@@ -497,7 +497,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 						})
 					})
 
-					Context("when namespace is annotated with non-empty zones and zone-pinning=true but no failure-tolerance-type", func() {
+					When("namespace is annotated with non-empty zones and zone-pinning=true but no failure-tolerance-type", func() {
 						BeforeEach(func() {
 							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "true")
@@ -520,7 +520,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 						})
 					})
 
-					Context("when namespace is annotated with non-empty zones but neither failure-tolerance-type nor zone-pinning", func() {
+					When("namespace is annotated with non-empty zones but neither failure-tolerance-type nor zone-pinning", func() {
 						BeforeEach(func() {
 							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 						})
@@ -530,7 +530,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 						})
 					})
 
-					Context("when namespace is annotated with failure-tolerance-type and non-empty zones but zone-pinning=false", func() {
+					When("namespace is annotated with failure-tolerance-type and non-empty zones but zone-pinning=false", func() {
 						BeforeEach(func() {
 							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
