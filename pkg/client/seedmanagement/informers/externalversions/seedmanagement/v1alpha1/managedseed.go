@@ -22,11 +22,39 @@ import (
 )
 
 // ManagedSeedInformer provides access to a shared informer and lister for
-// ManagedSeeds.
+// ManagedSeeds. Prefer using the type-safe variant (see [TypedManagedSeedInformer]).
 type ManagedSeedInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() seedmanagementv1alpha1.ManagedSeedLister
 }
+
+// TypedManagedSeedInformer provides access to a shared informer and lister for
+// ManagedSeeds, including the type-safe TypedInformer variant.
+// It is a superset of ManagedSeedInformer.
+type TypedManagedSeedInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ManagedSeedIndexInformer
+	Lister() seedmanagementv1alpha1.ManagedSeedLister
+}
+
+// ManagedSeedIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ManagedSeedIndexInformer cache.TypedSharedIndexInformer[*apisseedmanagementv1alpha1.ManagedSeed]
+
+// ManagedSeedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for ManagedSeed.
+type ManagedSeedHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apisseedmanagementv1alpha1.ManagedSeed]
+
+// ManagedSeedDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for ManagedSeed.
+type ManagedSeedDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apisseedmanagementv1alpha1.ManagedSeed]
+
+// ManagedSeedFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for ManagedSeed.
+type ManagedSeedFilteringHandler = cache.TypedFilteringResourceEventHandler[*apisseedmanagementv1alpha1.ManagedSeed]
+
+// ManagedSeedIndexers is a specialization of [cache.TypedIndexers] for ManagedSeed.
+type ManagedSeedIndexers = cache.TypedIndexers[*apisseedmanagementv1alpha1.ManagedSeed]
+
+// DeletedManagedSeed is a specialization of [cache.DeletedObject] for ManagedSeed.
+type DeletedManagedSeed = cache.DeletedObject[*apisseedmanagementv1alpha1.ManagedSeed]
 
 type managedSeedInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type managedSeedInformer struct {
 // NewManagedSeedInformer constructs a new informer for ManagedSeed type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedManagedSeedInformer]).
 func NewManagedSeedInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewManagedSeedInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedManagedSeedInformer constructs a new informer for ManagedSeed type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedManagedSeedInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers ManagedSeedIndexers) ManagedSeedIndexInformer {
+	return NewTypedManagedSeedInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredManagedSeedInformer constructs a new informer for ManagedSeed type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredManagedSeedInformer]).
 func NewFilteredManagedSeedInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewManagedSeedInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedManagedSeedInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredManagedSeedInformer constructs a new informer for ManagedSeed type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredManagedSeedInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers ManagedSeedIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ManagedSeedIndexInformer {
+	return NewTypedManagedSeedInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewManagedSeedInformerWithOptions constructs a new informer for ManagedSeed type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedManagedSeedInformerWithOptions]).
 func NewManagedSeedInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedManagedSeedInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedManagedSeedInformerWithOptions constructs a new informer for ManagedSeed type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedManagedSeedInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) ManagedSeedIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "seedmanagement.gardener.cloud", Version: "v1alpha1", Resource: "managedseeds"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.ManagedSeed](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewManagedSeedInformerWithOptions(client versioned.Interface, namespace str
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *managedSeedInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewManagedSeedInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedManagedSeedInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *managedSeedInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apisseedmanagementv1alpha1.ManagedSeed{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *managedSeedInformer) TypedInformer() ManagedSeedIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.ManagedSeed](f.factory.InformerFor(&apisseedmanagementv1alpha1.ManagedSeed{}, f.defaultInformer))
 }
 
 func (f *managedSeedInformer) Lister() seedmanagementv1alpha1.ManagedSeedLister {
 	return seedmanagementv1alpha1.NewManagedSeedLister(f.Informer().GetIndexer())
+}
+
+// ToTypedManagedSeedInformer converts an untyped informer into a TypedManagedSeedInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ManagedSeed. If that is not the case, calling type-safe methods of the returned
+// TypedManagedSeedInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedManagedSeedInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedManagedSeedInformer(informer ManagedSeedInformer) TypedManagedSeedInformer {
+	if informer, ok := informer.(TypedManagedSeedInformer); ok {
+		return informer
+	}
+	return &managedSeedTypedInformerAdapter{informer}
+}
+
+type managedSeedTypedInformerAdapter struct {
+	ManagedSeedInformer
+}
+
+func (a *managedSeedTypedInformerAdapter) TypedInformer() ManagedSeedIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.ManagedSeed](a.Informer())
+}
+
+// ToManagedSeedIndexInformer converts an untyped informer into a ManagedSeedIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ManagedSeed. If that is not the case, calling type-safe methods of the returned
+// ManagedSeedIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ManagedSeedIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToManagedSeedIndexInformer(informer cache.SharedIndexInformer) ManagedSeedIndexInformer {
+	if informer, ok := informer.(ManagedSeedIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apisseedmanagementv1alpha1.ManagedSeed](informer)
 }

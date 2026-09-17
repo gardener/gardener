@@ -15,7 +15,7 @@ import (
 
 	gomock "go.uber.org/mock/gomock"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	cache "sigs.k8s.io/controller-runtime/pkg/cache"
+	cacheapi "sigs.k8s.io/controller-runtime/pkg/cache/cacheapi"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,14 +63,14 @@ func (mr *MockCacheMockRecorder) Get(ctx, key, obj any, opts ...any) *gomock.Cal
 }
 
 // GetInformer mocks base method.
-func (m *MockCache) GetInformer(ctx context.Context, obj client.Object, opts ...cache.InformerGetOption) (cache.Informer, error) {
+func (m *MockCache) GetInformer(ctx context.Context, obj cacheapi.Object, opts ...cacheapi.InformerGetOption) (cacheapi.Informer, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, obj}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetInformer", varargs...)
-	ret0, _ := ret[0].(cache.Informer)
+	ret0, _ := ret[0].(cacheapi.Informer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -83,14 +83,14 @@ func (mr *MockCacheMockRecorder) GetInformer(ctx, obj any, opts ...any) *gomock.
 }
 
 // GetInformerForKind mocks base method.
-func (m *MockCache) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind, opts ...cache.InformerGetOption) (cache.Informer, error) {
+func (m *MockCache) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind, opts ...cacheapi.InformerGetOption) (cacheapi.Informer, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, gvk}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetInformerForKind", varargs...)
-	ret0, _ := ret[0].(cache.Informer)
+	ret0, _ := ret[0].(cacheapi.Informer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -103,7 +103,7 @@ func (mr *MockCacheMockRecorder) GetInformerForKind(ctx, gvk any, opts ...any) *
 }
 
 // IndexField mocks base method.
-func (m *MockCache) IndexField(ctx context.Context, obj client.Object, field string, extractValue client.IndexerFunc) error {
+func (m *MockCache) IndexField(ctx context.Context, obj cacheapi.Object, field string, extractValue cacheapi.IndexerFunc) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IndexField", ctx, obj, field, extractValue)
 	ret0, _ := ret[0].(error)
@@ -136,7 +136,7 @@ func (mr *MockCacheMockRecorder) List(ctx, list any, opts ...any) *gomock.Call {
 }
 
 // RemoveInformer mocks base method.
-func (m *MockCache) RemoveInformer(ctx context.Context, obj client.Object) error {
+func (m *MockCache) RemoveInformer(ctx context.Context, obj cacheapi.Object) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveInformer", ctx, obj)
 	ret0, _ := ret[0].(error)

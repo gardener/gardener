@@ -22,11 +22,39 @@ import (
 )
 
 // ProjectInformer provides access to a shared informer and lister for
-// Projects.
+// Projects. Prefer using the type-safe variant (see [TypedProjectInformer]).
 type ProjectInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.ProjectLister
 }
+
+// TypedProjectInformer provides access to a shared informer and lister for
+// Projects, including the type-safe TypedInformer variant.
+// It is a superset of ProjectInformer.
+type TypedProjectInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ProjectIndexInformer
+	Lister() corev1beta1.ProjectLister
+}
+
+// ProjectIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ProjectIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.Project]
+
+// ProjectHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for Project.
+type ProjectHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.Project]
+
+// ProjectDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for Project.
+type ProjectDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.Project]
+
+// ProjectFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for Project.
+type ProjectFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.Project]
+
+// ProjectIndexers is a specialization of [cache.TypedIndexers] for Project.
+type ProjectIndexers = cache.TypedIndexers[*apiscorev1beta1.Project]
+
+// DeletedProject is a specialization of [cache.DeletedObject] for Project.
+type DeletedProject = cache.DeletedObject[*apiscorev1beta1.Project]
 
 type projectInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -36,25 +64,49 @@ type projectInformer struct {
 // NewProjectInformer constructs a new informer for Project type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedProjectInformer]).
 func NewProjectInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewProjectInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedProjectInformer constructs a new informer for Project type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedProjectInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ProjectIndexers) ProjectIndexInformer {
+	return NewTypedProjectInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredProjectInformer constructs a new informer for Project type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredProjectInformer]).
 func NewFilteredProjectInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewProjectInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedProjectInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredProjectInformer constructs a new informer for Project type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredProjectInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ProjectIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ProjectIndexInformer {
+	return NewTypedProjectInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewProjectInformerWithOptions constructs a new informer for Project type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedProjectInformerWithOptions]).
 func NewProjectInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedProjectInformerWithOptions(client, options)
+}
+
+// NewTypedProjectInformerWithOptions constructs a new informer for Project type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedProjectInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) ProjectIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "projects"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Project](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -87,17 +139,57 @@ func NewProjectInformerWithOptions(client versioned.Interface, options internali
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *projectInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewProjectInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedProjectInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *projectInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.Project{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *projectInformer) TypedInformer() ProjectIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Project](f.factory.InformerFor(&apiscorev1beta1.Project{}, f.defaultInformer))
 }
 
 func (f *projectInformer) Lister() corev1beta1.ProjectLister {
 	return corev1beta1.NewProjectLister(f.Informer().GetIndexer())
+}
+
+// ToTypedProjectInformer converts an untyped informer into a TypedProjectInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Project. If that is not the case, calling type-safe methods of the returned
+// TypedProjectInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedProjectInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedProjectInformer(informer ProjectInformer) TypedProjectInformer {
+	if informer, ok := informer.(TypedProjectInformer); ok {
+		return informer
+	}
+	return &projectTypedInformerAdapter{informer}
+}
+
+type projectTypedInformerAdapter struct {
+	ProjectInformer
+}
+
+func (a *projectTypedInformerAdapter) TypedInformer() ProjectIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Project](a.Informer())
+}
+
+// ToProjectIndexInformer converts an untyped informer into a ProjectIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *Project. If that is not the case, calling type-safe methods of the returned
+// ProjectIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ProjectIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToProjectIndexInformer(informer cache.SharedIndexInformer) ProjectIndexInformer {
+	if informer, ok := informer.(ProjectIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.Project](informer)
 }

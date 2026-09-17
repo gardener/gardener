@@ -22,11 +22,39 @@ import (
 )
 
 // ControllerDeploymentInformer provides access to a shared informer and lister for
-// ControllerDeployments.
+// ControllerDeployments. Prefer using the type-safe variant (see [TypedControllerDeploymentInformer]).
 type ControllerDeploymentInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1.ControllerDeploymentLister
 }
+
+// TypedControllerDeploymentInformer provides access to a shared informer and lister for
+// ControllerDeployments, including the type-safe TypedInformer variant.
+// It is a superset of ControllerDeploymentInformer.
+type TypedControllerDeploymentInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ControllerDeploymentIndexInformer
+	Lister() corev1.ControllerDeploymentLister
+}
+
+// ControllerDeploymentIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ControllerDeploymentIndexInformer cache.TypedSharedIndexInformer[*apiscorev1.ControllerDeployment]
+
+// ControllerDeploymentHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for ControllerDeployment.
+type ControllerDeploymentHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1.ControllerDeployment]
+
+// ControllerDeploymentDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for ControllerDeployment.
+type ControllerDeploymentDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1.ControllerDeployment]
+
+// ControllerDeploymentFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for ControllerDeployment.
+type ControllerDeploymentFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1.ControllerDeployment]
+
+// ControllerDeploymentIndexers is a specialization of [cache.TypedIndexers] for ControllerDeployment.
+type ControllerDeploymentIndexers = cache.TypedIndexers[*apiscorev1.ControllerDeployment]
+
+// DeletedControllerDeployment is a specialization of [cache.DeletedObject] for ControllerDeployment.
+type DeletedControllerDeployment = cache.DeletedObject[*apiscorev1.ControllerDeployment]
 
 type controllerDeploymentInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -36,25 +64,49 @@ type controllerDeploymentInformer struct {
 // NewControllerDeploymentInformer constructs a new informer for ControllerDeployment type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedControllerDeploymentInformer]).
 func NewControllerDeploymentInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewControllerDeploymentInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedControllerDeploymentInformer constructs a new informer for ControllerDeployment type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedControllerDeploymentInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ControllerDeploymentIndexers) ControllerDeploymentIndexInformer {
+	return NewTypedControllerDeploymentInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredControllerDeploymentInformer constructs a new informer for ControllerDeployment type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredControllerDeploymentInformer]).
 func NewFilteredControllerDeploymentInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewControllerDeploymentInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedControllerDeploymentInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredControllerDeploymentInformer constructs a new informer for ControllerDeployment type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredControllerDeploymentInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ControllerDeploymentIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ControllerDeploymentIndexInformer {
+	return NewTypedControllerDeploymentInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewControllerDeploymentInformerWithOptions constructs a new informer for ControllerDeployment type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedControllerDeploymentInformerWithOptions]).
 func NewControllerDeploymentInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedControllerDeploymentInformerWithOptions(client, options)
+}
+
+// NewTypedControllerDeploymentInformerWithOptions constructs a new informer for ControllerDeployment type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedControllerDeploymentInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) ControllerDeploymentIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1", Resource: "controllerdeployments"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1.ControllerDeployment](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -87,17 +139,57 @@ func NewControllerDeploymentInformerWithOptions(client versioned.Interface, opti
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *controllerDeploymentInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewControllerDeploymentInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedControllerDeploymentInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *controllerDeploymentInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1.ControllerDeployment{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *controllerDeploymentInformer) TypedInformer() ControllerDeploymentIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1.ControllerDeployment](f.factory.InformerFor(&apiscorev1.ControllerDeployment{}, f.defaultInformer))
 }
 
 func (f *controllerDeploymentInformer) Lister() corev1.ControllerDeploymentLister {
 	return corev1.NewControllerDeploymentLister(f.Informer().GetIndexer())
+}
+
+// ToTypedControllerDeploymentInformer converts an untyped informer into a TypedControllerDeploymentInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ControllerDeployment. If that is not the case, calling type-safe methods of the returned
+// TypedControllerDeploymentInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedControllerDeploymentInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedControllerDeploymentInformer(informer ControllerDeploymentInformer) TypedControllerDeploymentInformer {
+	if informer, ok := informer.(TypedControllerDeploymentInformer); ok {
+		return informer
+	}
+	return &controllerDeploymentTypedInformerAdapter{informer}
+}
+
+type controllerDeploymentTypedInformerAdapter struct {
+	ControllerDeploymentInformer
+}
+
+func (a *controllerDeploymentTypedInformerAdapter) TypedInformer() ControllerDeploymentIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1.ControllerDeployment](a.Informer())
+}
+
+// ToControllerDeploymentIndexInformer converts an untyped informer into a ControllerDeploymentIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ControllerDeployment. If that is not the case, calling type-safe methods of the returned
+// ControllerDeploymentIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ControllerDeploymentIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToControllerDeploymentIndexInformer(informer cache.SharedIndexInformer) ControllerDeploymentIndexInformer {
+	if informer, ok := informer.(ControllerDeploymentIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1.ControllerDeployment](informer)
 }
