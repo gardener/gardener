@@ -13,6 +13,7 @@ import (
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
@@ -24,13 +25,12 @@ const (
 )
 
 // AddToManager adds the webhook to the given manager.
-func AddToManager(mgr manager.Manager, strictAuditPolicyValidation bool) error {
+func AddToManager(mgr manager.Manager) error {
 	webhook := &admission.Webhook{
 		Handler: NewHandler(
 			mgr.GetAPIReader(),
 			mgr.GetClient(),
 			admission.NewDecoder(mgr.GetScheme()),
-			strictAuditPolicyValidation,
 		),
 		RecoverPanic: new(true),
 	}
@@ -39,9 +39,9 @@ func AddToManager(mgr manager.Manager, strictAuditPolicyValidation bool) error {
 	return nil
 }
 
-// NewHandler returns a new handler for validating audit policies. If strictAuditPolicyValidation is true, unknown
-// or misspelled fields in the audit policy are rejected instead of being silently dropped.
-func NewHandler(apiReader, c client.Reader, decoder admission.Decoder, strictAuditPolicyValidation bool) admission.Handler {
+// NewHandler returns a new handler for validating audit policies. If the StrictAuditPolicyValidation feature gate is
+// enabled, unknown or misspelled fields in the audit policy are rejected instead of being silently dropped.
+func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission.Handler {
 	return &configvalidator.Handler{
 		APIReader: apiReader,
 		Client:    c,
@@ -54,7 +54,7 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder, strictAud
 		},
 		ShootFieldSelector: gardencore.ShootAuditPolicyConfigMapName,
 		AdmitConfig: func(_ context.Context, auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
-			return configvalidator.AdmitAuditPolicy(auditPolicyRaw, strictAuditPolicyValidation)
+			return configvalidator.AdmitAuditPolicy(auditPolicyRaw, features.DefaultFeatureGate.Enabled(features.StrictAuditPolicyValidation))
 		},
 	}
 }

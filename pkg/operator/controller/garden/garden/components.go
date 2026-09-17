@@ -1256,6 +1256,7 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.AdmissionController; config != nil {
+		values.FeatureGates = config.FeatureGates
 		values.ResourceAdmissionConfiguration = operatorv1alpha1conversion.ConvertToAdmissionControllerResourceAdmissionConfiguration(config.ResourceAdmissionConfiguration)
 		if config.LogLevel != nil {
 			values.LogLevel = *config.LogLevel

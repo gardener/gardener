@@ -21,11 +21,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	admissioncontrollerfeatures "github.com/gardener/gardener/pkg/admissioncontroller/features"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("handler", func() {
@@ -123,6 +126,8 @@ rules:
 	)
 
 	BeforeEach(func() {
+		admissioncontrollerfeatures.RegisterFeatureGates()
+
 		testEncoder = &jsonserializer.Serializer{}
 
 		fakeClient = fakeclient.NewClientBuilder().
@@ -132,7 +137,7 @@ rules:
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
-		handler = NewHandler(fakeClient, fakeClient, decoder, true)
+		handler = NewHandler(fakeClient, fakeClient, decoder)
 
 		request = admission.Request{}
 
@@ -287,7 +292,7 @@ rules:
 						return c.Get(ctx, key, obj, opts...)
 					},
 				}).Build()
-				handler = NewHandler(errClient, fakeClient, decoder, true)
+				handler = NewHandler(errClient, fakeClient, decoder)
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInternalError, "could not retrieve audit policy ConfigMap fake-cm-namespace/fake-cm-name: fake", "")
 			})
 
@@ -431,12 +436,14 @@ rules:
 		})
 
 		It("rejects an audit policy with an unknown field when enabled", func() {
-			handler = NewHandler(fakeClient, fakeClient, decoder, true)
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.StrictAuditPolicyValidation, true))
+			handler = NewHandler(fakeClient, fakeClient, decoder)
 			test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "failed to decode the provided audit policy", "")
 		})
 
 		It("accepts an audit policy with an unknown field when disabled", func() {
-			handler = NewHandler(fakeClient, fakeClient, decoder, false)
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.StrictAuditPolicyValidation, false))
+			handler = NewHandler(fakeClient, fakeClient, decoder)
 			test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced audit policy is valid", "")
 		})
 	})

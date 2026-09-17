@@ -233,6 +233,8 @@ spec:
     #       resource: shoots
     #       size: 500
     # gardenerAdmissionController:
+    #   featureGates:
+    #     SomeGardenerFeature: true
     #   logLevel: info # either {debug,info,error}
     #   resourceAdmissionConfiguration:
     #    operationMode: block # either {block,log}
