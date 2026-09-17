@@ -1579,6 +1579,34 @@ var _ = Describe("Helper", func() {
 		Entry("systemComponents.allowed = true", &gardencorev1beta1.Worker{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true}}, true),
 	)
 
+	DescribeTable("#ZonesWithSystemComponents",
+		func(workers []gardencorev1beta1.Worker, expectedZones []string) {
+			Expect(ZonesWithSystemComponents(workers)).To(Equal(expectedZones))
+		},
+		Entry("no worker pools", nil, []string{}),
+		Entry("worker pool without systemComponents section",
+			[]gardencorev1beta1.Worker{{Maximum: 1, Zones: []string{"b", "a"}}},
+			[]string{"a", "b"},
+		),
+		Entry("worker pool not allowing system components",
+			[]gardencorev1beta1.Worker{{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false}, Maximum: 1, Zones: []string{"a"}}},
+			[]string{},
+		),
+		Entry("worker pool with zero maximum",
+			[]gardencorev1beta1.Worker{{Maximum: 0, Zones: []string{"a"}}},
+			[]string{},
+		),
+		Entry("multiple worker pools with overlapping zones",
+			[]gardencorev1beta1.Worker{
+				{Maximum: 1, Zones: []string{"b", "c"}},
+				{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false}, Maximum: 1, Zones: []string{"a", "d"}},
+				{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true}, Maximum: 1, Zones: []string{"f", "e", "c"}},
+				{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true}, Maximum: 0, Zones: []string{"g", "h"}},
+			},
+			[]string{"b", "c", "e", "f"},
+		),
+	)
+
 	DescribeTable("#IsCoreDNSAutoscalingModeUsed",
 		func(systemComponents *gardencorev1beta1.SystemComponents, autoscalingMode gardencorev1beta1.CoreDNSAutoscalingMode, expected bool) {
 			Expect(IsCoreDNSAutoscalingModeUsed(systemComponents, autoscalingMode)).To(Equal(expected))

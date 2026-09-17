@@ -496,6 +496,51 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							})
 						})
 					})
+
+					When("namespace is annotated with non-empty zones and zone-pinning=true but no failure-tolerance-type", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "true")
+						})
+
+						It("should add a node affinity", func() {
+							Expect(getPodSpec().Affinity).To(Equal(&corev1.Affinity{
+								NodeAffinity: &corev1.NodeAffinity{
+									RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+										NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+											MatchExpressions: []corev1.NodeSelectorRequirement{{
+												Key:      corev1.LabelTopologyZone,
+												Operator: corev1.NodeSelectorOpIn,
+												Values:   zones,
+											}},
+										}},
+									},
+								},
+							}))
+						})
+					})
+
+					When("namespace is annotated with non-empty zones but neither failure-tolerance-type nor zone-pinning", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+						})
+
+						It("should not mutate the node affinity", func() {
+							Expect(getPodSpec().Affinity).To(BeNil())
+						})
+					})
+
+					When("namespace is annotated with failure-tolerance-type and non-empty zones but zone-pinning=false", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "foo")
+							metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZonePinning, "false")
+						})
+
+						It("should not mutate the node affinity", func() {
+							Expect(getPodSpec().Affinity).To(BeNil())
+						})
+					})
 				})
 
 				Context("topology spread constraints", func() {

@@ -539,6 +539,20 @@ func SystemComponentsAllowed(worker *gardencorev1beta1.Worker) bool {
 	return worker.SystemComponents == nil || worker.SystemComponents.Allow
 }
 
+// ZonesWithSystemComponents returns the sorted list of all zones of the given worker pools which allow system
+// components to be scheduled onto them and can have at least one node.
+func ZonesWithSystemComponents(workers []gardencorev1beta1.Worker) []string {
+	zones := sets.New[string]()
+
+	for _, pool := range workers {
+		if SystemComponentsAllowed(&pool) && pool.Maximum > 0 {
+			zones.Insert(pool.Zones...)
+		}
+	}
+
+	return sets.List(zones)
+}
+
 // IsCoreDNSAutoscalingModeUsed indicates whether the specified autoscaling mode of CoreDNS is enabled or not.
 func IsCoreDNSAutoscalingModeUsed(systemComponents *gardencorev1beta1.SystemComponents, autoscalingMode gardencorev1beta1.CoreDNSAutoscalingMode) bool {
 	isDefaultMode := autoscalingMode == gardencorev1beta1.CoreDNSAutoscalingModeHorizontal

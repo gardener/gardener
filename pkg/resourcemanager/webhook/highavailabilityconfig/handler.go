@@ -61,7 +61,7 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 	var (
 		failureToleranceType *gardencorev1beta1.FailureToleranceType
 		zones                []string
-		isZonePinningEnabled bool
+		zonePinning          *bool
 	)
 
 	if v, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType]; ok {
@@ -74,7 +74,7 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 	}
 
 	if v, err := strconv.ParseBool(namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZonePinning]); err == nil {
-		isZonePinningEnabled = v
+		zonePinning = &v
 	}
 
 	isHorizontallyScaled, maxReplicas, err := h.isHorizontallyScaled(ctx, req.Namespace, schema.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}.String(), req.Kind.Kind, req.Name)
@@ -89,9 +89,9 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 
 	switch requestGK {
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
-		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, hasMultipleNodes, isZonePinningEnabled)
+		obj, err = h.handleDeployment(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, hasMultipleNodes, zonePinning)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
-		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, hasMultipleNodes, isZonePinningEnabled)
+		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, hasMultipleNodes, zonePinning)
 	case autoscalingv2.SchemeGroupVersion.WithKind("HorizontalPodAutoscaler").GroupKind():
 		obj, err = h.handleHorizontalPodAutoscaler(req, failureToleranceType)
 	default:
@@ -121,7 +121,7 @@ func (h *Handler) handleDeployment(
 	isHorizontallyScaled bool,
 	maxReplicas int32,
 	hasMultipleNodes bool,
-	isZonePinningEnabled bool,
+	zonePinning *bool,
 ) (
 	runtime.Object,
 	error,
@@ -145,9 +145,9 @@ func (h *Handler) handleDeployment(
 	}
 
 	h.mutateNodeAffinity(
-		// TODO(ScheererJ): Remove "failureToleranceType != nil" after the shoot namespaces have been annotated with
-		//  "zone-pinning=enabled" as well (today, only the istio-ingress namespaces have this annotation).
-		failureToleranceType != nil || isZonePinningEnabled,
+		// TODO(ScheererJ): Remove the "failureToleranceType != nil" fallback after annotating all shoot namespaces with
+		//  zone-pinning=true for at least 3 releases (i.e., after v1.154 has been released).
+		ptr.Deref(zonePinning, failureToleranceType != nil),
 		zones,
 		&deployment.Spec.Template,
 	)
@@ -179,7 +179,7 @@ func (h *Handler) handleStatefulSet(
 	isHorizontallyScaled bool,
 	maxReplicas int32,
 	hasMultipleNodes bool,
-	isZonePinningEnabled bool,
+	zonePinning *bool,
 ) (
 	runtime.Object,
 	error,
@@ -203,9 +203,9 @@ func (h *Handler) handleStatefulSet(
 	}
 
 	h.mutateNodeAffinity(
-		// TODO(ScheererJ): Remove "failureToleranceType != nil" after the shoot namespaces have been annotated with
-		//  "zone-pinning=enabled" as well (today, only the istio-ingress namespaces have this annotation).
-		failureToleranceType != nil || isZonePinningEnabled,
+		// TODO(ScheererJ): Remove the "failureToleranceType != nil" fallback after annotating all shoot namespaces with
+		//  zone-pinning=true for at least 3 releases (i.e., after v1.154 has been released).
+		ptr.Deref(zonePinning, failureToleranceType != nil),
 		zones,
 		&statefulSet.Spec.Template,
 	)

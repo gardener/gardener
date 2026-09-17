@@ -794,6 +794,7 @@ const TaskGroupReconcileShootNamespaces flow.TaskID = "TaskGroupReconcileShootNa
 func (b *Botanist) ReconcileShootNamespacesTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileShootNamespaces).
+			SkipIf(b.Shoot.IsSelfHosted()).
 			WithDependencies(
 				TaskGroupReconcileGardenerResourceManager,
 			)

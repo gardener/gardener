@@ -151,6 +151,7 @@ var _ = Describe("Namespaces", func() {
 			ExpectWithOffset(1, botanist.SeedNamespaceObject.Annotations).To(And(
 				HaveKeyWithValue("shoot.gardener.cloud/uid", string(uid)),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/failure-tolerance-type", string(failureToleranceType)),
+				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zone-pinning", "true"),
 			))
 
 			if numberOfZones > 0 {
@@ -721,6 +722,37 @@ var _ = Describe("Namespaces", func() {
 			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 			Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("foo", "bar"))
 			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("bar", "foo"))
+		})
+
+		Context("self-hosted shoots", func() {
+			BeforeEach(func() {
+				defaultShootInfo.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+					Name:         "control-plane",
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+					Minimum:      1,
+					Maximum:      3,
+					Zones:        []string{"a", "b"},
+				}}
+				botanist.Shoot.SetInfo(defaultShootInfo)
+			})
+
+			It("should disable zone pinning and use the control plane worker pool zones", func() {
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				Expect(botanist.SeedNamespaceObject.Annotations).To(And(
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zone-pinning", "false"),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b"),
+				))
+			})
+
+			It("should add the labels of the kube-system namespace", func() {
+				Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
+
+				Expect(botanist.SeedNamespaceObject.Labels).To(And(
+					HaveKeyWithValue("gardener.cloud/purpose", "kube-system"),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				))
+			})
 		})
 
 		When("spec.controlPlane.zones is set", func() {
