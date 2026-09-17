@@ -819,6 +819,7 @@ build:
             - cmd/gardener-admission-controller/app
             - cmd/utils
             - cmd/utils/initrun
+            - pkg/admissioncontroller/features
             - pkg/admissioncontroller/gardenletidentity
             - pkg/admissioncontroller/gardenletidentity/seed
             - pkg/admissioncontroller/gardenletidentity/shoot
@@ -883,6 +884,7 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
             - pkg/controllerutils/routes
+            - pkg/features
             - pkg/gardenlet/bootstrap/util
             - pkg/healthz
             - pkg/logger
