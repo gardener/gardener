@@ -123,6 +123,54 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 	})
 
 	Context("merge status", func() {
+
+		It("should not patch the status when it did not change", func() {
+			var statusPatchCalls int
+
+			namespacedCloudProfile.Finalizers = []string{gardencorev1beta1.GardenerName}
+			namespacedCloudProfile.Status.CloudProfileSpec = cloudProfile.Spec
+			namespacedCloudProfile.Status.ObservedGeneration = namespacedCloudProfile.Generation
+
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithStatusSubresource(&gardencorev1beta1.NamespacedCloudProfile{}).
+				WithObjects(
+					cloudProfile.DeepCopy(),
+					namespacedCloudProfile.DeepCopy(),
+				).
+				WithInterceptorFuncs(interceptor.Funcs{
+					SubResourcePatch: func(
+						_ context.Context,
+						_ client.Client,
+						_ string,
+						_ client.Object,
+						_ client.Patch,
+						_ ...client.SubResourcePatchOption,
+					) error {
+						statusPatchCalls++
+						return nil
+					},
+				}).
+				Build()
+
+			reconciler = &namespacedcloudprofilecontroller.Reconciler{
+				Client:   fakeClient,
+				Clock:    fakeClock,
+				Recorder: &events.FakeRecorder{},
+			}
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespaceName,
+					Name:      namespacedCloudProfileName,
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(statusPatchCalls).To(BeZero())
+		})
+
 		It("should apply the CloudProfile providerConfig to the NamespacedCloudProfile status on spec change", func() {
 			cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"key":"value"}`)}
 
