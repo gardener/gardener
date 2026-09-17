@@ -1274,6 +1274,9 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 						},
 					},
 				},
+				MatchConditions: []admissionregistrationv1.MatchCondition{
+					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
+				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{

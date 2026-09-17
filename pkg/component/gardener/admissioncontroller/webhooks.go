@@ -362,6 +362,9 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						},
 					},
 				},
+				MatchConditions: []admissionregistrationv1.MatchCondition{
+					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
+				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{

@@ -497,41 +497,62 @@ func (h *Handler) admitConfigMap(ctx context.Context, seedName string, request a
 }
 
 func (h *Handler) admitSeed(ctx context.Context, seedName string, request admission.Request) admission.Response {
-	response := h.admit(seedName, &request.Name)
-	if request.Operation == admissionv1.Delete && !response.Allowed {
-		// If the deletion request is not allowed, then it might be submitted by the "parent gardenlet".
-		// This is the gardenlet/seed which is responsible for the `managedseed` in question.
-		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-		if err := h.Client.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}, managedSeed); err != nil {
-			if apierrors.IsNotFound(err) {
+	switch request.Operation {
+	case admissionv1.Update:
+		if resp := h.admit(seedName, &request.Name); !resp.Allowed {
+			return resp
+		}
+		oldSeed := &gardencorev1beta1.Seed{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldSeed); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newSeed := &gardencorev1beta1.Seed{}
+		if err := h.Decoder.Decode(request, newSeed); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Seed"))
+		}
+		return admission.Allowed("")
+
+	case admissionv1.Create, admissionv1.Delete:
+		response := h.admit(seedName, &request.Name)
+		if request.Operation == admissionv1.Delete && !response.Allowed {
+			// If the deletion request is not allowed, then it might be submitted by the "parent gardenlet".
+			// This is the gardenlet/seed which is responsible for the `managedseed` in question.
+			managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+			if err := h.Client.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}, managedSeed); err != nil {
+				if apierrors.IsNotFound(err) {
+					return response
+				}
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+
+			// If a gardenlet tries to delete a Seed belonging to a ManagedSeed then the request may only be considered
+			// further if the `.spec.deletionTimestamp` is set (gardenlets themselves are not allowed to delete ManagedSeeds,
+			// so it's safe to only continue if somebody else has set this deletion timestamp).
+			if managedSeed.DeletionTimestamp == nil {
+				return admission.Errored(http.StatusForbidden, fmt.Errorf("object can only be deleted if corresponding ManagedSeed has a deletion timestamp"))
+			}
+
+			// If for whatever reason the `.spec.shoot` is nil then we exit early.
+			if managedSeed.Spec.Shoot == nil {
 				return response
 			}
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
 
-		// If a gardenlet tries to delete a Seed belonging to a ManagedSeed then the request may only be considered
-		// further if the `.spec.deletionTimestamp` is set (gardenlets themselves are not allowed to delete ManagedSeeds,
-		// so it's safe to only continue if somebody else has set this deletion timestamp).
-		if managedSeed.DeletionTimestamp == nil {
-			return admission.Errored(http.StatusForbidden, fmt.Errorf("object can only be deleted if corresponding ManagedSeed has a deletion timestamp"))
-		}
+			// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
+			// the seed name of the requesting gardenlet.
+			shoot := &gardencorev1beta1.Shoot{}
+			if err := h.Client.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
 
-		// If for whatever reason the `.spec.shoot` is nil then we exit early.
-		if managedSeed.Spec.Shoot == nil {
-			return response
+			return h.admit(seedName, shoot.Spec.SeedName)
 		}
-
-		// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
-		// the seed name of the requesting gardenlet.
-		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.Client.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-
-		return h.admit(seedName, shoot.Spec.SeedName)
+		return response
 	}
 
-	return response
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 }
 
 func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, userType gardenletidentity.UserType, request admission.Request) admission.Response {
