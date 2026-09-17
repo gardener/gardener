@@ -16,10 +16,16 @@ import (
 const MaxConnectionDuration = 86400
 
 // TCPKeepaliveTime is the duration in seconds a connection needs to be idle before TCP keepalive probes are sent.
-const TCPKeepaliveTime = 300
-
 // TCPKeepaliveInterval is the duration in seconds between individual TCP keepalive probes.
-const TCPKeepaliveInterval = 10
+// TCPKeepaliveProbes is the number of TCP keepalive probes to send before considering the connection dead.
+// => After 60s + 30s * 5 = 210s (3.5 minutes) of idle time without answers to the keepalive probes, the connection will be considered dead and closed.
+// Values are choosen between the kubernetes client and server defaults, which are between 30s and 120s for the TCPKeepaliveTime and unspecified 
+// TCPKeepaliveInterval and TCPKeepaliveProbes.
+// client: https://github.com/kubernetes/kubernetes/blob/b264d0913501e614a75eb021a0e2578ee12d0281/staging/src/k8s.io/client-go/transport/cache.go#L123
+// server: https://github.com/kubernetes/kubernetes/blob/b264d0913501e614a75eb021a0e2578ee12d0281/staging/src/k8s.io/apiserver/pkg/server/secure_serving.go#L288
+const TCPKeepaliveTime = 60
+const TCPKeepaliveInterval = 30
+const TCPKeepaliveProbes = 5
 
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
 func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string) func() error {
@@ -95,6 +101,7 @@ func destinationRuleWithTrafficPolicy(
 						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
 							Time:     &durationpb.Duration{Seconds: TCPKeepaliveTime},
 							Interval: &durationpb.Duration{Seconds: TCPKeepaliveInterval},
+							Probes:   TCPKeepaliveProbes,
 						},
 					},
 					Http: httpConnectionPool,

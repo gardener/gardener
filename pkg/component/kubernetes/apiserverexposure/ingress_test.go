@@ -174,8 +174,9 @@ var _ = Describe("#Ingress", func() {
 						Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 							TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-								Time:     &durationpb.Duration{Seconds: 300},
-								Interval: &durationpb.Duration{Seconds: 10},
+								Time:     &durationpb.Duration{Seconds: 60},
+								Interval: &durationpb.Duration{Seconds: 30},
+								Probes:   5,
 							},
 						},
 					},

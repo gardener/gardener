@@ -105,7 +105,7 @@ spec:
               http2_protocol_options:
                 connection_keepalive:
                   interval: 120s
-                  timeout: 60s
+                  timeout: 30s
   - applyTo: CLUSTER
     match:
       context: GATEWAY
@@ -121,4 +121,4 @@ spec:
               http2_protocol_options:
                 connection_keepalive:
                   interval: 120s
-                  timeout: 60s
+                  timeout: 30s

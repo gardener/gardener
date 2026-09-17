@@ -178,6 +178,11 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	APIServerAuthenticationDynamicMetadataKey string
 	IstioTLSSecret                            string
 	TargetClusterAPIServerProxy               string
+	TCPKeepaliveTime                          int
+	TCPKeepaliveInterval                      int
+	TCPKeepaliveProbes                        int
+	HTTP2ConnectionKeepaliveInterval          string
+	HTTP2ConnectionKeepaliveTimeout           string
 }
 
 type envoyFilterIstioTLSTerminationTemplateValues struct {
@@ -189,7 +194,6 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	Namespace                        string
 	ControlPlaneNamespace            string
 	ControlPlaneNamespaceUID         string
-	Host                             string
 	MutualTLSHost                    string
 	ConnectionUpgradeHost            string
 	Port                             int
@@ -262,8 +266,13 @@ func (s *sni) Deploy(ctx context.Context) error {
 			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
 			APIServerRequestHeaderGroup:    kubeapiserverconstants.RequestHeaderGroup,
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
-			IstioTLSSecret:              s.emptyIstioTLSSecret().Name,
-			TargetClusterAPIServerProxy: targetClusterAPIServerProxy,
+			IstioTLSSecret:                   s.emptyIstioTLSSecret().Name,
+			TargetClusterAPIServerProxy:      targetClusterAPIServerProxy,
+			TCPKeepaliveTime:                 istio.TCPKeepaliveTime,
+			TCPKeepaliveInterval:             istio.TCPKeepaliveInterval,
+			TCPKeepaliveProbes:               istio.TCPKeepaliveProbes,
+			HTTP2ConnectionKeepaliveInterval: istio.HTTP2ConnectionKeepaliveInterval,
+			HTTP2ConnectionKeepaliveTimeout:  istio.HTTP2ConnectionKeepaliveTimeout,
 		}); err != nil {
 			return err
 		}
@@ -302,7 +311,6 @@ func (s *sni) Deploy(ctx context.Context) error {
 				ControlPlaneNamespace:            namespace.Name,
 				ControlPlaneNamespaceUID:         string(namespace.UID),
 				Port:                             kubeapiserverconstants.Port,
-				Host:                             hostName,
 				MutualTLSHost:                    mTLSHostName,
 				ConnectionUpgradeHost:            connectionUpgradeHostName,
 				RouteConfigurationName:           routeConfigurationName,

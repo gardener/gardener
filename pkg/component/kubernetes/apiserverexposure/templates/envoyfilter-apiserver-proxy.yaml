@@ -180,8 +180,9 @@ spec:
         per_connection_buffer_limit_bytes: 32768
         upstream_connection_options:
           tcp_keepalive:
-            keepalive_interval: 75
-            keepalive_time: 7200
+            keepalive_interval: {{ .TCPKeepaliveInterval }}
+            keepalive_time: {{ .TCPKeepaliveTime }}
+            keepalive_probes: {{ .TCPKeepaliveProbes }}
         load_assignment:
           cluster_name: {{ .TargetClusterAPIServerProxy }}
           endpoints:
