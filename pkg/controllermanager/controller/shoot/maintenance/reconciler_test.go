@@ -6,6 +6,7 @@ package maintenance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,10 +14,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	testingclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -2538,6 +2544,131 @@ var _ = Describe("Shoot Maintenance", func() {
 				},
 			}
 			Expect(allShootConditionsTrue(shoot)).To(BeTrue())
+		})
+	})
+
+	Describe("#reconcile", func() {
+		var (
+			ctx          = context.Background()
+			scheme       *runtime.Scheme
+			cloudProfile *gardencorev1beta1.CloudProfile
+			shoot        *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			scheme = runtime.NewScheme()
+			Expect(gardencorev1beta1.AddToScheme(scheme)).To(Succeed())
+
+			cloudProfile = &gardencorev1beta1.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-profile",
+				},
+				Spec: gardencorev1beta1.CloudProfileSpec{
+					Kubernetes: gardencorev1beta1.KubernetesSettings{
+						Versions: []gardencorev1beta1.ExpirableVersion{
+							{Version: "1.30.0"},
+							{Version: "1.30.1"},
+						},
+					},
+				},
+			}
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-shoot",
+					Namespace: "test-namespace",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					CloudProfileName: ptr.To("test-profile"),
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.30.0",
+					},
+					Maintenance: &gardencorev1beta1.Maintenance{
+						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
+							KubernetesVersion:   true,
+							MachineImageVersion: ptr.To(false),
+						},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+					},
+				},
+			}
+		})
+
+		It("should return conflict error when dry-run update encounters conflict so controller re-enqueues", func() {
+			conflictErr := apierrors.NewConflict(schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoots"}, shoot.Name, errors.New("the object has been modified"))
+
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(cloudProfile, shoot).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(_ context.Context, _ client.WithWatch, _ client.Object, opts ...client.UpdateOption) error {
+						updateOpts := &client.UpdateOptions{}
+						updateOpts.ApplyOptions(opts)
+						if len(updateOpts.DryRun) > 0 && updateOpts.DryRun[0] == metav1.DryRunAll {
+							return conflictErr
+						}
+						return nil
+					},
+				}).
+				Build()
+
+			r := &Reconciler{
+				Client: fakeClient,
+				Clock:  testingclock.NewFakeClock(time.Now()),
+			}
+
+			err := r.reconcile(ctx, log, shoot)
+			Expect(err).To(MatchError(conflictErr))
+			Expect(apierrors.IsConflict(err)).To(BeTrue())
+			Expect(shoot.Status.LastMaintenance.State).NotTo(Equal(gardencorev1beta1.LastOperationStateFailed))
+
+			fetchedShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
+			Expect(fetchedShoot.Status.LastMaintenance).To(BeNil())
+		})
+
+		It("should mark maintenance as failed and return nil when dry-run update encounters non-conflict error", func() {
+			forbiddenErr := apierrors.NewForbidden(schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoots"}, shoot.Name, errors.New("validation failed"))
+
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(cloudProfile, shoot).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(_ context.Context, _ client.WithWatch, _ client.Object, opts ...client.UpdateOption) error {
+						updateOpts := &client.UpdateOptions{}
+						updateOpts.ApplyOptions(opts)
+						if len(updateOpts.DryRun) > 0 && updateOpts.DryRun[0] == metav1.DryRunAll {
+							return forbiddenErr
+						}
+						return nil
+					},
+				}).
+				Build()
+
+			r := &Reconciler{
+				Client: fakeClient,
+				Clock:  testingclock.NewFakeClock(time.Now()),
+			}
+
+			err := r.reconcile(ctx, log, shoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
+			Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
+			Expect(shoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
+			Expect(*shoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
+
+			fetchedShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
+			Expect(fetchedShoot.Status.LastMaintenance).NotTo(BeNil())
+			Expect(fetchedShoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
+			Expect(fetchedShoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
+			Expect(*fetchedShoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
 		})
 	})
 })
