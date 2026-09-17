@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
@@ -117,10 +118,15 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, namespacedClou
 }
 
 func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile, parentCloudProfile *gardencorev1beta1.CloudProfile) error {
-	patch := client.MergeFrom(namespacedCloudProfile.DeepCopy())
+	old := namespacedCloudProfile.DeepCopy()
+
 	MergeCloudProfiles(namespacedCloudProfile, parentCloudProfile)
 	namespacedCloudProfile.Status.ObservedGeneration = namespacedCloudProfile.Generation
-	return c.Status().Patch(ctx, namespacedCloudProfile, patch)
+
+	if equality.Semantic.DeepEqual(old.Status, namespacedCloudProfile.Status) {
+		return nil
+	}
+	return c.Status().Patch(ctx, namespacedCloudProfile, client.MergeFrom(old))
 }
 
 // MergeCloudProfiles merges the cloud profile spec from a base CloudProfile and a NamespacedCloudProfile
