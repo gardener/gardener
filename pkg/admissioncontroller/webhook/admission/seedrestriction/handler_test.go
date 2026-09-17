@@ -6,6 +6,7 @@ package seedrestriction_test
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -773,6 +774,14 @@ var _ = Describe("handler", func() {
 					return func() {
 						BeforeEach(func() {
 							request.Operation = operation
+
+							if operation == admissionv1.Update {
+								seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: request.Name}}
+								raw, err := stdjson.Marshal(seed)
+								Expect(err).NotTo(HaveOccurred())
+								request.OldObject = runtime.RawExtension{Raw: raw}
+								request.Object = runtime.RawExtension{Raw: raw}
+							}
 						})
 
 						It("should allow the request because seed name matches", func() {
@@ -983,6 +992,50 @@ var _ = Describe("handler", func() {
 				Context("when operation is create", generateTestsForOperation(admissionv1.Create))
 				Context("when operation is update", generateTestsForOperation(admissionv1.Update))
 				Context("when operation is delete", generateTestsForOperation(admissionv1.Delete))
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Resource = metav1.GroupVersionResource{
+							Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+							Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+							Resource: "seeds",
+						}
+						request.Name = seedName
+						request.UserInfo = gardenletUser
+					})
+
+					It("should allow when spec is unchanged", func() {
+						seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
+						oldRaw, err := stdjson.Marshal(seed)
+						Expect(err).NotTo(HaveOccurred())
+						newSeed := seed.DeepCopy()
+						newSeed.Labels = map[string]string{"foo": "bar"}
+						newRaw, err := stdjson.Marshal(newSeed)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldSeed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
+						newSeed := oldSeed.DeepCopy()
+						newSeed.Spec.Provider.Type = "changed-provider"
+
+						oldRaw, err := stdjson.Marshal(oldSeed)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newSeed)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Seed"))
+					})
+				})
 			})
 
 			Context("when requested for Secrets", func() {
