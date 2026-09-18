@@ -13,6 +13,7 @@ import (
 // RegisterFeatureGates registers the feature gates of gardener-controller-manager.
 func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
+		features.VersionClassificationLifecycle,
 		features.DisableNginxIngressInShoot,
 	)))
 }
