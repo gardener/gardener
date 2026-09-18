@@ -14,8 +14,10 @@ tests:
     values: '0+0x20'
   # KubeEtcd3MainDbSizeLimitApproaching
   # KubeEtcd3MainDbSizeLimitCrossed
-  - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main"}'
-    values: '7194070000+107374182x20' # 6.7GB 6.8GB 6.9GB .. 7.7GB
+  - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main", pod="etcd-main-0"}'
+    values: '7300000000+0x40 8300000000+0x22' # 0-20m: 6.8GB (ratio 0.85), from 20m: 7.73GB (ratio 0.97)
+  - series: 'etcd_server_quota_backend_bytes{job="kube-etcd3-main", pod="etcd-main-0"}'
+    values: '8589934592+0x62' # 8Gi, constant
   # KubeEtcdMainDeltaBackupFailed
   - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-main",kind="Incr", pod="etcd", role="test"}'
     values: '0+0x62'
@@ -56,30 +58,32 @@ tests:
       exp_annotations:
         description: Etcd3 cluster main has no leader. Possible network partition in the etcd cluster.
         summary: Etcd3 main has no leader.
-  - eval_time: 5m
+  - eval_time: 20m
     alertname: KubeEtcd3MainDbSizeLimitApproaching
     exp_alerts:
     - exp_labels:
         job: kube-etcd3-main
+        pod: etcd-main-0
         service: etcd
         severity: warning
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 main DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
-        summary: Etcd3 main DB size is approaching its current practical limit.
-  - eval_time: 10m
+        description: Etcd3 main DB size has reached 84.98% of its configured etcd quota (etcd_server_quota_backend_bytes). Etcd quota might need to be increased.
+        summary: Etcd3 main DB size is approaching its configured quota.
+  - eval_time: 26m
     alertname: KubeEtcd3MainDbSizeLimitCrossed
     exp_alerts:
     - exp_labels:
         job: kube-etcd3-main
+        pod: etcd-main-0
         service: etcd
         severity: critical
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 main DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
-        summary: Etcd3 main DB size has crossed its current practical limit.
+        description: Etcd3 main DB size has reached 96.62% of its configured etcd quota (etcd_server_quota_backend_bytes). Etcd quota must be increased to allow updates.
+        summary: Etcd3 main DB size has crossed its configured quota.
   - eval_time: 31m
     alertname: KubeEtcdMainDeltaBackupFailed
     exp_alerts:
