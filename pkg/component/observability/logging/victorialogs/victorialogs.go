@@ -69,7 +69,6 @@ type Values struct {
 	// PVCAutoscaler configures whether and how the VictoriaLogs PVC is autoscaled.
 	PVCAutoscaling PVCAutoscalingConfig
 	// SecretNameServerCA is the name of the CA secret used to sign the server TLS cert.
-	// When non-empty a TLS server cert is generated and TLS is enabled on the VL HTTP listener.
 	SecretNameServerCA string
 }
 
@@ -118,23 +117,27 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	var vlServerTLSSecretName string
-	if v.values.SecretNameServerCA != "" {
-		serverTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "victoria-logs-server-tls",
-			CommonName:                  fmt.Sprintf("%s.%s.svc", constants.ServiceName, v.namespace),
-			DNSNames:                    kubernetesutils.DNSNamesForService(constants.ServiceName, v.namespace),
-			CertType:                    secrets.ServerCert,
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v.values.SecretNameServerCA))
-		if err != nil {
-			return err
-		}
-		vlServerTLSSecretName = serverTLSSecret.Name
+	if v.values.SecretNameServerCA == "" {
+		return fmt.Errorf("secretNameServerCA must be set")
+	}
+
+	serverTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        "victoria-logs-server-tls",
+		CommonName:                  fmt.Sprintf("%s.%s.svc", constants.ServiceName, v.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(constants.ServiceName, v.namespace),
+		CertType:                    secrets.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA))
+	if err != nil {
+		return err
+	}
+
+	if serverTLSSecret == nil || serverTLSSecret.Name == "" {
+		return fmt.Errorf("failed to generate victoria-logs-server-tls secret")
 	}
 
 	resources := []client.Object{
-		v.vlSingle(vlServerTLSSecretName),
+		v.vlSingle(serverTLSSecret.Name),
 		v.getVPA(),
 		v.getServiceMonitor(),
 		v.getPrometheusRule(),
@@ -250,42 +253,40 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 		}
 	}
 
-	if vlServerTLSSecretName != "" {
-		vlSingle.Spec.ExtraArgs = map[string]string{
-			"httpListenAddr": fmt.Sprintf(":%d,:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
-			"tls":            "true,false",
-			"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
-			"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
-		}
-
-		// Override Spec.Ports so it also exposes both ports.
-		// The http port is left for extension compatibility reasons.
-		vlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
-			{
-				Name:       "https",
-				Port:       constants.VictoriaLogsPort,
-				TargetPort: intstr.FromInt32(constants.VictoriaLogsPort),
-				Protocol:   corev1.ProtocolTCP,
-			},
-			{
-				Name:       "http",
-				Port:       constants.VictoriaLogsHttpPort,
-				TargetPort: intstr.FromInt32(constants.VictoriaLogsHttpPort),
-				Protocol:   corev1.ProtocolTCP,
-			},
-		}
-		vlSingle.Spec.Volumes = []corev1.Volume{{
-			Name: vlServerTLSVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{SecretName: vlServerTLSSecretName},
-			},
-		}}
-		vlSingle.Spec.VolumeMounts = []corev1.VolumeMount{{
-			Name:      vlServerTLSVolumeName,
-			MountPath: vlServerTLSMountPath,
-			ReadOnly:  true,
-		}}
+	// Port order matters => do not reorder
+	vlSingle.Spec.ExtraArgs = map[string]string{
+		"httpListenAddr": fmt.Sprintf(":%d,:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
+		"tls":            "true,false",
+		"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
+		"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
 	}
+
+	// Exposing both ports. The http port is left for extension compatibility reasons.
+	vlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
+		{
+			Name:       "https",
+			Port:       constants.VictoriaLogsPort,
+			TargetPort: intstr.FromInt32(constants.VictoriaLogsPort),
+			Protocol:   corev1.ProtocolTCP,
+		},
+		{
+			Name:       "http",
+			Port:       constants.VictoriaLogsHttpPort,
+			TargetPort: intstr.FromInt32(constants.VictoriaLogsHttpPort),
+			Protocol:   corev1.ProtocolTCP,
+		},
+	}
+	vlSingle.Spec.Volumes = []corev1.Volume{{
+		Name: vlServerTLSVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{SecretName: vlServerTLSSecretName},
+		},
+	}}
+	vlSingle.Spec.VolumeMounts = []corev1.VolumeMount{{
+		Name:      vlServerTLSVolumeName,
+		MountPath: vlServerTLSMountPath,
+		ReadOnly:  true,
+	}}
 
 	return vlSingle
 }
@@ -376,31 +377,6 @@ func (v *victoriaLogs) getAutoscalerName() string {
 }
 
 func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
-	endpoint := monitoringv1.Endpoint{
-		Port: "http",
-		RelabelConfigs: []monitoringv1.RelabelConfig{
-			{
-				Action:      "replace",
-				Replacement: new("victoria-logs"),
-				TargetLabel: "job",
-			},
-			{
-				Action: "labelmap",
-				Regex:  `__meta_kubernetes_service_label_(.+)`,
-			},
-		},
-	}
-
-	if v.values.SecretNameServerCA != "" {
-		endpoint.Port = "https"
-		endpoint.Scheme = new(monitoringv1.SchemeHTTPS)
-		endpoint.HTTPConfigWithProxyAndTLSFiles = monitoringv1.HTTPConfigWithProxyAndTLSFiles{
-			HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-				TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
-			},
-		}
-	}
-
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
@@ -413,7 +389,26 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 					"operator.victoriametrics.com/additional-service": "managed",
 				},
 			},
-			Endpoints: []monitoringv1.Endpoint{endpoint},
+			Endpoints: []monitoringv1.Endpoint{{
+				Port: "https",
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						Action:      "replace",
+						Replacement: new("victoria-logs"),
+						TargetLabel: "job",
+					},
+					{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+				},
+				Scheme: new(monitoringv1.SchemeHTTPS),
+				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
+					},
+				},
+			}},
 		},
 	}
 }

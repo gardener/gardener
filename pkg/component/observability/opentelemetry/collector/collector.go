@@ -138,19 +138,19 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
 		ingressTLSSecret                 *corev1.Secret
-		caBundle                         *corev1.Secret
 		loggingAgentShootAccessSecret    = o.newLoggingAgentShootAccessSecret()
 		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyShootAccessSecret()
 		shootObjects                     = []client.Object{}
 		seedObjects                      = []client.Object{}
 	)
 
-	if o.values.SecretNameServerCA != "" {
-		var found bool
-		caBundle, found = o.secretsManager.Get(o.values.SecretNameServerCA)
-		if !found {
-			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
-		}
+	if o.values.SecretNameServerCA == "" {
+		return fmt.Errorf("secretNameServerCA must be set")
+	}
+
+	caBundle, found := o.secretsManager.Get(o.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("the CA trust bundle for %q was not found", o.values.SecretNameServerCA)
 	}
 
 	if o.values.ClusterType == component.ClusterTypeShoot {
@@ -522,7 +522,36 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					},
 				},
 				Exporters: otelv1beta1.AnyConfig{
-					Object: o.buildExporters(lokiEndpoint, caBundle),
+					Object: map[string]any{
+						"loki": map[string]any{
+							"endpoint": lokiEndpoint,
+							"default_labels_enabled": map[string]any{
+								"exporter": false,
+								"job":      false,
+							},
+							"sending_queue": map[string]any{
+								"queue_size": 16777216,
+								"sizer":      "bytes",
+								"batch": map[string]any{
+									"flush_timeout": "1s",
+									"max_size":      4194304,
+									"sizer":         "bytes",
+								},
+							},
+						},
+						"debug/logs": map[string]any{
+							"verbosity": "basic",
+						},
+						"otlphttp/victorialogs": map[string]any{
+							"logs_endpoint": fmt.Sprintf("https://%s:%d%s", victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort, victorialogsconstants.PushEndpoint),
+							"headers": map[string]any{
+								"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
+							},
+							"tls": map[string]any{
+								"ca_file": path.Join(caBundleMountPath, secrets.DataKeyCertificateBundle),
+							},
+						},
+					},
 				},
 				Service: otelv1beta1.Service{
 					Telemetry: &otelv1beta1.AnyConfig{
@@ -645,43 +674,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 	}
 
 	return obj
-}
-
-func (o *otelCollector) buildExporters(lokiEndpoint string, caBundle *corev1.Secret) map[string]any {
-	lokiExporter := map[string]any{
-		"endpoint": lokiEndpoint,
-		"default_labels_enabled": map[string]any{
-			"exporter": false,
-			"job":      false,
-		},
-		"sending_queue": map[string]any{
-			"queue_size": 16777216,
-			"sizer":      "bytes",
-			"batch": map[string]any{
-				"flush_timeout": "1s",
-				"max_size":      4194304,
-				"sizer":         "bytes",
-			},
-		},
-	}
-
-	vlExporter := map[string]any{
-		"logs_endpoint": fmt.Sprintf("%s://%s:%d%s", "http", victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort, victorialogsconstants.PushEndpoint),
-		"headers": map[string]any{
-			"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
-		},
-	}
-
-	if caBundle != nil {
-		vlExporter["logs_endpoint"] = fmt.Sprintf("%s://%s:%d%s", "https", victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort, victorialogsconstants.PushEndpoint)
-		vlExporter["tls"] = map[string]any{"ca_file": path.Join(caBundleMountPath, secrets.DataKeyCertificateBundle)}
-	}
-
-	return map[string]any{
-		"loki":                  lokiExporter,
-		"debug/logs":            map[string]any{"verbosity": "basic"},
-		"otlphttp/victorialogs": vlExporter,
-	}
 }
 
 func (o *otelCollector) injectRBACProxyContainers(obj *otelv1beta1.OpenTelemetryCollector, valiRBACProxyArgs []string, otlpRBACProxyArgs []string) {
