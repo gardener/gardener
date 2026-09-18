@@ -277,7 +277,7 @@ func (r *Reconciler) reconcile(
 	var gardenAccessSecret *gardenerutils.AccessSecret
 	if r.SelfHostedShootMeta != nil {
 		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
-			WithServiceAccountName(extensionServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name)).
+			WithServiceAccountName(gardenerutils.ExtensionShootServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name)).
 			WithServiceAccountNamespace(r.SelfHostedShootMeta.Namespace).
 			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
 	} else {
@@ -573,7 +573,7 @@ func (r *Reconciler) delete(
 	var gardenClusterServiceAccount *corev1.ServiceAccount
 	if r.SelfHostedShootMeta != nil {
 		gardenClusterServiceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-			Name:      extensionServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name),
+			Name:      gardenerutils.ExtensionShootServiceAccountName(r.SelfHostedShootMeta.Name, controllerInstallation.Name),
 			Namespace: r.SelfHostedShootMeta.Namespace,
 		}}
 	} else {
@@ -749,10 +749,4 @@ func (r *Reconciler) CalculateUsablePorts() ([]int, error) {
 		ports = append(ports, p)
 	}
 	return ports, nil
-}
-
-// extensionServiceAccountName returns the name of the garden ServiceAccount for an extension in a self-hosted shoot
-// cluster. The format is extension-shoot--<shoot-name>--<controller-installation-name>.
-func extensionServiceAccountName(shootName, controllerInstallationName string) string {
-	return v1beta1constants.ExtensionShootServiceAccountPrefix + shootName + "--" + controllerInstallationName
 }

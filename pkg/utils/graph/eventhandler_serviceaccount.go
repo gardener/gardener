@@ -16,6 +16,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Informer) error {
@@ -94,14 +95,8 @@ func (g *graph) handleServiceAccountCreateOrUpdate(serviceAccount *corev1.Servic
 }
 
 func (g *graph) handleServiceAccountCreateOrUpdateForShoots(serviceAccount *corev1.ServiceAccount) {
-	if !strings.HasPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix) {
-		return
-	}
-
-	// SA name: extension-shoot--<shootName>--<controllerInstallationName>.
-	withoutPrefix := strings.TrimPrefix(serviceAccount.Name, v1beta1constants.ExtensionShootServiceAccountPrefix)
-	shootName, _, found := strings.Cut(withoutPrefix, "--")
-	if !found || shootName == "" {
+	shootName, ok := gardenerutils.ParseExtensionShootServiceAccountName(serviceAccount.Name)
+	if !ok {
 		return
 	}
 

@@ -400,6 +400,37 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 				},
 				SideEffects: &sideEffectsNone,
 			},
+			admissionregistrationv1.ValidatingWebhook{
+				Name:                    "self-hosted-shoot-extension-serviceaccounts.gardener.cloud",
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				TimeoutSeconds:          new(int32(10)),
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{corev1.GroupName},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"serviceaccounts", "serviceaccounts/token"},
+					},
+				}},
+				FailurePolicy: &failurePolicyFail,
+				MatchPolicy:   &matchPolicyEquivalent,
+				MatchConditions: []admissionregistrationv1.MatchCondition{{
+					Name:       "self-hosted-shoot-extension-serviceaccount-prefix",
+					Expression: fmt.Sprintf("request.name.startsWith('%s')", v1beta1constants.ExtensionShootServiceAccountPrefix),
+				}},
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      v1beta1constants.GardenRole,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{v1beta1constants.GardenRoleProject},
+					}},
+				},
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					URL:      buildClientConfigURL("/webhooks/admission/shootserviceaccounts", a.namespace),
+					CABundle: caBundle,
+				},
+				SideEffects: &sideEffectsNone,
+			},
 		)
 	}
 
