@@ -1571,6 +1571,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				BeforeEach(func() {
 					// Self-hosted shoots are required to reside in the garden namespace.
 					shoot.Namespace = "garden"
+
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 				})
 
 				It("should allow 'ControlPlane' field for worker pool", func() {
@@ -9821,7 +9823,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				{Name: "worker2"},
 			}
 
-			Expect(ValidateWorkers(workers, nil)).To(BeEmpty())
+			Expect(ValidateWorkers(workers, false, nil)).To(BeEmpty())
 		})
 
 		It("should fail because worker name is duplicated", func() {
@@ -9831,12 +9833,61 @@ var _ = Describe("Shoot Validation Tests", func() {
 				{Name: "worker1"},
 			}
 
-			Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(ConsistOf(
+			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("workers[2].name"),
 				})),
 			))
+		})
+
+		It("should fail because more than one worker pool is marked for control plane components", func() {
+			workers := []core.Worker{
+				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", ControlPlane: &core.WorkerControlPlane{}},
+			}
+
+			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("workers[1].controlPlane"),
+				})),
+			))
+		})
+
+		It("should fail because a self-hosted shoot with unmanaged infra uses a non-AutoInPlaceUpdate strategy", func() {
+			autoRolling := core.AutoRollingUpdate
+			workers := []core.Worker{
+				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", UpdateStrategy: &autoRolling},
+			}
+
+			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("workers[1].updateStrategy"),
+				})),
+			))
+		})
+
+		It("should succeed for a self-hosted shoot with unmanaged infra and AutoInPlaceUpdate strategy", func() {
+			autoInPlace := core.AutoInPlaceUpdate
+			workers := []core.Worker{
+				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", UpdateStrategy: &autoInPlace},
+			}
+
+			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(BeEmpty())
+		})
+
+		It("should not restrict update strategy for a self-hosted shoot with managed infra", func() {
+			autoRolling := core.AutoRollingUpdate
+			workers := []core.Worker{
+				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", UpdateStrategy: &autoRolling},
+			}
+
+			Expect(ValidateWorkers(workers, true, field.NewPath("workers"))).To(BeEmpty())
 		})
 	})
 

@@ -4755,6 +4755,21 @@ func schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref common.ReferenceCallb
 							Ref:         ref(v1beta1.PendingWorkerUpdates{}.OpenAPIModelName()),
 						},
 					},
+					"workerPoolToHashMap": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkerPoolToHashMap stores the last-applied in-place update hash per worker pool. Used for shoots with unmanaged infrastructure (no Worker extension resource).",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

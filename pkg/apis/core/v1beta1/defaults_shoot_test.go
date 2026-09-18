@@ -1261,5 +1261,48 @@ var _ = Describe("Shoot defaulting", func() {
 				Expect(obj.Spec.Provider.Workers[0].ControlPlane.Exposure.Extension.Type).To(PointTo(Equal("stackit")))
 			})
 		})
+
+		Describe("UpdateStrategy defaulting for unmanaged infrastructure", func() {
+			BeforeEach(func() {
+				obj.Spec.Provider.Workers = []Worker{
+					{
+						Name:         "worker-cp",
+						ControlPlane: &WorkerControlPlane{},
+					},
+					{
+						Name: "worker-regular",
+					},
+				}
+			})
+
+			It("should default all workers to AutoInPlaceUpdate when shoot is self-hosted with unmanaged infra", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				for _, worker := range obj.Spec.Provider.Workers {
+					Expect(worker.UpdateStrategy).To(PointTo(Equal(AutoInPlaceUpdate)))
+				}
+			})
+
+			It("should not override an explicitly set UpdateStrategy", func() {
+				manual := ManualInPlaceUpdate
+				obj.Spec.Provider.Workers[1].UpdateStrategy = &manual
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Provider.Workers[0].UpdateStrategy).To(PointTo(Equal(AutoInPlaceUpdate)))
+				Expect(obj.Spec.Provider.Workers[1].UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
+			})
+
+			It("should default to AutoRollingUpdate when infra is managed", func() {
+				credName := "my-credentials"
+				obj.Spec.CredentialsBindingName = &credName
+
+				SetObjectDefaults_Shoot(obj)
+
+				for _, worker := range obj.Spec.Provider.Workers {
+					Expect(worker.UpdateStrategy).To(PointTo(Equal(AutoRollingUpdate)))
+				}
+			})
+		})
 	})
 })

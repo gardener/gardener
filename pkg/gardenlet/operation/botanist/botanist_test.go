@@ -81,48 +81,13 @@ var _ = Describe("Botanist", func() {
 		})
 	})
 
-	Describe("#SetInPlaceUpdatePendingWorkers", func() {
+	Describe("#SetInPlaceUpdateStatus", func() {
 		var (
 			worker *extensionsv1alpha1.Worker
 			shoot  *gardencorev1beta1.Shoot
 		)
 
-		BeforeEach(func(ctx context.Context) {
-			worker = &extensionsv1alpha1.Worker{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "worker",
-					Namespace: seedNamespace.Name,
-				},
-				Spec: extensionsv1alpha1.WorkerSpec{
-					Pools: []extensionsv1alpha1.WorkerPool{
-						{
-							Name:           "pool-0",
-							UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
-						},
-						{
-							Name:           "pool-1",
-							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-						},
-						{
-							Name:           "pool-2",
-							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-						},
-						{
-							Name:           "pool-3",
-							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-						},
-					},
-				},
-				Status: extensionsv1alpha1.WorkerStatus{
-					InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
-						WorkerPoolToHashMap: map[string]string{
-							"pool-1": "hash-1",
-							"pool-2": "hash-2",
-						},
-					},
-				},
-			}
-
+		BeforeEach(func() {
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot",
@@ -167,170 +132,289 @@ var _ = Describe("Botanist", func() {
 					},
 				},
 			}
-
-			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
-			botanist.Shoot.SetInfo(shoot)
 		})
 
-		It("should set the in-place update pending workers when worker is nil", func(ctx context.Context) {
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, nil)).To(Succeed())
+		Context("managed infra", func() {
+			BeforeEach(func(ctx context.Context) {
+				worker = &extensionsv1alpha1.Worker{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "worker",
+						Namespace: seedNamespace.Name,
+					},
+					Spec: extensionsv1alpha1.WorkerSpec{
+						Pools: []extensionsv1alpha1.WorkerPool{
+							{
+								Name:           "pool-0",
+								UpdateStrategy: new(gardencorev1beta1.AutoRollingUpdate),
+							},
+							{
+								Name:           "pool-1",
+								UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+							},
+							{
+								Name:           "pool-2",
+								UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+							},
+							{
+								Name:           "pool-3",
+								UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+							},
+						},
+					},
+					Status: extensionsv1alpha1.WorkerStatus{
+						InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
+							WorkerPoolToHashMap: map[string]string{
+								"pool-1": "hash-1",
+								"pool-2": "hash-2",
+							},
+						},
+					},
+				}
 
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
-		})
+				shoot.Spec.CredentialsBindingName = new("my-secret")
 
-		It("should set the in-place update pending workers when worker does not contain this worker pool", func(ctx context.Context) {
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
-				Name:           "pool-4",
-				UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+				Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
+				botanist.Shoot.SetInfo(shoot)
 			})
-			botanist.Shoot.SetInfo(shoot)
 
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, worker)).To(Succeed())
+			It("should set the in-place update pending workers when worker is nil", func(ctx context.Context) {
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
 
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2", "pool-4"))
-		})
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			})
 
-		It("should set the in-place update pending workers when worker is not nil but worker status map does not contain this worker pool", func(ctx context.Context) {
-			worker.Status.InPlaceUpdates.WorkerPoolToHashMap = map[string]string{
-				"pool-1": "hash-1",
-			}
-
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, worker)).To(Succeed())
-
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
-		})
-
-		It("should set the in-place update pending workers when worker is not nil and hash is different", func(ctx context.Context) {
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, worker)).To(Succeed())
-
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
-		})
-
-		It("should not set the in-place update pending workers when worker is not nil and hash is same", func(ctx context.Context) {
-			worker.Status.InPlaceUpdates.WorkerPoolToHashMap["pool-1"] = "c6cc5f56a36222bf"
-			worker.Status.InPlaceUpdates.WorkerPoolToHashMap["pool-2"] = "8899f1cd0de77a6c"
-
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, worker)).To(Succeed())
-
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).To(BeNil())
-		})
-
-		It("should not change the order of the workers when SetInPlaceUpdatePendingWorkers is called multiple times", func(ctx context.Context) {
-			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers,
-				gardencorev1beta1.Worker{
-					Name:           "pool-3",
-					UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-				},
-				gardencorev1beta1.Worker{
+			It("should set the in-place update pending workers when worker does not contain this worker pool", func(ctx context.Context) {
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
 					Name:           "pool-4",
-					UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-				},
-				gardencorev1beta1.Worker{
-					Name:           "pool-5",
 					UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-				},
-				gardencorev1beta1.Worker{
-					Name:           "pool-6",
-					UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-				},
-			)
-			botanist.Shoot.SetInfo(shoot)
+				})
+				botanist.Shoot.SetInfo(shoot)
 
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, nil)).To(Succeed())
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, worker)).To(Succeed())
 
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4"}))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6"}))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2", "pool-4"))
+			})
 
-			Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
-					{
-						Name:           "pool-1",
-						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-					},
-					{
-						Name:           "pool-2",
-						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-					},
-					{
-						Name:           "pool-4",
-						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-					},
-					{
+			It("should set the in-place update pending workers when worker is not nil but worker status map does not contain this worker pool", func(ctx context.Context) {
+				worker.Status.InPlaceUpdates.WorkerPoolToHashMap = map[string]string{
+					"pool-1": "hash-1",
+				}
+
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, worker)).To(Succeed())
+
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			})
+
+			It("should set the in-place update pending workers when worker is not nil and hash is different", func(ctx context.Context) {
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, worker)).To(Succeed())
+
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			})
+
+			It("should not set the in-place update pending workers when worker is not nil and hash is same", func(ctx context.Context) {
+				worker.Status.InPlaceUpdates.WorkerPoolToHashMap["pool-1"] = "c6cc5f56a36222bf"
+				worker.Status.InPlaceUpdates.WorkerPoolToHashMap["pool-2"] = "8899f1cd0de77a6c"
+
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, worker)).To(Succeed())
+
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).To(BeNil())
+			})
+
+			It("should not change the order of the workers when SetInPlaceUpdateStatus is called multiple times", func(ctx context.Context) {
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers,
+					gardencorev1beta1.Worker{
 						Name:           "pool-3",
 						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
-					{
-						Name:           "pool-6",
-						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-					},
-					{
-						Name:           "pool-5",
-						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-					},
-				}
-				return nil
-			})).To(Succeed())
-
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, nil)).To(Succeed())
-
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4"}))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6"}))
-
-			Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
-					{
-						Name:           "pool-1",
-						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-					},
-					{
-						Name:           "pool-2",
-						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-					},
-					{
+					gardencorev1beta1.Worker{
 						Name:           "pool-4",
 						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					},
-					{
-						Name:           "pool-3",
-						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-					},
-					{
-						Name:           "pool-6",
-						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
-					},
-					{
+					gardencorev1beta1.Worker{
 						Name:           "pool-5",
 						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
-					{
-						Name:           "pool-7",
-						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-					},
-					{
-						Name:           "pool-8",
+					gardencorev1beta1.Worker{
+						Name:           "pool-6",
 						UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 					},
+				)
+				botanist.Shoot.SetInfo(shoot)
+
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4"}))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6"}))
+
+				Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:           "pool-1",
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
+						{
+							Name:           "pool-2",
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+						{
+							Name:           "pool-4",
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
+						{
+							Name:           "pool-3",
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
+						{
+							Name:           "pool-6",
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+						{
+							Name:           "pool-5",
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+					}
+					return nil
+				})).To(Succeed())
+
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4"}))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6"}))
+
+				Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:           "pool-1",
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
+						{
+							Name:           "pool-2",
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+						{
+							Name:           "pool-4",
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
+						{
+							Name:           "pool-3",
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
+						{
+							Name:           "pool-6",
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+						{
+							Name:           "pool-5",
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+						{
+							Name:           "pool-7",
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
+						{
+							Name:           "pool-8",
+							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+					}
+					return nil
+				})).To(Succeed())
+
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4", "pool-7"}))
+				Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6", "pool-8"}))
+			})
+
+		})
+
+		Context("unmanaged infra", func() {
+			BeforeEach(func(ctx context.Context) {
+				Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
+				botanist.Shoot.SetInfo(shoot)
+			})
+
+			It("should store initial hashes and not set pending workers on first reconciliation", func(ctx context.Context) {
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				status := botanist.Shoot.GetInfo().Status.InPlaceUpdates
+				Expect(status).NotTo(BeNil())
+				Expect(status.WorkerPoolToHashMap).To(HaveKey("pool-1"))
+				Expect(status.WorkerPoolToHashMap["pool-1"]).NotTo(BeEmpty())
+				Expect(status.WorkerPoolToHashMap).To(HaveKey("pool-2"))
+				Expect(status.WorkerPoolToHashMap["pool-2"]).NotTo(BeEmpty())
+				Expect(status.PendingWorkerUpdates.AutoInPlaceUpdate).To(BeEmpty())
+				Expect(status.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeEmpty())
+			})
+
+			It("should set pending workers when the stored hash differs from the computed hash", func(ctx context.Context) {
+				shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{
+					WorkerPoolToHashMap: map[string]string{
+						"pool-1": "stale-hash-1",
+						"pool-2": "stale-hash-2",
+					},
 				}
-				return nil
-			})).To(Succeed())
+				Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+				botanist.Shoot.SetInfo(shoot)
 
-			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, nil)).To(Succeed())
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
 
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4", "pool-7"}))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6", "pool-8"}))
+				status := botanist.Shoot.GetInfo().Status.InPlaceUpdates
+				Expect(status).NotTo(BeNil())
+				Expect(status.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+				Expect(status.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			})
+
+			It("should only set pending workers for the pool with a stale hash", func(ctx context.Context) {
+				// stores initial hashes for all pools.
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				correctHashForPool1 := botanist.Shoot.GetInfo().Status.InPlaceUpdates.WorkerPoolToHashMap["pool-1"]
+				Expect(correctHashForPool1).NotTo(BeEmpty())
+
+				// pool-1 keeps its correct hash; pool-2 gets a stale one.
+				updatedShoot := botanist.Shoot.GetInfo().DeepCopy()
+				updatedShoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{
+					WorkerPoolToHashMap: map[string]string{
+						"pool-1": correctHashForPool1,
+						"pool-2": "stale-hash-2",
+					},
+				}
+				Expect(gardenClient.Status().Update(ctx, updatedShoot)).To(Succeed())
+				botanist.Shoot.SetInfo(updatedShoot)
+
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				status := botanist.Shoot.GetInfo().Status.InPlaceUpdates
+				Expect(status).NotTo(BeNil())
+				Expect(status.PendingWorkerUpdates.AutoInPlaceUpdate).To(BeEmpty())
+				Expect(status.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			})
+
+			It("should not set pending workers when the stored hash matches the computed hash", func(ctx context.Context) {
+				// stores initial hashes.
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				// hashes match, no pending workers should be added.
+				Expect(botanist.SetInPlaceUpdateStatus(ctx, nil)).To(Succeed())
+
+				status := botanist.Shoot.GetInfo().Status.InPlaceUpdates
+				Expect(status).NotTo(BeNil())
+				Expect(status.PendingWorkerUpdates.AutoInPlaceUpdate).To(BeEmpty())
+				Expect(status.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeEmpty())
+			})
 		})
 	})
 })

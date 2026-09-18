@@ -30,6 +30,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/selfhostedshootexposure"
 	"github.com/gardener/gardener/pkg/logger"
@@ -38,6 +39,7 @@ import (
 )
 
 func TestSelfHostedShootExposure(t *testing.T) {
+	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test Integration Gardenlet Shoot SelfHostedShootExposure Suite")
 }
