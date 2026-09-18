@@ -66,6 +66,18 @@ func InjectNetworkPolicyNamespaceSelectors(service *corev1.Service, selectors ..
 	return nil
 }
 
+// InjectNetworkPolicyPodSelector injects the provided pod selector into the Service for use by generated
+// NetworkPolicy resources instead of the Service's own pod selector.
+func InjectNetworkPolicyPodSelector(service *corev1.Service, selector metav1.LabelSelector) error {
+	rawSelector, err := json.Marshal(selector)
+	if err != nil {
+		return err
+	}
+
+	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingNetworkPolicyPodSelector, string(rawSelector))
+	return nil
+}
+
 // NetworkPolicyLabel returns the network policy label for a component initiating the connection to a service with the
 // given name and TCP port.
 func NetworkPolicyLabel(serviceName string, port int32) string {
