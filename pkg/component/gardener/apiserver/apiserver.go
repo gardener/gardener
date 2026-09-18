@@ -99,6 +99,10 @@ type AutoscalingConfig struct {
 	APIServerResources corev1.ResourceRequirements
 	// Replicas is the number of pod replicas for the API server.
 	Replicas *int32
+	// MinReplicas are the minimum Replicas for horizontal autoscaling.
+	MinReplicas int32
+	// MaxReplicas are the maximum Replicas for horizontal autoscaling.
+	MaxReplicas int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-apiserver.
@@ -189,6 +193,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		g.podDisruptionBudget(),
 		g.serviceRuntime(),
 		g.verticalPodAutoscaler(),
+		g.horizontalPodAutoscaler(),
 		g.deployment(secretCAETCD, secretETCDClient, secretGenericTokenKubeconfig, secretServer, secretAdmissionKubeconfigs, secretETCDEncryptionConfiguration, secretAuditWebhookKubeconfig, secretWorkloadIdentityKey, secretVirtualGardenAccess, configMapAuditPolicy, configMapAdmissionConfigs),
 		g.serviceMonitor(),
 	)

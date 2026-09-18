@@ -72,7 +72,7 @@ func (g *gardenerAPIServer) deployment(
 		Spec: appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
 			RevisionHistoryLimit: new(int32(2)),
-			Replicas:             g.values.Autoscaling.Replicas,
+			Replicas:             new(g.values.Autoscaling.MinReplicas),
 			Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,

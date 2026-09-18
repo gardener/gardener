@@ -61,6 +61,16 @@ type Values struct {
 	AuthorizerRestrictionsEnabled bool
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended for the gardener-admission-controller.
 	TopologyAwareRoutingEnabled bool
+	//
+	Autoscaling AutoscalingConfig
+}
+
+// AutoscalingConfig contains information for configuring autoscaling settings for the admission controller.
+type AutoscalingConfig struct {
+	// MinReplicas are the minimum Replicas for horizontal autoscaling.
+	MinReplicas int32
+	// MaxReplicas are the maximum Replicas for horizontal autoscaling.
+	MaxReplicas int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-admission-controller.
@@ -111,6 +121,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 		a.podDisruptionBudget(),
 		a.service(),
 		a.vpa(),
+		a.hpa(),
 		admissionConfigConfigMap,
 		a.serviceMonitor(),
 	)
