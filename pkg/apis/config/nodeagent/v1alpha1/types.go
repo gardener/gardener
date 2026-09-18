@@ -66,7 +66,7 @@ var OSVersionRegex = regexp.MustCompile(`\b\d+(?:\.\d+)*\b`)
 
 // NodeAgentConfiguration defines the configuration for the gardener-node-agent.
 type NodeAgentConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// ClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to use
 	// when communicating with the kube-apiserver of the shoot cluster.

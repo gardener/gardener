@@ -15,7 +15,7 @@ import (
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.
 type ShootState struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -29,7 +29,7 @@ type ShootState struct {
 
 // ShootStateList is a list of ShootState objects.
 type ShootStateList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -87,7 +87,7 @@ type ExtensionResourceState struct {
 
 // ResourceData holds the data of a resource referred to by an extension controller state.
 type ResourceData struct {
-	autoscalingv1.CrossVersionObjectReference `json:",inline" protobuf:"bytes,1,opt,name=ref"`
+	autoscalingv1.CrossVersionObjectReference `json:",embed" protobuf:"bytes,1,opt,name=ref"`
 
 	// Data of the resource
 	Data runtime.RawExtension `json:"data" protobuf:"bytes,2,opt,name=data"`

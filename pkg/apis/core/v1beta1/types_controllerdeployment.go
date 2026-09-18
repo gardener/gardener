@@ -17,7 +17,7 @@ import (
 
 // ControllerDeployment contains information about how this controller is deployed.
 type ControllerDeployment struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -35,7 +35,7 @@ type ControllerDeployment struct {
 
 // ControllerDeploymentList is a collection of ControllerDeployments.
 type ControllerDeploymentList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

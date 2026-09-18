@@ -26,7 +26,7 @@ const DNSRecordResource = "DNSRecord"
 
 // DNSRecord is a specification for a DNSRecord resource.
 type DNSRecord struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta   `json:",embed"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Specification of the DNSRecord.
@@ -50,7 +50,7 @@ func (i *DNSRecord) GetExtensionStatus() Status {
 
 // DNSRecordList is a list of DNSRecord resources.
 type DNSRecordList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -61,7 +61,7 @@ type DNSRecordList struct {
 // DNSRecordSpec is the spec of a DNSRecord resource.
 type DNSRecordSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`
@@ -87,7 +87,7 @@ type DNSRecordSpec struct {
 // DNSRecordStatus is the status of a DNSRecord resource.
 type DNSRecordStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 
 	// Zone is the DNS hosted zone of this DNS record.
 	// +optional

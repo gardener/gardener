@@ -15,7 +15,7 @@ import (
 
 // AdmissionControllerConfiguration defines the configuration for the Gardener admission controller.
 type AdmissionControllerConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
 	// when communicating with the garden apiserver.
@@ -98,7 +98,7 @@ type Server struct {
 // HTTPSServer is the configuration for the HTTPSServer server.
 type HTTPSServer struct {
 	// Server is the configuration for the bind address and the port.
-	Server `json:",inline"`
+	Server `json:",embed"`
 
 	// TLSServer contains information about the TLS configuration for a HTTPS server.
 	TLS TLSServer `json:"tls"`

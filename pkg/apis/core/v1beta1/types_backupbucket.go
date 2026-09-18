@@ -16,7 +16,7 @@ import (
 
 // BackupBucket holds details about backup bucket
 type BackupBucket struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -30,7 +30,7 @@ type BackupBucket struct {
 
 // BackupBucketList is a list of BackupBucket objects.
 type BackupBucketList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

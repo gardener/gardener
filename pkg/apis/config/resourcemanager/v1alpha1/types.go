@@ -14,7 +14,7 @@ import (
 
 // ResourceManagerConfiguration defines the configuration for the gardener-resource-manager.
 type ResourceManagerConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// SourceClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the source apiserver.
@@ -43,7 +43,7 @@ type ResourceManagerConfiguration struct {
 
 // ClientConnection specifies the client connection settings to use when communicating with an API server.
 type ClientConnection struct {
-	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",inline"`
+	componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:",embed"`
 
 	// Namespaces in which the ManagedResources should be observed (defaults to "all namespaces").
 	// +optional
@@ -76,7 +76,7 @@ type Server struct {
 // HTTPSServer is the configuration for the HTTPSServer server.
 type HTTPSServer struct {
 	// Server is the configuration for the bind address and the port.
-	Server `json:",inline"`
+	Server `json:",embed"`
 
 	// TLSServer contains information about the TLS configuration for an HTTPS server.
 	TLS TLSServer `json:"tls"`

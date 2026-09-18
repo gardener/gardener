@@ -9,6 +9,14 @@
 # as needed. If the required tool (version) is not built/installed yet, make will make sure to build/install it.
 # The *_VERSION variables in this file contain the "default" values, but can be overwritten in the top level make file.
 
+# $(GOTOOLCHAIN) is exported in the top-level Makefile, but exported make variables are not propagated into the
+# environment of $(shell ...) sub-shells. Hence, we have to pass it explicitly to go invocations in the functions below.
+# SET_GOTOOLCHAIN is empty when GOTOOLCHAIN is unset (avoiding an empty `GOTOOLCHAIN=` assignment that would force go to
+# use the local toolchain), and expands to `GOTOOLCHAIN=<version>` otherwise.
+ifneq ($(GOTOOLCHAIN),)
+SET_GOTOOLCHAIN            := GOTOOLCHAIN=$(GOTOOLCHAIN)
+endif
+
 # dependency on github.com/gardener/gardener is optional.
 # If other repos don't use it and the project doesn't depend on the package, silence the error to minimize confusion.
 IS_GARDENER := $(shell go list -f '{{.Main}}' -m github.com/gardener/gardener 2>/dev/null)
@@ -96,10 +104,10 @@ GO_ADD_LICENSE_VERSION     ?= $(call version_gomod,github.com/google/addlicense)
 CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtime)
 K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
-# Hash of analyzer sources + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
-LOGCHECK_VERSION           ?= $(shell { [ -n "$(GARDENER_LOGCHECK_DIR)" ] && find $(GARDENER_LOGCHECK_DIR) -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
-# Hash of wrapper sources + pinned kube-api-linter version + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
-KUBE_API_LINTER_VERSION    ?= $(shell { [ -n "$(GARDENER_TOOL_DIR)" ] && find $(GARDENER_TOOL_DIR)/kube-api-linter -type f -name '*.go' | LC_ALL=C sort | xargs shasum -a 256; echo $(call version_gomod,sigs.k8s.io/kube-api-linter); echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+# Hash of analyzer sources + golangci-lint version + main go.mod toolchain + GOTOOLCHAIN + effective Go version. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
+LOGCHECK_VERSION           ?= $(shell { [ -n "$(GARDENER_LOGCHECK_DIR)" ] && find $(GARDENER_LOGCHECK_DIR) -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); echo $(GOTOOLCHAIN); go env GOVERSION; grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+# Hash of wrapper sources + pinned kube-api-linter version + golangci-lint version + main go.mod toolchain + GOTOOLCHAIN + effective Go version. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
+KUBE_API_LINTER_VERSION    ?= $(shell { [ -n "$(GARDENER_TOOL_DIR)" ] && find $(GARDENER_TOOL_DIR)/kube-api-linter -type f -name '*.go' | LC_ALL=C sort | xargs shasum -a 256; echo $(call version_gomod,sigs.k8s.io/kube-api-linter); echo $(GOLANGCI_LINT_VERSION); echo $(GOTOOLCHAIN); go env GOVERSION; grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
@@ -119,16 +127,16 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
 # Use this "function" to add the version file as a prerequisite for the tool target: e.g.
 #   $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
-tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)
+tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)_$(GOTOOLCHAIN)
 
 # Use this function to get the version of a go module from go.mod
-version_gomod = $(shell $(SET_GOWORK) go list $(MODFILE_TOOL_MOD) -f '{{ .Version }}' -m $(1))
+version_gomod = $(shell $(SET_GOTOOLCHAIN) $(SET_GOWORK) go list $(MODFILE_TOOL_MOD) -f '{{ .Version }}' -m $(1))
 
 # Use this function to copy the tool binary built by Go to the location passed as arg.
 #   E.g., `$(call go_tool_copy,./path/to/tool)` will copy the tool binary built by Go to ./path/to/tool.
 # Set GOCACHEPROG to empty, this is required as `go tool -n` returns a wrong path when GOCACHEPROG is set.
 # https://github.com/golang/go/issues/72824
-go_tool_copy = $(shell cp $$( GOCACHEPROG= $(SET_GOWORK) go tool $(MODFILE_TOOL_MOD) -n $$(basename $(1))) $(1))
+go_tool_copy = $(shell cp $$( $(SET_GOTOOLCHAIN) GOCACHEPROG= $(SET_GOWORK) go tool $(MODFILE_TOOL_MOD) -n $$(basename $(1))) $(1))
 
 # This target cleans up any previous version files for the given tool and creates the given version file.
 # This way, we can generically determine, which version was installed without calling each and every binary explicitly.

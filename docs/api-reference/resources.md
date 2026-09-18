@@ -287,86 +287,13 @@ ObjectReference is a reference to another object.
 
 <tr>
 <td>
-<code>kind</code></br>
+<code>ObjectReference</code></br>
 <em>
-string
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectreference-v1-core">ObjectReference</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Kind of the referent.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>namespace</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Namespace of the referent.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>name</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Name of the referent.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>uid</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#uid-types-pkg">UID</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>UID of the referent.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>apiVersion</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>API version of the referent.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resourceVersion</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Specific resourceVersion to which this reference is made, if any.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>fieldPath</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>If referring to a piece of an object instead of an entire object, this string<br />should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].<br />For example, if the object reference is to a container within a pod, this would take on a value like:<br />"spec.containers\{name\}" (where "name" refers to the name of the container that triggered<br />the event) or if no container name is specified "spec.containers[2]" (container with<br />index 2 in this pod). This syntax is chosen only to have some well-defined way of<br />referencing a part of an object.</p>
+<p></p>
 </td>
 </tr>
 <tr>

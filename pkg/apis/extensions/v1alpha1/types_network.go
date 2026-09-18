@@ -25,7 +25,7 @@ const NetworkResource = "Network"
 
 // Network is the specification for cluster networking.
 type Network struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -50,7 +50,7 @@ func (n *Network) GetExtensionStatus() Status {
 
 // NetworkList is a list of Network resources.
 type NetworkList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -61,7 +61,7 @@ type NetworkList struct {
 // NetworkSpec is the spec for an Network resource.
 type NetworkSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 
 	// PodCIDR defines the CIDR that will be used for pods. This field is immutable.
 	PodCIDR string `json:"podCIDR"`
@@ -76,7 +76,7 @@ type NetworkSpec struct {
 // NetworkStatus is the status for an Network resource.
 type NetworkStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 
 	// IPFamilies specifies the IP protocol versions that actually are used for shoot networking.
 	// During dual-stack migration, this field may differ from the spec.

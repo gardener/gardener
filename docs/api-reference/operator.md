@@ -1484,13 +1484,14 @@ ExtensionDeploymentSpec specifies how to install the extension in a gardener lan
 
 <tr>
 <td>
-<code>helm</code></br>
+<code>DeploymentSpec</code></br>
 <em>
-<a href="#extensionhelm">ExtensionHelm</a>
+<a href="#deploymentspec">DeploymentSpec</a>
 </em>
 </td>
 <td>
-<p>Helm contains the specification for a Helm deployment.</p>
+<em>(Optional)</em>
+<p>DeploymentSpec is the deployment configuration for the extension.</p>
 </td>
 </tr>
 <tr>
@@ -1563,7 +1564,7 @@ boolean
 
 
 <p>
-(<em>Appears on:</em><a href="#deploymentspec">DeploymentSpec</a>, <a href="#extensiondeploymentspec">ExtensionDeploymentSpec</a>)
+(<em>Appears on:</em><a href="#deploymentspec">DeploymentSpec</a>)
 </p>
 
 <p>
@@ -2147,14 +2148,13 @@ GardenerAPIServerConfig contains configuration settings for the gardener-apiserv
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -2343,14 +2343,13 @@ GardenerControllerManagerConfig contains configuration settings for the gardener
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -2651,14 +2650,13 @@ GardenerSchedulerConfig contains configuration settings for the gardener-schedul
 
 <tr>
 <td>
-<code>featureGates</code></br>
+<code>KubernetesConfig</code></br>
 <em>
-object (keys:string, values:boolean)
+<a href="#kubernetesconfig">KubernetesConfig</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>FeatureGates contains information about enabled feature gates.</p>
+<p></p>
 </td>
 </tr>
 <tr>
@@ -2822,6 +2820,18 @@ KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 
 <tr>
 <td>
+<code>KubeAPIServerConfig</code></br>
+<em>
+<a href="#kubeapiserverconfig">KubeAPIServerConfig</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>auditWebhook</code></br>
 <em>
 <a href="#auditwebhook">AuditWebhook</a>
@@ -2894,6 +2904,18 @@ KubeControllerManagerConfig contains configuration settings for the kube-control
 </thead>
 <tbody>
 
+<tr>
+<td>
+<code>KubeControllerManagerConfig</code></br>
+<em>
+<a href="#kubecontrollermanagerconfig">KubeControllerManagerConfig</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeControllerManagerConfig contains all configuration values not specific to the virtual garden cluster.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>certificateSigningDuration</code></br>

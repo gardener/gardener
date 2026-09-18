@@ -26,7 +26,7 @@ const BastionResource = "Bastion"
 // Bastion is a bastion or jump host that is dynamically created
 // to provide SSH access to shoot nodes.
 type Bastion struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -51,7 +51,7 @@ func (b *Bastion) GetExtensionStatus() Status {
 // BastionSpec contains the specification for an SSH bastion host.
 type BastionSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
-	DefaultSpec `json:",inline"`
+	DefaultSpec `json:",embed"`
 
 	// UserData is the base64-encoded user data for the bastion instance. This should
 	// contain code to provision the SSH key on the bastion instance.
@@ -70,7 +70,7 @@ type BastionIngressPolicy struct {
 // BastionStatus holds the most recently observed status of the Bastion.
 type BastionStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
-	DefaultStatus `json:",inline"`
+	DefaultStatus `json:",embed"`
 
 	// Ingress is the external IP and/or hostname of the bastion host.
 	// +optional
@@ -81,7 +81,7 @@ type BastionStatus struct {
 
 // BastionList is a collection of Bastions.
 type BastionList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`

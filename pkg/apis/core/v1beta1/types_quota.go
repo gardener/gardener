@@ -14,7 +14,7 @@ import (
 
 // Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.
 type Quota struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -28,7 +28,7 @@ type Quota struct {
 
 // QuotaList is a collection of Quotas.
 type QuotaList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

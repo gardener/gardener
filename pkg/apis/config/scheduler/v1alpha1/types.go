@@ -32,7 +32,7 @@ type CandidateDeterminationStrategy string
 
 // SchedulerConfiguration defines the configuration for the Gardener scheduler.
 type SchedulerConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.

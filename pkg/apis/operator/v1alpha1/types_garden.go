@@ -30,7 +30,7 @@ import (
 
 // Garden describes a list of gardens.
 type Garden struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -44,7 +44,7 @@ type Garden struct {
 
 // GardenList is a list of Garden resources.
 type GardenList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -382,7 +382,7 @@ type Kubernetes struct {
 type KubeAPIServerConfig struct {
 	// KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.
 	// +optional
-	*gardencorev1beta1.KubeAPIServerConfig `json:",inline"`
+	*gardencorev1beta1.KubeAPIServerConfig `json:",embed"`
 
 	// AuditWebhook contains settings related to an audit webhook configuration.
 	// +optional
@@ -477,7 +477,7 @@ type Networking struct {
 type KubeControllerManagerConfig struct {
 	// KubeControllerManagerConfig contains all configuration values not specific to the virtual garden cluster.
 	// +optional
-	*gardencorev1beta1.KubeControllerManagerConfig `json:",inline"`
+	*gardencorev1beta1.KubeControllerManagerConfig `json:",embed"`
 
 	// CertificateSigningDuration is the maximum length of duration signed certificates will be given. Individual CSRs
 	// may request shorter certs by setting `spec.expirationSeconds`.
@@ -523,7 +523,7 @@ type Gardener struct {
 
 // GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
 type GardenerAPIServerConfig struct {
-	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	gardencorev1beta1.KubernetesConfig `json:",embed"`
 
 	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),
 	// and, if desired, the corresponding configuration.
@@ -617,7 +617,7 @@ type ResourceLimit struct {
 
 // GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.
 type GardenerControllerManagerConfig struct {
-	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	gardencorev1beta1.KubernetesConfig `json:",embed"`
 
 	// DefaultProjectQuotas is the default configuration matching projects are set up with if a quota is not already
 	// specified.
@@ -650,7 +650,7 @@ type GardenerResourceManagerConfig struct {
 
 // GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.
 type GardenerSchedulerConfig struct {
-	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	gardencorev1beta1.KubernetesConfig `json:",embed"`
 
 	// Strategy is the candidate determination strategy that defines how seeds for shoots that do not
 	// specify a seed explicitly are determined. Must be one of "SameRegion" or "MinimalDistance".

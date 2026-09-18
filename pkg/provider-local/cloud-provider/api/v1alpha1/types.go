@@ -13,7 +13,7 @@ import (
 // CloudProviderConfig contains the configuration API for cloud-controller-manager-local (used by the
 // pkg/provider-local/cloud-provider package).
 type CloudProviderConfig struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// RuntimeCluster configures how cloud-controller-manager-local connects to the infrastructure cluster of the shoot
 	// cluster, i.e., the kind cluster where the shoot machine pods run.

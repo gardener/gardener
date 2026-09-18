@@ -37,7 +37,7 @@ type units struct {
 }
 
 type changedUnit struct {
-	extensionsv1alpha1.Unit `json:",inline"`
+	extensionsv1alpha1.Unit `json:",embed"`
 
 	DropInsChanges dropIns `json:"dropInsChanges"`
 }

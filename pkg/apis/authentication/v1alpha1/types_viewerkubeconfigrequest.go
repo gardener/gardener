@@ -13,7 +13,7 @@ import (
 // ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets)
 // for a Shoot cluster.
 type ViewerKubeconfigRequest struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 

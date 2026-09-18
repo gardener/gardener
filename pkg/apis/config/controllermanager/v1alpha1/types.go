@@ -14,7 +14,7 @@ import (
 
 // ControllerManagerConfiguration defines the configuration for the Gardener controller manager.
 type ControllerManagerConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",embed"`
 
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
 	// for the proxy server to use when communicating with the garden apiserver.

@@ -131,37 +131,13 @@ BackupBucketSpec is the spec for an BackupBucket resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -214,85 +190,13 @@ BackupBucketStatus is the status for an BackupBucket resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -391,37 +295,13 @@ BackupEntrySpec is the spec for an BackupEntry resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -497,85 +377,13 @@ BackupEntryStatus is the status for an BackupEntry resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 
@@ -700,37 +508,13 @@ BastionSpec contains the specification for an SSH bastion host.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -783,85 +567,13 @@ BastionStatus holds the most recently observed status of the Bastion.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -1315,37 +1027,13 @@ ContainerRuntimeSpec is the spec for a ContainerRuntime resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -1398,85 +1086,13 @@ ContainerRuntimeStatus is the status for a ContainerRuntime resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 
@@ -1720,37 +1336,13 @@ ControlPlaneSpec is the spec of a ControlPlane resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -1815,85 +1407,13 @@ ControlPlaneStatus is the status of a ControlPlane resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 
@@ -2030,37 +1550,13 @@ DNSRecordSpec is the spec of a DNSRecord resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -2171,85 +1667,13 @@ DNSRecordStatus is the status of a DNSRecord resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -2635,7 +2059,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 
 
 <p>
-(<em>Appears on:</em><a href="#backupbucketspec">BackupBucketSpec</a>, <a href="#backupentryspec">BackupEntrySpec</a>, <a href="#bastionspec">BastionSpec</a>, <a href="#containerruntimespec">ContainerRuntimeSpec</a>, <a href="#controlplanespec">ControlPlaneSpec</a>, <a href="#dnsrecordspec">DNSRecordSpec</a>, <a href="#defaultspec">DefaultSpec</a>, <a href="#extensionspec">ExtensionSpec</a>, <a href="#infrastructurespec">InfrastructureSpec</a>, <a href="#networkspec">NetworkSpec</a>, <a href="#operatingsystemconfigspec">OperatingSystemConfigSpec</a>, <a href="#selfhostedshootexposurespec">SelfHostedShootExposureSpec</a>, <a href="#workerspec">WorkerSpec</a>)
+(<em>Appears on:</em><a href="#defaultspec">DefaultSpec</a>)
 </p>
 
 <p>
@@ -2666,37 +2090,13 @@ ExtensionSpec is the spec for a Extension resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 
@@ -2727,85 +2127,13 @@ ExtensionStatus is the status for a Extension resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 
@@ -3343,37 +2671,13 @@ InfrastructureSpec is the spec for an Infrastructure resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -3438,85 +2742,13 @@ InfrastructureStatus is the status for an Infrastructure resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -3834,37 +3066,13 @@ NetworkSpec is the spec for an Network resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -3929,85 +3137,13 @@ NetworkStatus is the status for an Network resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -4192,37 +3328,13 @@ OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -4312,85 +3424,13 @@ OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -4755,37 +3795,13 @@ SelfHostedShootExposureSpec is the spec for an SelfHostedShootExposure resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -4850,85 +3866,13 @@ SelfHostedShootExposureStatus is the status for an SelfHostedShootExposure resou
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -5586,37 +4530,13 @@ WorkerSpec is the spec for a Worker resource.
 
 <tr>
 <td>
-<code>type</code></br>
+<code>DefaultSpec</code></br>
 <em>
-string
+<a href="#defaultspec">DefaultSpec</a>
 </em>
 </td>
 <td>
-<p>Type contains the instance of the resource's kind.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>class</code></br>
-<em>
-<a href="#extensionclass">ExtensionClass</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the provider specific configuration.</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
@@ -5704,85 +4624,13 @@ WorkerStatus is the status for a Worker resource.
 
 <tr>
 <td>
-<code>providerStatus</code></br>
+<code>DefaultStatus</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+<a href="#defaultstatus">DefaultStatus</a>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>ProviderStatus contains provider-specific status.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>conditions</code></br>
-<em>
-Condition array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Conditions represents the latest available observations of a Seed's current state based on health checks.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-<a href="#lasterror">LastError</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastOperation</code></br>
-<em>
-<a href="#lastoperation">LastOperation</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>observedGeneration</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<p>ObservedGeneration is the most recent generation observed for this resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>state</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>State can be filled by the operating controller with what ever data it needs.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>resources</code></br>
-<em>
-NamedResourceReference array
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
 </td>
 </tr>
 <tr>
