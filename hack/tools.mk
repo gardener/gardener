@@ -96,10 +96,10 @@ GO_ADD_LICENSE_VERSION     ?= $(call version_gomod,github.com/google/addlicense)
 CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtime)
 K8S_VERSION                ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
-# Hash of analyzer sources + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
-LOGCHECK_VERSION           ?= $(shell { [ -n "$(GARDENER_LOGCHECK_DIR)" ] && find $(GARDENER_LOGCHECK_DIR) -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
-# Hash of wrapper sources + pinned kube-api-linter version + golangci-lint version + main go.mod toolchain. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
-KUBE_API_LINTER_VERSION    ?= $(shell { [ -n "$(GARDENER_TOOL_DIR)" ] && find $(GARDENER_TOOL_DIR)/kube-api-linter -type f -name '*.go' | LC_ALL=C sort | xargs shasum -a 256; echo $(call version_gomod,sigs.k8s.io/kube-api-linter); echo $(GOLANGCI_LINT_VERSION); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+# Hash of analyzer sources + golangci-lint version + main go.mod toolchain + Go toolchain version. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
+LOGCHECK_VERSION           ?= $(shell { [ -n "$(GARDENER_LOGCHECK_DIR)" ] && find $(GARDENER_LOGCHECK_DIR) -type f \( -name '*.go' -o -name 'go.mod' -o -name 'go.sum' \) | LC_ALL=C sort | xargs shasum -a 256; echo $(GOLANGCI_LINT_VERSION); echo $(GOTOOLCHAIN); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
+# Hash of wrapper sources + pinned kube-api-linter version + golangci-lint version + main go.mod toolchain + Go toolchain version. Invalidates iff the bundled plugin would no longer match the bundled golangci-lint.
+KUBE_API_LINTER_VERSION    ?= $(shell { [ -n "$(GARDENER_TOOL_DIR)" ] && find $(GARDENER_TOOL_DIR)/kube-api-linter -type f -name '*.go' | LC_ALL=C sort | xargs shasum -a 256; echo $(call version_gomod,sigs.k8s.io/kube-api-linter); echo $(GOLANGCI_LINT_VERSION); echo $(GOTOOLCHAIN); grep -E '^(go|toolchain) ' go.mod; } | shasum -a 256 | cut -c1-12)
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
@@ -119,7 +119,7 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
 # Use this "function" to add the version file as a prerequisite for the tool target: e.g.
 #   $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
-tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)
+tool_version_file = $(TOOLS_BIN_DIR)/.version_$(subst $(TOOLS_BIN_DIR)/,,$(1))_$(2)_$(GOTOOLCHAIN)
 
 # Use this function to get the version of a go module from go.mod
 version_gomod = $(shell $(SET_GOWORK) go list $(MODFILE_TOOL_MOD) -f '{{ .Version }}' -m $(1))

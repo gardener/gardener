@@ -15,6 +15,14 @@ GARDENADM_IMAGE_REPOSITORY                 := $(REGISTRY)/gardenadm
 EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY  := $(REGISTRY)/extensions/provider-local
 EXTENSION_ADMISSION_LOCAL_IMAGE_REPOSITORY := $(REGISTRY)/extensions/admission-local
 PUSH_LATEST_TAG                            := false
+
+# Use a specific Go toolchain version to ensure consistent builds across different environments.
+# renovate: datasource=golang-version depName=go
+export GOTOOLCHAIN := go1.26.8
+# $(GOTOOLCHAIN) is exported, but exported make variables are not propagated into the environment of $(shell ...) sub-shells.
+# By exporting it explicitly in the SHELL command, it becomes available also in sub-shells.
+SHELL=/usr/bin/env GOTOOLCHAIN=$(GOTOOLCHAIN) bash -o pipefail
+
 VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
 BUILD_DATE                                 := $(shell date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$$/:\1/g')
@@ -30,13 +38,7 @@ ifneq ($(shell { git diff-index --quiet HEAD -- && ! git ls-files --others --exc
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
 endif
 
-SHELL=/usr/bin/env bash -o pipefail
-
 export SYSTEM_ARCH := $(SYSTEM_ARCH)
-
-# Use a specific Go toolchain version to ensure consistent builds across different environments.
-# renovate: datasource=golang-version depName=go
-export GOTOOLCHAIN := go1.26.7
 
 #########################################
 # Tools                                 #
