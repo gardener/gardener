@@ -16,6 +16,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	admissioncontrollervalidation "github.com/gardener/gardener/pkg/api/config/admissioncontroller/v1alpha1/validation"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/admissioncontroller/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var configDecoder runtime.Decoder
@@ -52,7 +53,9 @@ func (o *options) Complete() error {
 		return fmt.Errorf("error decoding config: %w", err)
 	}
 
-	return nil
+	// Set feature gates immediately after decoding the config.
+	// Feature gates might influence the next steps, e.g., validating the config.
+	return features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates)
 }
 
 func (o *options) Validate() error {

@@ -34,3 +34,5 @@ server:
 debugging:
   enableProfiling: false
   enableContentionProfiling: false
+# featureGates:
+#   StrictAuditPolicyValidation: true

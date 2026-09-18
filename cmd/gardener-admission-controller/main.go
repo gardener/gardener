@@ -12,10 +12,12 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-admission-controller/app"
 	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/admissioncontroller/features"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
+	features.RegisterFeatureGates()
 
 	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
 		fmt.Println(err)

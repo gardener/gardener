@@ -571,6 +571,8 @@ type GardenerAPIServerConfig struct {
 
 // GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.
 type GardenerAdmissionControllerConfig struct {
+	gardencorev1beta1.KubernetesConfig `json:",inline"`
+
 	// LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
 	// Defaults to info.
 	// +kubebuilder:validation:Enum=info;debug;error

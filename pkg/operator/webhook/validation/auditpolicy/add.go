@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
@@ -60,6 +61,8 @@ func NewHandler(apiReader, c client.Reader, decoderAdmission admission.Decoder, 
 			}
 			return configMapNames
 		},
-		AdmitGardenConfig: configvalidator.AdmitAuditPolicy,
+		AdmitGardenConfig: func(auditPolicyRaw string) (int32, error) {
+			return configvalidator.AdmitAuditPolicy(auditPolicyRaw, features.DefaultFeatureGate.Enabled(features.StrictAuditPolicyValidation))
+		},
 	}
 }

@@ -52,6 +52,8 @@ type Values struct {
 	LogLevel string
 	// Image is the container image used for the gardener-admission-controller pods.
 	Image string
+	// FeatureGates is the set of feature gates.
+	FeatureGates map[string]bool
 	// ResourceAdmissionConfiguration is the configuration for gardener-admission-controller's resource-size validator.
 	ResourceAdmissionConfiguration *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.

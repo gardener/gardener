@@ -23,8 +23,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	. "github.com/gardener/gardener/pkg/operator/webhook/validation/auditpolicy"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("handler", func() {
@@ -55,6 +58,8 @@ var _ = Describe("handler", func() {
 	)
 
 	BeforeEach(func() {
+		operatorfeatures.RegisterFeatureGates()
+
 		cmName = "fake-cm-name"
 		cmNameOther = "fake-cm-name-other"
 		gardenName = "fake-garden"
@@ -542,6 +547,35 @@ rules:
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
 				})
 			})
+		})
+	})
+
+	Context("strictAuditPolicyValidation", func() {
+		auditPolicyWithUnknownField := `
+---
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  - level: None
+    verb: ["get"]
+`
+
+		BeforeEach(func() {
+			request.Kind = metav1.GroupVersionKind{Group: "operator.gardener.cloud", Version: "v1alpha1", Kind: "Garden"}
+			Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: gardenNs},
+				Data:       map[string]string{"policy": auditPolicyWithUnknownField},
+			})).To(Succeed())
+		})
+
+		It("rejects an audit policy with an unknown field when enabled", func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.StrictAuditPolicyValidation, true))
+			test(admissionv1.Create, nil, garden, false, statusCodeInvalid, "failed to decode the provided audit policy", "")
+		})
+
+		It("accepts an audit policy with an unknown field when disabled (default)", func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.StrictAuditPolicyValidation, false))
+			test(admissionv1.Create, nil, garden, true, statusCodeAllowed, "all referenced configMaps are valid", "")
 		})
 	})
 })

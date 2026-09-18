@@ -21,6 +21,7 @@ func RegisterFeatureGates() {
 		features.PrometheusHealthChecks,
 		features.RemoveVali,
 		features.DisableNginxIngressInGarden,
+		features.StrictAuditPolicyValidation,
 		// OpenTelemetryCollector is registered here so the operator can wire the
 		// OTel→VictoriaLogs pipeline (see newFluentCustomResources). This also
 		// flips the garden fluent-bit init image and the static ClusterOutput to
