@@ -114,19 +114,26 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
+		waitUntilControlPlaneNodeLabeled = g.Add(flow.Task{
+			Name:         "Waiting until the control plane Node is labeled",
+			Fn:           flow.TaskFn(b.CheckControlPlaneNodeLabeled).RetryUntilTimeout(2*time.Second, 2*time.Minute),
+			SkipIf:       podNetworkAvailable,
+			Dependencies: flow.NewTaskIDs(approveGardenerNodeAgentCSR),
+		})
 		reconcileRuntimeGardenerResourceManager = g.AddGroup(
 			b.ReconcileRuntimeGardenerResourceManagerTaskGroup(podNetworkAvailable, shootIsGarden, false).
-				WithDependencies(approveGardenerNodeAgentCSR),
+				WithDependencies(approveGardenerNodeAgentCSR, waitUntilControlPlaneNodeLabeled),
 		)
 		reconcileGardenerResourceManager = g.AddGroup(
 			b.ReconcileGardenerResourceManagerTaskGroup(podNetworkAvailable, false).
-				WithDependencies(approveGardenerNodeAgentCSR),
+				WithDependencies(approveGardenerNodeAgentCSR, waitUntilControlPlaneNodeLabeled),
 		)
 		_                             = g.AddGroup(b.ReconcileReferencedResourcesTaskGroup())
 		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
-		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable))
-		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
-		_                             = g.AddGroup(
+		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(podNetworkAvailable).
+						WithDependencies(waitUntilControlPlaneNodeLabeled))
+		reconcileNetworkPolicies = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
+		_                        = g.AddGroup(
 			b.ReconcileInfrastructureTaskGroup(false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
