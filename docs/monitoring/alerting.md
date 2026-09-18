@@ -21,18 +21,39 @@ spec:
 
 # Alerting for Operators
 
-Currently, Gardener supports two options for alerting:
+## Garden Alertmanager
 
-- [Email Alerting](#email-alerting)
-- [Sending Alerts to an External Alertmanager](#external-alertmanager)
+The garden Alertmanager is the central alerting component in Gardener, receiving alerts from the garden Prometheus across the landscape. It is deployed without any configuration by default. Operators are expected to provide their own configuration via `AlertmanagerConfig` resources. See the [operator documentation](../concepts/operator.md#alertmanager) for details.
 
-## Email Alerting
+### Additional Alert Relabel Configurations for the Garden Prometheus
 
-Gardener provides the option to deploy an Alertmanager into each seed. This Alertmanager is responsible for sending out alerts to operators for each shoot cluster in the seed. Only email alerts are supported by the Alertmanager managed by Gardener. This is configurable by setting the Gardener controller manager configuration values `alerting`. See [Gardener Configuration and Usage](../operations/configuration.md) on how to configure the Gardener's SMTP secret. If the values are set, a secret with the label `gardener.cloud/role: alerting` will be created in the garden namespace of the garden cluster. This secret will be used by each Alertmanager in each seed.
+Operators can inject additional [alert relabel configurations](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#alert_relabel_config) into the garden Prometheus.
+
+To do so, create a `Secret` in the `garden` namespace of the runtime cluster and label it with `gardener.cloud/role: additional-alert-relabel-configs`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: additional-alert-relabel-configs
+  namespace: garden
+  labels:
+    gardener.cloud/role: additional-alert-relabel-configs
+stringData:
+  config.yaml: |
+    - target_label: support-group
+      replacement: on-call
+```
+
+It is the operator's responsibility to ensure the configuration is valid according to the [Prometheus relabeling documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config).
+
+## Seed Alertmanager
+
+Gardener provides the option to deploy an Alertmanager into each seed. This Alertmanager is responsible for sending out alerts to operators for each shoot cluster in the seed. Only email alerts are supported by this Alertmanager. This is configurable by setting the Gardener controller manager configuration values `alerting`. See [Gardener Configuration and Usage](../operations/configuration.md) on how to configure the Gardener's SMTP secret. If the values are set, a secret with the label `gardener.cloud/role: alerting` will be created in the garden namespace of the garden cluster. This secret will be used by each Alertmanager in each seed.
 
 ## External Alertmanager
 
-The Alertmanager supports different kinds of [alerting configurations](https://prometheus.io/docs/alerting/configuration/). The Alertmanager provided by Gardener only supports email alerts. If email is not sufficient, then alerts can be sent to an external Alertmanager. Prometheus will send alerts to a URL and then alerts will be handled by the external Alertmanager. This external Alertmanager is operated and configured by the operator (i.e. Gardener does not configure or deploy this Alertmanager). To configure sending alerts to an external Alertmanager, create a secret in the virtual garden cluster in the garden namespace with the label: `gardener.cloud/role: alerting`. This secret needs to contain a URL to the external Alertmanager and information regarding authentication. Supported authentication types are:
+Alerts can also be sent to an external Alertmanager. Prometheus will send alerts to a URL and then alerts will be handled by the external Alertmanager. This external Alertmanager is operated and configured by the operator (i.e. Gardener does not configure or deploy this Alertmanager). To configure sending alerts to an external Alertmanager, create a secret in the virtual garden cluster in the garden namespace with the label: `gardener.cloud/role: alerting`. This secret needs to contain a URL to the external Alertmanager and information regarding authentication. Supported authentication types are:
 
 - No Authentication (none)
 - Basic Authentication (basic)
