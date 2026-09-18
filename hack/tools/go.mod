@@ -39,7 +39,7 @@ require (
 )
 
 require (
-	github.com/onsi/ginkgo/v2 v2.32.1
+	github.com/onsi/ginkgo/v2 v2.33.0
 	github.com/spf13/cobra v1.10.2
 	sigs.k8s.io/controller-runtime v0.24.1
 )
