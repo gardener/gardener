@@ -740,6 +740,35 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			))
 		})
 
+		It("should remove the logs/vali pipeline when RemoveVali is enabled", func() {
+			values.RemoveVali = true
+			component = New(c, namespace, values, fakeSecretManager)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+			tlsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "logging-tls",
+					Namespace: namespace,
+				},
+			}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret)).To(Succeed())
+
+			delete(openTelemetryCollector.Spec.Config.Service.Pipelines, "logs/vali")
+			Expect(customResourcesManagedResource).To(consistOf(
+				openTelemetryCollector,
+				getGateway(),
+				getVirtualService(),
+				getDestinationRule(),
+				getTLSSecret(tlsSecret),
+				getCaBundleSecret(),
+				vpa,
+				serviceMonitor,
+				serviceAccount,
+			))
+		})
+
 		It("should add the logs/victorialogs pipeline when VictoriaLogsBackend is enabled", func() {
 			values.VictoriaLogsBackend = true
 			component = New(c, namespace, values, fakeSecretManager)
