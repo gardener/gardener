@@ -15,6 +15,12 @@ import (
 // MaxConnectionDuration is the maximum duration of a connection in seconds. It is set to 24 hours (86400 seconds) to prevent issues with expiring client certificates.
 const MaxConnectionDuration = 86400
 
+// TCPKeepaliveTime is the duration in seconds a connection needs to be idle before TCP keepalive probes are sent.
+const TCPKeepaliveTime = 300
+
+// TCPKeepaliveInterval is the duration in seconds between individual TCP keepalive probes.
+const TCPKeepaliveInterval = 10
+
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
 func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string) func() error {
 	return DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, exportTo, destinationHost, &istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE})
@@ -87,8 +93,8 @@ func destinationRuleWithTrafficPolicy(
 					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 						MaxConnectionDuration: &durationpb.Duration{Seconds: MaxConnectionDuration},
 						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Time:     &durationpb.Duration{Seconds: 7200},
-							Interval: &durationpb.Duration{Seconds: 75},
+							Time:     &durationpb.Duration{Seconds: TCPKeepaliveTime},
+							Interval: &durationpb.Duration{Seconds: TCPKeepaliveInterval},
 						},
 					},
 					Http: httpConnectionPool,

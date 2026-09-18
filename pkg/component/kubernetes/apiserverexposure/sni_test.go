@@ -142,8 +142,8 @@ var _ = Describe("#SNI", func() {
 						Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 							TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-								Time:     &durationpb.Duration{Seconds: 7200},
-								Interval: &durationpb.Duration{Seconds: 75},
+								Time:     &durationpb.Duration{Seconds: 300},
+								Interval: &durationpb.Duration{Seconds: 10},
 							},
 						},
 					},

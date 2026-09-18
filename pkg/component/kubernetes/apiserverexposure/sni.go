@@ -189,6 +189,7 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	Namespace                        string
 	ControlPlaneNamespace            string
 	ControlPlaneNamespaceUID         string
+	Host                             string
 	MutualTLSHost                    string
 	ConnectionUpgradeHost            string
 	Port                             int
@@ -301,6 +302,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 				ControlPlaneNamespace:            namespace.Name,
 				ControlPlaneNamespaceUID:         string(namespace.UID),
 				Port:                             kubeapiserverconstants.Port,
+				Host:                             hostName,
 				MutualTLSHost:                    mTLSHostName,
 				ConnectionUpgradeHost:            connectionUpgradeHostName,
 				RouteConfigurationName:           routeConfigurationName,
