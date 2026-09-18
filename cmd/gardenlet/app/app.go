@@ -420,13 +420,15 @@ func (g *garden) Start(ctx context.Context) error {
 						// Gardenlet does not have the required RBAC permissions for listing/watching the following
 						// resources on cluster level. Hence, we need to watch them individually with the help of a
 						// SingleObject cache.
-						&corev1.ConfigMap{}:                  kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
-						&corev1.Namespace{}:                  kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Namespace{}),
-						&corev1.Secret{}:                     kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
-						&corev1.ServiceAccount{}:             kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
-						&gardencorev1.ControllerDeployment{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1.ControllerDeployment{}),
-						&gardencorev1beta1.InternalSecret{}:  kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.InternalSecret{}),
-						&gardencorev1beta1.Project{}:         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Project{}),
+						&corev1.ConfigMap{}:                    kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
+						&corev1.Namespace{}:                    kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Namespace{}),
+						&corev1.Secret{}:                       kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Secret{}),
+						&corev1.ServiceAccount{}:               kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ServiceAccount{}),
+						&gardencorev1.ControllerDeployment{}:   kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1.ControllerDeployment{}),
+						&gardencorev1beta1.InternalSecret{}:    kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.InternalSecret{}),
+						&gardencorev1beta1.Project{}:           kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Project{}),
+						&gardencorev1beta1.SecretBinding{}:     kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.SecretBinding{}),
+						&securityv1alpha1.CredentialsBinding{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &securityv1alpha1.CredentialsBinding{}),
 					},
 					kubernetes.GardenScheme,
 				)(config, opts)
