@@ -19,6 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -47,7 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.Shoot{},
 				&handler.EnqueueRequestForObject{},
-				r.SeedNameChangedPredicate()),
+				predicate.Or(r.SeedNameChangedPredicate(), r.ShootCreationSucceededPredicate())),
 		).
 		Complete(r)
 }
@@ -56,18 +57,41 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 // true when the seed name changed.
 func (r *Reconciler) SeedNameChangedPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			newShoot, ok := updateEvent.ObjectNew.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return false
 			}
 
-			oldShoot, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
+			oldShoot, ok := updateEvent.ObjectOld.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return false
 			}
 
-			return ptr.Deref(shoot.Spec.SeedName, "") != ptr.Deref(oldShoot.Spec.SeedName, "")
+			return ptr.Deref(newShoot.Spec.SeedName, "") != ptr.Deref(oldShoot.Spec.SeedName, "")
 		},
+	}
+}
+
+// ShootCreationSucceededPredicate returns a predicate which returns true for update events where the Shoot's
+// initial Create operation just transitioned from Processing to Succeeded.
+func (r *Reconciler) ShootCreationSucceededPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool { return false },
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			oldShoot, ok := updateEvent.ObjectOld.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+
+			newShoot, ok := updateEvent.ObjectNew.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+
+			return predicateutils.CreationSucceeded(oldShoot.Status.LastOperation, newShoot.Status.LastOperation)
+		},
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
 }
