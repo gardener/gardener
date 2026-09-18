@@ -259,6 +259,8 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 			Enabled:     pvcAutoscalerEnabled,
 			MaxCapacity: resource.MustParse("40Gi"),
 		},
+		b.SecretsManager,
+		v1beta1constants.SecretNameCACluster,
 	)
 	if err != nil {
 		return nil, err
