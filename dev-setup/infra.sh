@@ -7,16 +7,35 @@ set -o errexit
 set -o pipefail
 
 COMMAND="${1:-up}"
-VALID_COMMANDS=("up" "down" "setup-loopback-devices")
+VALID_COMMANDS=("up" "down" "setup-loopback-devices" "cleanup-registry-ca")
 
 INFRA_COMPOSE_FILE="$(dirname "$0")/infra/docker-compose.yaml"
 DIR_BACKUP_BUCKET="$(dirname "$0")/../dev/local-backupbuckets"
 DIR_REGISTRY="$(dirname "$0")/../dev/local-registry"
+DIR_REGISTRY_TLS="$(dirname "$0")/infra/registry/tls"
+REGISTRY_HOST="registry.local.gardener.cloud"
 
 SUDO=""
 if [[ "$(id -u)" != "0" ]]; then
   SUDO="sudo "
 fi
+
+cleanup_registry_ca() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "> Removing registry CA from macOS login keychain..."
+    security delete-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db 2>/dev/null || true
+  elif [[ "$(uname -s)" == "Linux" ]]; then
+    if command -v update-ca-certificates >/dev/null 2>&1; then
+      echo "> Removing registry CA from /usr/local/share/ca-certificates/..."
+      ${SUDO}rm -f /usr/local/share/ca-certificates/gardener-local-registry-ca.crt
+      ${SUDO}update-ca-certificates --fresh >/dev/null 2>&1 || true
+    elif command -v update-ca-trust >/dev/null 2>&1; then
+      echo "> Removing registry CA from /etc/pki/ca-trust/source/anchors/..."
+      ${SUDO}rm -f /etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem
+      ${SUDO}update-ca-trust extract >/dev/null 2>&1 || true
+    fi
+  fi
+}
 
 case "$COMMAND" in
   up)
@@ -67,6 +86,143 @@ case "$COMMAND" in
     # insecure registry to allow pushing to it from the host. The insecureRegistries settings in the skaffold config
     # doesn't apply here, because skaffold uses the Docker daemon/CLI under the hood for pushing images, which only
     # considers the Docker daemon's registry configuration.
+    # The local registry serves its API over HTTPS using a self-signed CA (generated once and reused across restarts).
+    # The Go-based tools that push to it (skaffold, helm) verify the server certificate, so the CA is installed into
+    # the OS trust store below (macOS login keychain / Linux system trust store).
+    ensure_local_registry_tls() {
+      local ca_crt="$DIR_REGISTRY_TLS/ca.crt"
+      local ca_key="$DIR_REGISTRY_TLS/ca.key"
+      local tls_crt="$DIR_REGISTRY_TLS/registry.crt"
+      local tls_key="$DIR_REGISTRY_TLS/registry.key"
+
+      mkdir -p "$DIR_REGISTRY_TLS"
+
+      # Also regenerate if any certificate is expired or expires within 30 days (certs are valid for 180 days).
+      for cert_file in "$ca_crt" "$tls_crt"; do
+        if [[ -f "$cert_file" ]] && ! openssl x509 -in "$cert_file" -noout -checkend 2592000 2>/dev/null; then
+          echo "> Registry certificate $cert_file is expired or expiring soon, regenerating..."
+          rm -f "$ca_crt" "$ca_key" "$tls_crt" "$tls_key"
+          # Remove the old CA from the system trust store so the new one can be re-added below.
+          cleanup_registry_ca
+          break
+        fi
+      done
+
+      if [[ ! -f "$ca_crt" || ! -f "$tls_crt" || ! -f "$tls_key" ]]; then
+        echo "> Generating self-signed CA and server certificate for $REGISTRY_HOST..."
+        local cnf
+        cnf="$(mktemp)"
+        cat > "$cnf" <<EOF
+[req]
+distinguished_name = dn
+[dn]
+[v3_ca]
+basicConstraints = critical,CA:TRUE
+subjectKeyIdentifier = hash
+keyUsage = critical,keyCertSign,cRLSign
+nameConstraints = critical,permitted;DNS:$REGISTRY_HOST,permitted;DNS:localhost,permitted;IP:127.0.0.1/255.255.255.255,permitted;IP:::1/ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+[v3_server]
+basicConstraints = CA:FALSE
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = $REGISTRY_HOST
+DNS.2 = localhost
+IP.1 = 127.0.0.1
+IP.2 = ::1
+EOF
+
+        openssl req -x509 -newkey rsa:4096 -sha256 -days 180 -nodes \
+          -set_serial 1 \
+          -keyout "$ca_key" -out "$ca_crt" \
+          -subj "/CN=Gardener Local Registry CA" \
+          -config "$cnf" -extensions v3_ca 2>/dev/null
+
+        local csr
+        csr="$(mktemp)"
+        openssl req -newkey rsa:4096 -sha256 -nodes \
+          -keyout "$tls_key" -out "$csr" \
+          -subj "/CN=$REGISTRY_HOST" -config "$cnf" 2>/dev/null
+        openssl x509 -req -in "$csr" -CA "$ca_crt" -CAkey "$ca_key" \
+          -set_serial 1 \
+          -out "$tls_crt" -days 180 -sha256 \
+          -extfile "$cnf" -extensions v3_server 2>/dev/null
+
+        rm -f "$cnf" "$csr"
+
+        # Restart the registry container if it is already running so it picks up the new cert immediately.
+        docker compose -f "$(dirname "$0")/infra/docker-compose.yaml" restart registry 2>/dev/null || true
+      else
+        echo "> Reusing existing registry TLS certificates in $DIR_REGISTRY_TLS."
+      fi
+
+      # On macOS, add the CA to the current user's login keychain so that Go tools (e.g. skaffold) trust the registry.
+      # This uses the login keychain (no sudo, current user only). The CA is constrained by nameConstraints to only
+      # sign for registry.local.gardener.cloud and localhost, so trusting it here carries negligible risk.
+      if [[ "$(uname -s)" == "Darwin" ]]; then
+        if ! security find-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db >/dev/null 2>&1; then
+          echo "> Adding registry CA to macOS login keychain (current user only); you may be prompted for your login password... (run 'make local-registry-cleanup-ca' to undo)"
+          security add-trusted-cert -d -r trustRoot \
+            -k ~/Library/Keychains/login.keychain-db "$ca_crt"
+        fi
+      # On Linux, install the CA into the system trust store so that Go tools (e.g. skaffold, kubectl) trust the
+      # registry. The CA is constrained by nameConstraints to only sign for registry.local.gardener.cloud and
+      # localhost, so trusting it system-wide carries negligible risk.
+      elif [[ "$(uname -s)" == "Linux" ]]; then
+        if [[ -n "$SUDO" ]]; then
+          echo "> Installing the registry CA into the system trust store may prompt for your sudo password... (run 'make local-registry-cleanup-ca' to undo)"
+        fi
+        if command -v update-ca-certificates >/dev/null 2>&1; then
+          # Debian/Ubuntu
+          local trust_anchor="/usr/local/share/ca-certificates/gardener-local-registry-ca.crt"
+          if ! cmp -s "$ca_crt" "$trust_anchor" 2>/dev/null; then
+            echo "> Installing registry CA into $trust_anchor..."
+            ${SUDO}cp "$ca_crt" "$trust_anchor"
+            ${SUDO}update-ca-certificates >/dev/null
+          fi
+        elif command -v update-ca-trust >/dev/null 2>&1; then
+          # RHEL/Fedora
+          local trust_anchor="/etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem"
+          if ! cmp -s "$ca_crt" "$trust_anchor" 2>/dev/null; then
+            echo "> Installing registry CA into $trust_anchor..."
+            ${SUDO}cp "$ca_crt" "$trust_anchor"
+            ${SUDO}update-ca-trust extract >/dev/null
+          fi
+        else
+          echo "> WARNING: no supported CA trust tool (update-ca-certificates/update-ca-trust) found; skaffold may not trust the registry."
+        fi
+      fi
+    }
+
+    # Write the gardener-local-registry-ca Secret (referenced via caBundleSecretRef by the gardenlet and
+    # provider-local extension) from the current CA.
+    write_registry_ca_secrets() {
+      local ca_crt="$DIR_REGISTRY_TLS/ca.crt"
+      [[ -f "$ca_crt" ]] || return 0
+
+      local dest
+      for dest in \
+        "$(dirname "$0")/gardenlet/base/secret-registry-ca.yaml" \
+        "$(dirname "$0")/extensions/provider-local/components/extension/secret-registry-ca.yaml"; do
+        cat > "$dest" <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gardener-local-registry-ca
+  namespace: garden
+  labels:
+    gardener.cloud/role: oci-ca-bundle
+type: Opaque
+stringData:
+  bundle.crt: |
+$(sed 's/^/    /' "$ca_crt")
+EOF
+      done
+    }
+
     ensure_local_registry_hosts() {
       local host="registry.local.gardener.cloud"
 
@@ -236,6 +392,10 @@ EOF
 
     change_registry_upstream_urls_to_prow_caches
 
+    ensure_local_registry_tls
+
+    write_registry_ca_secrets
+
     docker compose -f "$INFRA_COMPOSE_FILE" up -d
 
     ensure_local_registry_hosts
@@ -329,6 +489,12 @@ EOF
 
       echo "Setting up loopback device ${LOOPBACK_DEVICE} with ${ip_func} completed."
     done
+    ;;
+
+  cleanup-registry-ca)
+    cleanup_registry_ca
+    echo "> Removing registry TLS certificate files from $DIR_REGISTRY_TLS..."
+    rm -f "$DIR_REGISTRY_TLS/ca.crt" "$DIR_REGISTRY_TLS/ca.key" "$DIR_REGISTRY_TLS/registry.crt" "$DIR_REGISTRY_TLS/registry.key"
     ;;
 
   *)

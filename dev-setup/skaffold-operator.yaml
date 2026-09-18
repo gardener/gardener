@@ -915,8 +915,6 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-admission-controller
-  insecureRegistries:
-    - registry.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'
@@ -1396,8 +1394,6 @@ build:
         dependencies:
           paths:
             - charts/gardener/admission-local/charts/application
-  insecureRegistries:
-    - registry.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: '{{.version}}-{{.sha}}'

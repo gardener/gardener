@@ -220,6 +220,12 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(connectToMachine, compileShootState),
 		})
 
+		installRegistryCABundle = g.Add(flow.Task{
+			Name:         "Installing the registry CA bundle on the first control plane machine",
+			Fn:           flow.TaskFn(b.InstallRegistryCABundle).Timeout(time.Minute),
+			Dependencies: flow.NewTaskIDs(connectToMachine),
+		})
+
 		downloadGardenadm = g.Add(flow.Task{
 			Name: "Downloading gardenadm binary on the first control plane machine",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -233,7 +239,7 @@ func run(ctx context.Context, opts *Options) error {
 					fmt.Sprintf("%s %q", nodeinit.GardenadmPathDownloadScript, image.String()),
 				)
 			}).Timeout(5 * time.Minute),
-			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests),
+			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests, installRegistryCABundle),
 		})
 		bootstrapControlPlane = g.Add(flow.Task{
 			Name: "Bootstrapping control plane on the first control plane machine",

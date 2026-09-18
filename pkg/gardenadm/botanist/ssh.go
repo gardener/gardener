@@ -8,9 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	rootcertificates "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -64,6 +67,53 @@ func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) er
 // SSHConnection returns the SSH connection to the control plane machine opened by ConnectToControlPlaneMachine.
 func (b *GardenadmBotanist) SSHConnection() *sshutils.Connection {
 	return b.sshConnection
+}
+
+// InstallRegistryCABundle installs the private container registry's CA bundle into the control plane machine's trust
+// store, so that the subsequent `ctr` pull of the gardenadm binary can verify the registry's TLS certificate. It is a
+// no-op unless a registry CA bundle is configured (via the image vector's containers CA bundle). Unlike shoot worker
+// nodes, the control plane machine has no running kube-apiserver yet from which gardener-node-agent's init script would
+// otherwise fetch and install the registry CA before pulling images, so we install it here directly from the bundle.
+func (b *GardenadmBotanist) InstallRegistryCABundle(ctx context.Context) error {
+	if b.RegistryCABundle == nil {
+		return nil
+	}
+
+	updateLocalCACertificatesScript, err := rootcertificates.RenderUpdateLocalCACertificatesScript()
+	if err != nil {
+		return fmt.Errorf("failed rendering CA update script: %w", err)
+	}
+
+	if _, _, err := b.sshConnection.Run(ctx, "mkdir -p "+strings.Join([]string{
+		rootcertificates.PathLocalSSLCerts,
+		rootcertificates.PathPKITrustAnchors,
+		path.Dir(rootcertificates.PathUpdateLocalCACertificates),
+	}, " ")); err != nil {
+		return fmt.Errorf("failed creating CA directories on control plane machine: %w", err)
+	}
+
+	// Write the CA bundle to both Debian/Flatcar and RedHat/SUSE trust anchor paths.
+	for _, caPath := range []string{rootcertificates.PathLocalSSLRegistryCACerts, rootcertificates.PathPKITrustAnchorsRegistryCACerts} {
+		if err := b.sshConnection.Copy(ctx, caPath, "0644", []byte(*b.RegistryCABundle)); err != nil {
+			return fmt.Errorf("failed copying registry CA bundle to %s on control plane machine: %w", caPath, err)
+		}
+	}
+
+	if err := b.sshConnection.Copy(ctx, rootcertificates.PathUpdateLocalCACertificates, "0744", updateLocalCACertificatesScript); err != nil {
+		return fmt.Errorf("failed copying CA update script to control plane machine: %w", err)
+	}
+
+	if _, stderr, err := b.sshConnection.Run(ctx, rootcertificates.PathUpdateLocalCACertificates); err != nil {
+		out, _ := io.ReadAll(stderr)
+		return fmt.Errorf("failed installing registry CA bundle into the control plane machine's trust store: %w: %s", err, string(out))
+	}
+
+	if _, stderr, err := b.sshConnection.Run(ctx, "systemctl restart containerd"); err != nil {
+		out, _ := io.ReadAll(stderr)
+		return fmt.Errorf("failed restarting containerd on control plane machine: %w: %s", err, string(out))
+	}
+
+	return nil
 }
 
 var (
