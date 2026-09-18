@@ -139,7 +139,7 @@ ExecStopPost=/bin/sh -c '[ "$SERVICE_RESULT" = "success" ] || systemctl restart 
 # We know that /metrics reliably times out when there are issues such as file descriptor leaks.
 # If we can verify that /healthz behaves the same, we should switch to using it instead,
 # since health checks are typically expected to target /healthz rather than /metrics.
-ExecStart=/usr/bin/curl -fsS --max-time 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics`),
+ExecStart=/usr/bin/curl -fsS --max-time 15 http://127.0.0.1:` + strconv.Itoa(MetricsPort) + `/metrics -o /dev/null -w "opentelemetry-collector-healthcheck.service ended with HTTP %{response_code} in %{time_total}s\n"`),
 	}
 }
 
