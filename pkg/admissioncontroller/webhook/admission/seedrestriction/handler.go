@@ -661,9 +661,43 @@ func (h *Handler) admitSeed(ctx context.Context, seedName string, request admiss
 		if err := h.Decoder.Decode(request, newSeed); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
-		if !apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
-			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Seed"))
+		if apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
+			return admission.Allowed("")
 		}
+
+		// Spec changed: validate that the new spec matches the authoritative spec in the ManagedSeed or
+		// Gardenlet resource. The gardenlet is the canonical writer of Seed.spec, but only within the
+		// bounds set by the operator via those resources.
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil && !apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusInternalServerError, err)
+		} else if err == nil {
+			seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
+			if err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			if seedTemplate != nil && !apiequality.Semantic.DeepEqual(newSeed.Spec, seedTemplate.Spec) {
+				return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not set .spec of Seed to a value different from the .spec in the ManagedSeed"))
+			}
+			return admission.Allowed("")
+		}
+
+		gardenlet := &seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet); err != nil && !apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusInternalServerError, err)
+		} else if err == nil {
+			seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(gardenlet.Name, &gardenlet.Spec.Config)
+			if err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			if seedTemplate != nil && !apiequality.Semantic.DeepEqual(newSeed.Spec, seedTemplate.Spec) {
+				return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not set .spec of Seed to a value different from the .spec in the Gardenlet"))
+			}
+			return admission.Allowed("")
+		}
+
+		// TODO(rfranzke): Once the Gardenlet resource is always present for all seeds, deny spec changes that have no
+		// authoritative source to validate against. Until then, allow them to avoid breaking existing deployments.
 		return admission.Allowed("")
 
 	case admissionv1.Create:
