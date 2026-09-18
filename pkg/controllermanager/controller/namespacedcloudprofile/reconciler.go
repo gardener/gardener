@@ -30,7 +30,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -135,7 +134,7 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 	namespacedCloudProfile.Status.CloudProfileSpec = cloudProfile.Spec
 
 	if namespacedCloudProfile.Spec.Kubernetes != nil {
-		namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions, namespacedCloudProfile.Spec.Kubernetes.Versions, expirableVersionKeyFunc, mergeExpirableVersions, false)
+		namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions, namespacedCloudProfile.Spec.Kubernetes.Versions, expirableVersionKeyFunc, ApplyExpirableVersionOverrides, false)
 	}
 
 	// TODO(Roncossek): Remove TransformSpecToParentFormat once all CloudProfiles have been migrated to use CapabilityFlavors and the Architecture fields are effectively forbidden or have been removed.
@@ -200,142 +199,60 @@ func defaultMachineImageArchitectures(cloudProfile gardencore.CloudProfileSpec, 
 }
 
 var (
-	expirableVersionKeyFunc        = func(v gardencorev1beta1.ExpirableVersion) string { return v.Version }
-	classificationLifecycleKeyFunc = func(c gardencorev1beta1.LifecycleStage) string { return string(c.Classification) }
-	machineImageKeyFunc            = func(i gardencorev1beta1.MachineImage) string { return i.Name }
-	machineImageVersionKeyFunc     = func(v gardencorev1beta1.MachineImageVersion) string { return v.Version }
-	machineTypeKeyFunc             = func(t gardencorev1beta1.MachineType) string { return t.Name }
-	volumeTypeKeyFunc              = func(t gardencorev1beta1.VolumeType) string { return t.Name }
+	expirableVersionKeyFunc    = func(v gardencorev1beta1.ExpirableVersion) string { return v.Version }
+	machineImageKeyFunc        = func(i gardencorev1beta1.MachineImage) string { return i.Name }
+	machineImageVersionKeyFunc = func(v gardencorev1beta1.MachineImageVersion) string { return v.Version }
+	machineTypeKeyFunc         = func(t gardencorev1beta1.MachineType) string { return t.Name }
+	volumeTypeKeyFunc          = func(t gardencorev1beta1.VolumeType) string { return t.Name }
 )
 
-// mergeExpirableVersions merges one parent ExpirableVersion with a NamespacedCloudProfile override.
-// Legacy classification fields are kept while lifecycle classifications are disabled; otherwise,
-// legacy classification fields are migrated so they can merge with lifecycle classifications.
-func mergeExpirableVersions(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
-	if !features.DefaultFeatureGate.Enabled(features.VersionClassificationLifecycle) {
-		return mergeLegacyClassificationFields(base, override)
+// getExpirationStage return a pointer to the expired stage of an ExpirableVersion or nil if not found.
+func getExpirationStage(v *gardencorev1beta1.ExpirableVersion) *gardencorev1beta1.LifecycleStage {
+	for i := range v.Lifecycle {
+		if v.Lifecycle[i].Classification == gardencorev1beta1.ClassificationExpired {
+			return &v.Lifecycle[i]
+		}
 	}
-
-	baseLifecycle := v1beta1helper.ToLifecycleStages(base)
-	overrideLifecycle := toLifecycleOverrideStages(override)
-
-	// If the override starts with an implicit stage, remove higher implicit stages from the base.
-	// Otherwise, they would immediately override it.
-	if len(overrideLifecycle) > 0 && overrideLifecycle[0].StartTime == nil {
-		baseLifecycle = removeImplicitLaterStages(baseLifecycle, overrideLifecycle[0].Classification)
-	}
-
-	resultLifecycle := mergeDeep(
-		baseLifecycle,
-		overrideLifecycle,
-		classificationLifecycleKeyFunc,
-		mergeClassificationLifecycles,
-		true,
-	)
-
-	slices.SortFunc(resultLifecycle, func(a, b gardencorev1beta1.LifecycleStage) int {
-		return a.Classification.Compare(b.Classification)
-	})
-
-	adjustLifecycleStartTimes(resultLifecycle, overrideLifecycle)
-
-	return gardencorev1beta1.ExpirableVersion{
-		Version:   base.Version,
-		Lifecycle: resultLifecycle,
-	}
+	return nil
 }
 
-// toLifecycleOverrideStages converts legacy classification fields of an ExpirableVersion to lifecycle stages
-// for use in overrides.
-// It intentionally does not apply defaulting, because defaulted stages would be treated as explicit overrides during merging.
-func toLifecycleOverrideStages(override gardencorev1beta1.ExpirableVersion) []gardencorev1beta1.LifecycleStage {
-	if len(override.Lifecycle) > 0 {
-		return override.Lifecycle
+// ApplyExpirableVersionOverrides applies a NamespacedCloudProfile override to a CloudProfile ExpirableVersion.
+// The behavior depends on whether the base and override use the legacy- or lifecycle classification:
+//   - legacy / legacy: preserve existing behavior and only add or replace the expiration date.
+//   - lifecycle / legacy: add or replace only the expired lifecycle stage and preserve all other stages.
+//   - legacy / lifecycle: the override lifecycle is authoritative and replaces the legacy classification fields
+//   - lifecycle / lifecycle: the override lifecycle is authoritative and replaces the base lifecycle
+func ApplyExpirableVersionOverrides(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
+	baseUsesLifecycle := len(base.Lifecycle) > 0
+	overrideUsesLifecycle := len(override.Lifecycle) > 0
+
+	if !overrideUsesLifecycle && override.ExpirationDate == nil {
+		// Removal of expiration in legacy classification is not allowed.
+		return base
 	}
 
-	var stages []gardencorev1beta1.LifecycleStage
-
-	if override.Classification != nil {
-		stages = append(stages, gardencorev1beta1.LifecycleStage{
-			Classification: *override.Classification,
-		})
+	if overrideUsesLifecycle {
+		return gardencorev1beta1.ExpirableVersion{
+			Version:   base.Version,
+			Lifecycle: slices.Clone(override.Lifecycle),
+		}
 	}
 
-	if override.ExpirationDate != nil {
-		stages = append(stages, gardencorev1beta1.LifecycleStage{
+	if !baseUsesLifecycle {
+		base.ExpirationDate = override.ExpirationDate.DeepCopy()
+		return base
+	}
+
+	base.Lifecycle = slices.Clone(base.Lifecycle)
+	if baseExpiryStage := getExpirationStage(&base); baseExpiryStage != nil {
+		baseExpiryStage.StartTime = override.ExpirationDate.DeepCopy()
+	} else {
+		base.Lifecycle = append(base.Lifecycle, gardencorev1beta1.LifecycleStage{
 			Classification: gardencorev1beta1.ClassificationExpired,
-			StartTime:      override.ExpirationDate,
+			StartTime:      override.ExpirationDate.DeepCopy(),
 		})
 	}
 
-	return stages
-}
-
-// mergeLegacyClassificationFields merges legacy classification fields without producing lifecycle classifications.
-// This is required while VersionClassificationLifecycle is disabled because lifecycle is rejected by API validation.
-func mergeLegacyClassificationFields(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
-	if override.ExpirationDate != nil {
-		base.ExpirationDate = override.ExpirationDate
-	}
-
-	return base
-}
-
-// removeImplicitLaterStages removes implicit lifecycle stages (stages with StartTime == nil)
-// from the base lifecycle that rank higher in lifecycle order than the given classification.
-//
-// For example, if the base has an implicit 'supported' stage (from defaulting) and the override
-// introduces an initial 'preview' stage without a StartTime, the implicit 'supported' stage is
-// removed so that 'preview' is not immediately superseded.
-func removeImplicitLaterStages(stages []gardencorev1beta1.LifecycleStage, classification gardencorev1beta1.VersionClassification) []gardencorev1beta1.LifecycleStage {
-	return slices.DeleteFunc(slices.Clone(stages), func(stage gardencorev1beta1.LifecycleStage) bool {
-		isImplicitStage := stage.StartTime == nil
-		isLaterStage := stage.Classification.Compare(classification) > 0
-		return isImplicitStage && isLaterStage
-	})
-}
-
-// adjustLifecycleStartTimes keeps the merged lifecycle valid after a NamespacedCloudProfile
-// overrides the StartTime of one or more lifecycle stages.
-//
-// For every override, all stages of the already merged resultLifecycle are checked:
-// - If a result stage is earlier than the override but starts after it: Move it to the override StartTime.
-// - If a result stage is later  than the override but starts before it: Move it to the override StartTime.
-//
-// This keeps the override StartTime authoritative while preserving the lifecycle order.
-func adjustLifecycleStartTimes(resultLifecycle, overrideLifecycle []gardencorev1beta1.LifecycleStage) {
-	for _, overrideStage := range overrideLifecycle {
-		if overrideStage.StartTime == nil {
-			continue
-		}
-
-		for i := range resultLifecycle {
-			resultStage := &resultLifecycle[i]
-			classificationOrder := resultStage.Classification.Compare(overrideStage.Classification)
-
-			switch {
-			// Earlier stages must not start after the override stage.
-			case classificationOrder < 0 &&
-				resultStage.StartTime != nil &&
-				overrideStage.StartTime.Before(resultStage.StartTime):
-				resultStage.StartTime = overrideStage.StartTime
-
-			// Later stages must not start before the override stage.
-			case classificationOrder > 0 &&
-				(resultStage.StartTime == nil ||
-					resultStage.StartTime.Before(overrideStage.StartTime)):
-				resultStage.StartTime = overrideStage.StartTime
-			}
-		}
-	}
-}
-
-// mergeClassificationLifecycles applies a NamespacedCloudProfile override to an existing
-// lifecycle stage.
-func mergeClassificationLifecycles(base, override gardencorev1beta1.LifecycleStage) gardencorev1beta1.LifecycleStage {
-	if override.StartTime != nil {
-		base.StartTime = override.StartTime
-	}
 	return base
 }
 
@@ -356,7 +273,7 @@ func mergeMachineImageVersions(base, override gardencorev1beta1.MachineImageVers
 		// If the NamespacedCloudProfile machine image version has been there before, do not merge it with the parent CloudProfile machine image version.
 		return override
 	}
-	base.ExpirableVersion = mergeExpirableVersions(base.ExpirableVersion, override.ExpirableVersion)
+	base.ExpirableVersion = ApplyExpirableVersionOverrides(base.ExpirableVersion, override.ExpirableVersion)
 	return base
 }
 
