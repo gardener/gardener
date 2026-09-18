@@ -3603,6 +3603,26 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						}))
 					})
 
+					It("should forbid the request because a ManagedSeed exists for this seed", func() {
+						Expect(fakeClient.Create(ctx, &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+						})).To(Succeed())
+
+						objData, err := runtime.Encode(encoder, &seedmanagementv1alpha1.Gardenlet{})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "managed-seed gardenlet must not create Gardenlet resources",
+								},
+							},
+						}))
+					})
+
 					It("should forbid the request because .spec.kubeconfigSecretRef is set", func() {
 						objData, err := runtime.Encode(encoder, &seedmanagementv1alpha1.Gardenlet{
 							Spec: seedmanagementv1alpha1.GardenletSpec{
