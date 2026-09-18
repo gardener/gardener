@@ -7,6 +7,7 @@ package plutono
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -523,6 +524,43 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		}
 	}
 
+	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+		delete(dashboards, "victorialogs-dashboard.json")
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+		if p.values.IsGardenCluster {
+			if err := removePanelByID(dashboards, "kubernetes-pods-dashboard.json", 6); err != nil {
+				return nil, err
+			}
+		} else if p.values.ClusterType == component.ClusterTypeSeed {
+			delete(dashboards, "pod-logs.json")
+			delete(dashboards, "systemd-logs.json")
+			if err := removePanelByID(dashboards, "extensions-dashboard.json", 5); err != nil {
+				return nil, err
+			}
+			if err := removeTemplating(dashboards, "extensions-dashboard.json"); err != nil {
+				return nil, err
+			}
+		} else if p.values.ClusterType == component.ClusterTypeShoot {
+			if err := removePanelByID(dashboards, "kubernetes-pods-dashboard.json", 6); err != nil {
+				return nil, err
+			}
+			if err := removePanelByID(dashboards, "controlplane-logs-dashboard.json", 43); err != nil {
+				return nil, err
+			}
+			if err := rewriteControlplaneLogsTemplating(dashboards); err != nil {
+				return nil, err
+			}
+			for _, name := range []string{"cluster-overview-dashboard.json"} {
+				if err := renamePanelValiToVictoriaLogs(dashboards, name, 40); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	// this is necessary to prevent hitting configmap size limit.
 	var err error
 	configMap.Data, err = convertToCompactJSON(dashboards)
@@ -926,6 +964,112 @@ func getLabels() map[string]string {
 	return map[string]string{
 		"component": name,
 	}
+}
+
+func parseDashboard(dashboards map[string]string, filename string) (map[string]any, error) {
+	raw, ok := dashboards[filename]
+	if !ok {
+		return nil, fmt.Errorf("dashboard %q not found", filename)
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(raw), &data); err != nil {
+		return nil, fmt.Errorf("error parsing dashboard %q: %w", filename, err)
+	}
+	return data, nil
+}
+
+func saveDashboard(dashboards map[string]string, filename string, data map[string]any) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("error marshaling dashboard %q: %w", filename, err)
+	}
+	dashboards[filename] = string(b)
+	return nil
+}
+
+func removePanelByID(dashboards map[string]string, filename string, id int) error {
+	data, err := parseDashboard(dashboards, filename)
+	if err != nil {
+		return err
+	}
+	panels, _ := data["panels"].([]any)
+	filtered := panels[:0]
+	for _, p := range panels {
+		panel, _ := p.(map[string]any)
+		if panelID, _ := panel["id"].(float64); int(panelID) != id {
+			filtered = append(filtered, p)
+		}
+	}
+	data["panels"] = filtered
+	return saveDashboard(dashboards, filename, data)
+}
+
+func removeTemplating(dashboards map[string]string, filename string) error {
+	data, err := parseDashboard(dashboards, filename)
+	if err != nil {
+		return err
+	}
+	delete(data, "templating")
+	return saveDashboard(dashboards, filename, data)
+}
+
+func rewriteControlplaneLogsTemplating(dashboards map[string]string) error {
+	const filename = "controlplane-logs-dashboard.json"
+	data, err := parseDashboard(dashboards, filename)
+	if err != nil {
+		return err
+	}
+	data["templating"] = map[string]any{
+		"list": []any{
+			map[string]any{
+				"allValue":       ".+",
+				"current":        map[string]any{"selected": false, "text": "All", "value": "$__all"},
+				"datasource":     "prometheus",
+				"definition":     "label_values(kube_pod_info{type=~\"seed\"}, pod)",
+				"description":    nil,
+				"error":          nil,
+				"hide":           float64(0),
+				"includeAll":     true,
+				"label":          "Pod",
+				"multi":          false,
+				"name":           "pod",
+				"options":        []any{},
+				"query":          map[string]any{"query": "label_values(kube_pod_info{type=~\"seed\"}, pod)", "refId": "StandardVariableQuery"},
+				"refresh":        float64(2),
+				"regex":          "",
+				"skipUrlSync":    false,
+				"sort":           float64(1),
+				"tagValuesQuery": "",
+				"tags":           []any{},
+				"tagsQuery":      "",
+				"type":           "query",
+				"useTags":        false,
+			},
+		},
+	}
+	return saveDashboard(dashboards, filename, data)
+}
+
+func renamePanelValiToVictoriaLogs(dashboards map[string]string, filename string, id int) error {
+	data, err := parseDashboard(dashboards, filename)
+	if err != nil {
+		return err
+	}
+	panels, _ := data["panels"].([]any)
+	for _, p := range panels {
+		panel, _ := p.(map[string]any)
+		if panelID, _ := panel["id"].(float64); int(panelID) == id {
+			panel["title"] = "victoria-logs"
+			targets, _ := panel["targets"].([]any)
+			for _, t := range targets {
+				target, _ := t.(map[string]any)
+				if expr, _ := target["expr"].(string); expr == "absent(up{job=\"vali\"} == 1)" {
+					target["expr"] = "absent(up{job=\"victoria-logs\"} == 1)"
+				}
+			}
+		}
+	}
+	return saveDashboard(dashboards, filename, data)
 }
 
 func convertToCompactJSON(data map[string]string) (map[string]string, error) {

@@ -6,6 +6,7 @@ package plutono_test
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -794,7 +795,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 24)
+					checkDeployedResources("plutono-dashboards", 23)
 				})
 
 				Context("w/ Vali is removed", func() {
@@ -806,6 +807,16 @@ status: {}
 					It("should omit the vali datasource from the datasources ConfigMap", func() {
 						Expect(manifests).To(ContainElement(dataSourceConfigMapYAMLFor(values)))
 						Expect(manifests).NotTo(ContainElement(ContainSubstring("- name: vali")))
+					})
+
+					It("should remove pod-logs and systemd-logs dashboards and modify extensions-dashboard", func() {
+						dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+
+						Expect(dashboardsConfigMap.Data).NotTo(HaveKey("pod-logs.json"))
+						Expect(dashboardsConfigMap.Data).NotTo(HaveKey("systemd-logs.json"))
+						Expect(dashboardPanelIDs(dashboardsConfigMap.Data["extensions-dashboard.json"])).NotTo(ContainElement(5))
+						Expect(dashboardsConfigMap.Data["extensions-dashboard.json"]).NotTo(ContainSubstring(`"templating"`))
 					})
 				})
 
@@ -827,7 +838,7 @@ status: {}
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards", 28)
+						checkDeployedResources("plutono-dashboards", 27)
 					})
 				})
 			})
@@ -876,6 +887,32 @@ status: {}
 				It("should successfully deploy all resources", func() {
 					checkDeployedResources("plutono-dashboards-garden", 28)
 				})
+
+				Context("w/ VictoriaLogs enabled, Vali not yet removed", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, false))
+					})
+
+					It("should not modify kubernetes-pods-dashboard", func() {
+						dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards-garden", Namespace: namespace}}
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+						Expect(dashboardPanelIDs(dashboardsConfigMap.Data["kubernetes-pods-dashboard.json"])).To(ContainElement(6))
+					})
+				})
+
+				Context("w/ VictoriaLogs enabled and Vali removed", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, true))
+					})
+
+					It("should remove the Pod Logs panel from kubernetes-pods-dashboard", func() {
+						dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards-garden", Namespace: namespace}}
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+						Expect(dashboardPanelIDs(dashboardsConfigMap.Data["kubernetes-pods-dashboard.json"])).NotTo(ContainElement(6))
+					})
+				})
 			})
 		})
 
@@ -886,7 +923,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkDeployedResources("plutono-dashboards", 35)
+				checkDeployedResources("plutono-dashboards", 36)
 			})
 
 			Context("w/ include istio, mcm, ha-vpn, vpa", func() {
@@ -897,7 +934,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 40)
+					checkDeployedResources("plutono-dashboards", 41)
 				})
 			})
 
@@ -907,7 +944,61 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 27)
+					checkDeployedResources("plutono-dashboards", 28)
+				})
+			})
+
+			Context("w/ VictoriaLogs enabled, Vali not yet removed", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, false))
+				})
+
+				It("should not modify dashboards", func() {
+					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+
+					Expect(dashboardsConfigMap.Data).To(HaveKey("kubernetes-pods-dashboard.json"))
+					Expect(dashboardsConfigMap.Data).To(HaveKey("controlplane-logs-dashboard.json"))
+					Expect(dashboardPanelIDs(dashboardsConfigMap.Data["kubernetes-pods-dashboard.json"])).To(ContainElement(6))
+					Expect(dashboardPanelIDs(dashboardsConfigMap.Data["controlplane-logs-dashboard.json"])).To(ContainElement(43))
+					Expect(dashboardTemplatingVarNames(dashboardsConfigMap.Data["controlplane-logs-dashboard.json"])).To(ContainElements("pod", "container", "severity", "search"))
+					Expect(dashboardPanelTitle(dashboardsConfigMap.Data["cluster-overview-dashboard.json"], 40)).To(Equal("vali"))
+				})
+			})
+
+			Context("w/ VictoriaLogs enabled and Vali removed", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, true))
+				})
+
+				It("should remove the Pod Logs panel from kubernetes-pods-dashboard", func() {
+					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+					Expect(dashboardPanelIDs(dashboardsConfigMap.Data["kubernetes-pods-dashboard.json"])).NotTo(ContainElement(6))
+				})
+
+				It("should remove the Logs panel and rewrite templating in controlplane-logs-dashboard", func() {
+					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+
+					raw := dashboardsConfigMap.Data["controlplane-logs-dashboard.json"]
+					Expect(dashboardPanelIDs(raw)).NotTo(ContainElement(43))
+					vars := dashboardTemplatingVarNames(raw)
+					Expect(vars).To(ConsistOf("pod"))
+					Expect(vars).NotTo(ContainElements("severity", "search", "container"))
+					Expect(dashboardTemplatingVarDatasource(raw, "pod")).To(Equal("prometheus"))
+				})
+
+				It("should rename the vali panel to victoria-logs in cluster-overview-dashboard", func() {
+					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+
+					raw := dashboardsConfigMap.Data["cluster-overview-dashboard.json"]
+					Expect(dashboardPanelTitle(raw, 40)).To(Equal("victoria-logs"))
+					Expect(raw).To(ContainSubstring(`absent(up{job=\"victoria-logs\"} == 1)`))
+					Expect(raw).NotTo(ContainSubstring(`job=\"vali\"`))
 				})
 			})
 		})
@@ -1088,4 +1179,70 @@ func filterManifests(manifests []string, secretPrefixToRemove string) (filteredM
 		filteredManifests = append(filteredManifests, manifest)
 	}
 	return filteredManifests, removedObjectMetas
+}
+
+func dashboardPanelIDs(raw string) []int {
+	var data map[string]any
+	if err := json.Unmarshal([]byte(raw), &data); err != nil {
+		return nil
+	}
+	panels, _ := data["panels"].([]any)
+	var ids []int
+	for _, p := range panels {
+		panel, _ := p.(map[string]any)
+		if id, ok := panel["id"].(float64); ok {
+			ids = append(ids, int(id))
+		}
+	}
+	return ids
+}
+
+func dashboardTemplatingVarNames(raw string) []string {
+	var data map[string]any
+	if err := json.Unmarshal([]byte(raw), &data); err != nil {
+		return nil
+	}
+	tpl, _ := data["templating"].(map[string]any)
+	list, _ := tpl["list"].([]any)
+	var names []string
+	for _, v := range list {
+		varMap, _ := v.(map[string]any)
+		if name, ok := varMap["name"].(string); ok {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+func dashboardTemplatingVarDatasource(raw, varName string) string {
+	var data map[string]any
+	if err := json.Unmarshal([]byte(raw), &data); err != nil {
+		return ""
+	}
+	tpl, _ := data["templating"].(map[string]any)
+	list, _ := tpl["list"].([]any)
+	for _, v := range list {
+		varMap, _ := v.(map[string]any)
+		if varMap["name"] == varName {
+			ds, _ := varMap["datasource"].(string)
+			return ds
+		}
+	}
+	return ""
+}
+
+func dashboardPanelTitle(raw string, id int) string {
+	var data map[string]any
+	if err := json.Unmarshal([]byte(raw), &data); err != nil {
+		return ""
+	}
+	panels, _ := data["panels"].([]any)
+	for _, p := range panels {
+		panel, _ := p.(map[string]any)
+		if panelID, ok := panel["id"].(float64); ok && int(panelID) == id {
+			title, _ := panel["title"].(string)
+			return title
+		}
+	}
+	return ""
 }

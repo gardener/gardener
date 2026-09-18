@@ -327,6 +327,38 @@
           "align": false,
           "alignLevel": null
         }
+      },
+      {
+        "datasource": "vali",
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 17,
+          "w": 24,
+          "x": 0,
+          "y": 7
+        },
+        "id": 43,
+        "interval": "",
+        "options": {
+          "dedupStrategy": "none",
+          "showLabels": false,
+          "showTime": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": false
+        },
+        "targets": [
+          {
+            "expr": "{pod_name=~\"$pod\", container_name=~\"$container\", severity=~\"$severity\"} |~ \"$search\"",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": null,
+        "timeShift": null,
+        "title": "Logs",
+        "type": "logs"
       }
     ],
     "refresh": "1m",
@@ -342,25 +374,27 @@
         {
           "allValue": ".+",
           "current": {
-            "selected": false,
-            "text": "All",
-            "value": "$__all"
+            "selected": true,
+            "tags": [],
+            "text": [
+              "All"
+            ],
+            "value": [
+              ".*"
+            ]
           },
-          "datasource": "prometheus",
-          "definition": "label_values(kube_pod_info{type=~\"seed\"}, pod)",
+          "datasource": "vali",
+          "definition": "label_values(pod_name)",
           "description": null,
           "error": null,
           "hide": 0,
           "includeAll": true,
-          "label": "Pod",
-          "multi": false,
+          "label": "pod",
+          "multi": true,
           "name": "pod",
           "options": [],
-          "query": {
-            "query": "label_values(kube_pod_info{type=~\"seed\"}, pod)",
-            "refId": "StandardVariableQuery"
-          },
-          "refresh": 2,
+          "query": "label_values(pod_name)",
+          "refresh": 1,
           "regex": "",
           "skipUrlSync": false,
           "sort": 1,
@@ -369,6 +403,122 @@
           "tagsQuery": "",
           "type": "query",
           "useTags": false
+        },
+        {
+          "allValue": ".+",
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          },
+          "datasource": "prometheus",
+          "definition": "label_values(kube_pod_container_info{type=~\"seed\", pod=~\"$pod\"}, container)",
+          "description": null,
+          "error": null,
+          "hide": 0,
+          "includeAll": true,
+          "label": "Container",
+          "multi": true,
+          "name": "container",
+          "options": [],
+          "query": {
+            "query": "label_values(kube_pod_container_info{type=~\"seed\", pod=~\"$pod\"}, container)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 2,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": ".*",
+          "current": {
+            "selected": true,
+            "tags": [],
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          },
+          "datasource": "vali",
+          "definition": "label_values(severity)",
+          "description": null,
+          "error": null,
+          "hide": 0,
+          "includeAll": true,
+          "label": "Severity",
+          "multi": true,
+          "name": "severity",
+          "options": [
+            {
+              "selected": true,
+              "text": "All",
+              "value": "$__all"
+            },
+            {
+              "selected": false,
+              "text": "ERR",
+              "value": "ERR"
+            },
+            {
+              "selected": false,
+              "text": "INFO",
+              "value": "INFO"
+            },
+            {
+              "selected": false,
+              "text": "NOTICE",
+              "value": "NOTICE"
+            },
+            {
+              "selected": false,
+              "text": "WARN",
+              "value": "WARN"
+            }
+          ],
+          "query": "label_values(severity)",
+          "refresh": 0,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "current": {
+            "selected": false,
+            "text": "",
+            "value": ""
+          },
+          "description": null,
+          "error": null,
+          "hide": 0,
+          "label": "Search",
+          "name": "search",
+          "options": [
+            {
+              "selected": true,
+              "text": "",
+              "value": ""
+            }
+          ],
+          "query": "",
+          "skipUrlSync": false,
+          "type": "textbox"
         }
       ]
     },
