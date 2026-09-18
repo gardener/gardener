@@ -687,6 +687,16 @@ func ComputeExpectedGardenletConfiguration(
 			Bastion: &gardenletconfigv1alpha1.BastionControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
+			ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
+				ConcurrentSyncs: &twenty,
+			},
+			ControllerInstallationCare: &gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration{
+				ConcurrentSyncs: &twenty,
+				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
+			},
+			ControllerInstallationRequired: &gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
+				ConcurrentSyncs: &one,
+			},
 			Gardenlet: &gardenletconfigv1alpha1.GardenletObjectControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
@@ -699,6 +709,19 @@ func ComputeExpectedGardenletConfiguration(
 				LeaseResyncSeconds:       new(int32(2)),
 				LeaseResyncMissThreshold: new(int32(10)),
 			},
+			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
+				SyncPeriod: &metav1.Duration{
+					Duration: 30 * time.Second,
+				},
+				ConditionThresholds: []gardenletconfigv1alpha1.ConditionThreshold{
+					{
+						Type: string(gardencorev1beta1.SeedSystemComponentsHealthy),
+						Duration: metav1.Duration{
+							Duration: 1 * time.Minute,
+						},
+					},
+				},
+			},
 			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 				ReconcileInMaintenanceOnly: new(false),
 				RespectSyncPeriodOverwrite: new(false),
@@ -710,19 +733,6 @@ func ComputeExpectedGardenletConfiguration(
 					Duration: 12 * time.Hour,
 				},
 				DNSEntryTTLSeconds: new(int64(120)),
-			},
-			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
-				ConcurrentSyncs: &five,
-				JitterUpdates:   new(false),
-				SyncPeriod: &metav1.Duration{
-					Duration: 1 * time.Hour,
-				},
-				WaitSyncPeriod: &metav1.Duration{
-					Duration: 15 * time.Second,
-				},
-				SyncJitterPeriod: &metav1.Duration{
-					Duration: 300000000000,
-				},
 			},
 			ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 				ConcurrentSyncs: &five,
@@ -768,25 +778,28 @@ func ComputeExpectedGardenletConfiguration(
 				},
 				WebhookRemediatorEnabled: new(false),
 			},
-			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
-				SyncPeriod: &metav1.Duration{
-					Duration: 30 * time.Second,
-				},
-				ConditionThresholds: []gardenletconfigv1alpha1.ConditionThreshold{
-					{
-						Type: string(gardencorev1beta1.SeedSystemComponentsHealthy),
-						Duration: metav1.Duration{
-							Duration: 1 * time.Minute,
-						},
-					},
-				},
-			},
 			ShootState: &gardenletconfigv1alpha1.ShootStateControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod:      &metav1.Duration{Duration: 6 * time.Hour},
 			},
 			ShootStatus: &gardenletconfigv1alpha1.ShootStatusControllerConfiguration{
 				ConcurrentSyncs: &five,
+			},
+			NetworkPolicy: &gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration{
+				ConcurrentSyncs: &five,
+			},
+			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
+				ConcurrentSyncs: &five,
+				JitterUpdates:   new(false),
+				SyncPeriod: &metav1.Duration{
+					Duration: 1 * time.Hour,
+				},
+				WaitSyncPeriod: &metav1.Duration{
+					Duration: 15 * time.Second,
+				},
+				SyncJitterPeriod: &metav1.Duration{
+					Duration: 300000000000,
+				},
 			},
 			TokenRequestorServiceAccount: &gardenletconfigv1alpha1.TokenRequestorServiceAccountControllerConfiguration{
 				ConcurrentSyncs: &five,
@@ -796,19 +809,6 @@ func ComputeExpectedGardenletConfiguration(
 				TokenExpirationDuration: &metav1.Duration{Duration: 6 * time.Hour},
 			},
 			VPAEvictionRequirements: &gardenletconfigv1alpha1.VPAEvictionRequirementsControllerConfiguration{
-				ConcurrentSyncs: &five,
-			},
-			ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
-				ConcurrentSyncs: &twenty,
-			},
-			ControllerInstallationCare: &gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration{
-				ConcurrentSyncs: &twenty,
-				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
-			},
-			ControllerInstallationRequired: &gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
-				ConcurrentSyncs: &one,
-			},
-			NetworkPolicy: &gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
 		},
@@ -893,16 +893,17 @@ func ComputeExpectedGardenletConfiguration(
 		config.GardenClientConnection.Kubeconfig = "/etc/gardenlet/kubeconfig-garden/kubeconfig"
 	}
 
-	if hasSeedClientConnectionKubeconfig {
-		config.SeedClientConnection.Kubeconfig = "/etc/gardenlet/kubeconfig-seed/kubeconfig"
-	}
-
 	if bootstrapKubeconfig != nil {
 		config.GardenClientConnection.BootstrapKubeconfig = bootstrapKubeconfig
 	}
 	config.GardenClientConnection.KubeconfigSecret = kubeconfigSecret
 
+	if hasSeedClientConnectionKubeconfig {
+		config.SeedClientConnection.Kubeconfig = "/etc/gardenlet/kubeconfig-seed/kubeconfig"
+	}
+
 	if seedConfig != nil {
+		gardencorev1beta1.SetDefaults_SeedSpec(&seedConfig.Spec)
 		config.SeedConfig = seedConfig
 	}
 

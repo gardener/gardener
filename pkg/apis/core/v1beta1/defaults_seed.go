@@ -10,15 +10,21 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// SetDefaults_Seed sets default values for Seed objects.
-func SetDefaults_Seed(obj *Seed) {
-	if obj.Spec.Settings == nil {
-		obj.Spec.Settings = &SeedSettings{}
+// SetDefaults_SeedSpec sets default values for SeedSpec objects.
+// It is used for both `Seed` objects and `SeedConfig` in `GardenletConfiguration`, so the logic must not be duplicated.
+// The idiomatic approach would be a generated `SetObjectDefaults_SeedSpec`, but defaulter-gen only generates
+// `SetObjectDefaults_*` functions for API objects (i.e. types implementing `runtime.Object`), not for sub-types like `SeedSpec`.
+// The helper functions below are intentionally unexported: if they were named `SetDefaults_<Type>`, defaulter-gen would
+// add them to the generated `SetObjectDefaults_Seed`, causing them to run twice - once via this function and once again individually.
+func SetDefaults_SeedSpec(obj *SeedSpec) {
+	if obj.Settings == nil {
+		obj.Settings = &SeedSettings{}
 	}
+	setDefaults_SeedNetworks(&obj.Networks)
+	setDefaults_SeedSettings(obj.Settings)
 }
 
-// SetDefaults_SeedSettings sets default values for SeedSettings objects.
-func SetDefaults_SeedSettings(obj *SeedSettings) {
+func setDefaults_SeedSettings(obj *SeedSettings) {
 	if obj.ExcessCapacityReservation == nil {
 		obj.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{}
 		setDefaults_ExcessCapacityReservationConfig(obj.ExcessCapacityReservation)
@@ -35,6 +41,7 @@ func SetDefaults_SeedSettings(obj *SeedSettings) {
 	if obj.LoadBalancerServices == nil {
 		obj.LoadBalancerServices = &SeedSettingLoadBalancerServices{}
 	}
+	setDefaults_LoadBalancerServices(obj.LoadBalancerServices)
 
 	if obj.VerticalPodAutoscaler == nil {
 		obj.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
@@ -47,21 +54,20 @@ func SetDefaults_SeedSettings(obj *SeedSettings) {
 	if obj.DependencyWatchdog == nil {
 		obj.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
 	}
+	setDefaults_DependencyWatchdog(obj.DependencyWatchdog)
 
 	if obj.TopologyAwareRouting == nil {
 		obj.TopologyAwareRouting = &SeedSettingTopologyAwareRouting{Enabled: false}
 	}
 }
 
-// SetDefaults_SeedNetworks sets default values for SeedNetworks objects.
-func SetDefaults_SeedNetworks(obj *SeedNetworks) {
+func setDefaults_SeedNetworks(obj *SeedNetworks) {
 	if len(obj.IPFamilies) == 0 {
 		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
 	}
 }
 
-// SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
-func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
+func setDefaults_DependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
 	if obj.Weeder == nil {
 		obj.Weeder = &SeedSettingDependencyWatchdogWeeder{Enabled: true}
 	}
@@ -71,8 +77,7 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 	}
 }
 
-// SetDefaults_SeedSettingLoadBalancerServices sets defaults for SeedSettingLoadBalancerServices objects.
-func SetDefaults_SeedSettingLoadBalancerServices(obj *SeedSettingLoadBalancerServices) {
+func setDefaults_LoadBalancerServices(obj *SeedSettingLoadBalancerServices) {
 	if obj.ZonalIngress == nil {
 		obj.ZonalIngress = &SeedSettingLoadBalancerServicesZonalIngress{Enabled: new(true)}
 	}
