@@ -22,11 +22,39 @@ import (
 )
 
 // ControllerInstallationInformer provides access to a shared informer and lister for
-// ControllerInstallations.
+// ControllerInstallations. Prefer using the type-safe variant (see [TypedControllerInstallationInformer]).
 type ControllerInstallationInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.ControllerInstallationLister
 }
+
+// TypedControllerInstallationInformer provides access to a shared informer and lister for
+// ControllerInstallations, including the type-safe TypedInformer variant.
+// It is a superset of ControllerInstallationInformer.
+type TypedControllerInstallationInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ControllerInstallationIndexInformer
+	Lister() corev1beta1.ControllerInstallationLister
+}
+
+// ControllerInstallationIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ControllerInstallationIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.ControllerInstallation]
+
+// ControllerInstallationHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for ControllerInstallation.
+type ControllerInstallationHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.ControllerInstallation]
+
+// ControllerInstallationDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for ControllerInstallation.
+type ControllerInstallationDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.ControllerInstallation]
+
+// ControllerInstallationFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for ControllerInstallation.
+type ControllerInstallationFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.ControllerInstallation]
+
+// ControllerInstallationIndexers is a specialization of [cache.TypedIndexers] for ControllerInstallation.
+type ControllerInstallationIndexers = cache.TypedIndexers[*apiscorev1beta1.ControllerInstallation]
+
+// DeletedControllerInstallation is a specialization of [cache.DeletedObject] for ControllerInstallation.
+type DeletedControllerInstallation = cache.DeletedObject[*apiscorev1beta1.ControllerInstallation]
 
 type controllerInstallationInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -36,25 +64,49 @@ type controllerInstallationInformer struct {
 // NewControllerInstallationInformer constructs a new informer for ControllerInstallation type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedControllerInstallationInformer]).
 func NewControllerInstallationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewControllerInstallationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedControllerInstallationInformer constructs a new informer for ControllerInstallation type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedControllerInstallationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ControllerInstallationIndexers) ControllerInstallationIndexInformer {
+	return NewTypedControllerInstallationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredControllerInstallationInformer constructs a new informer for ControllerInstallation type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredControllerInstallationInformer]).
 func NewFilteredControllerInstallationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewControllerInstallationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedControllerInstallationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredControllerInstallationInformer constructs a new informer for ControllerInstallation type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredControllerInstallationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ControllerInstallationIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ControllerInstallationIndexInformer {
+	return NewTypedControllerInstallationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewControllerInstallationInformerWithOptions constructs a new informer for ControllerInstallation type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedControllerInstallationInformerWithOptions]).
 func NewControllerInstallationInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedControllerInstallationInformerWithOptions(client, options)
+}
+
+// NewTypedControllerInstallationInformerWithOptions constructs a new informer for ControllerInstallation type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedControllerInstallationInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) ControllerInstallationIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "controllerinstallations"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerInstallation](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -87,17 +139,57 @@ func NewControllerInstallationInformerWithOptions(client versioned.Interface, op
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *controllerInstallationInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewControllerInstallationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedControllerInstallationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *controllerInstallationInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.ControllerInstallation{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *controllerInstallationInformer) TypedInformer() ControllerInstallationIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerInstallation](f.factory.InformerFor(&apiscorev1beta1.ControllerInstallation{}, f.defaultInformer))
 }
 
 func (f *controllerInstallationInformer) Lister() corev1beta1.ControllerInstallationLister {
 	return corev1beta1.NewControllerInstallationLister(f.Informer().GetIndexer())
+}
+
+// ToTypedControllerInstallationInformer converts an untyped informer into a TypedControllerInstallationInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ControllerInstallation. If that is not the case, calling type-safe methods of the returned
+// TypedControllerInstallationInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedControllerInstallationInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedControllerInstallationInformer(informer ControllerInstallationInformer) TypedControllerInstallationInformer {
+	if informer, ok := informer.(TypedControllerInstallationInformer); ok {
+		return informer
+	}
+	return &controllerInstallationTypedInformerAdapter{informer}
+}
+
+type controllerInstallationTypedInformerAdapter struct {
+	ControllerInstallationInformer
+}
+
+func (a *controllerInstallationTypedInformerAdapter) TypedInformer() ControllerInstallationIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerInstallation](a.Informer())
+}
+
+// ToControllerInstallationIndexInformer converts an untyped informer into a ControllerInstallationIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ControllerInstallation. If that is not the case, calling type-safe methods of the returned
+// ControllerInstallationIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ControllerInstallationIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToControllerInstallationIndexInformer(informer cache.SharedIndexInformer) ControllerInstallationIndexInformer {
+	if informer, ok := informer.(ControllerInstallationIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerInstallation](informer)
 }

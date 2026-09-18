@@ -334,18 +334,7 @@ func autoConvert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(in *
 }
 
 func autoConvert_v1alpha1_GardenletDeployment_To_seedmanagement_GardenletDeployment(in *GardenletDeployment, out *seedmanagement.GardenletDeployment, s conversion.Scope) error {
-	out.ReplicaCount = (*int32)(unsafe.Pointer(in.ReplicaCount))
-	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
-	out.ServiceAccountName = (*string)(unsafe.Pointer(in.ServiceAccountName))
-	out.Image = (*seedmanagement.Image)(unsafe.Pointer(in.Image))
-	out.Resources = (*corev1.ResourceRequirements)(unsafe.Pointer(in.Resources))
-	out.PodLabels = *(*map[string]string)(unsafe.Pointer(&in.PodLabels))
-	out.PodAnnotations = *(*map[string]string)(unsafe.Pointer(&in.PodAnnotations))
-	out.AdditionalVolumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
-	out.AdditionalVolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
-	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
-	out.Tolerations = *(*[]corev1.Toleration)(unsafe.Pointer(&in.Tolerations))
-	out.EnableHealthProbes = (*bool)(unsafe.Pointer(in.EnableHealthProbes))
+	*out = *(*seedmanagement.GardenletDeployment)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -355,18 +344,7 @@ func Convert_v1alpha1_GardenletDeployment_To_seedmanagement_GardenletDeployment(
 }
 
 func autoConvert_seedmanagement_GardenletDeployment_To_v1alpha1_GardenletDeployment(in *seedmanagement.GardenletDeployment, out *GardenletDeployment, s conversion.Scope) error {
-	out.ReplicaCount = (*int32)(unsafe.Pointer(in.ReplicaCount))
-	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
-	out.ServiceAccountName = (*string)(unsafe.Pointer(in.ServiceAccountName))
-	out.Image = (*Image)(unsafe.Pointer(in.Image))
-	out.Resources = (*corev1.ResourceRequirements)(unsafe.Pointer(in.Resources))
-	out.PodLabels = *(*map[string]string)(unsafe.Pointer(&in.PodLabels))
-	out.PodAnnotations = *(*map[string]string)(unsafe.Pointer(&in.PodAnnotations))
-	out.AdditionalVolumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.AdditionalVolumes))
-	out.AdditionalVolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.AdditionalVolumeMounts))
-	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
-	out.Tolerations = *(*[]corev1.Toleration)(unsafe.Pointer(&in.Tolerations))
-	out.EnableHealthProbes = (*bool)(unsafe.Pointer(in.EnableHealthProbes))
+	*out = *(*GardenletDeployment)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -498,8 +476,7 @@ func autoConvert_seedmanagement_GardenletSpec_To_v1alpha1_GardenletSpec(in *seed
 }
 
 func autoConvert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus(in *GardenletStatus, out *seedmanagement.GardenletStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
-	out.ObservedGeneration = in.ObservedGeneration
+	*out = *(*seedmanagement.GardenletStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -509,8 +486,7 @@ func Convert_v1alpha1_GardenletStatus_To_seedmanagement_GardenletStatus(in *Gard
 }
 
 func autoConvert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus(in *seedmanagement.GardenletStatus, out *GardenletStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]v1beta1.Condition)(unsafe.Pointer(&in.Conditions))
-	out.ObservedGeneration = in.ObservedGeneration
+	*out = *(*GardenletStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -520,10 +496,7 @@ func Convert_seedmanagement_GardenletStatus_To_v1alpha1_GardenletStatus(in *seed
 }
 
 func autoConvert_v1alpha1_Image_To_seedmanagement_Image(in *Image, out *seedmanagement.Image, s conversion.Scope) error {
-	out.Repository = (*string)(unsafe.Pointer(in.Repository))
-	out.Tag = (*string)(unsafe.Pointer(in.Tag))
-	out.PullPolicy = (*corev1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
-	out.Ref = (*string)(unsafe.Pointer(in.Ref))
+	*out = *(*seedmanagement.Image)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -533,10 +506,7 @@ func Convert_v1alpha1_Image_To_seedmanagement_Image(in *Image, out *seedmanageme
 }
 
 func autoConvert_seedmanagement_Image_To_v1alpha1_Image(in *seedmanagement.Image, out *Image, s conversion.Scope) error {
-	out.Repository = (*string)(unsafe.Pointer(in.Repository))
-	out.Tag = (*string)(unsafe.Pointer(in.Tag))
-	out.PullPolicy = (*corev1.PullPolicy)(unsafe.Pointer(in.PullPolicy))
-	out.Ref = (*string)(unsafe.Pointer(in.Ref))
+	*out = *(*Image)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -732,17 +702,7 @@ func Convert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpec(in
 }
 
 func autoConvert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatus(in *ManagedSeedSetStatus, out *seedmanagement.ManagedSeedSetStatus, s conversion.Scope) error {
-	out.ObservedGeneration = in.ObservedGeneration
-	out.Replicas = in.Replicas
-	out.ReadyReplicas = in.ReadyReplicas
-	out.NextReplicaNumber = in.NextReplicaNumber
-	out.CurrentReplicas = in.CurrentReplicas
-	out.UpdatedReplicas = in.UpdatedReplicas
-	out.CurrentRevision = in.CurrentRevision
-	out.UpdateRevision = in.UpdateRevision
-	out.CollisionCount = (*int32)(unsafe.Pointer(in.CollisionCount))
-	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
-	out.PendingReplica = (*seedmanagement.PendingReplica)(unsafe.Pointer(in.PendingReplica))
+	*out = *(*seedmanagement.ManagedSeedSetStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -752,17 +712,7 @@ func Convert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatu
 }
 
 func autoConvert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatus(in *seedmanagement.ManagedSeedSetStatus, out *ManagedSeedSetStatus, s conversion.Scope) error {
-	out.ObservedGeneration = in.ObservedGeneration
-	out.Replicas = in.Replicas
-	out.ReadyReplicas = in.ReadyReplicas
-	out.NextReplicaNumber = in.NextReplicaNumber
-	out.CurrentReplicas = in.CurrentReplicas
-	out.UpdatedReplicas = in.UpdatedReplicas
-	out.CurrentRevision = in.CurrentRevision
-	out.UpdateRevision = in.UpdateRevision
-	out.CollisionCount = (*int32)(unsafe.Pointer(in.CollisionCount))
-	out.Conditions = *(*[]v1beta1.Condition)(unsafe.Pointer(&in.Conditions))
-	out.PendingReplica = (*PendingReplica)(unsafe.Pointer(in.PendingReplica))
+	*out = *(*ManagedSeedSetStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -798,8 +748,7 @@ func Convert_seedmanagement_ManagedSeedSpec_To_v1alpha1_ManagedSeedSpec(in *seed
 }
 
 func autoConvert_v1alpha1_ManagedSeedStatus_To_seedmanagement_ManagedSeedStatus(in *ManagedSeedStatus, out *seedmanagement.ManagedSeedStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
-	out.ObservedGeneration = in.ObservedGeneration
+	*out = *(*seedmanagement.ManagedSeedStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -809,8 +758,7 @@ func Convert_v1alpha1_ManagedSeedStatus_To_seedmanagement_ManagedSeedStatus(in *
 }
 
 func autoConvert_seedmanagement_ManagedSeedStatus_To_v1alpha1_ManagedSeedStatus(in *seedmanagement.ManagedSeedStatus, out *ManagedSeedStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]v1beta1.Condition)(unsafe.Pointer(&in.Conditions))
-	out.ObservedGeneration = in.ObservedGeneration
+	*out = *(*ManagedSeedStatus)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -846,10 +794,7 @@ func Convert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate(
 }
 
 func autoConvert_v1alpha1_PendingReplica_To_seedmanagement_PendingReplica(in *PendingReplica, out *seedmanagement.PendingReplica, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Reason = seedmanagement.PendingReplicaReason(in.Reason)
-	out.Since = in.Since
-	out.Retries = (*int32)(unsafe.Pointer(in.Retries))
+	*out = *(*seedmanagement.PendingReplica)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -859,10 +804,7 @@ func Convert_v1alpha1_PendingReplica_To_seedmanagement_PendingReplica(in *Pendin
 }
 
 func autoConvert_seedmanagement_PendingReplica_To_v1alpha1_PendingReplica(in *seedmanagement.PendingReplica, out *PendingReplica, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Reason = PendingReplicaReason(in.Reason)
-	out.Since = in.Since
-	out.Retries = (*int32)(unsafe.Pointer(in.Retries))
+	*out = *(*PendingReplica)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -872,7 +814,7 @@ func Convert_seedmanagement_PendingReplica_To_v1alpha1_PendingReplica(in *seedma
 }
 
 func autoConvert_v1alpha1_RollingUpdateStrategy_To_seedmanagement_RollingUpdateStrategy(in *RollingUpdateStrategy, out *seedmanagement.RollingUpdateStrategy, s conversion.Scope) error {
-	out.Partition = (*int32)(unsafe.Pointer(in.Partition))
+	*out = *(*seedmanagement.RollingUpdateStrategy)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -882,7 +824,7 @@ func Convert_v1alpha1_RollingUpdateStrategy_To_seedmanagement_RollingUpdateStrat
 }
 
 func autoConvert_seedmanagement_RollingUpdateStrategy_To_v1alpha1_RollingUpdateStrategy(in *seedmanagement.RollingUpdateStrategy, out *RollingUpdateStrategy, s conversion.Scope) error {
-	out.Partition = (*int32)(unsafe.Pointer(in.Partition))
+	*out = *(*RollingUpdateStrategy)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -892,7 +834,7 @@ func Convert_seedmanagement_RollingUpdateStrategy_To_v1alpha1_RollingUpdateStrat
 }
 
 func autoConvert_v1alpha1_Shoot_To_seedmanagement_Shoot(in *Shoot, out *seedmanagement.Shoot, s conversion.Scope) error {
-	out.Name = in.Name
+	*out = *(*seedmanagement.Shoot)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -902,7 +844,7 @@ func Convert_v1alpha1_Shoot_To_seedmanagement_Shoot(in *Shoot, out *seedmanageme
 }
 
 func autoConvert_seedmanagement_Shoot_To_v1alpha1_Shoot(in *seedmanagement.Shoot, out *Shoot, s conversion.Scope) error {
-	out.Name = in.Name
+	*out = *(*Shoot)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -912,8 +854,7 @@ func Convert_seedmanagement_Shoot_To_v1alpha1_Shoot(in *seedmanagement.Shoot, ou
 }
 
 func autoConvert_v1alpha1_UpdateStrategy_To_seedmanagement_UpdateStrategy(in *UpdateStrategy, out *seedmanagement.UpdateStrategy, s conversion.Scope) error {
-	out.Type = (*seedmanagement.UpdateStrategyType)(unsafe.Pointer(in.Type))
-	out.RollingUpdate = (*seedmanagement.RollingUpdateStrategy)(unsafe.Pointer(in.RollingUpdate))
+	*out = *(*seedmanagement.UpdateStrategy)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -923,8 +864,7 @@ func Convert_v1alpha1_UpdateStrategy_To_seedmanagement_UpdateStrategy(in *Update
 }
 
 func autoConvert_seedmanagement_UpdateStrategy_To_v1alpha1_UpdateStrategy(in *seedmanagement.UpdateStrategy, out *UpdateStrategy, s conversion.Scope) error {
-	out.Type = (*UpdateStrategyType)(unsafe.Pointer(in.Type))
-	out.RollingUpdate = (*RollingUpdateStrategy)(unsafe.Pointer(in.RollingUpdate))
+	*out = *(*UpdateStrategy)(unsafe.Pointer(in))
 	return nil
 }
 
