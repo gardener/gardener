@@ -18,8 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	testingclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/ptr"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -2577,16 +2576,19 @@ var _ = Describe("Shoot Maintenance", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-shoot",
 					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationMaintain,
+					},
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					CloudProfileName: ptr.To("test-profile"),
+					CloudProfileName: new("test-profile"),
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.30.0",
 					},
 					Maintenance: &gardencorev1beta1.Maintenance{
 						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
 							KubernetesVersion:   true,
-							MachineImageVersion: ptr.To(false),
+							MachineImageVersion: new(false),
 						},
 					},
 				},
@@ -2619,7 +2621,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			r := &Reconciler{
 				Client: fakeClient,
-				Clock:  testingclock.NewFakeClock(time.Now()),
+				Clock:  testclock.NewFakeClock(time.Now()),
 			}
 
 			err := r.reconcile(ctx, log, shoot)
@@ -2630,6 +2632,39 @@ var _ = Describe("Shoot Maintenance", func() {
 			fetchedShoot := &gardencorev1beta1.Shoot{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
 			Expect(fetchedShoot.Status.LastMaintenance).To(BeNil())
+		})
+
+		It("should not strip the maintain operation annotation on conflict error", func() {
+			conflictErr := apierrors.NewConflict(schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoots"}, shoot.Name, errors.New("the object has been modified"))
+
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(cloudProfile, shoot).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(_ context.Context, _ client.WithWatch, _ client.Object, opts ...client.UpdateOption) error {
+						updateOpts := &client.UpdateOptions{}
+						updateOpts.ApplyOptions(opts)
+						if len(updateOpts.DryRun) > 0 && updateOpts.DryRun[0] == metav1.DryRunAll {
+							return conflictErr
+						}
+						return nil
+					},
+				}).
+				Build()
+
+			r := &Reconciler{
+				Client: fakeClient,
+				Clock:  testclock.NewFakeClock(time.Now()),
+			}
+
+			err := r.reconcile(ctx, log, shoot)
+			Expect(err).To(MatchError(conflictErr))
+			Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain))
+
+			fetchedShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
+			Expect(fetchedShoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain))
 		})
 
 		It("should mark maintenance as failed and return nil when dry-run update encounters non-conflict error", func() {
@@ -2653,7 +2688,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 			r := &Reconciler{
 				Client: fakeClient,
-				Clock:  testingclock.NewFakeClock(time.Now()),
+				Clock:  testclock.NewFakeClock(time.Now()),
 			}
 
 			err := r.reconcile(ctx, log, shoot)
