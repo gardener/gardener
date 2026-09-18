@@ -949,11 +949,22 @@ namespace: kube-system
 			Expect(c.Create(ctx, deploy)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
 
+			replicaSet := &appsv1.ReplicaSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "replicaset",
+					Namespace:       deployment.Namespace,
+					Labels:          labels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deploy, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
+				},
+			}
+			Expect(c.Create(ctx, replicaSet)).To(Succeed())
+
 			Expect(c.Create(ctx, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod",
-					Namespace: deployment.Namespace,
-					Labels:    labels,
+					Name:            "pod",
+					Namespace:       deployment.Namespace,
+					Labels:          labels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(replicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
 				},
 			})).To(Succeed())
 

@@ -160,6 +160,7 @@ var _ = Describe("Deployment", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "deploy",
 					Namespace: "namespace",
+					UID:       "deploy-uid",
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas: new(int32(1)),
@@ -182,11 +183,23 @@ var _ = Describe("Deployment", func() {
 
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
+			replicaSet := &appsv1.ReplicaSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "replicaset",
+					Namespace:       deployment.Namespace,
+					UID:             "replicaset-uid",
+					Labels:          labels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
+				},
+			}
+			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
+
 			Expect(fakeClient.Create(ctx, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod",
-					Namespace: deployment.Namespace,
-					Labels:    labels,
+					Name:            "pod",
+					Namespace:       deployment.Namespace,
+					Labels:          labels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(replicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
 				},
 			})).To(Succeed())
 
@@ -209,12 +222,24 @@ var _ = Describe("Deployment", func() {
 
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
+			replicaSet := &appsv1.ReplicaSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "replicaset",
+					Namespace:       deployment.Namespace,
+					UID:             "replicaset-uid",
+					Labels:          labels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
+				},
+			}
+			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
+
 			for i := range 2 {
 				Expect(fakeClient.Create(ctx, &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("pod%d", i),
-						Namespace: deployment.Namespace,
-						Labels:    labels,
+						Name:            fmt.Sprintf("pod%d", i),
+						Namespace:       deployment.Namespace,
+						Labels:          labels,
+						OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(replicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
 					},
 				})).To(Succeed())
 			}
@@ -267,6 +292,7 @@ var _ = Describe("Deployment", func() {
 			fakeClient client.Client
 
 			deployment *appsv1.Deployment
+			replicaSet *appsv1.ReplicaSet
 			pod        *corev1.Pod
 		)
 
@@ -277,21 +303,34 @@ var _ = Describe("Deployment", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "deploy",
 					Namespace: "namespace",
+					UID:       "deploy-uid",
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas: new(int32(1)),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
 				},
 			}
-			pod = &corev1.Pod{
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+
+			replicaSet = &appsv1.ReplicaSet{
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "pod-",
-					Namespace:    deployment.Namespace,
-					Labels:       deployment.Spec.Selector.MatchLabels,
+					Name:            "replicaset",
+					Namespace:       deployment.Namespace,
+					UID:             "replicaset-uid",
+					Labels:          deployment.Spec.Selector.MatchLabels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
 				},
 			}
+			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
 
-			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			pod = &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName:    "pod-",
+					Namespace:       deployment.Namespace,
+					Labels:          deployment.Spec.Selector.MatchLabels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(replicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
+				},
+			}
 		})
 
 		It("should consider the deployment as updated", func() {
@@ -363,6 +402,47 @@ var _ = Describe("Deployment", func() {
 
 			p2 := pod.DeepCopy()
 			Expect(fakeClient.Create(ctx, p2)).To(Succeed())
+
+			ok, err := health.DeploymentHasExactNumberOfPods(ctx, fakeClient, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+		})
+
+		It("should not consider pods of an unrelated Deployment sharing the same selector labels", func() {
+			Expect(fakeClient.Create(ctx, pod)).To(Succeed())
+
+			otherDeployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "other-deploy",
+					Namespace: deployment.Namespace,
+					UID:       "other-deploy-uid",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{MatchLabels: deployment.Spec.Selector.MatchLabels},
+				},
+			}
+			Expect(fakeClient.Create(ctx, otherDeployment)).To(Succeed())
+
+			otherReplicaSet := &appsv1.ReplicaSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "other-replicaset",
+					Namespace:       deployment.Namespace,
+					UID:             "other-replicaset-uid",
+					Labels:          deployment.Spec.Selector.MatchLabels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(otherDeployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
+				},
+			}
+			Expect(fakeClient.Create(ctx, otherReplicaSet)).To(Succeed())
+
+			otherPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName:    "other-pod-",
+					Namespace:       deployment.Namespace,
+					Labels:          deployment.Spec.Selector.MatchLabels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(otherReplicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
+				},
+			}
+			Expect(fakeClient.Create(ctx, otherPod)).To(Succeed())
 
 			ok, err := health.DeploymentHasExactNumberOfPods(ctx, fakeClient, deployment)
 			Expect(err).NotTo(HaveOccurred())

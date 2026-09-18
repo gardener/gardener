@@ -740,11 +740,22 @@ subjects:
 			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
 
+			replicaSet := &appsv1.ReplicaSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "replicaset",
+					Namespace:       deployment.Namespace,
+					Labels:          deployment.Spec.Selector.MatchLabels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deploy, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
+				},
+			}
+			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
+
 			Expect(fakeClient.Create(ctx, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod",
-					Namespace: deployment.Namespace,
-					Labels:    deployment.Spec.Selector.MatchLabels,
+					Name:            "pod",
+					Namespace:       deployment.Namespace,
+					Labels:          deployment.Spec.Selector.MatchLabels,
+					OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(replicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
 				},
 			})).To(Succeed())
 

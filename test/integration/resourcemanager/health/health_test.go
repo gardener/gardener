@@ -360,6 +360,7 @@ var _ = Describe("Health controller tests", func() {
 		Context("with existing resources", func() {
 			var (
 				deployment   *appsv1.Deployment
+				replicaSet   *appsv1.ReplicaSet
 				pod          *corev1.Pod
 				statefulSet  *appsv1.StatefulSet
 				daemonSet    *appsv1.DaemonSet
@@ -377,7 +378,10 @@ var _ = Describe("Health controller tests", func() {
 				deployment.Status = *deploymentStatus
 				Expect(testClient.Status().Update(ctx, deployment)).To(Succeed())
 
-				pod = generatePodForDeployment(deployment)
+				replicaSet = generateReplicaSetForDeployment(deployment)
+				Expect(testClient.Create(ctx, replicaSet)).To(Succeed())
+
+				pod = generatePodForDeployment(replicaSet)
 				Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 				statefulSet = generateStatefulSetTestResource(managedResource.Name)
@@ -419,6 +423,7 @@ var _ = Describe("Health controller tests", func() {
 				DeferCleanup(func() {
 					By("Delete test resources")
 					Expect(testClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, replicaSet)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, deployment)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, statefulSet)).To(Or(Succeed(), BeNotFoundError()))
 					Expect(testClient.Delete(ctx, daemonSet)).To(Or(Succeed(), BeNotFoundError()))
@@ -519,7 +524,7 @@ var _ = Describe("Health controller tests", func() {
 			})
 
 			It("sets Progressing to true as Deployment still has non-terminated pods", func() {
-				pod2 := generatePodForDeployment(deployment)
+				pod2 := generatePodForDeployment(replicaSet)
 				Expect(testClient.Create(ctx, pod2)).To(Succeed())
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, pod2)).To(Or(Succeed(), BeNotFoundError()))
@@ -780,12 +785,28 @@ func generateDeploymentTestResource(name string) *appsv1.Deployment {
 	}
 }
 
-func generatePodForDeployment(deployment *appsv1.Deployment) *corev1.Pod {
+func generateReplicaSetForDeployment(deployment *appsv1.Deployment) *appsv1.ReplicaSet {
+	return &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName:    deployment.Name + "-rs-",
+			Namespace:       deployment.Namespace,
+			Labels:          deployment.Spec.Selector.MatchLabels,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Selector: deployment.Spec.Selector,
+			Template: deployment.Spec.Template,
+		},
+	}
+}
+
+func generatePodForDeployment(replicaSet *appsv1.ReplicaSet) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: deployment.Name + "-pod-",
-			Namespace:    deployment.Namespace,
-			Labels:       deployment.Spec.Selector.MatchLabels,
+			GenerateName:    replicaSet.Name + "-pod-",
+			Namespace:       replicaSet.Namespace,
+			Labels:          replicaSet.Labels,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(replicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
