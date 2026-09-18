@@ -19,7 +19,7 @@ func NewFluentOperatorCustomResources(
 	enabled bool,
 	suffix string,
 	centralLoggingConfigurations []component.CentralLoggingConfiguration,
-	output *fluentbitv1alpha2.ClusterOutput,
+	outputs []*fluentbitv1alpha2.ClusterOutput,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -28,7 +28,6 @@ func NewFluentOperatorCustomResources(
 		inputs  []*fluentbitv1alpha2.ClusterInput
 		filters []*fluentbitv1alpha2.ClusterFilter
 		parsers []*fluentbitv1alpha2.ClusterParser
-		outputs []*fluentbitv1alpha2.ClusterOutput
 	)
 
 	// Fetch component specific logging configurations
@@ -49,10 +48,6 @@ func NewFluentOperatorCustomResources(
 		if len(loggingConfig.Parsers) > 0 {
 			parsers = append(parsers, loggingConfig.Parsers...)
 		}
-	}
-
-	if output != nil {
-		outputs = append(outputs, output)
 	}
 
 	deployer = fluentcustomresources.New(
