@@ -32,7 +32,7 @@ type ControlPlane struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ControlPlaneSpec `json:"spec"`
 	// +optional
-	Status ControlPlaneStatus `json:"status"`
+	Status ControlPlaneStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.

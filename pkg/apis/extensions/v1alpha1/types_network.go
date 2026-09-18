@@ -33,7 +33,7 @@ type Network struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec NetworkSpec `json:"spec"`
 	// +optional
-	Status NetworkStatus `json:"status"`
+	Status NetworkStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.
