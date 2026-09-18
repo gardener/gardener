@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/aggregate"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
@@ -59,6 +60,8 @@ type Values struct {
 	ValiEnabled bool
 	// PriorityClassName is the name of the priority class of the fluent-bit.
 	PriorityClassName string
+	// IsGardenCluster specifies whether FluentBit is being deployed in a cluster registered as a Garden.
+	IsGardenCluster bool
 }
 
 type fluentBit struct {
@@ -96,7 +99,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 			},
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
-			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, aggregate.Label),
+			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, f.getPrometheusLabel()),
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
@@ -130,7 +133,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 			},
 		}
 		serviceMonitorPlugin = &monitoringv1.ServiceMonitor{
-			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", f.namespace, aggregate.Label),
+			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit-output-plugin", f.namespace, f.getPrometheusLabel()),
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: getLabels()},
 				Endpoints: []monitoringv1.Endpoint{{
@@ -195,7 +198,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 			},
 		}
 		prometheusRule = &monitoringv1.PrometheusRule{
-			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, aggregate.Label),
+			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, f.getPrometheusLabel()),
 			Spec: monitoringv1.PrometheusRuleSpec{
 				Groups: []monitoringv1.RuleGroup{{
 					Name: "fluent-bit.rules",
@@ -364,10 +367,25 @@ func getCustomResourcesLabels() map[string]string {
 	}
 }
 
+func (f *fluentBit) getPrometheusLabel() string {
+	if f.values.IsGardenCluster {
+		return garden.Label
+	}
+
+	return aggregate.Label
+}
+
 func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
+	var networkPolicyFromPolicyAnnotationPrefix string
+	if f.values.IsGardenCluster {
+		networkPolicyFromPolicyAnnotationPrefix = v1beta1constants.LabelNetworkPolicyGardenScrapeTargets
+	} else {
+		networkPolicyFromPolicyAnnotationPrefix = v1beta1constants.LabelNetworkPolicySeedScrapeTargets
+	}
+
 	annotations := map[string]string{
 		resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
-			v1beta1constants.LabelNetworkPolicySeedScrapeTargets +
+			networkPolicyFromPolicyAnnotationPrefix +
 			resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":2020,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`,
 	}
 

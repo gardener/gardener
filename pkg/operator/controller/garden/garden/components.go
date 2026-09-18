@@ -1443,6 +1443,7 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 		true,
 		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
+		true,
 	)
 }
 
