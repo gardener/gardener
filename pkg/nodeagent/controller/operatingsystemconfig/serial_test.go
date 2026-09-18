@@ -61,7 +61,7 @@ var _ = Describe("#newLeaderElectorForSecret", func() {
 	It("should return leaderElector with nil lease when annotation is not set", func() {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: "ns"}}
 
-		le := newLeaderElectorForSecret(log, fakeClient, fakeClock, secret, identity)
+		le := newLeaderElectorForSecret(log, fakeClient, fakeClient, fakeClock, secret, identity)
 		Expect(le).NotTo(BeNil())
 		Expect(le.lease).To(BeNil())
 		Expect(le.identity).To(Equal(identity))
@@ -79,7 +79,7 @@ var _ = Describe("#newLeaderElectorForSecret", func() {
 			},
 		}
 
-		le := newLeaderElectorForSecret(log, fakeClient, fakeClock, secret, identity)
+		le := newLeaderElectorForSecret(log, fakeClient, fakeClient, fakeClock, secret, identity)
 		Expect(le).NotTo(BeNil())
 		Expect(le.identity).To(Equal(identity))
 		Expect(le.lease).NotTo(BeNil())
@@ -113,7 +113,7 @@ var _ = Describe("leaderElector", func() {
 		clk = testclock.NewFakeClock(now)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		lease = &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: "test-lease", Namespace: "test-ns"}}
-		le = &leaderElector{log: logr.Discard(), client: fakeClient, clock: clk, identity: identity, lease: lease}
+		le = &leaderElector{log: logr.Discard(), client: fakeClient, reader: fakeClient, clock: clk, identity: identity, lease: lease}
 	})
 
 	Describe("#acquiredByMe", func() {

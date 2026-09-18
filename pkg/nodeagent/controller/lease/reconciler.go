@@ -6,10 +6,12 @@ package lease
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +25,7 @@ import (
 // Reconciler creates a lease in the kube-system namespace of the shoot.
 type Reconciler struct {
 	Client               client.Client
+	APIReader            client.Reader
 	LeaseDurationSeconds int32
 	Namespace            string
 	Clock                clock.Clock
@@ -33,7 +36,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log := logf.FromContext(ctx)
 
 	node := &corev1.Node{}
-	if err := r.Client.Get(ctx, request.NamespacedName, node); err != nil {
+	if err := r.APIReader.Get(ctx, request.NamespacedName, node); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -44,20 +47,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, lease, func() error {
-		if err := controllerutil.SetControllerReference(node, lease, r.Client.Scheme()); err != nil {
-			log.Error(err, "Unable to set controller reference for Lease", "lease", client.ObjectKeyFromObject(lease))
+	op := controllerutil.OperationResultUpdated
+	if err := r.APIReader.Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return reconcile.Result{}, fmt.Errorf("failed reading lease %s: %w", client.ObjectKeyFromObject(lease), err)
 		}
+		op = controllerutil.OperationResultCreated
+	}
 
-		lease.Spec = coordinationv1.LeaseSpec{
-			HolderIdentity:       &lease.Name,
-			LeaseDurationSeconds: &r.LeaseDurationSeconds,
-			RenewTime:            &metav1.MicroTime{Time: r.Clock.Now().UTC()},
+	if err := controllerutil.SetControllerReference(node, lease, r.Client.Scheme()); err != nil {
+		log.Error(err, "Unable to set controller reference for Lease", "lease", client.ObjectKeyFromObject(lease))
+	}
+	lease.Spec = coordinationv1.LeaseSpec{
+		HolderIdentity:       &lease.Name,
+		LeaseDurationSeconds: &r.LeaseDurationSeconds,
+		RenewTime:            &metav1.MicroTime{Time: r.Clock.Now().UTC()},
+	}
+
+	if op == controllerutil.OperationResultCreated {
+		if err := r.Client.Create(ctx, lease); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed creating lease %s: %w", client.ObjectKeyFromObject(lease), err)
 		}
-		return nil
-	})
-	if err != nil {
-		return reconcile.Result{}, err
+	} else {
+		if err := r.Client.Update(ctx, lease); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed updating lease %s: %w", client.ObjectKeyFromObject(lease), err)
+		}
 	}
 
 	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
