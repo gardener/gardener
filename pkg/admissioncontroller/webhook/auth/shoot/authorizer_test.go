@@ -1905,8 +1905,6 @@ var _ = Describe("Shoot", func() {
 					Entry("get", "get"),
 					Entry("list", "list"),
 					Entry("watch", "watch"),
-					Entry("create", "create"),
-					Entry("patch", "patch"),
 				)
 
 				It("should allow the request when the request is for 'token' subresource and path exists", func() {
@@ -1930,9 +1928,11 @@ var _ = Describe("Shoot", func() {
 
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list patch watch]"))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
 					},
 
+					Entry("create", "create"),
+					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
@@ -1950,6 +1950,28 @@ var _ = Describe("Shoot", func() {
 
 				It("should have no opinion because request is for a subresource", func() {
 					attrs.Subresource = "status"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [token]"))
+				})
+
+				It("should have no opinion because create is not allowed for non-token subresource", func() {
+					attrs.Verb = "create"
+					attrs.Subresource = "status"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [token]"))
+				})
+
+				It("should have no opinion because patch is not allowed for token subresource", func() {
+					attrs.Verb = "patch"
+					attrs.Subresource = "token"
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 

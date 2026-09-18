@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -48,13 +49,16 @@ var (
 	bastionResource                   = operationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
+	controllerinstallationResource    = gardencorev1beta1.Resource("controllerinstallations")
 	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
+	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	secretResource                    = corev1.Resource("secrets")
 	configMapResource                 = corev1.Resource("configmaps")
 	seedResource                      = gardencorev1beta1.Resource("seeds")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
+	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
 
@@ -101,16 +105,22 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitClusterRoleBinding(ctx, seedName, userType, request)
 	case configMapResource:
 		return h.admitConfigMap(ctx, seedName, request)
+	case controllerinstallationResource:
+		return h.admitControllerInstallation(seedName, request)
 	case internalSecretResource:
 		return h.admitInternalSecret(ctx, seedName, request)
 	case gardenletResource:
-		return h.admitGardenlet(seedName, request)
+		return h.admitGardenlet(ctx, seedName, request)
 	case leaseResource:
 		return h.admitLease(seedName, userType, request)
+	case managedSeedResource:
+		return h.admitManagedSeed(seedName, request)
 	case secretResource:
 		return h.admitSecret(ctx, seedName, request)
 	case seedResource:
 		return h.admitSeed(ctx, seedName, request)
+	case shootResource:
+		return h.admitShoot(seedName, request)
 	case serviceAccountResource:
 		return h.admitServiceAccount(ctx, seedName, userType, request)
 	case shootStateResource:
@@ -129,14 +139,51 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 
 func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, request admission.Request) admission.Response {
 	switch request.Operation {
+	case admissionv1.Update:
+		oldBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldBucket); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.Decode(request, newBucket); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !apiequality.Semantic.DeepEqual(oldBucket.Spec, newBucket.Spec) {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of BackupBucket"))
+		}
+		return admission.Allowed("")
+
 	case admissionv1.Create:
 		// If a gardenlet tries to create a BackupBucket then the request may only be allowed if the used `.spec.seedName`
-		// is equal to the gardenlet's seed.
+		// is equal to the gardenlet's seed, and the `.spec` matches the backup configuration of the gardenlet's seed.
 		backupBucket := &gardencorev1beta1.BackupBucket{}
 		if err := h.Decoder.Decode(request, backupBucket); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
-		return h.admit(seedName, backupBucket.Spec.SeedName)
+
+		if resp := h.admit(seedName, backupBucket.Spec.SeedName); !resp.Allowed {
+			return resp
+		}
+
+		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if seed.Spec.Backup == nil {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet's seed has no backup configuration"))
+		}
+
+		backup := seed.Spec.Backup
+		region := ptr.Deref(backup.Region, seed.Spec.Provider.Region)
+		if backupBucket.Spec.Provider.Type != backup.Provider ||
+			backupBucket.Spec.Provider.Region != region ||
+			!apiequality.Semantic.DeepEqual(backupBucket.Spec.ProviderConfig, backup.ProviderConfig) ||
+			!apiequality.Semantic.DeepEqual(backupBucket.Spec.CredentialsRef, backup.CredentialsRef) {
+			return admission.Errored(http.StatusForbidden, errors.New("BackupBucket spec does not match the backup configuration of the gardenlet's seed"))
+		}
+
+		return admission.Allowed("")
 
 	case admissionv1.Delete:
 		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the name is equal to the UID of
@@ -155,29 +202,53 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 }
 
 func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	switch request.Operation {
+	case admissionv1.Update:
+		oldEntry := &gardencorev1beta1.BackupEntry{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldEntry); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newEntry := &gardencorev1beta1.BackupEntry{}
+		if err := h.Decoder.Decode(request, newEntry); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !apiequality.Semantic.DeepEqual(oldEntry.Spec.ShootRef, newEntry.Spec.ShootRef) {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec.shootRef of BackupEntry"))
+		}
+		if oldEntry.Spec.BucketName != newEntry.Spec.BucketName {
+			backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: newEntry.Spec.BucketName}}
+			if err := h.Client.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket); err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			if resp := h.admit(seedName, backupBucket.Spec.SeedName); !resp.Allowed {
+				return resp
+			}
+		}
+		return admission.Allowed("")
+
+	case admissionv1.Create:
+		backupEntry := &gardencorev1beta1.BackupEntry{}
+		if err := h.Decoder.Decode(request, backupEntry); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		if resp := h.admit(seedName, backupEntry.Spec.SeedName); !resp.Allowed {
+			return resp
+		}
+
+		if strings.HasPrefix(backupEntry.Name, v1beta1constants.BackupSourcePrefix) {
+			return h.admitSourceBackupEntry(ctx, backupEntry)
+		}
+
+		backupBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Client.Get(ctx, client.ObjectKey{Name: backupEntry.Spec.BucketName}, backupBucket); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		return h.admit(seedName, backupBucket.Spec.SeedName)
 	}
 
-	backupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := h.Decoder.Decode(request, backupEntry); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-
-	if resp := h.admit(seedName, backupEntry.Spec.SeedName); !resp.Allowed {
-		return resp
-	}
-
-	if strings.HasPrefix(backupEntry.Name, v1beta1constants.BackupSourcePrefix) {
-		return h.admitSourceBackupEntry(ctx, backupEntry)
-	}
-
-	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := h.Client.Get(ctx, client.ObjectKey{Name: backupEntry.Spec.BucketName}, backupBucket); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	return h.admit(seedName, backupBucket.Spec.SeedName)
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 }
 
 func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry) admission.Response {
@@ -213,16 +284,66 @@ func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *garde
 }
 
 func (h *Handler) admitBastion(seedName string, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create {
+	switch request.Operation {
+	case admissionv1.Update:
+		oldBastion := &operationsv1alpha1.Bastion{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldBastion); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newBastion := &operationsv1alpha1.Bastion{}
+		if err := h.Decoder.Decode(request, newBastion); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !apiequality.Semantic.DeepEqual(oldBastion.Spec, newBastion.Spec) {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Bastion"))
+		}
+		return admission.Allowed("")
+
+	case admissionv1.Create:
+		bastion := &operationsv1alpha1.Bastion{}
+		if err := h.Decoder.Decode(request, bastion); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		return h.admit(seedName, bastion.Spec.SeedName)
+	}
+
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+}
+
+func (h *Handler) admitControllerInstallation(_ string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Update {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
-
-	bastion := &operationsv1alpha1.Bastion{}
-	if err := h.Decoder.Decode(request, bastion); err != nil {
+	oldCI := &gardencorev1beta1.ControllerInstallation{}
+	if err := h.Decoder.DecodeRaw(request.OldObject, oldCI); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+	newCI := &gardencorev1beta1.ControllerInstallation{}
+	if err := h.Decoder.Decode(request, newCI); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	if !apiequality.Semantic.DeepEqual(oldCI.Spec, newCI.Spec) {
+		return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of ControllerInstallation"))
+	}
+	return admission.Allowed("")
+}
 
-	return h.admit(seedName, bastion.Spec.SeedName)
+func (h *Handler) admitManagedSeed(_ string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Update {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+	oldManagedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := h.Decoder.DecodeRaw(request.OldObject, oldManagedSeed); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	newManagedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := h.Decoder.Decode(request, newManagedSeed); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	if !apiequality.Semantic.DeepEqual(oldManagedSeed.Spec, newManagedSeed.Spec) {
+		return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of ManagedSeed"))
+	}
+	return admission.Allowed("")
 }
 
 func (h *Handler) admitCertificateSigningRequest(seedName string, userType gardenletidentity.UserType, request admission.Request) admission.Response {
@@ -282,16 +403,46 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *Handler) admitGardenlet(seedName string, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+func (h *Handler) admitGardenlet(ctx context.Context, seedName string, request admission.Request) admission.Response {
+	switch request.Operation {
+	case admissionv1.Update:
+		oldGardenlet := &seedmanagementv1alpha1.Gardenlet{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldGardenlet); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newGardenlet := &seedmanagementv1alpha1.Gardenlet{}
+		if err := h.Decoder.Decode(request, newGardenlet); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !apiequality.Semantic.DeepEqual(oldGardenlet.Spec, newGardenlet.Spec) {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Gardenlet"))
+		}
+		return admission.Allowed("")
+
+	case admissionv1.Create:
+		if request.Namespace != v1beta1constants.GardenNamespace {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("object must be in namespace: %q", v1beta1constants.GardenNamespace))
+		}
+		if resp := h.admit(seedName, &request.Name); !resp.Allowed {
+			return resp
+		}
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: seedName}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err == nil {
+			return admission.Errored(http.StatusForbidden, errors.New("managed-seed gardenlet must not create Gardenlet resources"))
+		} else if !apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		gardenlet := &seedmanagementv1alpha1.Gardenlet{}
+		if err := h.Decoder.Decode(request, gardenlet); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if gardenlet.Spec.KubeconfigSecretRef != nil {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not set .spec.kubeconfigSecretRef"))
+		}
+		return admission.Allowed("")
 	}
 
-	if request.Namespace != v1beta1constants.GardenNamespace {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("object must be in namespace: %q", v1beta1constants.GardenNamespace))
-	}
-
-	return h.admit(seedName, &request.Name)
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 }
 
 func (h *Handler) admitInternalSecret(ctx context.Context, seedName string, request admission.Request) admission.Response {
@@ -446,8 +597,8 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 	}
 
 	for _, managedSeed := range managedSeedList.Items {
-		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.Client.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
@@ -497,14 +648,74 @@ func (h *Handler) admitConfigMap(ctx context.Context, seedName string, request a
 }
 
 func (h *Handler) admitSeed(ctx context.Context, seedName string, request admission.Request) admission.Response {
-	response := h.admit(seedName, &request.Name)
-	if request.Operation == admissionv1.Delete && !response.Allowed {
-		// If the deletion request is not allowed, then it might be submitted by the "parent gardenlet".
-		// This is the gardenlet/seed which is responsible for the `managedseed` in question.
-		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-		if err := h.Client.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}, managedSeed); err != nil {
+	switch request.Operation {
+	case admissionv1.Update:
+		if resp := h.admit(seedName, &request.Name); !resp.Allowed {
+			return resp
+		}
+		oldSeed := &gardencorev1beta1.Seed{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, oldSeed); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		newSeed := &gardencorev1beta1.Seed{}
+		if err := h.Decoder.Decode(request, newSeed); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
+			return admission.Allowed("")
+		}
+
+		// Spec changed: validate that the new spec matches the authoritative spec in the ManagedSeed or
+		// Gardenlet resource. The gardenlet is the canonical writer of Seed.spec, but only within the
+		// bounds set by the operator via those resources.
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil && !apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusInternalServerError, err)
+		} else if err == nil {
+			seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
+			if err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			if seedTemplate != nil && !apiequality.Semantic.DeepEqual(newSeed.Spec, seedTemplate.Spec) {
+				return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not set .spec of Seed to a value different from the .spec in the ManagedSeed"))
+			}
+			return admission.Allowed("")
+		}
+
+		gardenlet := &seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet); err != nil && !apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusInternalServerError, err)
+		} else if err == nil {
+			seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(gardenlet.Name, &gardenlet.Spec.Config)
+			if err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			if seedTemplate != nil && !apiequality.Semantic.DeepEqual(newSeed.Spec, seedTemplate.Spec) {
+				return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not set .spec of Seed to a value different from the .spec in the Gardenlet"))
+			}
+			return admission.Allowed("")
+		}
+
+		// TODO(rfranzke): Once the Gardenlet resource is always present for all seeds, deny spec changes that have no
+		// authoritative source to validate against. Until then, allow them to avoid breaking existing deployments.
+		return admission.Allowed("")
+
+	case admissionv1.Create:
+		return h.admit(seedName, &request.Name)
+
+	case admissionv1.Delete:
+		// A gardenlet must not delete its own Seed — deletion is always triggered externally;
+		// the gardenlet only removes the finalizer as part of its delete flow.
+		if request.Name == seedName {
+			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not delete its own Seed"))
+		}
+
+		// The deletion request might be submitted by the "parent gardenlet", i.e. the gardenlet/seed
+		// which is responsible for the ManagedSeed in question.
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: request.Name}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
 			if apierrors.IsNotFound(err) {
-				return response
+				return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 			}
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
@@ -518,20 +729,20 @@ func (h *Handler) admitSeed(ctx context.Context, seedName string, request admiss
 
 		// If for whatever reason the `.spec.shoot` is nil then we exit early.
 		if managedSeed.Spec.Shoot == nil {
-			return response
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 		}
 
 		// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
 		// the seed name of the requesting gardenlet.
-		shoot := &gardencorev1beta1.Shoot{}
-		if err := h.Client.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
+		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}}
+		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
 		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
-	return response
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 }
 
 func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, userType gardenletidentity.UserType, request admission.Request) admission.Response {
@@ -555,6 +766,44 @@ func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, user
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
+}
+
+func (h *Handler) admitShoot(_ string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Update {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+	oldShoot := &gardencorev1beta1.Shoot{}
+	if err := h.Decoder.DecodeRaw(request.OldObject, oldShoot); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	newShoot := &gardencorev1beta1.Shoot{}
+	if err := h.Decoder.Decode(request, newShoot); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	if apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
+		return admission.Allowed("")
+	}
+	// Allow setting .spec.networking.nodes from nil — gardenlet writes this after node CIDR discovery.
+	var oldNodes *string
+	if oldShoot.Spec.Networking != nil {
+		oldNodes = oldShoot.Spec.Networking.Nodes
+	}
+	var newNodes *string
+	if newShoot.Spec.Networking != nil {
+		newNodes = newShoot.Spec.Networking.Nodes
+	}
+	if oldNodes == nil && newNodes != nil {
+		// Check that .spec.networking.nodes is the only change by temporarily patching old spec and re-comparing.
+		oldSpecForComparison := *oldShoot.Spec.DeepCopy()
+		if oldSpecForComparison.Networking == nil {
+			oldSpecForComparison.Networking = &gardencorev1beta1.Networking{}
+		}
+		oldSpecForComparison.Networking.Nodes = newNodes
+		if apiequality.Semantic.DeepEqual(oldSpecForComparison, newShoot.Spec) {
+			return admission.Allowed("")
+		}
+	}
+	return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Shoot (only .spec.networking.nodes may be set from nil)"))
 }
 
 func (h *Handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {
