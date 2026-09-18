@@ -56,8 +56,9 @@ var _ = Describe("VictoriaLogs", func() {
 		imageRepository = "europe-docker.pkg.dev/gardener-project/releases/some-image"
 		imageTag        = "some-tag"
 		values          = Values{
-			ImageRepository: imageRepository,
-			ImageTag:        imageTag,
+			ImageRepository:    imageRepository,
+			ImageTag:           imageTag,
+			SecretNameServerCA: "ca",
 		}
 
 		c         client.Client
@@ -126,6 +127,23 @@ var _ = Describe("VictoriaLogs", func() {
 						},
 					},
 					ReplicaCount: new(int32(0)),
+					ExtraArgs: map[string]string{
+						"httpListenAddr": fmt.Sprintf(":%d,:%d", 9429, 9428),
+						"tls":            "true,false",
+						"tlsCertFile":    "/etc/victorialogs/tls/tls.crt",
+						"tlsKeyFile":     "/etc/victorialogs/tls/tls.key",
+					},
+					Volumes: []corev1.Volume{{
+						Name: "vl-server-tls",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{SecretName: "victoria-logs-server-tls"},
+						},
+					}},
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      "vl-server-tls",
+						MountPath: "/etc/victorialogs/tls",
+						ReadOnly:  true,
+					}},
 				},
 				RetentionPeriod: "15d",
 				Storage: &corev1.PersistentVolumeClaimSpec{
@@ -144,6 +162,22 @@ var _ = Describe("VictoriaLogs", func() {
 				ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
 					EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 						Name: "logging-vl",
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "https",
+								Port:       9429,
+								TargetPort: intstr.FromInt32(9429),
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "http",
+								Port:       9428,
+								TargetPort: intstr.FromInt32(9428),
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
 					},
 				},
 			},
@@ -188,7 +222,7 @@ var _ = Describe("VictoriaLogs", func() {
 					},
 				},
 				Endpoints: []monitoringv1.Endpoint{{
-					Port: "http",
+					Port: "https",
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
@@ -198,6 +232,12 @@ var _ = Describe("VictoriaLogs", func() {
 						{
 							Action: "labelmap",
 							Regex:  `__meta_kubernetes_service_label_(.+)`,
+						},
+					},
+					Scheme: new(monitoringv1.SchemeHTTPS),
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 						},
 					},
 				}},
@@ -287,8 +327,9 @@ var _ = Describe("VictoriaLogs", func() {
 		DescribeTable("should successfully deploy all resources including the PersistentVolumeClaimAutoscaler when PVC autoscaler is enabled",
 			func(maxCapacity resource.Quantity) {
 				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
 					PVCAutoscaling: PVCAutoscalingConfig{
 						Enabled:     true,
 						MaxCapacity: maxCapacity,
@@ -315,9 +356,10 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in seed cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
-					ClusterType:     componentpkg.ClusterTypeSeed,
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
+					ClusterType:        componentpkg.ClusterTypeSeed,
 				}
 				component = New(c, namespace, values, fakeSecretManager)
 			})
@@ -358,10 +400,11 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in garden cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
-					ClusterType:     componentpkg.ClusterTypeSeed,
-					IsGardenCluster: true,
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
+					ClusterType:        componentpkg.ClusterTypeSeed,
+					IsGardenCluster:    true,
 					PVCAutoscaling: PVCAutoscalingConfig{
 						Enabled:     true,
 						MaxCapacity: resource.MustParse("200Gi"),
@@ -402,87 +445,13 @@ var _ = Describe("VictoriaLogs", func() {
 			})
 		})
 
-		Context("when TLS is enabled via SecretNameServerCA", func() {
+		Context("when deployed in shoot cluster", func() {
 			BeforeEach(func() {
 				values = Values{
 					ImageRepository:    imageRepository,
 					ImageTag:           imageTag,
 					SecretNameServerCA: "ca",
-				}
-				component = New(c, namespace, values, fakeSecretManager)
-			})
-
-			It("should deploy VLSingle with TLS extra args, volumes, and volume mounts", func() {
-				Expect(component.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
-				customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
-
-				// Discover the generated TLS secret name from the cluster.
-				tlsSecretList := &corev1.SecretList{}
-				Expect(c.List(ctx, tlsSecretList, client.InNamespace(namespace), client.MatchingLabels{"name": "victoria-logs-server-tls"})).To(Succeed())
-				Expect(tlsSecretList.Items).To(HaveLen(1))
-				tlsSecretName := tlsSecretList.Items[0].Name
-
-				expectedVlSingle := vlSingle.DeepCopy()
-				expectedVlSingle.Spec.ExtraArgs = map[string]string{
-					"httpListenAddr": fmt.Sprintf(":%d,:%d", 9429, 9428),
-					"tls":            "true,false",
-					"tlsCertFile":    "/etc/victorialogs/tls/tls.crt",
-					"tlsKeyFile":     "/etc/victorialogs/tls/tls.key",
-				}
-				expectedVlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
-					{
-						Name:       "https",
-						Port:       9429,
-						TargetPort: intstr.FromInt32(9429),
-						Protocol:   corev1.ProtocolTCP,
-					},
-					{
-						Name:       "http",
-						Port:       9428,
-						TargetPort: intstr.FromInt32(9428),
-						Protocol:   corev1.ProtocolTCP,
-					},
-				}
-				expectedVlSingle.Spec.Volumes = []corev1.Volume{{
-					Name: "vl-server-tls",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{SecretName: tlsSecretName},
-					},
-				}}
-				expectedVlSingle.Spec.VolumeMounts = []corev1.VolumeMount{{
-					Name:      "vl-server-tls",
-					MountPath: "/etc/victorialogs/tls",
-					ReadOnly:  true,
-				}}
-
-				expectedServiceMonitor := serviceMonitor.DeepCopy()
-				expectedServiceMonitor.Spec.Endpoints[0].Port = "https"
-				expectedServiceMonitor.Spec.Endpoints[0].Scheme = new(monitoringv1.SchemeHTTPS)
-				expectedServiceMonitor.Spec.Endpoints[0].HTTPConfigWithProxyAndTLSFiles = monitoringv1.HTTPConfigWithProxyAndTLSFiles{
-					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
-						TLSConfig: &monitoringv1.TLSConfig{
-							SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)},
-						},
-					},
-				}
-
-				Expect(customResourcesManagedResource).To(consistOf(
-					expectedVlSingle,
-					vpa,
-					expectedServiceMonitor,
-					prometheusRule,
-				))
-			})
-		})
-
-		Context("when deployed in shoot cluster", func() {
-			BeforeEach(func() {
-				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
-					ClusterType:     componentpkg.ClusterTypeShoot,
+					ClusterType:        componentpkg.ClusterTypeShoot,
 				}
 				component = New(c, namespace, values, fakeSecretManager)
 			})
