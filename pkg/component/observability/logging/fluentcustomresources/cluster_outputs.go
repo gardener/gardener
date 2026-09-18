@@ -18,7 +18,7 @@ import (
 const (
 	// Output names
 	outputNameJournald      = "journald"
-	outputNameSystemd       = "systemd"
+	outputNameSystemd       = "systemd-default"
 	outputNameVali          = "gardener-vali"
 	outputNameOpenTelemetry = "opentelemetry"
 	outputNameStaticVali    = "static-vali"

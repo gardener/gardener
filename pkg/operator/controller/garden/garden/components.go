@@ -1449,16 +1449,14 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 
-	var outputs []*fluentbitv1alpha2.ClusterOutput
+	// The gardener-operator has no option to disable logging, so the default output is always included.
+	outputs := []*fluentbitv1alpha2.ClusterOutput{fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels)}
 
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels))
 	} else {
 		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels))
 	}
-
-	// The gardener-operator has no option to disable logging, so the default output is always included.
-	outputs = append(outputs, fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels))
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),

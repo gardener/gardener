@@ -26,7 +26,7 @@ var _ = Describe("Logging", func() {
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "systemd",
+						Name:   "systemd-default",
 						Labels: labels,
 					},
 					Spec: fluentbitv1alpha2.OutputSpec{
