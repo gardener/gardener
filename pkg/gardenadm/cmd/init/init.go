@@ -154,7 +154,7 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 				WithDependencies(reconcileGardenerResourceManagerInPodNetwork).
 				SkipIf(podNetworkAvailable || opts.UseHostNetwork),
 		)
-		_ = g.AddGroup(
+		reconcileControlPlane = g.AddGroup(
 			b.ReconcileControlPlaneTaskGroup(false).
 				WithDependencies(gardenadmbotanist.TaskGroupReconcileExtensionControllers),
 		)
@@ -256,10 +256,27 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 			Fn:           b.FinalizeGardenerNodeAgentBootstrapping,
 			Dependencies: flow.NewTaskIDs(reconcileWorker),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilGardenerNodeAgentLeaseIsRenewed = g.Add(flow.Task{
 			Name:         "Waiting until gardener-node-agent lease is renewed",
 			Fn:           b.WaitUntilGardenerNodeAgentLeaseIsRenewed,
 			Dependencies: flow.NewTaskIDs(finalizeGardenerNodeAgentBootstrapping),
+		})
+
+		// The first control plane node was registered by kubelet before the provider extension (and its webhook adding
+		// --cloud-provider=external to the kubelet flags) was running, i.e., without the cloud provider taint. Hence, the
+		// node controller of the cloud-controller-manager did not initialize it yet. We add the taint ourselves now that
+		// the cloud-controller-manager and the system components it depends on have been deployed.
+		taintControlPlaneNodeForCloudProviderInitialization = g.Add(flow.Task{
+			Name:         "Tainting control plane node so that cloud-controller-manager initializes it",
+			Fn:           b.TaintControlPlaneNodeForCloudProviderInitialization,
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(reconcileSystemComponents, reconcileControlPlane, waitUntilGardenerNodeAgentLeaseIsRenewed),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until control plane node is initialized by cloud-controller-manager",
+			Fn:           flow.TaskFn(b.WaitUntilControlPlaneNodeIsInitializedByCloudProvider).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
+			Dependencies: flow.NewTaskIDs(taintControlPlaneNodeForCloudProviderInitialization),
 		})
 	)
 
