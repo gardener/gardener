@@ -157,16 +157,17 @@ The health check controller leverages the [health check library](healthcheck-lib
 #### Control Plane
 
 This webhook reacts on the `OperatingSystemConfig` containing the configuration of the kubelet and sets the `failSwapOn` to `false` (independent of what is configured in the `Shoot` spec) ([ref](https://github.com/kubernetes-sigs/kind/blob/b6bc112522651d98c81823df56b7afa511459a3b/site/content/docs/design/node-image.md#design)).
+For shoots with managed infrastructure, it also adds the `--cloud-provider=external` flag to the kubelet command line, so that nodes are registered with the `node.cloudprovider.kubernetes.io/uninitialized` taint and initialized by the node controller of [`cloud-controller-manager-local`](#cloud-controller-manager-local).
 
 #### Node
 
-This webhook reacts on updates to `nodes/status` in both seed and shoot clusters and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
+This webhook reacts on updates to `nodes/status` in shoot clusters and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
 
 Background: Typically, the `.status.{capacity,allocatable}` values are determined by the resources configured for the Docker daemon (see for example the [docker Quick Start Guide](https://docs.docker.com/desktop/mac/#resources) for Mac).
 Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.requests`, the `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
-In order to improve the user experience, on startup/leader election the provider-local extension submits an empty patch which triggers the "node webhook" (see the below section) for the seed cluster.
-The webhook will increase the capacity of the `Node`s to allow all `Pod`s to be scheduled.
-For the shoot clusters, this empty patch trigger is not needed since the `MutatingWebhookConfiguration` is reconciled by the `ControlPlane` controller and exists before the `Node` object gets registered.
+In order to improve the user experience, the webhook increases the capacity of the `Node`s to allow all `Pod`s to be scheduled.
+The `MutatingWebhookConfiguration` is reconciled by the `ControlPlane` controller and exists before the `Node` objects get registered.
+For the kind cluster itself, the same is achieved by a `MutatingAdmissionPolicy` (see [`dev-setup/kind/node-status-capacity`](../../dev-setup/kind/node-status-capacity)).
 
 #### Shoot
 
@@ -201,6 +202,15 @@ Additionally, it also uses the in-cluster credentials (ServiceAccount in the see
 This is needed, because the shoot node IPs are pod IPs in the kind cluster, which are not directly reachable from load balancer containers in the `kind` network.
 Therefore, cloud-controller-manager-local configures IP routes to the machine pod IPs via the kind nodes on which the machine pods are running.
 This way, creating a `Service` of type `LoadBalancer` works even in shoots.
+
+For shoot clusters with managed infrastructure, `cloud-controller-manager-local` additionally implements the [`cloudprovider.InstancesV2`](https://pkg.go.dev/k8s.io/cloud-provider#InstancesV2) interface, which enables the upstream `cloud-node` and `cloud-node-lifecycle` controllers.
+A shoot `Node` is backed by the machine pod with the same name in the runtime cluster (see [machine-controller-manager-provider-local](#machine-controller-manager-provider-local)).
+The node controller initializes new `Node`s (which are registered with the `node.cloudprovider.kubernetes.io/uninitialized` taint because kubelet runs with `--cloud-provider=external`) by setting `.spec.providerID` to the machine pod name (which is also what the machine provider reports for the `Machine`, as required by cluster-autoscaler), the node addresses (the machine pod IPs), and the `topology.kubernetes.io/{zone,region}` and `node.kubernetes.io/instance-type` labels.
+Since there is no real concept of zones, regions, or instance types in the local setup, the machine provider stores the desired values (taken from the `nodeTemplate` of the `MachineClass`) as `local.provider.extensions.gardener.cloud/{zone,region,instance-type}` labels on the machine pod when creating it.
+The well-known `topology.kubernetes.io/*` label keys cannot be used for this purpose, because the `kube-apiserver` overwrites them with the labels of the kind node the machine pod is scheduled to.
+The node lifecycle controller deletes `Node` objects whose machine pod no longer exists.
+
+The node controllers are disabled when `cloud-controller-manager-local` runs for the kind cluster itself or for self-hosted shoots with unmanaged infrastructure (where nodes are kind containers).
 
 ### machine-controller-manager-provider-local
 
