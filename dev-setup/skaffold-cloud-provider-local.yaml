@@ -37,6 +37,8 @@ build:
             - pkg/chartrenderer
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
+            - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/v1alpha1
             - pkg/provider-local/cloud-provider/api/v1alpha1
             - pkg/provider-local/cloud-provider/loadbalancer
             - pkg/provider-local/cloud-provider/provider
