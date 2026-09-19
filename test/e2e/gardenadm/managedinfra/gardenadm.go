@@ -13,11 +13,10 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	cloudproviderapi "k8s.io/cloud-provider/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
@@ -140,7 +139,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 			for kind, list := range extensionKinds {
 				Eventually(ctx, ObjectList(list, client.InNamespace(technicalID))).Should(
-					HaveField("Items", matchAllElements(
+					HaveField("Items", HaveEach(
 						HaveField("Status.DefaultStatus.LastOperation", And(
 							HaveField("Type", gardencorev1beta1.LastOperationTypeMigrate),
 							HaveField("State", gardencorev1beta1.LastOperationStateSucceeded),
@@ -301,6 +300,36 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 				)))
 		}, SpecTimeout(time.Minute))
 
+		It("should initialize the nodes with the node controller of cloud-controller-manager-local", func(ctx SpecContext) {
+			// The node controller of cloud-controller-manager-local (running in the self-hosted shoot) must initialize all
+			// nodes by setting the provider ID and the topology labels and removing the "uninitialized" taint. The worker
+			// nodes (created by machine-controller-manager) register with the taint because kubelet runs with
+			// --cloud-provider=external. The first control plane node registers without the taint (the provider webhook is
+			// not running yet when it is bootstrapped), so gardenadm init adds the taint itself.
+			nodeList := &corev1.NodeList{}
+			Eventually(ctx, shootKomega.ObjectList(nodeList)).Should(HaveField("Items", And(
+				ContainElements(
+					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-control-plane-")),
+					HaveField("ObjectMeta.Name", HavePrefix("machine-"+technicalID+"-worker-")),
+				),
+				HaveEach(And(
+					HaveField("Spec.ProviderID", Not(BeEmpty())),
+					HaveField("ObjectMeta.Labels", And(
+						// The region is used as fallback zone because the worker pools have no zones configured.
+						HaveKeyWithValue(corev1.LabelTopologyZone, "local"),
+						HaveKeyWithValue(corev1.LabelTopologyRegion, "local"),
+						HaveKeyWithValue(corev1.LabelInstanceTypeStable, "local"),
+					)),
+					HaveField("Spec.Taints", Not(ContainElement(HaveField("Key", cloudproviderapi.TaintExternalCloudProvider)))),
+				)),
+			)))
+
+			for _, node := range nodeList.Items {
+				// The provider ID is the name of the machine pod, which is also the node name.
+				Expect(node.Spec.ProviderID).To(Equal(node.Name), "node %s should have the provider ID set", node.Name)
+			}
+		}, SpecTimeout(time.Minute))
+
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
 			Eventually(ctx, session.Out).Should(gbytes.Say("work in progress"))
@@ -311,11 +340,3 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		}, SpecTimeout(10*time.Minute))
 	})
 })
-
-// matchAllElements returns a matcher that must succeed for all elements in a slice.
-func matchAllElements(matcher gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
-	// map all elements to the same given matcher
-	return gstruct.MatchAllElements(func(any) string { return "" }, gstruct.Elements{
-		"": matcher,
-	})
-}
