@@ -70,6 +70,15 @@ spec:
     spec:
       priorityClassName: {{ .Values.priorityClassName }}
       serviceAccountName: cloud-controller-manager
+      {{- if and (include "is-shoot" .) (not (hasPrefix "shoot-" .Release.Namespace)) .Values.hasManagedInfrastructure }}
+      # Case: CCM runs in kube-system namespace of a self-hosted shoot with managed infrastructure. The control plane
+      # node registers with the "uninitialized" taint (kubelet runs with --cloud-provider=external), which is only
+      # removed by the node controller of this cloud-controller-manager. Hence, it must tolerate the taint itself.
+      tolerations:
+      - key: node.cloudprovider.kubernetes.io/uninitialized
+        operator: Exists
+        effect: NoSchedule
+      {{- end }}
       containers:
       - name: cloud-controller-manager
         image: {{ index .Values.images "cloud-controller-manager-local" }}
@@ -92,7 +101,14 @@ spec:
         {{- with .Values.server.tlsCipherSuites }}
         - --tls-cipher-suites={{ . | join "," }}
         {{- end }}
+        {{- if and (include "is-shoot" .) .Values.hasManagedInfrastructure }}
+        # The node controllers are only supported for shoot clusters with managed infrastructure, where shoot nodes are
+        # backed by machine pods in the runtime cluster. They are disabled for the kind cluster itself and for
+        # self-hosted shoots with unmanaged infrastructure (nodes are kind containers).
+        - --controllers=service,cloud-node,cloud-node-lifecycle
+        {{- else }}
         - --controllers=service
+        {{- end }}
         - --concurrent-service-syncs=10
         - --use-service-account-credentials
         - --v=2
