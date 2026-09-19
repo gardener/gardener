@@ -18,6 +18,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	cloudproviderv1alpha1 "github.com/gardener/gardener/pkg/provider-local/cloud-provider/api/v1alpha1"
+	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/instances"
 	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
 )
 
@@ -73,13 +74,25 @@ func New(cfg *cloudproviderv1alpha1.CloudProviderConfig) (cloudprovider.Interfac
 		return nil, fmt.Errorf("failed to create client for runtime cluster: %w", err)
 	}
 
-	return &Local{
+	cloudProvider := &Local{
 		loadBalancer: &loadbalancer.Provider{
 			Config:        cfg,
 			DockerClient:  dockerClient,
 			RuntimeClient: runtimeClient,
 		},
-	}, nil
+	}
+
+	// Node instances are only supported for shoot clusters with managed infrastructure, where shoot nodes are backed by
+	// machine pods in the runtime cluster. When running for the kind cluster itself or for self-hosted shoots with
+	// unmanaged infrastructure (nodes are kind containers), the node controllers are not supported.
+	if runtimeClient != nil {
+		cloudProvider.instances = &instances.Provider{
+			Config:        cfg,
+			RuntimeClient: runtimeClient,
+		}
+	}
+
+	return cloudProvider, nil
 }
 
 func createRuntimeClient(cfg *cloudproviderv1alpha1.RuntimeCluster) (client.Client, error) {
@@ -104,6 +117,7 @@ func createRuntimeClient(cfg *cloudproviderv1alpha1.RuntimeCluster) (client.Clie
 // Local implements the cloudprovider.Interface.
 type Local struct {
 	loadBalancer *loadbalancer.Provider
+	instances    *instances.Provider
 }
 
 // ProviderName returns the cloud provider ID. Selected by the --cloud-provider flag of cloud-controller-manager.
@@ -133,7 +147,12 @@ func (l *Local) Instances() (cloudprovider.Instances, bool) { return nil, false 
 // Implementing InstancesV2 is behaviorally identical to Instances but is optimized to significantly reduce API calls to
 // the cloud provider when registering and syncing nodes. Implementation of this interface will disable calls to the
 // Zones interface. Also returns true if the interface is supported, false otherwise.
-func (l *Local) InstancesV2() (cloudprovider.InstancesV2, bool) { return nil, false }
+func (l *Local) InstancesV2() (cloudprovider.InstancesV2, bool) {
+	if l.instances == nil {
+		return nil, false
+	}
+	return l.instances, true
+}
 
 // Zones returns a zones interface. Also returns true if the interface is supported, false otherwise.
 //
