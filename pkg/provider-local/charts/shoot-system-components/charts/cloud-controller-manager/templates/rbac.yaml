@@ -2,7 +2,7 @@
 # - leader election
 # - reading the extension-apiserver-authentication ConfigMap (for verifying incoming requests)
 # - starting shared informers (watches) for all controllers
-# - requesting tokens for the controller-specific ServiceAccounts (like in kube-controller-manager), e.g., kube-system/cloud-service-controller (used for write requests)
+# - requesting tokens for the controller-specific ServiceAccounts (like in kube-controller-manager), e.g., kube-system/service-controller (used for write requests)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -52,6 +52,9 @@ rules:
   - serviceaccounts/token
   resourceNames:
   - service-controller
+  # Used by the cloud-node and cloud-node-lifecycle controllers. The kube-apiserver bootstraps the
+  # system:controller:node-controller ClusterRole and binds it to this ServiceAccount.
+  - node-controller
   verbs:
   - create
 ---
