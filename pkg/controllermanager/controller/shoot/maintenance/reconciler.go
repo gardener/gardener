@@ -342,6 +342,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		if err := r.Client.Update(ctx, maintainedShoot.DeepCopy(), &client.UpdateOptions{
 			DryRun: []string{metav1.DryRunAll},
 		}); err != nil {
+			if apierrors.IsConflict(err) {
+				return err
+			}
+
 			// If shoot maintenance is triggered by `gardener.cloud/operation=maintain` annotation and if it fails in dry run,
 			// `maintain` operation annotation needs to be removed so that if reason for failure is fixed and maintenance is triggered
 			// again via `maintain` operation annotation then it should not fail with the reason that annotation is already present.
