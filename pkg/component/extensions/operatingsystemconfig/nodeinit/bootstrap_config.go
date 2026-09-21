@@ -13,8 +13,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-func getBootstrapConfiguration(worker gardencorev1beta1.Worker) (*nodeagentconfigv1alpha1.BootstrapConfiguration, error) {
-	bootstrapConfiguration := &nodeagentconfigv1alpha1.BootstrapConfiguration{}
+func getBootstrapConfiguration(bootstrapConfiguration *nodeagentconfigv1alpha1.BootstrapConfiguration, worker gardencorev1beta1.Worker) (*nodeagentconfigv1alpha1.BootstrapConfiguration, error) {
+	if bootstrapConfiguration == nil {
+		bootstrapConfiguration = &nodeagentconfigv1alpha1.BootstrapConfiguration{}
+	}
 
 	var err error
 	bootstrapConfiguration.KubeletDataVolumeSize, err = getKubeletDataVolumeSize(worker)

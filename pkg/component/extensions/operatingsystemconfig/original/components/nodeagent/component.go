@@ -91,7 +91,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		})
 	}
 
-	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, additionalTokenSyncConfigs))
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, additionalTokenSyncConfigs, ctx.IsControlPlanePool))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
@@ -152,8 +152,9 @@ func ComponentConfig(
 	kubernetesVersion *semver.Version,
 	apiServerURL string,
 	additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig,
+	isControlPlanePool bool,
 ) *nodeagentconfigv1alpha1.NodeAgentConfiguration {
-	return &nodeagentconfigv1alpha1.NodeAgentConfiguration{
+	config := &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentconfigv1alpha1.APIServer{
 			Server: apiServerURL,
 			CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
@@ -172,6 +173,14 @@ func ComponentConfig(
 			},
 		},
 	}
+
+	if isControlPlanePool {
+		config.Bootstrap = &nodeagentconfigv1alpha1.BootstrapConfiguration{
+			ControlPlaneNodesEndpoints: &nodeagentconfigv1alpha1.ControlPlaneNodesEndpoints{Enabled: true},
+		}
+	}
+
+	return config
 }
 
 // Files returns the files related to the gardener-node-agent unit.

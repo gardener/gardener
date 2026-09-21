@@ -157,7 +157,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		return fmt.Errorf("failed fetching name of node: %w", err)
 	}
 
-	runControlPlaneNodesEndpointsBootstrapper := true // TODO(next-commit): Only add this when config indicates it (self-hosted shoots on control plane nodes).
+	runControlPlaneNodesEndpointsBootstrapper := cfg.Bootstrap != nil && cfg.Bootstrap.ControlPlaneNodesEndpoints != nil && cfg.Bootstrap.ControlPlaneNodesEndpoints.Enabled
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{

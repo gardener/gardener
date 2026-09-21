@@ -39,7 +39,7 @@ var _ = Describe("Init", func() {
 
 		BeforeEach(func() {
 			worker = gardencorev1beta1.Worker{}
-			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, nil)
+			config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, nil, false)
 		})
 
 		When("kubelet data volume is not configured", func() {

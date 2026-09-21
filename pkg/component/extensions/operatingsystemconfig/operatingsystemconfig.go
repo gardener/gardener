@@ -752,6 +752,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		PreferIPv6:                              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 		Taints:                                  d.taints,
 		SyncControlPlaneAuthTokens:              d.syncControlPlaneAuthTokens && d.worker.ControlPlane != nil,
+		IsControlPlanePool:                      d.worker.ControlPlane != nil,
 	}
 
 	switch d.purpose {
@@ -759,7 +760,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		units, files, err = InitConfigFn(
 			d.worker,
 			d.images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
-			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, nil),
+			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, nil, d.worker.ControlPlane != nil),
 			d.clusterCABundle,
 			d.registryCABundle != nil,
 		)
