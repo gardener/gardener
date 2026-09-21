@@ -21,8 +21,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var path = filepath.Join(string(filepath.Separator), "var", "lib", "etcd", "control-plane-nodes-endpoints")
-
 // ControlPlaneNodesEndpoints is a runnable for writing the IP addresses of the control plane nodes to a file on the
 // host. This file is later mounted into the etcd-backup-restore container that runs as static pod on control plane
 // nodes of self-hosted shoot clusters.
@@ -34,10 +32,10 @@ type ControlPlaneNodesEndpoints struct {
 
 // Start writes the IP addresses of the control plane nodes to a file on the host if it does not exist yet.
 func (c *ControlPlaneNodesEndpoints) Start(ctx context.Context) error {
-	if _, err := c.FS.Stat(path); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed checking for existence of file %s: %w", path, err)
+	if _, err := c.FS.Stat(v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed checking for existence of file %s: %w", v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints, err)
 	} else if err == nil {
-		c.Log.Info("File containing control plane nodes endpoints already exists, will not overwrite it", "file", path)
+		c.Log.Info("File containing control plane nodes endpoints already exists, will not overwrite it", "file", v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints)
 		return nil
 	}
 
@@ -65,10 +63,10 @@ func (c *ControlPlaneNodesEndpoints) Start(ctx context.Context) error {
 		endpoints = append(endpoints, ip.String())
 	}
 
-	if err := c.FS.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return fmt.Errorf("failed creating directory %s: %w", filepath.Dir(path), err)
+	if err := c.FS.MkdirAll(filepath.Dir(v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints), 0755); err != nil {
+		return fmt.Errorf("failed creating directory %s: %w", filepath.Dir(v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints), err)
 	}
 
-	c.Log.Info("Writing file containing IP addresses of control plane nodes", "path", path)
-	return c.FS.WriteFile(path, []byte(strings.Join(endpoints, "\n")), 0600)
+	c.Log.Info("Writing file containing IP addresses of control plane nodes", "path", v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints)
+	return c.FS.WriteFile(v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints, []byte(strings.Join(endpoints, "\n")), 0600)
 }

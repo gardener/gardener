@@ -828,6 +828,9 @@ const (
 	OperatingSystemConfigFilePathValitailConfig = "/var/lib/valitail/config/config"
 	// OperatingSystemConfigFilePathBinaries is a constant for a path to a directory in the operating system config that contains the binaries.
 	OperatingSystemConfigFilePathBinaries = "/opt/bin"
+	// OperatingSystemConfigFilePathControlPlaneNodesEndpoints is a constant for a path to a file containing the
+	// endpoints of the control plane nodes in self-hosted shoot clusters.
+	OperatingSystemConfigFilePathControlPlaneNodesEndpoints = "/var/lib/etcd/control-plane-nodes-endpoints"
 
 	// FluentBitConfigMapKubernetesFilter is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
 	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"
