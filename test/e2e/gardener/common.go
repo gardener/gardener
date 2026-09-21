@@ -38,8 +38,9 @@ func baseShoot(name string) *gardencorev1beta1.Shoot {
 				Name: "local",
 			},
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:       "1.36",
-				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+				Version:               "1.36",
+				KubeAPIServer:         &gardencorev1beta1.KubeAPIServerConfig{},
+				KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{},
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",
