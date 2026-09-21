@@ -213,7 +213,7 @@
     },
     {
       "datasource": "${datasource}",
-      "description": "Available disk space remaining at the storage location. Disk space exhaustion triggers read-only mode or causes ingestion failures.",
+      "description": "Available disk space remaining at the storage location. Disk space exhaustion triggers read-only mode and causes ingestion failures.",
       "fieldConfig": {
         "defaults": {
           "color": {
