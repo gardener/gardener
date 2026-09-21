@@ -125,8 +125,7 @@ func (p *perses) getPodLabels() map[string]string {
 	}
 
 	if p.values.VictoriaLogsEnabled {
-		// TODO(teodordichev): switch to HTTPS when the following PR is resolved - https://github.com/perses/perses-operator/pull/495
-		labels[gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsHttpPort)] = v1beta1constants.LabelNetworkPolicyAllowed
+		labels[gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
 	seedSpecificLabels := map[string]string{

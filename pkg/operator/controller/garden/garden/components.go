@@ -1767,6 +1767,7 @@ func (r *Reconciler) newPerses(garden *operatorv1alpha1.Garden, secretsManager s
 	return sharedcomponent.NewPerses(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
+		secretsManager,
 		perses.Values{
 			ClusterType: component.ClusterTypeSeed,
 			Replicas:    1,
@@ -1777,6 +1778,7 @@ func (r *Reconciler) newPerses(garden *operatorv1alpha1.Garden, secretsManager s
 			VictoriaLogsEnabled: features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 			// The garden runtime cluster runs istio, so include its dashboards.
 			IncludeIstioDashboards: true,
+			SecretNameServerCA:     operatorv1alpha1.SecretNameCARuntime,
 			ExternalExposure: &perses.ExposureValues{
 				AuthSecretName:               v1beta1constants.SecretNameObservabilityIngress,
 				AuthSecretManaged:            true,

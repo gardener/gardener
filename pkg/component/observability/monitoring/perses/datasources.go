@@ -12,11 +12,13 @@ import (
 	persescommon "github.com/perses/spec/go/common"
 	"github.com/perses/spec/go/datasource"
 	persesplugin "github.com/perses/spec/go/plugin"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/component"
 	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -24,25 +26,24 @@ const (
 	pluginKindVictoriaLogs = "VictoriaLogsDatasource"
 )
 
-func (p *perses) datasources() []client.Object {
+func (p *perses) datasources(caBundle *corev1.Secret) []client.Object {
 	var datasources []client.Object
 
 	if p.values.IsGardenCluster {
 		datasources = append(datasources,
-			p.newDatasource("prometheus-garden", pluginKindPrometheus, "http://prometheus-garden:80", true),
-			p.newDatasource("prometheus-longterm", pluginKindPrometheus, "http://prometheus-longterm:81", false),
+			p.newDatasource("prometheus-garden", pluginKindPrometheus, "http://prometheus-garden:80", true, nil),
+			p.newDatasource("prometheus-longterm", pluginKindPrometheus, "http://prometheus-longterm:81", false, nil),
 		)
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		datasources = append(datasources,
-			p.newDatasource("prometheus-aggregate", pluginKindPrometheus, "http://prometheus-aggregate:80", !p.values.OnlyDeployDatasourcesAndDashboards),
-			p.newDatasource("prometheus-seed", pluginKindPrometheus, "http://prometheus-seed:80", false),
+			p.newDatasource("prometheus-aggregate", pluginKindPrometheus, "http://prometheus-aggregate:80", !p.values.OnlyDeployDatasourcesAndDashboards, nil),
+			p.newDatasource("prometheus-seed", pluginKindPrometheus, "http://prometheus-seed:80", false, nil),
 		)
 	}
 
 	if p.values.VictoriaLogsEnabled && !p.values.OnlyDeployDatasourcesAndDashboards {
 		datasources = append(datasources,
-			// TODO(teodordichev): switch to HTTPS once the following PR is resolved - https://github.com/perses/perses-operator/pull/495
-			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsHttpPort), false),
+			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("https://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsPort), false, caBundle),
 		)
 	}
 
@@ -51,8 +52,13 @@ func (p *perses) datasources() []client.Object {
 
 // newDatasource returns a project-scoped PersesDatasource. The perses-operator maps the resource's namespace to a
 // Perses project of the same name, so the datasource is explorable within that project.
-func (p *perses) newDatasource(dsName, pluginKind, url string, isDefault bool) *persesv1alpha2.PersesDatasource {
-	return &persesv1alpha2.PersesDatasource{
+func (p *perses) newDatasource(dsName, pluginKind, url string, isDefault bool, caBundle *corev1.Secret) *persesv1alpha2.PersesDatasource {
+	proxySpec := map[string]any{
+		"url":              url,
+		"allowedEndpoints": allowedEndpointsForPlugin(pluginKind),
+	}
+
+	ds := &persesv1alpha2.PersesDatasource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dsName,
 			Namespace: p.namespace,
@@ -70,16 +76,7 @@ func (p *perses) newDatasource(dsName, pluginKind, url string, isDefault bool) *
 						Spec: map[string]any{
 							"proxy": map[string]any{
 								"kind": "HTTPProxy",
-								"spec": map[string]any{
-									"url": url,
-									// Restrict what can be proxied to the datasource. The Perses proxy forwards any
-									// request under the datasource path (with any method, and attaching the
-									// datasource's stored credentials) to the upstream. Without an allow-list, a user
-									// reaching the un-authenticated Perses API could use the proxy to send writes
-									// (e.g. Prometheus remote-write) or reach other upstream endpoints. The allow-list
-									// is limited to the read-only query endpoints the corresponding Perses plugin uses.
-									"allowedEndpoints": allowedEndpointsForPlugin(pluginKind),
-								},
+								"spec": proxySpec,
 							},
 						},
 					},
@@ -88,6 +85,26 @@ func (p *perses) newDatasource(dsName, pluginKind, url string, isDefault bool) *
 			InstanceSelector: p.instanceSelector(),
 		},
 	}
+
+	if caBundle != nil {
+		// The operator names the Perses Secret after the datasource and appends "-secret".
+		proxySpec["secret"] = dsName + "-secret"
+		ds.Spec.Client = &persesv1alpha2.Client{
+			TLS: &persesv1alpha2.TLS{
+				Enable: new(true),
+				CaCert: &persesv1alpha2.Certificate{
+					SecretSource: persesv1alpha2.SecretSource{
+						Type:      persesv1alpha2.SecretSourceTypeSecret,
+						Name:      &caBundle.Name,
+						Namespace: &caBundle.Namespace,
+					},
+					CertPath: secrets.DataKeyCertificateBundle,
+				},
+			},
+		}
+	}
+
+	return ds
 }
 
 // allowedEndpointsForPlugin returns the read-only upstream endpoints the given datasource plugin needs to be able to

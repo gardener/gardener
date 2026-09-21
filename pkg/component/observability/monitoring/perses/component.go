@@ -6,6 +6,7 @@ package perses
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,8 +43,6 @@ type Values struct {
 	VPAEnabled bool
 	// IsGardenCluster specifies whether the cluster is a garden cluster.
 	IsGardenCluster bool
-	// ExternalExposure contains configuration for exposing this Perses instance via a VirtualService resource.
-	ExternalExposure *ExposureValues
 	// VictoriaLogsEnabled indicates whether VictoriaLogs is enabled as the logging backend.
 	VictoriaLogsEnabled bool
 	// IncludeIstioDashboards specifies whether the istio dashboards should be deployed.
@@ -52,6 +51,10 @@ type Values struct {
 	// This is relevant when the Perses instance is already deployed by another component (e.g., gardener-operator),
 	// and the gardenlet wants to contribute seed-specific configuration.
 	OnlyDeployDatasourcesAndDashboards bool
+	// SecretNameServerCA is the name of the server CA secret.
+	SecretNameServerCA string
+	// ExternalExposure contains configuration for exposing this Perses instance via a VirtualService resource.
+	ExternalExposure *ExposureValues
 }
 
 // ExposureValues contains configuration for exposing this Perses instance via a VirtualService resource.
@@ -85,19 +88,22 @@ type ExposureValues struct {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
 	return &perses{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type perses struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 func (p *perses) Deploy(ctx context.Context) error {
@@ -119,7 +125,13 @@ func (p *perses) Deploy(ctx context.Context) error {
 
 		objs = append(objs, p.serviceMonitor())
 	}
-	objs = append(objs, p.datasources()...)
+
+	caBundle, found := p.secretsManager.Get(p.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("the CA trust bundle for %q was not found", p.values.SecretNameServerCA)
+	}
+
+	objs = append(objs, p.datasources(caBundle)...)
 
 	dashboards, err := p.dashboards()
 	if err != nil {
