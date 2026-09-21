@@ -795,7 +795,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 23)
+					checkDeployedResources("plutono-dashboards", 24)
 				})
 
 				Context("w/ Vali is removed", func() {
@@ -838,7 +838,7 @@ status: {}
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards", 27)
+						checkDeployedResources("plutono-dashboards", 28)
 					})
 				})
 			})
@@ -923,7 +923,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkDeployedResources("plutono-dashboards", 36)
+				checkDeployedResources("plutono-dashboards", 35)
 			})
 
 			Context("w/ include istio, mcm, ha-vpn, vpa", func() {
@@ -934,7 +934,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 41)
+					checkDeployedResources("plutono-dashboards", 40)
 				})
 			})
 
@@ -944,7 +944,7 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards", 28)
+					checkDeployedResources("plutono-dashboards", 27)
 				})
 			})
 
