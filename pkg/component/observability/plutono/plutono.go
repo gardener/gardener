@@ -563,10 +563,8 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 			if err := rewriteControlplaneLogsTemplating(dashboards); err != nil {
 				return nil, err
 			}
-			for _, name := range []string{"cluster-overview-dashboard.json"} {
-				if err := renamePanelValiToVictoriaLogs(dashboards, name, 40); err != nil {
-					return nil, err
-				}
+			if err := renamePanelValiToVictoriaLogs(dashboards, "cluster-overview-dashboard.json", 40); err != nil {
+				return nil, err
 			}
 		}
 	}
