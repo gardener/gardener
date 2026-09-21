@@ -16,7 +16,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -305,6 +308,10 @@ func testManualWorkersRollout(s *ShootContext) {
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
 		test := func(s *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools bool) {
+			s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+				Resources: []string{"configmaps", "shirts.stable.example.com"},
+			}
+
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -352,8 +359,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 						return s.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
 					},
-					EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
-					RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
+					ResourcesToEncrypt: append([]string{"configmaps", "shirts.stable.example.com"}, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
+					EncryptionKey:      v1beta1constants.SecretNameETCDEncryptionKey,
+					RoleLabelValue:     v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 				},
 				&rotationutils.ServiceAccountKeyVerifier{
 					GetServiceAccountKeySecretNamespace: func() string {
@@ -372,6 +380,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					NewTargetClientFunc: func(ctx context.Context) (kubernetes.Interface, error) {
 						return access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
 					},
+					SetupFunc: createShirtCRD,
 					Resources: []rotationutils.EncryptedResource{
 						{
 							NewObject: func() client.Object {
@@ -381,6 +390,20 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 								}
 							},
 							NewEmptyList: func() client.ObjectList { return &corev1.SecretList{} },
+						},
+						{
+							NewObject: func() client.Object {
+								return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-", Namespace: "default"}, Data: map[string]string{"content": "gardener-svm-rotation-test"}}
+							},
+							NewEmptyList: func() client.ObjectList { return &corev1.ConfigMapList{} },
+						},
+						{
+							NewObject: func() client.Object { return newShirt(map[string]any{"color": "blue", "size": "M"}) },
+							NewEmptyList: func() client.ObjectList {
+								list := &unstructured.UnstructuredList{}
+								list.SetGroupVersionKind(schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "ShirtList"})
+								return list
+							},
 						},
 					},
 				},
@@ -483,7 +506,56 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
+			shoot := DefaultWorkerlessShoot("e2e-rotate")
+
+			test(NewTestContext().ForShoot(shoot), false, false, false)
 		})
 	})
 })
+
+func createShirtCRD(ctx context.Context, c client.Client) {
+	GinkgoHelper()
+
+	crd := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "shirts.stable.example.com"},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: "stable.example.com",
+			Scope: apiextensionsv1.NamespaceScoped,
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
+				Plural:   "shirts",
+				Singular: "shirt",
+				Kind:     "Shirt",
+			},
+			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
+				Name:    "v1",
+				Served:  true,
+				Storage: true,
+				Schema: &apiextensionsv1.CustomResourceValidation{
+					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+						Type: "object",
+						Properties: map[string]apiextensionsv1.JSONSchemaProps{
+							"spec": {
+								Type: "object",
+								Properties: map[string]apiextensionsv1.JSONSchemaProps{
+									"color": {Type: "string"},
+									"size":  {Type: "string"},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	Expect(client.IgnoreAlreadyExists(c.Create(ctx, crd))).To(Succeed())
+}
+
+func newShirt(spec map[string]any) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "Shirt"})
+	obj.SetGenerateName("polo-blue-")
+	obj.SetNamespace("default")
+	_ = unstructured.SetNestedMap(obj.Object, spec, "spec")
+	return obj
+}
