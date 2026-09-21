@@ -254,7 +254,7 @@ var _ = Describe("PeerExposure", func() {
 				srv := gw.Spec.Servers[0]
 				Expect(srv.Hosts).To(Equal([]string{clientHost}))
 				Expect(srv.Port.Number).To(Equal(uint32(443)))
-				Expect(srv.Port.Name).To(Equal("tls-etcd-client"))
+				Expect(srv.Port.Name).To(Equal("tls"))
 				Expect(srv.Port.Protocol).To(Equal("TLS"))
 				Expect(srv.Tls.Mode).To(Equal(istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH))
 			})

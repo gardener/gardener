@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	istioutils "github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -104,10 +105,14 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 
 	if p.values.ClientHost != "" {
 		clientGateway := p.emptyGatewayFor(p.clientName())
-		gatewayWithClientTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})()
+		if err := istioutils.GatewayWithTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})(); err != nil {
+			return err
+		}
 
 		clientVirtualService := p.emptyVirtualServiceFor(p.clientName())
-		virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, p.clientServiceHost())()
+		if err := istioutils.VirtualServiceWithSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, uint32(etcdconstants.PortEtcdClient), p.clientServiceHost())(); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
+			return err
+		}
 
 		clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
 		serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)() // #nosec G115 -- Port constants are positive values well within uint32 range.
@@ -248,49 +253,6 @@ func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.Virtu
 			Hosts:    allHosts,
 			Gateways: []string{gatewayName},
 			Tls:      routes,
-		}
-	}
-}
-
-func gatewayWithClientTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, hosts []string) func() {
-	return func() {
-		gateway.Labels = labels
-		gateway.Spec = istioapinetworkingv1beta1.Gateway{
-			Selector: istioLabels,
-			Servers: []*istioapinetworkingv1beta1.Server{{
-				Hosts: hosts,
-				Port: &istioapinetworkingv1beta1.Port{
-					Number:   443,
-					Name:     etcdconstants.ServicePortNameEtcdClient,
-					Protocol: "TLS",
-				},
-				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
-					Mode: istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH,
-				},
-			}},
-		}
-	}
-}
-
-func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo, hosts []string, gatewayName, destinationHost string) func() {
-	return func() {
-		virtualService.Labels = labels
-		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
-			ExportTo: exportTo,
-			Hosts:    hosts,
-			Gateways: []string{gatewayName},
-			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
-				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
-					Port:     443,
-					SniHosts: hosts,
-				}},
-				Route: []*istioapinetworkingv1beta1.RouteDestination{{
-					Destination: &istioapinetworkingv1beta1.Destination{
-						Host: destinationHost,
-						Port: &istioapinetworkingv1beta1.PortSelector{Number: uint32(etcdconstants.PortEtcdClient)}, // #nosec G115 -- Port constants are positive values well within uint32 range.
-					},
-				}},
-			}},
 		}
 	}
 }
