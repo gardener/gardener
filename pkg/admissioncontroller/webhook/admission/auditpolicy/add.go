@@ -13,6 +13,7 @@ import (
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/webhook/configvalidator"
 )
 
@@ -38,7 +39,8 @@ func AddToManager(mgr manager.Manager) error {
 	return nil
 }
 
-// NewHandler returns a new handler for validating audit policies.
+// NewHandler returns a new handler for validating audit policies. If the StrictAuditPolicyValidation feature gate is
+// enabled, unknown or misspelled fields in the audit policy are rejected instead of being silently dropped.
 func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission.Handler {
 	return &configvalidator.Handler{
 		APIReader: apiReader,
@@ -51,10 +53,8 @@ func NewHandler(apiReader, c client.Reader, decoder admission.Decoder) admission
 			return gardencorehelper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 		},
 		ShootFieldSelector: gardencore.ShootAuditPolicyConfigMapName,
-		AdmitConfig:        admitConfig,
+		AdmitConfig: func(_ context.Context, auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
+			return configvalidator.AdmitAuditPolicy(auditPolicyRaw, features.DefaultFeatureGate.Enabled(features.StrictAuditPolicyValidation))
+		},
 	}
-}
-
-func admitConfig(_ context.Context, auditPolicyRaw string, _ []*gardencore.Shoot) (int32, error) {
-	return configvalidator.AdmitAuditPolicy(auditPolicyRaw)
 }

@@ -135,6 +135,14 @@ const (
 	// owner: @jamand @timebertt
 	// alpha: v1.148.0
 	RemoveHTTPProxyLegacyPort featuregate.Feature = "RemoveHTTPProxyLegacyPort"
+
+	// StrictAuditPolicyValidation enables strict decoding (rejecting unknown or misspelled fields) when the
+	// gardener-admission-controller validates a Shoot's referenced audit policy ConfigMap. When disabled, the
+	// admission-controller falls back to the previous lenient decoding behavior, which silently drops unknown
+	// fields instead of rejecting the audit policy.
+	// owner: @pujitha24
+	// alpha: v1.152.0
+	StrictAuditPolicyValidation featuregate.Feature = "StrictAuditPolicyValidation"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -180,6 +188,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
 	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.Beta},
 	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
+	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

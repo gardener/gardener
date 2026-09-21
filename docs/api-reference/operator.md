@@ -2293,6 +2293,18 @@ GardenerAdmissionControllerConfig contains configuration settings for the garden
 
 <tr>
 <td>
+<code>featureGates</code></br>
+<em>
+object (keys:string, values:boolean)
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>FeatureGates contains information about enabled feature gates.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>logLevel</code></br>
 <em>
 string

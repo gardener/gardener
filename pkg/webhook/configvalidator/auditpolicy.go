@@ -16,17 +16,27 @@ import (
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 )
 
-var decoder runtime.Decoder
+var (
+	strictDecoder  runtime.Decoder
+	lenientDecoder runtime.Decoder
+)
 
 func init() {
 	scheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(auditv1.AddToScheme, audit.AddToScheme)
 	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
-	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+	strictDecoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
+	lenientDecoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 }
 
-// AdmitAuditPolicy validates the provided audit policy.
-func AdmitAuditPolicy(auditPolicyRaw string) (int32, error) {
+// AdmitAuditPolicy validates the provided audit policy. If strict is true, unknown or misspelled fields in the
+// audit policy are rejected instead of being silently dropped.
+func AdmitAuditPolicy(auditPolicyRaw string, strict bool) (int32, error) {
+	decoder := lenientDecoder
+	if strict {
+		decoder = strictDecoder
+	}
+
 	obj, schemaVersion, err := decoder.Decode([]byte(auditPolicyRaw), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided audit policy: %w", err)

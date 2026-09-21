@@ -849,6 +849,12 @@ spec:
                         description: AdmissionController contains configuration settings
                           for the gardener-admission-controller.
                         properties:
+                          featureGates:
+                            additionalProperties:
+                              type: boolean
+                            description: FeatureGates contains information about enabled
+                              feature gates.
+                            type: object
                           logLevel:
                             default: info
                             description: |-

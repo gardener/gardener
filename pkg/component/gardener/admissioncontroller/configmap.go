@@ -49,8 +49,9 @@ func (a *gardenerAdmissionController) admissionConfigConfigMap() (*corev1.Config
 			Burst:      130,
 			Kubeconfig: gardenerutils.PathGenericKubeconfig,
 		},
-		LogLevel:  a.values.LogLevel,
-		LogFormat: logger.FormatJSON,
+		LogLevel:     a.values.LogLevel,
+		LogFormat:    logger.FormatJSON,
+		FeatureGates: a.values.FeatureGates,
 		Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
 			Webhooks: admissioncontrollerconfigv1alpha1.HTTPSServer{
 				Server: admissioncontrollerconfigv1alpha1.Server{Port: serverPort},

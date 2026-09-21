@@ -22,7 +22,7 @@ kind: Policy
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
@@ -54,7 +54,7 @@ rules:
   - group: ""
     resources: ["pods"]
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
@@ -68,12 +68,12 @@ omitStages:
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
 
-		It("should accept audit policy with namespaces and objectRef", func() {
+		It("should accept audit policy with namespaces and resources", func() {
 			auditPolicy := `
 apiVersion: audit.k8s.io/v1
 kind: Policy
@@ -81,11 +81,11 @@ rules:
 - level: None
   namespaces: ["kube-system", "kube-public"]
 - level: Metadata
-  objectRef:
-    resource: "pods"
-    namespace: "default"
+  resources:
+  - group: ""
+    resources: ["pods"]
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(0)))
 		})
@@ -97,7 +97,7 @@ rules:
 invalid: yaml: content
   - missing quotes
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("failed to decode the provided audit policy"))
@@ -105,7 +105,7 @@ invalid: yaml: content
 
 		It("should reject empty content", func() {
 			auditPolicy := ""
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("failed to decode the provided audit policy"))
@@ -117,7 +117,7 @@ kind: Policy
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 		})
@@ -128,7 +128,7 @@ apiVersion: audit.k8s.io/v1
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 		})
@@ -140,7 +140,7 @@ kind: Policy
 rules:
 - level: InvalidLevel
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("provided invalid audit policy"))
@@ -155,10 +155,43 @@ omitStages:
 rules:
 - level: Metadata
 `
-			statusCode, err := AdmitAuditPolicy(auditPolicy)
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
 			Expect(err).To(HaveOccurred())
 			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
 			Expect(err.Error()).To(ContainSubstring("provided invalid audit policy"))
+		})
+
+		It("should reject audit policy with an unknown field", func() {
+			auditPolicy := `
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: None
+  nonResourceURLs:
+  - /
+  verb: ["get"]
+`
+			statusCode, err := AdmitAuditPolicy(auditPolicy, true)
+			Expect(err).To(HaveOccurred())
+			Expect(statusCode).To(Equal(int32(http.StatusUnprocessableEntity)))
+			Expect(err.Error()).To(ContainSubstring("failed to decode the provided audit policy"))
+		})
+	})
+
+	Describe("lenient decoding (strict=false)", func() {
+		It("should silently accept an audit policy with an unknown field", func() {
+			auditPolicy := `
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: None
+  nonResourceURLs:
+  - /
+  verb: ["get"]
+`
+			statusCode, err := AdmitAuditPolicy(auditPolicy, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(statusCode).To(Equal(int32(0)))
 		})
 	})
 })
