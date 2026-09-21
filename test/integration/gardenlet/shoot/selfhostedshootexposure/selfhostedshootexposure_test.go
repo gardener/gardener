@@ -14,6 +14,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -41,6 +43,8 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 	}
 
 	BeforeEach(func() {
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
@@ -60,7 +64,8 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 							Type:  "large",
 							Image: &gardencorev1beta1.ShootMachineImage{Name: "some-image", Version: new("1.0.0")},
 						},
-						ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+						ControlPlane:   &gardencorev1beta1.WorkerControlPlane{},
+						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 					}},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},

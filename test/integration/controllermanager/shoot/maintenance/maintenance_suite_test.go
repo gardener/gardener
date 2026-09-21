@@ -26,6 +26,7 @@ import (
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	apiserverfeatures "github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
@@ -35,6 +36,7 @@ import (
 )
 
 func TestMaintenance(t *testing.T) {
+	apiserverfeatures.RegisterFeatureGates()
 	controllermanagerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test Integration ControllerManager Shoot Maintenance Suite")

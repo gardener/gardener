@@ -6,6 +6,7 @@ package v1beta1
 
 import (
 	"math"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +48,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Networking = &Networking{}
 	}
 
+	unmanagedSelfHosted := obj.Spec.CredentialsBindingName == nil && obj.Spec.SecretBindingName == nil &&
+		slices.ContainsFunc(obj.Spec.Provider.Workers, func(worker Worker) bool { return worker.ControlPlane != nil })
+
 	for i, worker := range obj.Spec.Provider.Workers {
 		if worker.CRI == nil {
 			obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
@@ -71,6 +75,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		if worker.ControlPlane != nil && worker.ControlPlane.Exposure != nil && worker.ControlPlane.Exposure.Extension != nil && worker.ControlPlane.Exposure.Extension.Type == nil {
 			worker.ControlPlane.Exposure.Extension.Type = new(obj.Spec.Provider.Type)
+		}
+
+		if unmanagedSelfHosted && worker.UpdateStrategy == nil {
+			obj.Spec.Provider.Workers[i].UpdateStrategy = new(AutoInPlaceUpdate)
 		}
 	}
 

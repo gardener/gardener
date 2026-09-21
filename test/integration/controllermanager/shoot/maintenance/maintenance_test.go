@@ -74,6 +74,7 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 		testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "0.0.1", Classification: &deprecatedClassification}
 		testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "0.0.5", Classification: &deprecatedClassification}
 		testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "0.1.1", Classification: &deprecatedClassification}

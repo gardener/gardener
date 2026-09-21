@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -79,11 +80,15 @@ func AddToManager(
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
-	if err := (&status.Reconciler{
-		Config:   *cfg.Controllers.ShootStatus,
-		SeedName: seedName,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
-		return fmt.Errorf("failed adding status reconciler: %w", err)
+	// unmanaged infrastructure shoots only support AutoInPlaceUpdate update strategy
+	// status controller is required only if shoots has workers with ManualInPlaceUpdate update strategy
+	if selfHostedShoot == nil || v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
+		if err := (&status.Reconciler{
+			Config:   *cfg.Controllers.ShootStatus,
+			SeedName: seedName,
+		}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+			return fmt.Errorf("failed adding status reconciler: %w", err)
+		}
 	}
 
 	if shootStateControllerEnabled {
