@@ -3932,6 +3932,35 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))
 				})
 
+				It("should allow setting NodeCIDRMaskSizeIPv6 while migrating from IPv4 to dual-stack", func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = nil
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+					newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = new(int32(80))
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should fail setting NodeCIDRMaskSizeIPv6 once the cluster is already dual-stack", func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = nil
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 = new(int32(80))
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6"),
+						"Detail": ContainSubstring(`field is immutable`),
+					}))
+				})
+
 				It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(int32(32))
 

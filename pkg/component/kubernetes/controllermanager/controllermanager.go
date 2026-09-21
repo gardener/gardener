@@ -655,6 +655,25 @@ func (k *kubeControllerManager) isDualStack() bool {
 	return false
 }
 
+// nodeCIDRMaskSizeIPv6 returns the IPv6 node CIDR mask size to pass to the kube-controller-manager.
+// A user-provided value takes precedence. Otherwise it is derived from the actual IPv6 pod CIDR (which
+// is infrastructure-dependent, e.g. a /64 on OpenStack), because defaulting it in the shoot spec cannot
+// know the real pod CIDR. Returns nil if no IPv6 pod network is present.
+func (k *kubeControllerManager) nodeCIDRMaskSizeIPv6() *int32 {
+	if k.values.Config != nil && k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
+		return k.values.Config.NodeCIDRMaskSizeIPv6
+	}
+
+	for _, podNetwork := range k.values.PodNetworks {
+		if podNetwork.IP.To4() != nil {
+			continue
+		}
+		podCIDRMaskSize, _ := podNetwork.Mask.Size()
+		return ptr.To(netutils.DefaultNodeCIDRMaskSizeIPv6(podCIDRMaskSize))
+	}
+	return nil
+}
+
 func (k *kubeControllerManager) computeCommand(port int32) []string {
 	var (
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
@@ -682,8 +701,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			if k.values.Config.NodeCIDRMaskSize != nil {
 				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *k.values.Config.NodeCIDRMaskSize))
 			}
-			if k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
-				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", *k.values.Config.NodeCIDRMaskSizeIPv6))
+			if nodeCIDRMaskSizeIPv6 := k.nodeCIDRMaskSizeIPv6(); nodeCIDRMaskSizeIPv6 != nil {
+				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", *nodeCIDRMaskSizeIPv6))
 			}
 		} else {
 			// Single-stack: use generic flag (works for both IPv4 and IPv6)

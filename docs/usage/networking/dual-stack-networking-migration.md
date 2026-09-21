@@ -22,6 +22,21 @@ Dual-stack networking allows clusters to operate with both IPv4 and IPv6 protoco
 - A dual-stack cluster cannot be migrated to single-stack. Migration from single-stack to dual-stack is a one-way process and cannot be undone.
 - Migration involves multiple reconciliation runs to ensure a smooth transition without disruptions.
 
+### IPv6 node CIDR mask size
+
+The relevance of `spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6` depends on the infrastructure:
+
+- **Infrastructure-managed prefix delegation** (e.g. AWS, GCP): the infrastructure delegates a per-node IPv6 prefix directly to each node. Kubernetes' node-ipam in kube-controller-manager is bypassed; `nodeCIDRMaskSizeIPv6` is ignored and does not need to be set.
+- **Kubernetes-managed CIDR allocation**: kube-controller-manager carves per-node subnets out of the IPv6 pod network. `nodeCIDRMaskSizeIPv6` controls the size of these per-node subnets and matters for cluster capacity.
+
+For the second case, this value is **not** defaulted to a fixed number, because the usable range depends on the infrastructure-allocated IPv6 pod CIDR. For example, if the infrastructure hands out a `/64` pod network, a mask of `/64` would only allow a single node.
+
+If you are on a Kubernetes-managed CIDR allocation infrastructure and leave `nodeCIDRMaskSizeIPv6` unset (the recommended default), Gardener derives the effective per-node mask from the actual IPv6 pod CIDR as `podCIDRMaskSize + 16` (capped at `/124`). For a `/64` pod CIDR this yields `/80`, i.e. up to 65,536 nodes with an ample address space per node. `+16` is the largest difference Kubernetes' node-ipam allows for IPv6.
+
+The derived value is not written to the spec. You can determine it from the IPv6 pod CIDR reported in `.status.networking.pods` by applying the formula above.
+
+> :warning: `nodeCIDRMaskSizeIPv6` can only be set in the update that adds IPv6 to `spec.networking.ipFamilies` (i.e. the migration step below) or at shoot creation. Once the cluster is already dual-stack, the field is immutable, because IPv6 pod CIDRs are already allocated to nodes and changing the mask would break those allocations. If you set it explicitly, make sure the value is `>= podCIDRMaskSize` and `<= podCIDRMaskSize + 16`, otherwise kube-controller-manager will not be able to allocate node CIDRs.
+
 ## Preconditions
 
 Gardener supports multiple different network configurations, including running with pod overlay network or native routing. Currently, there is only native routing as supported operating mode for dual-stack networking in Gardener. This means that the pod overlay network needs to be disabled before starting the dual-stack migration. Otherwise, pod-to-pod cross-node communication may not work as expected after the migration.

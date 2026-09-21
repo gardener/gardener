@@ -1024,7 +1024,17 @@ func commandForKubernetesVersion(
 		if nodeCIDRMaskSize != nil {
 			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *nodeCIDRMaskSize))
 		}
-		// Only add IPv6 flag if explicitly set (dual-stack or IPv6 single-stack)
+		// Use the user-provided IPv6 mask or, when unset, derive it from the IPv6 pod CIDR.
+		if nodeCIDRMaskSizeIPv6 == nil {
+			for _, podNet := range podNetwork {
+				if podNet.IP.To4() != nil {
+					continue
+				}
+				podCIDRMaskSize, _ := podNet.Mask.Size()
+				nodeCIDRMaskSizeIPv6 = new(netutils.DefaultNodeCIDRMaskSizeIPv6(podCIDRMaskSize))
+				break
+			}
+		}
 		if nodeCIDRMaskSizeIPv6 != nil {
 			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", *nodeCIDRMaskSizeIPv6))
 		}

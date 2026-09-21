@@ -452,7 +452,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
 
-	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
+	oldIsDualStack := oldSpec.Networking != nil && core.IsDualStack(oldSpec.Networking.IPFamilies)
+	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, oldIsDualStack, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 
 	if err := validateWorkerUpdate(len(newSpec.Provider.Workers) > 0, len(oldSpec.Provider.Workers) > 0, fldPath.Child("provider", "workers")); err != nil {
 		allErrs = append(allErrs, err)
@@ -820,7 +821,7 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 	return allErrs
 }
 
-func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControllerManagerConfig, oldIsDualStack bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	var (
@@ -840,8 +841,10 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskNew, nodeCIDRMaskOld, fldPath.Child("nodeCIDRMaskSize"))...)
-	// allow nodeCIDRMaskSizeIPv6 to be added if it was not set before for migration to dual-stack.
-	if nodeCIDRMaskIPv6Old != nil {
+	// nodeCIDRMaskSizeIPv6 may be set in the update that migrates the shoot to dual-stack (i.e. while the
+	// cluster is not yet dual-stack). Once dual-stack is active it is immutable, because IPv6 pod CIDRs are
+	// already allocated to nodes and changing the mask would break those allocations.
+	if oldIsDualStack {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskIPv6New, nodeCIDRMaskIPv6Old, fldPath.Child("nodeCIDRMaskSizeIPv6"))...)
 	}
 
