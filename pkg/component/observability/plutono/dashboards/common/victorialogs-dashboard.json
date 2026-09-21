@@ -26,7 +26,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "HTTP requests arriving at VictoriaLogs endpoints (before validation and auth), split by path.",
       "fieldConfig": {
         "defaults": {
@@ -103,7 +103,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(rate(vl_http_requests_total[$__rate_interval])) by (path)",
           "format": "time_series",
@@ -119,7 +119,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "Queries dropped after waiting too long in the queue. Indicates severe sustained overload where the query queue exceeds acceptable wait times.",
       "fieldConfig": {
         "defaults": {
@@ -196,7 +196,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(rate(vl_concurrent_select_limit_timeout_total[$__rate_interval])) by (instance)",
           "format": "time_series",
@@ -212,7 +212,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "Available disk space remaining at the storage location. Disk space exhaustion triggers read-only mode or causes ingestion failures.",
       "fieldConfig": {
         "defaults": {
@@ -289,7 +289,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "max(vl_free_disk_space_bytes) by (instance)",
           "format": "time_series",
@@ -305,7 +305,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "The number of log streams registered in daily partitions since the last VictoriaLogs restart. If this metric increases much faster than expected outside the normal creation of daily partitions, it may indicate high cardinality.",
       "fieldConfig": {
         "defaults": {
@@ -382,7 +382,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(rate(vl_streams_created_total[$__rate_interval])) by (instance)",
           "format": "time_series",
@@ -398,7 +398,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "Log entries successfully parsed and added to the processing pipeline, split by type.",
       "fieldConfig": {
         "defaults": {
@@ -475,7 +475,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(rate(vl_rows_ingested_total[$__rate_interval])) by (type)",
           "format": "time_series",
@@ -491,7 +491,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "Log entries rejected for specific reasons.",
       "fieldConfig": {
         "defaults": {
@@ -568,7 +568,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(rate(vl_rows_dropped_total[$__rate_interval])) by (reason)",
           "format": "time_series",
@@ -580,7 +580,7 @@
           "refId": "A"
         },
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(rate(vl_too_long_lines_skipped_total[$__rate_interval]))",
           "format": "time_series",
@@ -596,7 +596,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "Number of merge operations currently running per storage tier. High values suggest heavy write load or slow disk performance.",
       "fieldConfig": {
         "defaults": {
@@ -673,7 +673,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(vl_active_merges) by (type)",
           "format": "time_series",
@@ -689,7 +689,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "prometheus",
+      "datasource": "${datasource}",
       "description": "Log entries waiting in memory buffers before being written to disk. High values suggest ingestion rate exceeds storage write speed.",
       "fieldConfig": {
         "defaults": {
@@ -766,7 +766,7 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "datasource": "prometheus",
+          "datasource": "${datasource}",
           "editorMode": "code",
           "expr": "sum(vl_pending_rows) by (type)",
           "format": "time_series",
@@ -790,7 +790,29 @@
     "logging"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+        "selected": false,
+        "text": "seed-prometheus",
+        "value": "seed-prometheus"
+      },
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",
