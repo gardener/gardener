@@ -228,7 +228,10 @@ func (r *Reconciler) checkUnits(ctx context.Context, units []unitInfo) (unhealth
 // updateNodeCondition patches the Node's SystemdUnitsReady condition.
 func (r *Reconciler) updateNodeCondition(ctx context.Context, node *corev1.Node, unhealthyMessages, progressingMessages []string) error {
 	var (
-		patch = client.MergeFrom(node.DeepCopy())
+		// The JSON merge patch replaces the entire conditions list with the version of the (cached) node object. Use
+		// optimistic locking to avoid dropping conditions that were concurrently added or updated by other components (e.g.,
+		// the NetworkUnavailable condition managed by the CNI plugin). Conflicts are returned and retried.
+		patch = client.MergeFromWithOptions(node.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		now   = metav1.NewTime(r.Clock.Now())
 
 		newCondition corev1.NodeCondition
