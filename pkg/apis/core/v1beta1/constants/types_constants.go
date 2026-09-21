@@ -697,6 +697,8 @@ const (
 	// LabelNodeLocalDNS is a constant for a label key, which the provider extensions set on the nodes.
 	// The value can be true or false.
 	LabelNodeLocalDNS = "networking.gardener.cloud/node-local-dns-enabled"
+	// LabelNodePreferIPv6 is a constant for a label key which indicates whether IPv6 is preferred over IPv4.
+	LabelNodePreferIPv6 = "networking.gardener.cloud/prefer-ipv6"
 
 	// LabelVPAEvictionRequirementsController is a constant for a label indicating that a VPA resource is under control
 	// of the VPAEvictionRequirementsController.

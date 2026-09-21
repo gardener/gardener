@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -47,10 +48,20 @@ func (c *ControlPlaneNodesEndpoints) Start(ctx context.Context) error {
 
 	var endpoints []string
 	for _, node := range nodeList.Items {
-		ip, err := kubernetesutils.NodeInternalIP(node, false) // TODO(next-commit): Fetch this ("false") from to-be-set annotation on control plane nodes.
+		preferIPv6 := false
+		if v, ok := node.Labels[v1beta1constants.LabelNodePreferIPv6]; ok {
+			var err error
+			preferIPv6, err = strconv.ParseBool(v)
+			if err != nil {
+				return fmt.Errorf("failed to parse %q label on node %q: %w", v1beta1constants.LabelNodePreferIPv6, node.Name, err)
+			}
+		}
+
+		ip, err := kubernetesutils.NodeInternalIP(node, preferIPv6)
 		if err != nil {
 			return fmt.Errorf("failed determining IP address of control plane node %q: %w", node.Name, err)
 		}
+
 		endpoints = append(endpoints, ip.String())
 	}
 

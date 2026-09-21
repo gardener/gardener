@@ -733,7 +733,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		ClusterDomain:                           d.clusterDomain,
 		CRIName:                                 d.criName,
 		Images:                                  d.images,
-		NodeLabels:                              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key, ptr.Deref(d.region, "")),
+		NodeLabels:                              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6, d.key, ptr.Deref(d.region, "")),
 		NodeMonitorGracePeriod:                  d.nodeMonitorGracePeriod,
 		KubeletCABundle:                         d.kubeletCABundle,
 		KubeletConfigParameters:                 d.kubeletConfigParameters,

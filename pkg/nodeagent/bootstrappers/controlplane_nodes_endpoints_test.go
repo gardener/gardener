@@ -6,6 +6,7 @@ package bootstrappers_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strings"
 
@@ -107,6 +108,55 @@ var _ = Describe("ControlPlaneNodesEndpoints", func() {
 					Expect(net.ParseIP(line)).NotTo(BeNil(), "expected %q to be a valid IP address", line)
 				}
 				Expect(lines).To(ConsistOf("10.0.0.1", "10.0.0.2"))
+			})
+
+			When("a control plane node has the prefer-ipv6 label set to true", func() {
+				BeforeEach(func() {
+					node1 = node1.DeepCopy()
+					node1.Labels[v1beta1constants.LabelNodePreferIPv6] = "true"
+					node1.Status.Addresses = []corev1.NodeAddress{
+						{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
+						{Type: corev1.NodeInternalIP, Address: "fd00::1"},
+					}
+				})
+
+				It("should pick the IPv6 address for that node", func() {
+					Expect(bootstrapper.Start(ctx)).To(Succeed())
+
+					content, err := fakeFS.ReadFile(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(strings.Split(string(content), "\n")).To(ConsistOf("fd00::1", "10.0.0.2"))
+				})
+			})
+
+			When("a control plane node has the prefer-ipv6 label set to false", func() {
+				BeforeEach(func() {
+					node1 = node1.DeepCopy()
+					node1.Labels[v1beta1constants.LabelNodePreferIPv6] = "false"
+					node1.Status.Addresses = []corev1.NodeAddress{
+						{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
+						{Type: corev1.NodeInternalIP, Address: "fd00::1"},
+					}
+				})
+
+				It("should pick the IPv4 address for that node", func() {
+					Expect(bootstrapper.Start(ctx)).To(Succeed())
+
+					content, err := fakeFS.ReadFile(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(strings.Split(string(content), "\n")).To(ConsistOf("10.0.0.1", "10.0.0.2"))
+				})
+			})
+
+			When("a control plane node has an invalid prefer-ipv6 label value", func() {
+				BeforeEach(func() {
+					node1 = node1.DeepCopy()
+					node1.Labels[v1beta1constants.LabelNodePreferIPv6] = "invalid"
+				})
+
+				It("should return an error", func() {
+					Expect(bootstrapper.Start(ctx)).To(MatchError(ContainSubstring(fmt.Sprintf("failed to parse %q label on node %q", v1beta1constants.LabelNodePreferIPv6, node1.Name))))
+				})
 			})
 		})
 	})
