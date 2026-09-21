@@ -107,7 +107,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 // It returns an error if no matching nodes are found.
 func (b *Botanist) ListControlPlaneNodes(ctx context.Context) ([]corev1.Node, error) {
 	nodeList := &corev1.NodeList{}
-	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelNodeRoleControlPlane: ""}); err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
 	if len(nodeList.Items) == 0 {
