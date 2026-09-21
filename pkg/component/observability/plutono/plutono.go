@@ -524,6 +524,16 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		}
 	}
 
+	// TODO(iypetrov): Once all feature gates related to the VictoriaLogs rollout
+	// reach GA, this code can be cleaned up. At that point, all logic in the following
+	// ifs can be removed and the dashboard JSON files can be updated directly.
+	//
+	// For now, this logic is required to support switching between different
+	// dashboard views depending on which logging backends are enabled. The linked
+	// commit shows what the dashboard JSON files should look like after this
+	// cleanup:
+	//
+	// https://github.com/iypetrov/gardener/commit/aaffd7672406c89b85797d2be9497d22483cf929
 	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
 		delete(dashboards, "victorialogs-dashboard.json")
 	}
