@@ -1003,7 +1003,7 @@ func removePanelByID(dashboards map[string]string, filename string, id int) erro
 		return err
 	}
 	panels, _ := data["panels"].([]any)
-	filtered := panels[:0]
+	filtered := make([]any, 0, len(panels))
 	for _, p := range panels {
 		panel, _ := p.(map[string]any)
 		if panelID, _ := panel["id"].(float64); int(panelID) != id {
