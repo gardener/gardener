@@ -1124,16 +1124,16 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			})
 
 			It("Kubernetes version should be updated: force update minor version and maintain feature gates and admission plugins", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.31.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.31.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.32.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.32.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.33.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.33.5", Classification: &deprecatedClassification}
 				var (
 					// Use two actual feature gates from pkg/utils/validation/features/featuregates.go
 					// which are supported in testKubernetesVersionHighestPatchLowMinor.Version
 					// but not in testKubernetesVersionHighestPatchConsecutiveMinor.Version
-					unsupportedfeatureGate1 = "CSIMigrationRBD"
-					unsupportedfeatureGate2 = "APIPriorityAndFairness"
+					unsupportedfeatureGate1 = "VolumeCapacityPriority"
+					unsupportedfeatureGate2 = "AdmissionWebhookMatchConditions"
 					// Use two feature gates which are supported in both versions
 					supportedfeatureGate1 = "APIServerIdentity"
 					supportedfeatureGate2 = "AllBeta"
@@ -1208,12 +1208,12 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					},
 				}
 
-				By("Create k8s v1.30 Shoot")
+				By("Create k8s v1.32 Shoot")
 				Expect(testClient.Create(ctx, shoot130)).To(Succeed())
-				log.Info("Created shoot with k8s v1.30 for test", "shoot", client.ObjectKeyFromObject(shoot130))
+				log.Info("Created shoot with k8s v1.32 for test", "shoot", client.ObjectKeyFromObject(shoot130))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.30")
+					By("Delete Shoot with k8s v1.32")
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot130))).To(Succeed())
 				})
 
@@ -1231,37 +1231,37 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot130), updatedShoot)).To(Succeed())
 					g.Expect(updatedShoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.30.5\" to \"1.31.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.32.5\" to \"1.33.5\". Reason: Kubernetes version expired - force update required"))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed admission plugins from \"spec.kubernetes.kubeAPIServer.admissionPlugins\" because they are not supported in Kubernetes version \"1.31.5\": PersistentVolumeLabel"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed admission plugins from \"spec.kubernetes.kubeAPIServer.admissionPlugins\" because they are not supported in Kubernetes version \"1.33.5\": PersistentVolumeLabel"))
 					g.Expect(updatedShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
 						HaveField("Name", Equal(supportedAdmissionPlugin1)),
 						HaveField("Name", Equal(supportedAdmissionPlugin2)),
 					))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeAPIServer.featureGates\" because they are not supported in Kubernetes version \"1.31.5\": CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeAPIServer.featureGates\" because they are not supported in Kubernetes version \"1.33.5\": VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Kubernetes.KubeAPIServer.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeControllerManager.featureGates\" because they are not supported in Kubernetes version \"1.31.5\": CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeControllerManager.featureGates\" because they are not supported in Kubernetes version \"1.33.5\": VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Kubernetes.KubeControllerManager.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeScheduler.featureGates\" because they are not supported in Kubernetes version \"1.31.5\": APIPriorityAndFairness, CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeScheduler.featureGates\" because they are not supported in Kubernetes version \"1.33.5\": AdmissionWebhookMatchConditions, VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Kubernetes.KubeScheduler.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate2: true,
 					}))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeProxy.featureGates\" because they are not supported in Kubernetes version \"1.31.5\": APIPriorityAndFairness"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubeProxy.featureGates\" because they are not supported in Kubernetes version \"1.33.5\": AdmissionWebhookMatchConditions"))
 					g.Expect(updatedShoot.Spec.Kubernetes.KubeProxy.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.31.5\": APIPriorityAndFairness, CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Removed feature gates from \"spec.kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.33.5\": AdmissionWebhookMatchConditions, VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))
@@ -1435,17 +1435,17 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			})
 
 			It("Worker Pool Kubernetes version should be updated: force update minor version and maintain feature gates", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.31.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.31.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.32.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.32.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.33.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.33.5", Classification: &deprecatedClassification}
 
 				var (
 					// Use two actual feature gates from pkg/utils/validation/features/featuregates.go
 					// which are supported in testKubernetesVersionHighestPatchLowMinor.Version
 					// but not in testKubernetesVersionHighestPatchConsecutiveMinor.Version
-					unsupportedfeatureGate1 = "CSIMigrationRBD"
-					unsupportedfeatureGate2 = "APIPriorityAndFairness"
+					unsupportedfeatureGate1 = "VolumeCapacityPriority"
+					unsupportedfeatureGate2 = "AdmissionWebhookMatchConditions"
 					// Use two feature gates which are supported in both versions
 					supportedfeatureGate1 = "APIServerIdentity"
 					supportedfeatureGate2 = "AllBeta"
@@ -1486,12 +1486,12 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					},
 				}
 
-				By("Create k8s v1.30 Shoot")
+				By("Create k8s v1.32 Shoot")
 				Expect(testClient.Create(ctx, shoot130)).To(Succeed())
-				log.Info("Created shoot with k8s v1.30 for test", "shoot", client.ObjectKeyFromObject(shoot130))
+				log.Info("Created shoot with k8s v1.32 for test", "shoot", client.ObjectKeyFromObject(shoot130))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.30")
+					By("Delete Shoot with k8s v1.32")
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot130))).To(Succeed())
 				})
 
@@ -1510,15 +1510,15 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot130), updatedShoot)).To(Succeed())
 					g.Expect(updatedShoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.30.5\" to \"1.31.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.30.5\" to \"1.31.5\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.31.5\": APIPriorityAndFairness, CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.32.5\" to \"1.33.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.32.5\" to \"1.33.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.33.5\": AdmissionWebhookMatchConditions, VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.31.5\": CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.33.5\": VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))
@@ -1560,17 +1560,17 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			})
 
 			It("Worker Pool Kubernetes version should be updated, but control plane version stays: force update minor version and maintain feature gates", func() {
-				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.30.5", Classification: &deprecatedClassification}
-				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.31.1", Classification: &deprecatedClassification}
-				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.31.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.32.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchLowMinor = gardencorev1beta1.ExpirableVersion{Version: "1.32.5", Classification: &deprecatedClassification}
+				testKubernetesVersionLowPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.33.1", Classification: &deprecatedClassification}
+				testKubernetesVersionHighestPatchConsecutiveMinor = gardencorev1beta1.ExpirableVersion{Version: "1.33.5", Classification: &deprecatedClassification}
 
 				var (
 					// Use two actual feature gates from pkg/utils/validation/features/featuregates.go
 					// which are supported in testKubernetesVersionHighestPatchLowMinor.Version
 					// but not in testKubernetesVersionHighestPatchConsecutiveMinor.Version
-					unsupportedfeatureGate1 = "CSIMigrationRBD"
-					unsupportedfeatureGate2 = "APIPriorityAndFairness"
+					unsupportedfeatureGate1 = "VolumeCapacityPriority"
+					unsupportedfeatureGate2 = "AdmissionWebhookMatchConditions"
 					// Use two feature gates which are supported in both versions
 					supportedfeatureGate1 = "APIServerIdentity"
 					supportedfeatureGate2 = "AllBeta"
@@ -1612,12 +1612,12 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					},
 				}
 
-				By("Create k8s v1.30 Shoot")
+				By("Create k8s v1.32 Shoot")
 				Expect(testClient.Create(ctx, shoot130)).To(Succeed())
-				log.Info("Created shoot with k8s v1.30 for test", "shoot", client.ObjectKeyFromObject(shoot130))
+				log.Info("Created shoot with k8s v1.32 for test", "shoot", client.ObjectKeyFromObject(shoot130))
 
 				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.30")
+					By("Delete Shoot with k8s v1.32")
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot130))).To(Succeed())
 				})
 
@@ -1635,14 +1635,14 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot130), updatedShoot)).To(Succeed())
 					g.Expect(updatedShoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.30.5\" to \"1.31.1\". Reason: Kubernetes version expired - force update required"))
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.31.1\": APIPriorityAndFairness, CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"1.32.5\" to \"1.33.1\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[0].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.33.1\": AdmissionWebhookMatchConditions, VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 						supportedfeatureGate2: false,
 					}))
 
-					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.31.1\": CSIMigrationRBD"))
+					g.Expect(updatedShoot.Status.LastMaintenance.Description).To(ContainSubstring(" Removed feature gates from \"spec.provider.workers[1].kubernetes.kubelet.featureGates\" because they are not supported in Kubernetes version \"1.33.1\": VolumeCapacityPriority"))
 					g.Expect(updatedShoot.Spec.Provider.Workers[1].Kubernetes.Kubelet.FeatureGates).To(Equal(map[string]bool{
 						supportedfeatureGate1: true,
 					}))

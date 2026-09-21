@@ -28,11 +28,11 @@ var _ = Describe("featuregates", func() {
 
 		Entry("TopologyAwareHints is supported in 1.27.4", "TopologyAwareHints", "1.27.4", true, true),                   // AddedInVersion: 1.21
 		Entry("AllowServiceLBStatusOnNonLB is supported in 1.30.3", "AllowServiceLBStatusOnNonLB", "1.30.3", true, true), // AddedInVersion: 1.29
-		Entry("CSIMigrationRBD is supported in 1.27.1", "CSIMigrationRBD", "1.27.1", true, true),                         // RemovedInVersion: 1.31
+		Entry("AppArmor is supported in 1.27.1", "AppArmor", "1.27.1", true, true),                                       // RemovedInVersion: 1.33
 
-		Entry("SupplementalGroupsPolicy is not supported in 1.30.8", "SupplementalGroupsPolicy", "1.30.8", false, true),   // AddedInVersion: 1.31
-		Entry("ValidatingAdmissionPolicy is not supported in 1.33.3", "ValidatingAdmissionPolicy", "1.33.3", false, true), // RemovedInVersion: 1.32
-		Entry("Foo is unknown in 1.25.8", "Foo", "1.25.8", false, false),                                                  // Unknown
+		Entry("SupplementalGroupsPolicy is not supported in 1.30.8", "SupplementalGroupsPolicy", "1.30.8", false, true),               // AddedInVersion: 1.31
+		Entry("AdmissionWebhookMatchConditions is not supported in 1.33.3", "AdmissionWebhookMatchConditions", "1.33.3", false, true), // RemovedInVersion: 1.33
+		Entry("Foo is unknown in 1.25.8", "Foo", "1.25.8", false, false),                                                              // Unknown
 
 		Entry("AllAlpha is supported in 1.17.0", "AllAlpha", "1.17.0", true, true),        // AddedInVersion: 1.17
 		Entry("AllAlpha is not supported in 1.16.15", "AllAlpha", "1.16.15", false, true), // AddedInVersion: 1.17
@@ -58,9 +58,9 @@ var _ = Describe("featuregates", func() {
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown feature gate Foo"),
 			})))),
-			Entry("setting non-default value for locked feature gate", map[string]bool{"CPUManager": false}, "1.27.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("setting non-default value for locked feature gate", map[string]bool{"AppArmor": false}, "1.32.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("CPUManager").String()),
+				"Field":  Equal(field.NewPath("AppArmor").String()),
 				"Detail": Equal("cannot set feature gate to false, feature is locked to true"),
 			})))),
 		)
