@@ -51,7 +51,11 @@ function detect_scenario() {
   fi
 
   if [[ "$(kubectl get namespace kube-system -o jsonpath='{.metadata.labels.gardener\.cloud/role}')" == "shoot" ]]; then
-    export SCENARIO="${SCENARIO}-gardenadm"
+    if [[ "$(kubectl get cluster -o yaml 2>/dev/null | yq '.items[].spec.shoot.spec.credentialsBindingName != null or .items[].spec.shoot.spec.secretBindingName != null')" == "true" ]]; then
+      export SCENARIO="${SCENARIO}-gink"
+    else
+      export SCENARIO="${SCENARIO}-gind"
+    fi
   fi
 
   echo "Detected scenario: $SCENARIO"
@@ -68,8 +72,11 @@ function skaffold_profile() {
     multi-node)
       export SKAFFOLD_PROFILE="multi-node"
       ;;
-    multi-node-gardenadm)
-      export SKAFFOLD_PROFILE="multi-node-gardenadm"
+    multi-node-gind)
+      export SKAFFOLD_PROFILE="multi-node-gind"
+      ;;
+    multi-node-gink)
+      export SKAFFOLD_PROFILE="multi-node-gink"
       ;;
     multi-node2)
       export SKAFFOLD_PROFILE="multi-node2"

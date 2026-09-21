@@ -171,7 +171,13 @@ EOF
     generate_client_cert_kubeconfig "self-hosted-shoot--${shoot_namespace}--${shoot_name}" \
       "$(get_self_hosted_shoot_certs "${shoot_namespace}" "${shoot_name}" "${docker_container}")"
   else
-    kubectl --kubeconfig "${runtime_kubeconfig}" -n "shoot--${shoot_namespace}--${shoot_name}" get secret kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 -d
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+    local kubeconfig_file="${tmp_dir}/kubeconfig"
+
+    kubectl --kubeconfig "${runtime_kubeconfig}" -n "shoot--${shoot_namespace}--${shoot_name}" get secret kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 -d > "$kubeconfig_file"
+    kubectl --kubeconfig "$kubeconfig_file" config unset contexts.kube-system.namespace > /dev/null
+    cat "$kubeconfig_file"
   fi
 }
 

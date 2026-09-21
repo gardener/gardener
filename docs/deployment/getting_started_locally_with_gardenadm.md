@@ -190,7 +190,7 @@ make gind-down
 Use the following command to prepare the `gardenadm` managed infrastructure scenario:
 
 ```shell
-make gink-up # Gardener-in-kind
+make gink-up # Gardener-in-KinD
 ```
 
 This will first setup a kind cluster and then use the cluster to perform `gardenadm bootstrap` to create a self-hosted shoot cluster.

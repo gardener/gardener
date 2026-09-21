@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+# SPDX-FileCopyrightText: Contributors to the Gardener project
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -47,14 +47,12 @@ case "$COMMAND" in
     cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig"
     cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-local/kubeconfig/kubeconfig"
 
-    kubectl --kubeconfig "$KUBECONFIG_RUNTIME_CLUSTER" scale deployment gardener-resource-manager -n shoot--garden--root --replicas=0
-
     # Deploy Gardener into the self-hosted shoot and run `gardenadm connect` to deploy gardenlet which registers the Shoot
     if (( level >= 2 )); then
-      make gardenadm-up SCENARIO=connect-managed # deploys gardener-operator, the 'Garden' resource, and waits for reconciliation
+      make gardenadm-up SCENARIO=connect # deploys gardener-operator, the 'Garden' resource, and waits for reconciliation
       connect_command="$(KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER "$(dirname "$0")/../bin/gardenadm" token create --print-connect-command --shoot-namespace garden --shoot-name root)"
       # The connect command must run inside the control plane machine pod (mirroring how gind.sh runs it in machine-0
-      # via docker exec). The machine pod has gardenadm installed in /gardenadm/gardenadm.
+      # via docker exec). The machine pod has gardenadm installed in /opt/bin/gardenadm.
       technical_id="shoot--garden--root"
       machine_namespace="infra-${technical_id}"
       machine_pod="$(kubectl --kubeconfig "$KUBECONFIG_RUNTIME_CLUSTER" -n "$machine_namespace" get pods -l app=machine --sort-by=.metadata.name -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep "${technical_id}-control-plane-" | head -1)"
@@ -63,7 +61,6 @@ case "$COMMAND" in
 
     # Register the self-hosted shoot as a seed via a ManagedSeed
     if (( level >= 3 )); then
-      "$(dirname "$0")/gardenlet/overlays/multi-node-gardenadm/generate-patch-managedseed.sh" managed-infra
       make seed-up KUBECONFIG="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
     fi
     ;;

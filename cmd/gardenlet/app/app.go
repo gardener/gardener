@@ -427,7 +427,6 @@ func (g *garden) Start(ctx context.Context) error {
 						&gardencorev1.ControllerDeployment{}:   kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1.ControllerDeployment{}),
 						&gardencorev1beta1.InternalSecret{}:    kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.InternalSecret{}),
 						&gardencorev1beta1.Project{}:           kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Project{}),
-						&gardencorev1beta1.SecretBinding{}:     kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.SecretBinding{}),
 						&securityv1alpha1.CredentialsBinding{}: kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &securityv1alpha1.CredentialsBinding{}),
 					},
 					kubernetes.GardenScheme,

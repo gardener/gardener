@@ -1,5 +1,8 @@
-apiVersion: kustomize.config.k8s.io/v1alpha1
-kind: Component
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
 
 patches:
   - patch: |
@@ -8,15 +11,15 @@ patches:
       - op: replace
         path: /spec/runtimeCluster/networking/nodes
         value:
-        - 172.18.0.0/24
+          - 10.0.0.0/16
       - op: replace
         path: /spec/runtimeCluster/networking/pods
         value:
-        - 10.3.0.0/16
+          - 10.3.0.0/16
       - op: replace
         path: /spec/runtimeCluster/networking/services
         value:
-        - 10.4.0.0/16
+          - 10.4.0.0/16
       - op: remove
         path: /spec/runtimeCluster/provider/zones
     target:

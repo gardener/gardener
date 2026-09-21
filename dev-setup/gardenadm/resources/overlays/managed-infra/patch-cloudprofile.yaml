@@ -1,9 +1,0 @@
-apiVersion: core.gardener.cloud/v1beta1
-kind: CloudProfile
-metadata:
-  name: local
-spec:
-  regions:
-    - name: local
-      zones:
-        - name: local

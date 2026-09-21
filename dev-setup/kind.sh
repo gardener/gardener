@@ -70,7 +70,7 @@ EOF
     # [5]: https://kubernetes.io/docs/reference/instrumentation/metrics/
     setup_kind_sc_default_volume_type() {
       echo "Configuring default StorageClass for kind cluster ..."
-      kubectl annotate storageclass standard defaultVolumeType=local
+      kubectl annotate storageclass standard defaultVolumeType=local --overwrite
     }
 
     # The rancher.io/local-path provisioner at the moment does not support volume
@@ -130,12 +130,16 @@ EOF
 
     "$(dirname "$0")/infra.sh" up
 
-    kustomize build "$(dirname "$0")/kind/cluster/overlays/${KUSTOMIZE_OVERLAY}-${IPFAMILY}" | \
-      yq 'del(.metadata)' | \
-      sed "s|\${DOCKER_SOCKET}|$(docker_socket)|g" | \
-      kind create cluster \
-        --name "$CLUSTER_NAME" \
-        --config /dev/stdin
+    if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+      echo "Kind cluster '${CLUSTER_NAME}' already exists, skipping creation."
+    else
+      kustomize build "$(dirname "$0")/kind/cluster/overlays/${KUSTOMIZE_OVERLAY}-${IPFAMILY}" | \
+        yq 'del(.metadata)' | \
+        sed "s|\${DOCKER_SOCKET}|$(docker_socket)|g" | \
+        kind create cluster \
+          --name "$CLUSTER_NAME" \
+          --config /dev/stdin
+    fi
 
     nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 
@@ -241,6 +245,17 @@ EOF
     # There can be multiple CSRs for a node, so approve all of them.
     echo "Approving Kubelet Serving Certificate Signing Requests..."
     for node in $nodes; do
+      # Skip if this node already has an approved kubelet-serving CSR (e.g. on re-run).
+      approved=$(kubectl get csr -o json | jq -r --arg node "$node" '
+        .items[] | select(.status.conditions != null and
+                          (.status.conditions[] | select(.type == "Approved")) and
+                          .spec.signerName == "kubernetes.io/kubelet-serving" and
+                          .spec.username == "system:node:"+$node) | .metadata.name')
+      if [ -n "$approved" ]; then
+        echo "CSR for node ${node} already approved, skipping."
+        continue
+      fi
+
       max_retries=600
       for ((i = 0; i < max_retries; i++)); do
         csr_names=$(kubectl get csr -o json | jq -r --arg node "$node" '
@@ -263,7 +278,11 @@ EOF
     ;;
 
   down)
-    kind delete cluster --name "$CLUSTER_NAME"
+    if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+      kind delete cluster --name "$CLUSTER_NAME"
+    else
+      echo "Kind cluster '${CLUSTER_NAME}' does not exist, skipping deletion."
+    fi
 
     # remove kind cluster kubeconfig to additional directories where needed
     for path_kubeconfig in "$KUBECONFIG" "${KUBECONFIG_SEED_CLUSTER:-}" "${KUBECONFIG_SEED2_CLUSTER:-}" "${KUBECONFIG_SEED_SECRET_PATH:-}"; do

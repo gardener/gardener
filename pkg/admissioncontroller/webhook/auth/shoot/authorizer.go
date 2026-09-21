@@ -254,9 +254,6 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				}),
 			)
 
-		case secretBindingResource:
-			return requestAuthorizer.CheckRead(graph.VertexTypeSecretBinding, attrs)
-
 		case secretResource:
 			return a.authorizeSecret(ctx, requestAuthorizer, userType, attrs)
 
