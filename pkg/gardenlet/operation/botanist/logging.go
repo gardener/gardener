@@ -233,6 +233,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			IstioIngressGatewayLabels:    istioLabels,
 			IstioIngressGatewayNamespace: istioNamespace,
 			VictoriaLogsBackend:          features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+			RemoveVali:                   features.DefaultFeatureGate.Enabled(features.RemoveVali),
 		},
 		b.SecretsManager,
 	), nil

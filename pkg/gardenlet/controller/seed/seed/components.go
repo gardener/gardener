@@ -1048,6 +1048,7 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		component.ClusterTypeSeed,
 		seedIsGarden,
 		features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+		features.DefaultFeatureGate.Enabled(features.RemoveVali),
 	)
 	if err != nil {
 		return nil, err

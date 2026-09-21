@@ -26,6 +26,7 @@ func NewOpenTelemetryCollector(
 	clusterType component.ClusterType,
 	isGardenCluster bool,
 	victoriaLogsBackend bool,
+	removeVali bool,
 ) (
 	deployer collector.Interface,
 	err error,
@@ -54,6 +55,7 @@ func NewOpenTelemetryCollector(
 			ClusterType:             clusterType,
 			IsGardenCluster:         isGardenCluster,
 			VictoriaLogsBackend:     victoriaLogsBackend,
+			RemoveVali:              removeVali,
 		},
 		secretsManager,
 	), nil
