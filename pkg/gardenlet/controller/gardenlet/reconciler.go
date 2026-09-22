@@ -197,6 +197,14 @@ func (r *Reconciler) prepareGardenletChartValues(
 		delete(values, "componentImageVectorOverwrites")
 	}
 
+	if imageVector := gardenlet.Spec.Deployment.ChartsImageVectorOverwrite; imageVector != nil {
+		values["chartsImageVectorOverwrite"] = *imageVector
+	} else {
+		// Similar to the <imageVectorOverwrite> (see above), we have to also get rid of the
+		// <chartsImageVectorOverwrite> in case it is no longer specified in the `Gardenlet` resource.
+		delete(values, "chartsImageVectorOverwrite")
+	}
+
 	return values, nil
 }
 
