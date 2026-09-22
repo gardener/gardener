@@ -23,8 +23,8 @@ import (
 
 var _ = Describe("ValuesHelper", func() {
 	var (
-		imageVectorOverwritePath, componentImageVectorOverwritesPath string
-		gardenKubeconfigPath, seedKubeconfigPath                     string
+		imageVectorOverwritePath, componentImageVectorOverwritesPath, chartsImageVectorOverwritePath string
+		gardenKubeconfigPath, seedKubeconfigPath                                                     string
 
 		cleanupFuncs []func()
 
@@ -47,10 +47,12 @@ var _ = Describe("ValuesHelper", func() {
 		cleanupFuncs = []func(){
 			test.WithTempFile("", "image-vector-overwrite", []byte("image vector overwrite"), &imageVectorOverwritePath),
 			test.WithTempFile("", "component-image-vector-overwrites", []byte("component image vector overwrites"), &componentImageVectorOverwritesPath),
+			test.WithTempFile("", "charts-image-vector-overwrite", []byte("charts image vector overwrite"), &chartsImageVectorOverwritePath),
 			test.WithTempFile("", "garden-kubeconfig", []byte("garden kubeconfig"), &gardenKubeconfigPath),
 			test.WithTempFile("", "seed-kubeconfig", []byte("seed kubeconfig"), &seedKubeconfigPath),
 			test.WithEnvVar(imagevector.OverrideEnv, imageVectorOverwritePath),
 			test.WithEnvVar(imagevector.ComponentOverrideEnv, componentImageVectorOverwritesPath),
+			test.WithEnvVar(imagevector.OverrideChartsEnv, chartsImageVectorOverwritePath),
 		}
 
 		parentConfig = &gardenletconfigv1alpha1.GardenletConfiguration{
@@ -214,6 +216,7 @@ var _ = Describe("ValuesHelper", func() {
 				},
 				"imageVectorOverwrite":           "image vector overwrite",
 				"componentImageVectorOverwrites": "component image vector overwrites",
+				"chartsImageVectorOverwrite":     "charts image vector overwrite",
 				"config": map[string]any{
 					"apiVersion": "gardenlet.config.gardener.cloud/v1alpha1",
 					"kind":       "GardenletConfiguration",

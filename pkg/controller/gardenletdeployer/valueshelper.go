@@ -157,7 +157,7 @@ func (vp *valuesHelper) getGardenletDeploymentValues(deployment *seedmanagementv
 	// make sure map is initialized
 	deploymentValues = utils.InitValuesMap(deploymentValues)
 
-	// Set imageVectorOverwrite and componentImageVectorOverwrites from parent
+	// Set imageVectorOverwrite, componentImageVectorOverwrites and chartsImageVectorOverwrite from parent
 	parentImageVectorOverwrite, err := getParentImageVectorOverwrite()
 	if err != nil {
 		return nil, err
@@ -174,6 +174,15 @@ func (vp *valuesHelper) getGardenletDeploymentValues(deployment *seedmanagementv
 
 	if parentComponentImageVectorOverwrites != nil {
 		deploymentValues["componentImageVectorOverwrites"] = *parentComponentImageVectorOverwrites
+	}
+
+	parentChartsImageVectorOverwrite, err := getParentChartsImageVectorOverwrite()
+	if err != nil {
+		return nil, err
+	}
+
+	if parentChartsImageVectorOverwrite != nil {
+		deploymentValues["chartsImageVectorOverwrite"] = *parentChartsImageVectorOverwrite
 	}
 
 	return deploymentValues, nil
@@ -310,4 +319,16 @@ func getParentComponentImageVectorOverwrites() (*string, error) {
 		componentImageVectorOverwrites = new(string(data))
 	}
 	return componentImageVectorOverwrites, nil
+}
+
+func getParentChartsImageVectorOverwrite() (*string, error) {
+	var chartsImageVectorOverwrite *string
+	if overWritePath := os.Getenv(imagevectorutils.OverrideChartsEnv); len(overWritePath) > 0 {
+		data, err := os.ReadFile(overWritePath) // #nosec: G304,G703 -- ImageVectorOverwrite is a feature. In reality files can be read from the Pod's file system only.
+		if err != nil {
+			return nil, err
+		}
+		chartsImageVectorOverwrite = new(string(data))
+	}
+	return chartsImageVectorOverwrite, nil
 }
