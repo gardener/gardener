@@ -6,6 +6,9 @@ reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-o
 {{- if .Values.componentImageVectorOverwrites }}
 reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite-components.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
 {{- end }}
+{{- if .Values.chartsImageVectorOverwrite }}
+reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite-charts.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite-charts.name" . }}
+{{- end }}
 {{- if .Values.config.gardenClientConnection.kubeconfig }}
 reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-garden.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-garden.name" . }}
 {{- end }}
@@ -106,6 +109,10 @@ spec:
         - name: IMAGEVECTOR_OVERWRITE_COMPONENTS
           value: /imagevector_overwrite_components/components.yaml
         {{- end }}
+        {{- if .Values.chartsImageVectorOverwrite }}
+        - name: IMAGEVECTOR_OVERWRITE_CHARTS
+          value: /imagevector_overwrite_charts/images_overwrite.yaml
+        {{- end }}
         {{- range $index, $value := .Values.env }}
         {{- if not (empty $value) }}
         - name: {{ index $value "name" | quote }}
@@ -162,6 +169,11 @@ spec:
         {{- if .Values.componentImageVectorOverwrites }}
         - name: gardenlet-imagevector-overwrite-components
           mountPath: /imagevector_overwrite_components
+          readOnly: true
+        {{- end }}
+        {{- if .Values.chartsImageVectorOverwrite }}
+        - name: gardenlet-imagevector-overwrite-charts
+          mountPath: /imagevector_overwrite_charts
           readOnly: true
         {{- end }}
         - name: gardenlet-config
@@ -225,6 +237,11 @@ spec:
       - name: gardenlet-imagevector-overwrite-components
         configMap:
           name: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
+      {{- end }}
+      {{- if .Values.chartsImageVectorOverwrite }}
+      - name: gardenlet-imagevector-overwrite-charts
+        configMap:
+          name: {{ include "gardenlet.imagevector-overwrite-charts.name" . }}
       {{- end }}
       - name: gardenlet-config
         configMap:
