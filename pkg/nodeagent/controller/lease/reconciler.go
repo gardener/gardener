@@ -36,7 +36,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log := logf.FromContext(ctx)
 
 	node := &corev1.Node{}
-	if err := r.APIReader.Get(ctx, request.NamespacedName, node); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, node); err != nil {
 		return reconcile.Result{}, err
 	}
 
