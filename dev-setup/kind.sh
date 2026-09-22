@@ -190,7 +190,10 @@ EOF
 
     "$(dirname "$0")/infra.sh" up
 
-<<<<<<< HEAD
+    # Force Docker Desktop to refresh its cached view of the bind-mounted resolv.conf before creating the
+    # nodes, so they mount the correct content from the start (see resync_resolv_conf for details).
+    resync_resolv_conf
+
     if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
       echo "Kind cluster '${CLUSTER_NAME}' already exists, skipping creation."
     else
@@ -201,18 +204,6 @@ EOF
           --name "$CLUSTER_NAME" \
           --config /dev/stdin
     fi
-=======
-    # Force Docker Desktop to refresh its cached view of the bind-mounted resolv.conf before creating the
-    # nodes, so they mount the correct content from the start (see resync_resolv_conf for details).
-    resync_resolv_conf
-
-    kustomize build "$(dirname "$0")/kind/cluster/overlays/${KUSTOMIZE_OVERLAY}-${IPFAMILY}" | \
-      yq 'del(.metadata)' | \
-      sed "s|\${DOCKER_SOCKET}|$(docker_socket)|g" | \
-      kind create cluster \
-        --name "$CLUSTER_NAME" \
-        --config /dev/stdin
->>>>>>> e6c99c13eb (Fix stale Docker Desktop bind-mount cache for resolv.conf on macOS)
 
     nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
 
