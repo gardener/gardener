@@ -527,6 +527,52 @@ var _ = Describe("handler", func() {
 				})
 
 				When("operation is UPDATE", func() {
+					var (
+						updateProviderType   = "foo-provider"
+						updateProviderRegion = "foo-region"
+						updateCredentialsRef = corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Namespace:  "garden",
+							Name:       "foo-credentials",
+						}
+
+						updateSeedWithBackup = func(region *string) *gardencorev1beta1.Seed {
+							return &gardencorev1beta1.Seed{
+								ObjectMeta: metav1.ObjectMeta{Name: seedName},
+								Spec: gardencorev1beta1.SeedSpec{
+									Provider: gardencorev1beta1.SeedProvider{Region: updateProviderRegion},
+									Backup: &gardencorev1beta1.Backup{
+										Provider:       updateProviderType,
+										Region:         region,
+										CredentialsRef: &updateCredentialsRef,
+									},
+								},
+							}
+						}
+
+						updateValidBucket = func(region string) *gardencorev1beta1.BackupBucket {
+							return &gardencorev1beta1.BackupBucket{
+								ObjectMeta: metav1.ObjectMeta{Name: "bucket-" + seedName},
+								Spec: gardencorev1beta1.BackupBucketSpec{
+									SeedName: &seedName,
+									Provider: gardencorev1beta1.BackupBucketProvider{
+										Type:   updateProviderType,
+										Region: region,
+									},
+									CredentialsRef: &updateCredentialsRef,
+								},
+							}
+						}
+
+						encodeUpdateBucket = func(bb *gardencorev1beta1.BackupBucket) []byte {
+							GinkgoHelper()
+							objData, err := runtime.Encode(encoder, bb)
+							Expect(err).NotTo(HaveOccurred())
+							return objData
+						}
+					)
+
 					BeforeEach(func() {
 						request.Operation = admissionv1.Update
 						request.Resource = metav1.GroupVersionResource{
@@ -538,43 +584,93 @@ var _ = Describe("handler", func() {
 						request.UserInfo = gardenletUser
 					})
 
-					It("should allow when spec is unchanged", func() {
-						oldBucket := &gardencorev1beta1.BackupBucket{
-							ObjectMeta: metav1.ObjectMeta{Name: "bucket-" + seedName},
-							Spec:       gardencorev1beta1.BackupBucketSpec{SeedName: &seedName},
-						}
-						newBucket := oldBucket.DeepCopy()
-						newBucket.Annotations = map[string]string{"foo": "bar"}
+					It("should return an error because reading the Seed failed", func() {
+						fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+							Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+								return fakeErr
+							},
+						}).Build()
+						handler = &Handler{Logger: log, Client: fakeClient, Decoder: decoder}
 
-						oldRaw, err := stdjson.Marshal(oldBucket)
-						Expect(err).NotTo(HaveOccurred())
-						newRaw, err := stdjson.Marshal(newBucket)
-						Expect(err).NotTo(HaveOccurred())
-						request.OldObject = runtime.RawExtension{Raw: oldRaw}
-						request.Object = runtime.RawExtension{Raw: newRaw}
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusInternalServerError),
+									Message: fakeErr.Error(),
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because the seed has no backup configuration", func() {
+						seed := &gardencorev1beta1.Seed{
+							ObjectMeta: metav1.ObjectMeta{Name: seedName},
+							Spec: gardencorev1beta1.SeedSpec{
+								Provider: gardencorev1beta1.SeedProvider{Region: updateProviderRegion},
+							},
+						}
+						Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "gardenlet's seed has no backup configuration",
+								},
+							},
+						}))
+					})
+
+					DescribeTable("should forbid the request because the BackupBucket spec does not match the seed's backup configuration",
+						func(mutateBucket func(*gardencorev1beta1.BackupBucket)) {
+							Expect(fakeClient.Create(ctx, updateSeedWithBackup(new(updateProviderRegion)))).To(Succeed())
+
+							bucket := updateValidBucket(updateProviderRegion)
+							mutateBucket(bucket)
+							request.Object.Raw = encodeUpdateBucket(bucket)
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: "BackupBucket spec does not match the backup configuration of the gardenlet's seed",
+									},
+								},
+							}))
+						},
+
+						Entry("provider type mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.Provider.Type = "other-provider"
+						}),
+						Entry("provider region mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.Provider.Region = "other-region"
+						}),
+						Entry("credentialsRef mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.CredentialsRef = &corev1.ObjectReference{Name: "other-credentials"}
+						}),
+					)
+
+					It("should allow the request when spec matches and backup region is set explicitly", func() {
+						Expect(fakeClient.Create(ctx, updateSeedWithBackup(new(updateProviderRegion)))).To(Succeed())
+
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
-					It("should deny when spec is changed", func() {
-						otherSeed := "other-seed"
-						oldBucket := &gardencorev1beta1.BackupBucket{
-							ObjectMeta: metav1.ObjectMeta{Name: "bucket-" + seedName},
-							Spec:       gardencorev1beta1.BackupBucketSpec{SeedName: &seedName},
-						}
-						newBucket := oldBucket.DeepCopy()
-						newBucket.Spec.SeedName = &otherSeed
+					It("should allow the request when spec matches and backup region falls back to provider region", func() {
+						Expect(fakeClient.Create(ctx, updateSeedWithBackup(nil))).To(Succeed())
 
-						oldRaw, err := stdjson.Marshal(oldBucket)
-						Expect(err).NotTo(HaveOccurred())
-						newRaw, err := stdjson.Marshal(newBucket)
-						Expect(err).NotTo(HaveOccurred())
-						request.OldObject = runtime.RawExtension{Raw: oldRaw}
-						request.Object = runtime.RawExtension{Raw: newRaw}
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
 
-						response := handler.Handle(ctx, request)
-						Expect(response.Allowed).To(BeFalse())
-						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of BackupBucket"))
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 				})
 			})
@@ -1445,132 +1541,22 @@ var _ = Describe("handler", func() {
 						request.UserInfo = gardenletUser
 					})
 
-					It("should allow when spec is unchanged", func() {
-						seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
-						oldRaw, err := stdjson.Marshal(seed)
-						Expect(err).NotTo(HaveOccurred())
-						newSeed := seed.DeepCopy()
-						newSeed.Labels = map[string]string{"foo": "bar"}
-						newRaw, err := stdjson.Marshal(newSeed)
-						Expect(err).NotTo(HaveOccurred())
-						request.OldObject = runtime.RawExtension{Raw: oldRaw}
-						request.Object = runtime.RawExtension{Raw: newRaw}
-
+					It("should allow spec changes to own seed", func() {
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
-					When("spec is changed", func() {
-						var (
-							oldRaw, newRaw []byte
-						)
+					It("should deny updates to a foreign seed", func() {
+						request.Name = "other-seed"
 
-						BeforeEach(func() {
-							oldSeed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
-							newSeed := oldSeed.DeepCopy()
-							newSeed.Spec.Provider.Type = "changed-provider"
-
-							var err error
-							oldRaw, err = stdjson.Marshal(oldSeed)
-							Expect(err).NotTo(HaveOccurred())
-							newRaw, err = stdjson.Marshal(newSeed)
-							Expect(err).NotTo(HaveOccurred())
-							request.OldObject = runtime.RawExtension{Raw: oldRaw}
-							request.Object = runtime.RawExtension{Raw: newRaw}
-						})
-
-						It("should allow when neither ManagedSeed nor Gardenlet exists", func() {
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
-
-						It("should deny when ManagedSeed exists and spec diverges from its seed template", func() {
-							managedSeed := &seedmanagementv1alpha1.ManagedSeed{
-								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
-								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot: &seedmanagementv1alpha1.Shoot{Name: "some-shoot"},
-									Gardenlet: seedmanagementv1alpha1.GardenletConfig{
-										Config: runtime.RawExtension{
-											Object: &gardenletconfigv1alpha1.GardenletConfiguration{
-												SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
-													SeedTemplate: gardencorev1beta1.SeedTemplate{
-														Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "original-provider"}},
-													},
-												},
-											},
-										},
-									},
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
 								},
-							}
-							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-
-							response := handler.Handle(ctx, request)
-							Expect(response.Allowed).To(BeFalse())
-							Expect(response.Result.Message).To(ContainSubstring("different from the .spec in the ManagedSeed"))
-						})
-
-						It("should allow when ManagedSeed exists and spec matches its seed template", func() {
-							managedSeed := &seedmanagementv1alpha1.ManagedSeed{
-								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
-								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot: &seedmanagementv1alpha1.Shoot{Name: "some-shoot"},
-									Gardenlet: seedmanagementv1alpha1.GardenletConfig{
-										Config: runtime.RawExtension{
-											Object: &gardenletconfigv1alpha1.GardenletConfiguration{
-												SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
-													SeedTemplate: gardencorev1beta1.SeedTemplate{
-														Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "changed-provider"}},
-													},
-												},
-											},
-										},
-									},
-								},
-							}
-							Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
-
-						It("should deny when Gardenlet exists and spec diverges from its seed template", func() {
-							gardenlet := &seedmanagementv1alpha1.Gardenlet{
-								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
-								Spec: seedmanagementv1alpha1.GardenletSpec{
-									Config: runtime.RawExtension{
-										Object: &gardenletconfigv1alpha1.GardenletConfiguration{
-											SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
-												SeedTemplate: gardencorev1beta1.SeedTemplate{
-													Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "original-provider"}},
-												},
-											},
-										},
-									},
-								},
-							}
-							Expect(fakeClient.Create(ctx, gardenlet)).To(Succeed())
-
-							response := handler.Handle(ctx, request)
-							Expect(response.Allowed).To(BeFalse())
-							Expect(response.Result.Message).To(ContainSubstring("different from the .spec in the Gardenlet"))
-						})
-
-						It("should allow when Gardenlet exists and spec matches its seed template", func() {
-							gardenlet := &seedmanagementv1alpha1.Gardenlet{
-								ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
-								Spec: seedmanagementv1alpha1.GardenletSpec{
-									Config: runtime.RawExtension{
-										Object: &gardenletconfigv1alpha1.GardenletConfiguration{
-											SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
-												SeedTemplate: gardencorev1beta1.SeedTemplate{
-													Spec: gardencorev1beta1.SeedSpec{Provider: gardencorev1beta1.SeedProvider{Type: "changed-provider"}},
-												},
-											},
-										},
-									},
-								},
-							}
-							Expect(fakeClient.Create(ctx, gardenlet)).To(Succeed())
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
+							},
+						}))
 					})
 				})
 			})

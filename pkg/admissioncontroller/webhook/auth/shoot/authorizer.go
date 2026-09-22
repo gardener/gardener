@@ -306,7 +306,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case workloadIdentityResource:
 			return requestAuthorizer.Check(graph.VertexTypeWorkloadIdentity, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch"),
-				authwebhook.WithVerbsForSubresources([]string{"create"}, "token"),
+				authwebhook.WithSubresourcesAndVerb([]string{"token"}, []string{"create"}),
 			)
 
 		default:

@@ -101,11 +101,11 @@ func WithAllowedSubresources(resources ...string) configFunc {
 	}
 }
 
-// WithVerbsForSubresources is a config function that restricts the given verbs to only be
+// WithSubresourcesAndVerb is a config function that restricts the given verbs to only be
 // allowed when one of the given subresources is present in the request. Unlike
 // WithAllowedVerbs, these verbs are not allowed on the root resource — only on the specified
 // subresources. The verbs provided here must not also appear in WithAllowedVerbs.
-func WithVerbsForSubresources(verbs []string, subresources ...string) configFunc {
+func WithSubresourcesAndVerb(subresources []string, verbs []string) configFunc {
 	return func(req *authzRequest) {
 		req.verbsForSubresources = append(req.verbsForSubresources, verbSubresourcePair{
 			verbs:        sets.New(verbs...),
@@ -176,7 +176,7 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	// Check subresource: allowed either via WithAllowedSubresources, or via a WithVerbsForSubresources pair
+	// Check subresource: allowed either via WithAllowedSubresources, or via a WithSubresourcesAndVerb pair
 	// that includes both the current verb and subresource. The empty string is a valid subresource value
 	// representing the root resource — pairs containing "" cover requests without a subresource.
 	// We only enter this check when a subresource is present in the request, or when at least one pair
@@ -212,22 +212,15 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 
 	// Compute the effective set of allowed verbs for this specific request:
 	// - allowedVerbs are always available
-	// - verbs from WithVerbsForSubresources pairs are available only when their subresource (including "") matches
-	effectiveAllowedVerbs := sets.List(req.allowedVerbs)
+	// - verbs from WithSubresourcesAndVerb pairs are available only when their subresource (including "") matches
+	allAllowedVerbs := req.alwaysAllowedVerbs.Union(req.allowedVerbs)
 	for _, pair := range req.verbsForSubresources {
 		if pair.subresources.Has(subresource) {
-			effectiveAllowedVerbs = append(effectiveAllowedVerbs, sets.List(pair.verbs)...)
+			allAllowedVerbs = allAllowedVerbs.Union(pair.verbs)
 		}
 	}
-	slices.Sort(effectiveAllowedVerbs)
-	effectiveAllowedVerbs = slices.Compact(effectiveAllowedVerbs)
 
-	allAllowedVerbs := sets.List(req.alwaysAllowedVerbs)
-	allAllowedVerbs = append(allAllowedVerbs, effectiveAllowedVerbs...)
-	slices.Sort(allAllowedVerbs)
-	allAllowedVerbs = slices.Compact(allAllowedVerbs)
-
-	if ok, reason := CheckVerb(log, attrs, allAllowedVerbs...); !ok {
+	if ok, reason := CheckVerb(log, attrs, sets.List(allAllowedVerbs)...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
