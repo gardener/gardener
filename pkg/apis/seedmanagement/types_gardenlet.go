@@ -65,6 +65,8 @@ type GardenletSelfDeployment struct {
 	// ComponentImageVectorOverwrite is the component image vector overwrite for the components deployed by this
 	// gardenlet.
 	ComponentImageVectorOverwrite *string
+	// ChartsImageVectorOverwrite is the image vector overwrite for the chart images deployed by this gardenlet.
+	ChartsImageVectorOverwrite *string
 }
 
 // GardenletHelm is the Helm deployment configuration for gardenlet.
