@@ -156,8 +156,8 @@ var _ = Describe("Reconciler", func() {
 
 			keepalive := h2opts.Fields["connection_keepalive"].GetStructValue()
 			Expect(keepalive).NotTo(BeNil())
-			Expect(keepalive.Fields["interval"].GetStringValue()).To(Equal("120s"))
-			Expect(keepalive.Fields["timeout"].GetStringValue()).To(Equal("10s"))
+			Expect(keepalive.Fields["interval"].GetStringValue()).To(Equal("30s"))
+			Expect(keepalive.Fields["timeout"].GetStringValue()).To(Equal("15s"))
 
 			commonOpts := httpOpts.Fields["common_http_protocol_options"].GetStructValue()
 			Expect(commonOpts).NotTo(BeNil())
@@ -245,8 +245,8 @@ var _ = Describe("Reconciler", func() {
 
 			keepalive := h2opts.Fields["connection_keepalive"].GetStructValue()
 			Expect(keepalive).NotTo(BeNil())
-			Expect(keepalive.Fields["interval"].GetStringValue()).To(Equal("120s"))
-			Expect(keepalive.Fields["timeout"].GetStringValue()).To(Equal("10s"))
+			Expect(keepalive.Fields["interval"].GetStringValue()).To(Equal("30s"))
+			Expect(keepalive.Fields["timeout"].GetStringValue()).To(Equal("15s"))
 
 			commonOpts := httpOpts.Fields["common_http_protocol_options"].GetStructValue()
 			Expect(commonOpts).NotTo(BeNil())
