@@ -53,13 +53,6 @@ spec:
             domain: ingress.root.garden.external.local.gardener.cloud
             controller:
               kind: nginx
-          networks:
-            nodes: 172.18.0.0/24
-            pods: 10.0.0.0/15
-            services: 10.2.0.0/16
-            shootDefaults:
-              pods: 10.3.0.0/16
-              services: 10.4.0.0/16
           settings:
             excessCapacityReservation:
               enabled: false

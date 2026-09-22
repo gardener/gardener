@@ -49,7 +49,7 @@ case "$COMMAND" in
       --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
-    if [[ "$SCENARIO" == "multi-node-gin*" ]]; then
+    if [[ "$SCENARIO" == "multi-node-gin"* ]]; then
       cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenlet/components/kubeconfigs/seed-root/kubeconfig"
     fi
 
@@ -68,7 +68,7 @@ case "$COMMAND" in
   down)
     skaffold --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" delete -m gardenlet
 
-    if [[ "$SCENARIO" == "multi-node-gin*" ]]; then
+    if [[ "$SCENARIO" == "multi-node-gin"* ]]; then
       kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden wait managedseed/root --for=delete --timeout=5m || true
     else
       kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" delete seed/"$gardenlet_name" --ignore-not-found --wait --timeout 5m

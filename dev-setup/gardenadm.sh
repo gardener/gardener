@@ -48,11 +48,7 @@ fi
 garden_runtime_cluster_kubeconfig="$KUBECONFIG_RUNTIME_CLUSTER"
 if [[ "$SCENARIO" == "connect" ]]; then
   garden_runtime_cluster_kubeconfig="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
-  docker_flag=""
-  if docker inspect gind-machine-0 &>/dev/null; then
-    docker_flag="--docker gind-machine-0"
-  fi
-  ./hack/usage/generate-kubeconfig.sh self-hosted-shoot $docker_flag > "$garden_runtime_cluster_kubeconfig"
+  ./hack/usage/generate-kubeconfig.sh self-hosted-shoot > "$garden_runtime_cluster_kubeconfig"
 fi
 
 case "$COMMAND" in
