@@ -220,6 +220,9 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 				authwebhook.WithAlwaysAllowedVerbs("get", "list", "watch"),
 			)
 
+		case credentialsBindingResource:
+			return requestAuthorizer.CheckRead(graph.VertexTypeCredentialsBinding, attrs)
+
 		case eventCoreResource, eventResource:
 			return a.authorizeEvent(log, attrs)
 

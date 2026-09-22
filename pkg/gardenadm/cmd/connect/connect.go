@@ -317,6 +317,9 @@ func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist
 		},
 		Resources: sharedcomponent.StringifyGroupResources(sharedcomponent.GetResourcesForEncryptionFromConfig(shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig)),
 	}
+	// The bootstrap restore (KinD → self-hosted shoot) has already completed successfully. Remove it so that
+	// gardenlet computes a normal Reconcile rather than triggering another Restore with the now-stale ShootState.
+	shoot.Status.LastOperation = nil
 	if err := b.GardenClient.Status().Patch(ctx, shoot, patch); err != nil {
 		return fmt.Errorf("failed patching Shoot %s status in garden cluster: %w", client.ObjectKeyFromObject(b.Shoot.GetInfo()), err)
 	}

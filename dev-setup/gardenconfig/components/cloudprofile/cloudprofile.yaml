@@ -6,6 +6,10 @@ spec:
   type: local
   regions:
   - name: local
+    zones:
+    - name: "0"
+    - name: "1"
+    - name: "2"
   kubernetes:
     # We typically don't update the patch versions in the local cloud profile because this leads to failing upgrade tests.
     # When a specific patch version is needed for a bug fix or similar reason, keep the previous patch version for at least one more release.

@@ -4,7 +4,7 @@ metadata:
   name: root
   namespace: garden
 spec:
-  secretBindingName: local
+  credentialsBindingName: local
   dns:
     providers:
     - type: local
