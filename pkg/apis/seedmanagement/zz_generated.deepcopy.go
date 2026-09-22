@@ -230,6 +230,11 @@ func (in *GardenletSelfDeployment) DeepCopyInto(out *GardenletSelfDeployment) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ChartsImageVectorOverwrite != nil {
+		in, out := &in.ChartsImageVectorOverwrite, &out.ChartsImageVectorOverwrite
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
