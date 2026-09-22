@@ -215,7 +215,8 @@ func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, select
 	}
 
 	for _, req := range labelSelectorRequirements {
-		if req.Operator() != selection.Equals && req.Operator() != selection.DoubleEquals && req.Operator() != selection.In {
+		if req.Operator() != selection.Equals && req.Operator() != selection.DoubleEquals &&
+			(req.Operator() != selection.In || req.Values().Len() != 1) {
 			continue
 		}
 		for key, value := range selector.labels {

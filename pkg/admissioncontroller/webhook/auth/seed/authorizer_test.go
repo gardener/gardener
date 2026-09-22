@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -1436,6 +1437,20 @@ var _ = Describe("Seed", func() {
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("must specify field or label selector"))
 				})
+
+				It("should deny list/watch if label selector uses set-based 'In' operator with multiple values", func() {
+					attrs.Name = ""
+					attrs.Verb = "list"
+
+					req, err := labels.NewRequirement("name.seed.gardener.cloud/"+seedName, selection.In, []string{"true", "other-value"})
+					Expect(err).NotTo(HaveOccurred())
+					attrs.LabelSelectorRequirements = labels.Requirements{*req}
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("must specify field or label selector"))
+				})
 			})
 
 			Context("when requested for Gardenlets", func() {
@@ -1910,6 +1925,20 @@ var _ = Describe("Seed", func() {
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("must specify field or label selector"))
 				})
+
+				It("should deny list/watch if label selector uses set-based 'In' operator with multiple values", func() {
+					attrs.Name = ""
+					attrs.Verb = "list"
+
+					req, err := labels.NewRequirement("name.seed.gardener.cloud/"+seedName, selection.In, []string{"true", "other-value"})
+					Expect(err).NotTo(HaveOccurred())
+					attrs.LabelSelectorRequirements = labels.Requirements{*req}
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("must specify field or label selector"))
+				})
 			})
 
 			Context("when requested for Seeds", func() {
@@ -2038,6 +2067,20 @@ var _ = Describe("Seed", func() {
 					reqs, selectable := selector.Requirements()
 					Expect(selectable).To(BeTrue())
 					attrs.LabelSelectorRequirements = reqs
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("must specify field or label selector"))
+				})
+
+				It("should deny list/watch if label selector uses set-based 'In' operator with multiple values", func() {
+					attrs.Name = ""
+					attrs.Verb = "list"
+
+					req, err := labels.NewRequirement("name.seed.gardener.cloud/"+seedName, selection.In, []string{"true", "other-value"})
+					Expect(err).NotTo(HaveOccurred())
+					attrs.LabelSelectorRequirements = labels.Requirements{*req}
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
