@@ -112,6 +112,66 @@ EOF
       kubectl delete --ignore-not-found=true storageclass local-path
     }
 
+    # On macOS, Docker Desktop shares host files with its Linux VM through a caching layer (gRPC-FUSE/virtiofs).
+    # The kind nodes bind-mount the single file `dev-setup/infra/resolv.conf` to `/etc/resolv.conf`
+    # (see dev-setup/kind/cluster/components/node/kustomization.yaml). If Docker's cached view of that file
+    # is stale (e.g., it was cached as empty before the content was written), the kind nodes end up with an
+    # empty or unreadable `/etc/resolv.conf`. DNS then fails entirely inside the nodes, which breaks pulling
+    # images from the registry mirrors (e.g., calico from quay.registry-cache.local.gardener.cloud) and any
+    # in-cluster DNS-dependent flows. Because it is a bind mount, recreating the container does not help: it
+    # re-mounts the same stale view, which is why the problem persists across restarts.
+    #
+    # Atomically rewriting the file from its own content forces Docker Desktop to refresh its cached view, so
+    # the nodes mount the correct content. This is a no-op on Linux where this caching issue does not occur.
+    resync_resolv_conf() {
+      [ "$(uname -s)" == "Darwin" ] || return 0
+
+      local resolv_conf="$(dirname "$0")/infra/resolv.conf"
+      [ -f "$resolv_conf" ] || return 0
+
+      echo "Refreshing Docker's cached view of ${resolv_conf} (works around stale macOS bind-mount cache)."
+      local tmp
+      tmp="$(mktemp)"
+      cat "$resolv_conf" > "$tmp"
+      cat "$tmp" > "$resolv_conf"
+      rm -f "$tmp"
+    }
+
+    # ensure_node_resolv_conf verifies that each kind node has a readable, non-empty /etc/resolv.conf mounted
+    # from dev-setup/infra/resolv.conf. If a stale Docker Desktop mount left a node with a broken resolv.conf,
+    # restarting the node container re-establishes the mount against the (now refreshed) host file. This fails
+    # loudly if a node still lacks a working resolv.conf, since DNS-dependent steps downstream would otherwise
+    # fail with confusing errors. Only runs on macOS where Docker Desktop's stale-cache issue occurs.
+    ensure_node_resolv_conf() {
+      [ "$(uname -s)" == "Darwin" ] || return 0
+
+      for NODE in "$@"; do
+        if docker exec "${NODE}" test -s /etc/resolv.conf 2>/dev/null; then
+          continue
+        fi
+
+        echo "[${NODE}] /etc/resolv.conf is empty or unreadable; restarting node to re-establish the bind mount."
+        docker restart "${NODE}" > /dev/null
+
+        # Wait for the node to come back and expose a readable resolv.conf.
+        local ready=0
+        for _ in $(seq 1 30); do
+          if docker exec "${NODE}" test -s /etc/resolv.conf 2>/dev/null; then
+            ready=1
+            break
+          fi
+          sleep 1
+        done
+
+        if [ "$ready" -ne 1 ]; then
+          echo "Error: [${NODE}] /etc/resolv.conf is still empty/unreadable after restart. This is usually a stale" >&2
+          echo "Docker Desktop file-share cache for dev-setup/infra/resolv.conf. Restarting Docker Desktop and" >&2
+          echo "re-running 'make kind-up' should resolve it." >&2
+          exit 1
+        fi
+      done
+    }
+
     docker_socket() {
       # Find the Docker socket path from the current Docker context. This also respects the DOCKER_HOST environment variable
       # if set. This should support setups with non-standard Docker socket paths, e.g., when using Lima or Colima as Docker
@@ -130,6 +190,7 @@ EOF
 
     "$(dirname "$0")/infra.sh" up
 
+<<<<<<< HEAD
     if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
       echo "Kind cluster '${CLUSTER_NAME}' already exists, skipping creation."
     else
@@ -140,8 +201,24 @@ EOF
           --name "$CLUSTER_NAME" \
           --config /dev/stdin
     fi
+=======
+    # Force Docker Desktop to refresh its cached view of the bind-mounted resolv.conf before creating the
+    # nodes, so they mount the correct content from the start (see resync_resolv_conf for details).
+    resync_resolv_conf
+
+    kustomize build "$(dirname "$0")/kind/cluster/overlays/${KUSTOMIZE_OVERLAY}-${IPFAMILY}" | \
+      yq 'del(.metadata)' | \
+      sed "s|\${DOCKER_SOCKET}|$(docker_socket)|g" | \
+      kind create cluster \
+        --name "$CLUSTER_NAME" \
+        --config /dev/stdin
+>>>>>>> e6c99c13eb (Fix stale Docker Desktop bind-mount cache for resolv.conf on macOS)
 
     nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
+
+    # Make sure every node ended up with a working /etc/resolv.conf. On macOS, a stale Docker Desktop mount
+    # cache can still leave a node with an empty resolv.conf; ensure_node_resolv_conf recovers or fails loudly.
+    ensure_node_resolv_conf $nodes
 
     # Configure the default StorageClass in the kind cluster
     setup_kind_sc_default_volume_type
