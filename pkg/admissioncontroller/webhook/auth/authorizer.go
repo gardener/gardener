@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -216,8 +215,12 @@ func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, select
 	}
 
 	for _, req := range labelSelectorRequirements {
+		if req.Operator() != selection.Equals && req.Operator() != selection.DoubleEquals &&
+			(req.Operator() != selection.In || req.Values().Len() != 1) {
+			continue
+		}
 		for key, value := range selector.labels {
-			if req.Matches(labels.Set{key: value}) {
+			if req.Key() == key && req.Values().Has(value) {
 				return true, "label selector provided and matches name of 'to object'"
 			}
 		}
