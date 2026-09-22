@@ -69,7 +69,7 @@ tests:
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 main DB size has reached 84.98% of its configured etcd quota (etcd_server_quota_backend_bytes). Etcd quota might need to be increased.
+        description: 'Etcd3 main DB size has reached 84.98% of its configured etcd quota. DB size: 6.799GiB, quota: 8GiB. Etcd quota might need to be increased.'
         summary: Etcd3 main DB size is approaching its configured quota.
   - eval_time: 26m
     alertname: KubeEtcd3MainDbSizeLimitCrossed
@@ -82,7 +82,7 @@ tests:
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 main DB size has reached 96.62% of its configured etcd quota (etcd_server_quota_backend_bytes). Etcd quota must be increased to allow updates.
+        description: 'Etcd3 main DB size has reached 96.62% of its configured etcd quota. DB size: 7.73GiB, quota: 8GiB. Etcd quota must be increased to allow updates.'
         summary: Etcd3 main DB size has crossed its configured quota.
   - eval_time: 31m
     alertname: KubeEtcdMainDeltaBackupFailed
