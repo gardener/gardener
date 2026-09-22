@@ -919,7 +919,7 @@ images:
   - name: istio-proxy
     sourceRepository: github.com/istio/istio
     repository: gcr.io/istio-release/proxyv2
-    tag: "1.29.7-distroless"
+    tag: "1.29.8-distroless"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
@@ -936,7 +936,7 @@ images:
   - name: istio-istiod
     sourceRepository: github.com/istio/istio
     repository: gcr.io/istio-release/pilot
-    tag: "1.29.7-distroless"
+    tag: "1.29.8-distroless"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
