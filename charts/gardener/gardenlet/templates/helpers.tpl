@@ -44,6 +44,15 @@ components.yaml: |
 gardenlet-imagevector-overwrite-components-{{ include "gardenlet.imagevector-overwrite-components.data" . | sha256sum | trunc 8 }}
 {{- end -}}
 
+{{- define "gardenlet.imagevector-overwrite-charts.data" -}}
+images_overwrite.yaml: |
+{{ .Values.chartsImageVectorOverwrite | indent 2 }}
+{{- end -}}
+
+{{- define "gardenlet.imagevector-overwrite-charts.name" -}}
+gardenlet-imagevector-overwrite-charts-{{ include "gardenlet.imagevector-overwrite-charts.data" . | sha256sum | trunc 8 }}
+{{- end -}}
+
 {{- define "gardenlet.cert.name" -}}
 gardenlet-cert-{{ include "gardenlet.cert.data" . | sha256sum | trunc 8 }}
 {{- end -}}
