@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,6 +141,34 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 			g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoint), testEndpoint)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
+
+	Describe("Self-hosted shoot extension ServiceAccount restrictions", Ordered, func() {
+		It("Verify non-gardenlet users cannot create a ServiceAccount with the reserved prefix", func(ctx SpecContext) {
+			reservedSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-shoot--test--foo",
+				Namespace: *s.Project.Spec.Namespace,
+			}}
+
+			Expect(testUserClient.Create(ctx, reservedSA)).To(BeForbiddenError())
+		}, SpecTimeout(time.Minute))
+
+		It("Verify non-gardenlet users cannot request a token for a reserved-prefix ServiceAccount", func(ctx SpecContext) {
+			// The webhook fires before the API server checks whether the ServiceAccount exists,
+			// so we can use a non-existent SA to test the token subresource restriction.
+			reservedSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-shoot--test--nonexistent",
+				Namespace: *s.Project.Spec.Namespace,
+			}}
+
+			tokenRequest := &authenticationv1.TokenRequest{
+				Spec: authenticationv1.TokenRequestSpec{
+					ExpirationSeconds: new(int64(600)),
+				},
+			}
+
+			Expect(testUserClient.SubResource("token").Create(ctx, reservedSA, tokenRequest)).To(BeForbiddenError())
+		}, SpecTimeout(time.Minute))
+	})
 
 	ItShouldDeleteProject(s)
 	ItShouldWaitForProjectToBeDeleted(s)
