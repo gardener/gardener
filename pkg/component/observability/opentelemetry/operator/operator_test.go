@@ -127,6 +127,11 @@ var _ = Describe("OpenTelemetry Operator", func() {
 					Verbs:     []string{"create", "get", "list", "update"},
 				},
 				{
+					APIGroups: []string{"gateway.networking.k8s.io"},
+					Resources: []string{"httproutes"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
 					APIGroups: []string{"monitoring.coreos.com"},
 					Resources: []string{"podmonitors", "servicemonitors"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
