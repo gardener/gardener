@@ -22,6 +22,8 @@ env: []
 #  Please find documentation in /docs/deployment/image_vector.md#overwriting-image-vector
 # componentImageVectorOverwrites: |
 #  Please find documentation in /docs/deployment/image_vector.md#image-vectors-for-dependent-components
+# chartsImageVectorOverwrite: |
+#  Please find documentation in /docs/deployment/image_vector.md#helm-chart-image-vector
 config:
   gardenClientConnection:
   # acceptContentTypes: application/json

@@ -450,6 +450,7 @@ func autoConvert_v1alpha1_GardenletSelfDeployment_To_seedmanagement_GardenletSel
 	}
 	out.ImageVectorOverwrite = (*string)(unsafe.Pointer(in.ImageVectorOverwrite))
 	out.ComponentImageVectorOverwrite = (*string)(unsafe.Pointer(in.ComponentImageVectorOverwrite))
+	out.ChartsImageVectorOverwrite = (*string)(unsafe.Pointer(in.ChartsImageVectorOverwrite))
 	return nil
 }
 
@@ -467,6 +468,7 @@ func autoConvert_seedmanagement_GardenletSelfDeployment_To_v1alpha1_GardenletSel
 	}
 	out.ImageVectorOverwrite = (*string)(unsafe.Pointer(in.ImageVectorOverwrite))
 	out.ComponentImageVectorOverwrite = (*string)(unsafe.Pointer(in.ComponentImageVectorOverwrite))
+	out.ChartsImageVectorOverwrite = (*string)(unsafe.Pointer(in.ChartsImageVectorOverwrite))
 	return nil
 }
 
