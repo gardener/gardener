@@ -76,6 +76,9 @@ type GardenletSelfDeployment struct {
 	// gardenlet.
 	// +optional
 	ComponentImageVectorOverwrite *string `json:"componentImageVectorOverwrite,omitempty" protobuf:"bytes,4,opt,name=componentImageVectorOverwrite"`
+	// ChartsImageVectorOverwrite is the image vector overwrite for the chart images deployed by this gardenlet.
+	// +optional
+	ChartsImageVectorOverwrite *string `json:"chartsImageVectorOverwrite,omitempty" protobuf:"bytes,5,opt,name=chartsImageVectorOverwrite"`
 }
 
 // GardenletHelm is the Helm deployment configuration for gardenlet.

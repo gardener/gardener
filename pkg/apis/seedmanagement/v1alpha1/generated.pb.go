@@ -460,6 +460,13 @@ func (m *GardenletSelfDeployment) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.ChartsImageVectorOverwrite != nil {
+		i -= len(*m.ChartsImageVectorOverwrite)
+		copy(dAtA[i:], *m.ChartsImageVectorOverwrite)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.ChartsImageVectorOverwrite)))
+		i--
+		dAtA[i] = 0x2a
+	}
 	if m.ComponentImageVectorOverwrite != nil {
 		i -= len(*m.ComponentImageVectorOverwrite)
 		copy(dAtA[i:], *m.ComponentImageVectorOverwrite)
@@ -1438,6 +1445,10 @@ func (m *GardenletSelfDeployment) Size() (n int) {
 		l = len(*m.ComponentImageVectorOverwrite)
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.ChartsImageVectorOverwrite != nil {
+		l = len(*m.ChartsImageVectorOverwrite)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -1849,6 +1860,7 @@ func (this *GardenletSelfDeployment) String() string {
 		`Helm:` + strings.Replace(strings.Replace(this.Helm.String(), "GardenletHelm", "GardenletHelm", 1), `&`, ``, 1) + `,`,
 		`ImageVectorOverwrite:` + valueToStringGenerated(this.ImageVectorOverwrite) + `,`,
 		`ComponentImageVectorOverwrite:` + valueToStringGenerated(this.ComponentImageVectorOverwrite) + `,`,
+		`ChartsImageVectorOverwrite:` + valueToStringGenerated(this.ChartsImageVectorOverwrite) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3368,6 +3380,39 @@ func (m *GardenletSelfDeployment) Unmarshal(dAtA []byte) error {
 			}
 			s := string(dAtA[iNdEx:postIndex])
 			m.ComponentImageVectorOverwrite = &s
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChartsImageVectorOverwrite", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := string(dAtA[iNdEx:postIndex])
+			m.ChartsImageVectorOverwrite = &s
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

@@ -19,6 +19,8 @@ spec:
   #   Please find documentation in /docs/deployment/image_vector.md#overwriting-image-vector
   # componentImageVectorOverwrite: |
   #   Please find documentation in /docs/deployment/image_vector.md#image-vectors-for-dependent-components
+  # chartsImageVectorOverwrite: |
+  #   Please find documentation in /docs/deployment/image_vector.md#helm-chart-image-vector
     replicaCount: 2
     revisionHistoryLimit: 2
     resources:

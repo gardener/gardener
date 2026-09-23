@@ -12558,6 +12558,13 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 							Format:      "",
 						},
 					},
+					"chartsImageVectorOverwrite": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ChartsImageVectorOverwrite is the image vector overwrite for the chart images deployed by this gardenlet.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"helm"},
 			},
