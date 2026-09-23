@@ -679,6 +679,7 @@ build:
             - pkg/controllermanager/controller/seed
             - pkg/controllermanager/controller/seed/backupbucketscheck
             - pkg/controllermanager/controller/seed/extensionscheck
+            - pkg/controllermanager/controller/seed/refallowlist
             - pkg/controllermanager/controller/seed/reference
             - pkg/controllermanager/controller/seed/secrets
             - pkg/controllermanager/controller/seed/utils
