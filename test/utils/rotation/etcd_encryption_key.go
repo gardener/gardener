@@ -30,6 +30,8 @@ type ETCDEncryptionKeyVerifier struct {
 	GetETCDEncryptionKeyRotation func() *gardencorev1beta1.ETCDEncryptionKeyRotation
 	GetRuntimeClient             func() client.Client
 	GetETCDSecretNamespace       func() string
+	// ResourcesToEncrypt is the full list of resource names expected in the encryption config.
+	ResourcesToEncrypt []string
 
 	EncryptionKey  string
 	RoleLabelValue string
@@ -68,23 +70,31 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		g.Expect(runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)).To(Succeed())
 
-		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
-
-		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
-			{
-				AESCBC: &apiserverconfigv1.AESConfiguration{
-					Keys: []apiserverconfigv1.Key{{
-						// old key
-						Name:   string(v.secretsBefore[v.EncryptionKey][0].Data["key"]),
-						Secret: getBase64EncodedETCDEncryptionKeyFromSecret(v.secretsBefore[v.EncryptionKey][0]),
-					}},
+		g.Expect(encryptionConfiguration.Resources).NotTo(BeEmpty(), "encryption config should have resources")
+		if len(v.ResourcesToEncrypt) > 0 {
+			var allResources []string
+			for _, rc := range encryptionConfiguration.Resources {
+				allResources = append(allResources, rc.Resources...)
+			}
+			g.Expect(allResources).To(ConsistOf(v.ResourcesToEncrypt), "encryption config should contain exactly the expected resources")
+		}
+		for _, resourceConfig := range encryptionConfiguration.Resources {
+			g.Expect(resourceConfig.Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
+				{
+					AESCBC: &apiserverconfigv1.AESConfiguration{
+						Keys: []apiserverconfigv1.Key{{
+							// old key
+							Name:   string(v.secretsBefore[v.EncryptionKey][0].Data["key"]),
+							Secret: getBase64EncodedETCDEncryptionKeyFromSecret(v.secretsBefore[v.EncryptionKey][0]),
+						}},
+					},
 				},
-			},
-			{
-				// identity is always added
-				Identity: &apiserverconfigv1.IdentityConfiguration{},
-			},
-		}))
+				{
+					// identity is always added
+					Identity: &apiserverconfigv1.IdentityConfiguration{},
+				},
+			}), "resource %v should have correct providers", resourceConfig.Resources)
+		}
 	}).Should(Succeed(), "etcd encryption config should only have old key")
 }
 
@@ -147,21 +157,30 @@ func (v *ETCDEncryptionKeyVerifier) afterCompleted(ctx context.Context) {
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		g.Expect(runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)).To(Succeed())
 
-		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
-		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
-			{
-				AESCBC: &apiserverconfigv1.AESConfiguration{
-					Keys: []apiserverconfigv1.Key{{
-						// new key
-						Name:   string(newKeySecret.Data["key"]),
-						Secret: getBase64EncodedETCDEncryptionKeyFromSecret(newKeySecret),
-					}},
+		g.Expect(encryptionConfiguration.Resources).NotTo(BeEmpty(), "encryption config should have resources")
+		if len(v.ResourcesToEncrypt) > 0 {
+			var allResources []string
+			for _, rc := range encryptionConfiguration.Resources {
+				allResources = append(allResources, rc.Resources...)
+			}
+			g.Expect(allResources).To(ConsistOf(v.ResourcesToEncrypt), "encryption config should contain exactly the expected resources")
+		}
+		for _, resourceConfig := range encryptionConfiguration.Resources {
+			g.Expect(resourceConfig.Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
+				{
+					AESCBC: &apiserverconfigv1.AESConfiguration{
+						Keys: []apiserverconfigv1.Key{{
+							// new key
+							Name:   string(newKeySecret.Data["key"]),
+							Secret: getBase64EncodedETCDEncryptionKeyFromSecret(newKeySecret),
+						}},
+					},
 				},
-			},
-			{
-				Identity: &apiserverconfigv1.IdentityConfiguration{},
-			},
-		}))
+				{
+					Identity: &apiserverconfigv1.IdentityConfiguration{},
+				},
+			}), "resource %v should have correct providers", resourceConfig.Resources)
+		}
 	}).Should(Succeed(), "etcd encryption config should only have new key")
 }
 

@@ -272,6 +272,8 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	}
 	shoot.KubernetesVersion = kubernetesVersion
 
+	shoot.StorageVersionMigratorEnabled = gardenerutils.IsStorageVersionMigratorFeatureGateEnabled(shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, shoot.GetInfo().Spec.Kubernetes.KubeControllerManager, kubernetesVersion)
+
 	runtimeKubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
 	if err != nil {
 		return nil, err

@@ -164,17 +164,32 @@ func (r *Reconciler) reconcile(
 	)
 
 	var (
+		kubeAPIServerConfig         *gardencorev1beta1.KubeAPIServerConfig
+		kubeControllerManagerConfig *gardencorev1beta1.KubeControllerManagerConfig
+	)
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil {
+		kubeAPIServerConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig
+	}
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager != nil {
+		kubeControllerManagerConfig = garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig
+	}
+
+	var (
 		backupConfigured        = helper.GetETCDMainBackup(garden) != nil
 		backupEntryForGarden    = features.DefaultFeatureGate.Enabled(features.BackupEntryForGarden)
 		virtualClusterClientSet kubernetes.Interface
 		virtualClusterClient    client.Client
 		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
+		defaultEncryptedGRs     = append(gardenerutils.DefaultGardenerGroupResourcesForEncryption(), gardenerutils.DefaultGroupResourcesForEncryption()...)
 		resourcesToEncrypt      = append(shared.StringifyGroupResources(getKubernetesResourcesForEncryption(garden)), shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden))...)
 		encryptedResources      = shared.NormalizeResources(helper.GetEncryptedResourcesInStatus(garden.Status))
 		// Both kube-apiserver and garden-apiserver must use the same encryption provider type.
 		// This is validated by a webhook, so we can read from either apiserver config.
-		encryptionProviderToUse = v1beta1helper.GetEncryptionProviderType(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
-		encryptionProvider      = helper.GetEncryptionProviderTypeInStatus(garden.Status)
+		encryptionProviderToUse       = v1beta1helper.GetEncryptionProviderType(kubeAPIServerConfig)
+		encryptionProvider            = helper.GetEncryptionProviderTypeInStatus(garden.Status)
+		storageVersionMigratorEnabled = gardenerutils.IsStorageVersionMigratorFeatureGateEnabled(kubeAPIServerConfig, kubeControllerManagerConfig, targetVersion)
 
 		globalObservabilitySecretLastRotationInitiationTimestamp int64
 
@@ -622,9 +637,9 @@ func (r *Reconciler) reconcile(
 		})
 
 		rewriteResourcesAddLabel = g.Add(flow.Task{
-			Name: "Labeling encrypted resources after modification of encryption config or to re-encrypt them with new ETCD encryption key",
+			Name: "Creating StorageVersionMigration objects/ Labeling encrypted resources after modification of encryption config or to re-encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs)
+				return secretsrotation.RewriteEncryptedData(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs, defaultEncryptedGRs, storageVersionMigratorEnabled)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) && (encryptionProviderToUse == encryptionProvider ||
@@ -643,9 +658,9 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(rewriteResourcesAddLabel),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Removing label from re-encrypted resources after modification of encryption config or rotation of ETCD encryption key",
+			Name: "Cleaning up StorageVersionMigration objects/ Removing label from re-encrypted resources after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs); err != nil {
+				if err := secretsrotation.CompleteEncryptedDataRewrite(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs, storageVersionMigratorEnabled); err != nil {
 					return err
 				}
 
