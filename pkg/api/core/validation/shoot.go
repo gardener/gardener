@@ -3944,6 +3944,8 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 // the `vpa.k8s.io` admission webhook, i.e., that CPU quantities are a whole number of milli CPUs and memory
 // quantities are a whole number of bytes. Otherwise, the VerticalPodAutoscaler resource created from this value
 // would be rejected by the webhook, causing the reconciliation to fail.
+// See https://github.com/kubernetes/autoscaler/blob/9344916ae8eb013904419cbb4844f468e8b7cd73/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go#L343-L367
+// (validateResourceResolution, unexported).
 func validateResourceQuantityResolution(resourceName corev1.ResourceName, quantity resource.Quantity, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
