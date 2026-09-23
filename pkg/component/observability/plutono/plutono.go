@@ -7,7 +7,6 @@ package plutono
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -449,6 +448,12 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		if p.values.VPAEnabled {
 			requiredDashboards[commonVpaDashboardsPath] = commonDashboards
 		}
+		if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+			features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+			ignorePaths.Insert("vali")
+		} else {
+			ignorePaths.Insert("victorialogs")
+		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{
 			seedDashboardsPath:   seedDashboards,
@@ -464,6 +469,12 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		}
 		if !p.values.VPAEnabled {
 			ignorePaths.Insert("vpa")
+		}
+		if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+			features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+			ignorePaths.Insert("vali")
+		} else {
+			ignorePaths.Insert("victorialogs")
 		}
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		requiredDashboards = map[string]embed.FS{
@@ -487,6 +498,13 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 			} else {
 				ignorePaths.Insert("ha-vpn")
 			}
+		}
+		if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+			features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+			ignorePaths.Insert("vali")
+			ignorePaths.Insert("vali")
+		} else {
+			ignorePaths.Insert("victorialogs")
 		}
 	}
 
@@ -524,49 +542,8 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		}
 	}
 
-	// TODO(iypetrov): Once all feature gates related to the VictoriaLogs rollout
-	// reach GA, this code can be cleaned up. At that point, all logic in the following
-	// ifs can be removed and the dashboard JSON files can be updated directly.
-	//
-	// For now, this logic is required to support switching between different
-	// dashboard views depending on which logging backends are enabled. The linked
-	// commit shows what the dashboard JSON files should look like after this
-	// cleanup:
-	//
-	// https://github.com/iypetrov/gardener/commit/aaffd7672406c89b85797d2be9497d22483cf929
 	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
 		delete(dashboards, "victorialogs-dashboard.json")
-	}
-
-	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
-		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
-		if p.values.IsGardenCluster {
-			if err := removePanelByID(dashboards, "kubernetes-pods-dashboard.json", 6); err != nil {
-				return nil, err
-			}
-		} else if p.values.ClusterType == component.ClusterTypeSeed {
-			delete(dashboards, "pod-logs.json")
-			delete(dashboards, "systemd-logs.json")
-			if err := removePanelByID(dashboards, "extensions-dashboard.json", 5); err != nil {
-				return nil, err
-			}
-			if err := removeTemplating(dashboards, "extensions-dashboard.json"); err != nil {
-				return nil, err
-			}
-		} else if p.values.ClusterType == component.ClusterTypeShoot {
-			if err := removePanelByID(dashboards, "kubernetes-pods-dashboard.json", 6); err != nil {
-				return nil, err
-			}
-			if err := removePanelByID(dashboards, "controlplane-logs-dashboard.json", 43); err != nil {
-				return nil, err
-			}
-			if err := rewriteControlplaneLogsTemplating(dashboards); err != nil {
-				return nil, err
-			}
-			if err := renamePanelValiToVictoriaLogs(dashboards, "cluster-overview-dashboard.json", 40); err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	// this is necessary to prevent hitting configmap size limit.
@@ -972,112 +949,6 @@ func getLabels() map[string]string {
 	return map[string]string{
 		"component": name,
 	}
-}
-
-func parseDashboard(dashboards map[string]string, filename string) (map[string]any, error) {
-	raw, ok := dashboards[filename]
-	if !ok {
-		return nil, fmt.Errorf("dashboard %q not found", filename)
-	}
-	var data map[string]any
-	if err := json.Unmarshal([]byte(raw), &data); err != nil {
-		return nil, fmt.Errorf("error parsing dashboard %q: %w", filename, err)
-	}
-	return data, nil
-}
-
-func saveDashboard(dashboards map[string]string, filename string, data map[string]any) error {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("error marshaling dashboard %q: %w", filename, err)
-	}
-	dashboards[filename] = string(b)
-	return nil
-}
-
-func removePanelByID(dashboards map[string]string, filename string, id int) error {
-	data, err := parseDashboard(dashboards, filename)
-	if err != nil {
-		return err
-	}
-	panels, _ := data["panels"].([]any)
-	filtered := make([]any, 0, len(panels))
-	for _, p := range panels {
-		panel, _ := p.(map[string]any)
-		if panelID, _ := panel["id"].(float64); int(panelID) != id {
-			filtered = append(filtered, p)
-		}
-	}
-	data["panels"] = filtered
-	return saveDashboard(dashboards, filename, data)
-}
-
-func removeTemplating(dashboards map[string]string, filename string) error {
-	data, err := parseDashboard(dashboards, filename)
-	if err != nil {
-		return err
-	}
-	delete(data, "templating")
-	return saveDashboard(dashboards, filename, data)
-}
-
-func rewriteControlplaneLogsTemplating(dashboards map[string]string) error {
-	const filename = "controlplane-logs-dashboard.json"
-	data, err := parseDashboard(dashboards, filename)
-	if err != nil {
-		return err
-	}
-	data["templating"] = map[string]any{
-		"list": []any{
-			map[string]any{
-				"allValue":       ".+",
-				"current":        map[string]any{"selected": false, "text": "All", "value": "$__all"},
-				"datasource":     "prometheus",
-				"definition":     "label_values(kube_pod_info{type=~\"seed\"}, pod)",
-				"description":    nil,
-				"error":          nil,
-				"hide":           float64(0),
-				"includeAll":     true,
-				"label":          "Pod",
-				"multi":          false,
-				"name":           "pod",
-				"options":        []any{},
-				"query":          map[string]any{"query": "label_values(kube_pod_info{type=~\"seed\"}, pod)", "refId": "StandardVariableQuery"},
-				"refresh":        float64(2),
-				"regex":          "",
-				"skipUrlSync":    false,
-				"sort":           float64(1),
-				"tagValuesQuery": "",
-				"tags":           []any{},
-				"tagsQuery":      "",
-				"type":           "query",
-				"useTags":        false,
-			},
-		},
-	}
-	return saveDashboard(dashboards, filename, data)
-}
-
-func renamePanelValiToVictoriaLogs(dashboards map[string]string, filename string, id int) error {
-	data, err := parseDashboard(dashboards, filename)
-	if err != nil {
-		return err
-	}
-	panels, _ := data["panels"].([]any)
-	for _, p := range panels {
-		panel, _ := p.(map[string]any)
-		if panelID, _ := panel["id"].(float64); int(panelID) == id {
-			panel["title"] = "victoria-logs"
-			targets, _ := panel["targets"].([]any)
-			for _, t := range targets {
-				target, _ := t.(map[string]any)
-				if expr, _ := target["expr"].(string); expr == "absent(up{job=\"vali\"} == 1)" {
-					target["expr"] = "absent(up{job=\"victoria-logs\"} == 1)"
-				}
-			}
-		}
-	}
-	return saveDashboard(dashboards, filename, data)
 }
 
 func convertToCompactJSON(data map[string]string) (map[string]string, error) {
