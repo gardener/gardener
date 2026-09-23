@@ -415,7 +415,7 @@ test-e2e-post-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="post-upgrade" ./test/e2e/gardener/...
 
 # CI-related e2e test rules
-GARDENER_PREVIOUS_RELEASE      := ""
+GARDENER_PREVIOUS_RELEASE      := 16c2d522d0ebbb331f444aa90b418315af7e1b45
 GARDENER_NEXT_RELEASE          := $(VERSION)
 GARDENER_RELEASE_DOWNLOAD_PATH := $(REPO_ROOT)/dev
 
