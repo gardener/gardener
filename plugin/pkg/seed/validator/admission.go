@@ -9,7 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -25,6 +28,7 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	gardensecurityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	gardensecurityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -42,6 +46,7 @@ type ValidateSeed struct {
 
 	shootLister            gardencorev1beta1listers.ShootLister
 	secretLister           kubecorev1listers.SecretLister
+	configMapLister        kubecorev1listers.ConfigMapLister
 	workloadIdentityLister gardensecurityv1alpha1listers.WorkloadIdentityLister
 	readyFunc              admission.ReadyFunc
 }
@@ -88,7 +93,11 @@ func (v *ValidateSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFact
 	secretInformer := f.Core().V1().Secrets()
 	v.secretLister = secretInformer.Lister()
 
+	configMapInformer := f.Core().V1().ConfigMaps()
+	v.configMapLister = configMapInformer.Lister()
+
 	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, configMapInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -96,8 +105,11 @@ func (v *ValidateSeed) ValidateInitialization() error {
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
 	}
+	if v.configMapLister == nil {
+		return errors.New("missing ConfigMap lister")
+	}
 	if v.secretLister == nil {
-		return errors.New("missing secret lister")
+		return errors.New("missing Secret lister")
 	}
 	if v.workloadIdentityLister == nil {
 		return errors.New("missing WorkloadIdentity lister")
@@ -170,7 +182,15 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 		return err
 	}
 
-	return v.validateCredentialsRef(a, newSeed)
+	if err := v.validateCredentialsRef(a, newSeed); err != nil {
+		return err
+	}
+
+	if newSeed.DeletionTimestamp != nil && apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
+		return nil
+	}
+
+	return v.validateReferenceAllowlist(a, newSeed)
 }
 
 func (v *ValidateSeed) validateSeedCreate(a admission.Attributes) error {
@@ -179,7 +199,11 @@ func (v *ValidateSeed) validateSeedCreate(a admission.Attributes) error {
 		return apierrors.NewInternalError(errors.New("failed to convert resource into Seed object"))
 	}
 
-	return v.validateCredentialsRef(a, seed)
+	if err := v.validateCredentialsRef(a, seed); err != nil {
+		return err
+	}
+
+	return v.validateReferenceAllowlist(a, seed)
 }
 
 func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
@@ -232,4 +256,109 @@ func (v *ValidateSeed) validateCredentialsRef(attrs admission.Attributes, seed *
 	}
 
 	return nil
+}
+
+func (v *ValidateSeed) validateReferenceAllowlist(attrs admission.Attributes, seed *core.Seed) error {
+	if !features.DefaultFeatureGate.Enabled(features.AllowlistSeedReferences) {
+		return nil
+	}
+
+	if seed.Spec.Backup != nil {
+		if ref := seed.Spec.Backup.CredentialsRef; ref != nil {
+			if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, "spec.backup.credentialsRef"); err != nil {
+				return err
+			}
+		}
+	}
+
+	if seed.Spec.DNS.Provider != nil {
+		if ref := seed.Spec.DNS.Provider.CredentialsRef; ref != nil {
+			if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, "spec.dns.provider.credentialsRef"); err != nil {
+				return err
+			}
+		}
+	}
+
+	if seed.Spec.DNS.Internal != nil {
+		ref := seed.Spec.DNS.Internal.CredentialsRef
+		if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, "spec.dns.internal.credentialsRef"); err != nil {
+			return err
+		}
+	}
+
+	for i, defaultDNS := range seed.Spec.DNS.Defaults {
+		ref := defaultDNS.CredentialsRef
+		if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, fmt.Sprintf("spec.dns.defaults[%d].credentialsRef", i)); err != nil {
+			return err
+		}
+	}
+
+	for i, resource := range seed.Spec.Resources {
+		ref := resource.ResourceRef
+		if err := v.checkAllowlistAnnotation(attrs, seed.Name, v1beta1constants.GardenNamespace, ref.Name, ref.APIVersion, ref.Kind, fmt.Sprintf("spec.resources[%d].resourceRef", i)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (v *ValidateSeed) checkAllowlistAnnotation(attrs admission.Attributes, seedName, namespace, name, apiVersion, kind, fieldPath string) error {
+	var annotations map[string]string
+
+	switch {
+	case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
+		obj, err := v.secretLister.Secrets(namespace).Get(name)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced Secret %s/%s not found or not allowlisted for seed %q", fieldPath, namespace, name, seedName))
+			}
+			return apierrors.NewInternalError(err)
+		}
+		annotations = obj.Annotations
+
+	case apiVersion == corev1.SchemeGroupVersion.String() && kind == "ConfigMap":
+		obj, err := v.configMapLister.ConfigMaps(namespace).Get(name)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced ConfigMap %s/%s not found or not allowlisted for seed %q", fieldPath, namespace, name, seedName))
+			}
+			return apierrors.NewInternalError(err)
+		}
+		annotations = obj.Annotations
+
+	case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
+		obj, err := v.workloadIdentityLister.WorkloadIdentities(namespace).Get(name)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced WorkloadIdentity %s/%s not found or not allowlisted for seed %q", fieldPath, namespace, name, seedName))
+			}
+			return apierrors.NewInternalError(err)
+		}
+		annotations = obj.Annotations
+
+	default:
+		return nil
+	}
+
+	if !isSeedAllowlisted(annotations, seedName) {
+		return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced %s %s/%s is not allowlisted for seed %q (missing annotation %q with value %q or %q)",
+			fieldPath, kind, namespace, name, seedName, v1beta1constants.AnnotationSeedNames, seedName, "*"))
+	}
+
+	return nil
+}
+
+func isSeedAllowlisted(annotations map[string]string, seedName string) bool {
+	value, ok := annotations[v1beta1constants.AnnotationSeedNames]
+	if !ok {
+		return false
+	}
+	for _, token := range strings.Split(value, ",") {
+		token = strings.TrimSpace(token)
+		if token == "*" || token == seedName {
+			return true
+		}
+	}
+	return false
 }
