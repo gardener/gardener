@@ -3,6 +3,7 @@ kind: Component
 
 resources:
 - extension.yaml
+- secret-registry-ca.yaml
 
 patches:
 - path: extension-patch.yaml

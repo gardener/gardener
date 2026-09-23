@@ -310,6 +310,10 @@ gind-up gind-down: $(YQ)
 gink-up gink-down: $(YQ)
 	$(DEV_SETUP)/gink.sh $(subst gink-,,$@)
 
+# cleanup-local-registry-ca
+cleanup-local-registry-ca:
+	$(DEV_SETUP)/infra.sh cleanup-registry-ca
+
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
 # build the images for the platform matching the nodes of the active kubernetes cluster, even in `skaffold build`, which doesn't enable this by default
