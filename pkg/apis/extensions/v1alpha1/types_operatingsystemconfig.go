@@ -34,7 +34,7 @@ type OperatingSystemConfig struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec OperatingSystemConfigSpec `json:"spec"`
 	// +optional
-	Status OperatingSystemConfigStatus `json:"status"`
+	Status OperatingSystemConfigStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.

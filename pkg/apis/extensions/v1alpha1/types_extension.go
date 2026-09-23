@@ -31,7 +31,7 @@ type Extension struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ExtensionSpec `json:"spec"`
 	// +optional
-	Status ExtensionStatus `json:"status"`
+	Status ExtensionStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.

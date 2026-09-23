@@ -31,7 +31,7 @@ type Bastion struct {
 	Spec BastionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the Bastion.
 	// +optional
-	Status BastionStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+	Status BastionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

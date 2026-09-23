@@ -33,7 +33,7 @@ type Infrastructure struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec InfrastructureSpec `json:"spec"`
 	// +optional
-	Status InfrastructureStatus `json:"status"`
+	Status InfrastructureStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.
