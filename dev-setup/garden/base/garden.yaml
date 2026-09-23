@@ -62,6 +62,7 @@ spec:
           LiveControlPlaneMigration: true
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
+          AllowlistSeedReferences: true
       gardenerDashboard:
         domain:
           name: dashboard.local.gardener.cloud
