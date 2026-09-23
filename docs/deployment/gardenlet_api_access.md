@@ -213,3 +213,63 @@ The admission's purpose is to perform extended validation on requests which requ
 Additionally, it handles `CREATE` requests of `gardenlet`s/extensions (the above discussed resource dependency graph cannot be used in such cases because there won't be any vertex/edge for non-existing resources).
 
 Gardenlets/extensions are restricted to only create new resources which are somehow related to the seed clusters they are responsible for.
+
+## Seed Reference Allowlist
+
+The `SeedAuthorizer` grants a `gardenlet` access to every resource that is reachable from its `Seed` via the resource dependency graph — including all `Secret`s, `ConfigMap`s, and `WorkloadIdentities` referenced in the `Seed`'s spec.
+Because the `Seed` spec is operator-controlled, a `gardenlet` with write access to its own `Seed` object could in principle extend the set of resources it may access.
+
+The `AllowlistSeedReferences` feature gate (alpha, disabled by default) mitigates this by requiring every referenced resource to carry an explicit allowlist annotation before the `Seed` referencing it is accepted.
+
+### How It Works
+
+When `AllowlistSeedReferences` is enabled in `gardener-apiserver`, the `ValidateSeed` admission plugin checks — on every `Seed` create or update — that each resource referenced in the following five spec fields carries the annotation `seed.gardener.cloud/names`:
+
+| Field path | Supported resource types |
+|---|---|
+| `.spec.backup.credentialsRef` | `Secret`, `WorkloadIdentity` |
+| `.spec.dns.provider.credentialsRef` | `Secret`, `WorkloadIdentity` |
+| `.spec.dns.internal.credentialsRef` | `Secret`, `WorkloadIdentity` |
+| `.spec.dns.defaults[].credentialsRef` | `Secret`, `WorkloadIdentity` |
+| `.spec.resources[].resourceRef` | `Secret`, `ConfigMap`, `WorkloadIdentity` |
+
+The annotation value is a comma-separated list of `Seed` names that are permitted to reference the resource:
+
+```yaml
+metadata:
+  annotations:
+    seed.gardener.cloud/names: "my-seed,other-seed"
+```
+
+A wildcard value of `*` permits any `Seed` to reference the resource:
+
+```yaml
+metadata:
+  annotations:
+    seed.gardener.cloud/names: "*"
+```
+
+If the annotation is absent, the `Seed` create/update is rejected with a `Forbidden` error naming the field path and the missing annotation.
+
+### Automatic Annotation for Managed Seeds
+
+For `Seed`s backed by a `Gardenlet` or `ManagedSeed` object, `gardener-controller-manager` automatically stamps the `seed.gardener.cloud/names` annotation on all referenced resources.
+The annotation is kept up-to-date as the `Gardenlet`/`ManagedSeed` spec changes, and is cleaned up when the object is deleted.
+
+> [!NOTE]
+> The GCM controller runs unconditionally — it stamps annotations regardless of whether `AllowlistSeedReferences` is enabled.
+> This lets you prepare your landscape before turning the gate on.
+
+### Manual Annotation for Hand-Managed Seeds
+
+For `Seed`s that are not backed by a `Gardenlet` or `ManagedSeed` object, you must annotate the referenced resources manually before enabling the gate.
+Failing to do so will cause `Seed` updates to be rejected once the gate is enabled.
+
+### Migration Guide
+
+1. **Before enabling the gate**: verify that all credential resources referenced by your `Seed`s carry the `seed.gardener.cloud/names` annotation.
+   - For `Gardenlet`/`ManagedSeed`-backed `Seed`s, `gardener-controller-manager` stamps this automatically. Confirm by inspecting the `Secret`s/`WorkloadIdentities` referenced in those `Seed`s.
+   - For hand-managed `Seed`s, annotate the referenced resources manually.
+2. **Enable the gate**: add `AllowlistSeedReferences: true` to the `featureGates` section of your `gardener-apiserver` configuration.
+3. Once the gate has been stable in your environment for a release cycle, it will be promoted to beta (default enabled).
+
