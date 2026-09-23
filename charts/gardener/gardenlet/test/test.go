@@ -963,7 +963,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 	image seedmanagement.Image,
 	gardenClientConnectionKubeconfig, seedClientConnectionKubeconfig *string,
 	expectedLabels map[string]string,
-	imageVectorOverwrite, componentImageVectorOverwrites *string,
+	imageVectorOverwrite, componentImageVectorOverwrites, chartsImageVectorOverwrite *string,
 	uniqueName map[string]string,
 	seedConfig *gardenletconfigv1alpha1.SeedConfig,
 ) (
@@ -1222,6 +1222,28 @@ func ComputeExpectedGardenletDeploymentSpec(
 		})
 	}
 
+	if chartsImageVectorOverwrite != nil {
+		deployment.Template.Spec.Containers[0].Env = append(deployment.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "IMAGEVECTOR_OVERWRITE_CHARTS",
+			Value: "/imagevector_overwrite_charts/images_overwrite.yaml",
+		})
+		deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      "gardenlet-imagevector-overwrite-charts",
+			ReadOnly:  true,
+			MountPath: "/imagevector_overwrite_charts",
+		})
+		deployment.Template.Spec.Volumes = append(deployment.Template.Spec.Volumes, corev1.Volume{
+			Name: "gardenlet-imagevector-overwrite-charts",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: uniqueName["gardenlet-imagevector-overwrite-charts"],
+					},
+				},
+			},
+		})
+	}
+
 	if gardenClientConnectionKubeconfig != nil {
 		deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      "gardenlet-kubeconfig-garden",
@@ -1293,7 +1315,8 @@ func VerifyGardenletDeployment(ctx context.Context,
 	usesTLSBootstrapping bool,
 	expectedLabels map[string]string,
 	imageVectorOverwrite,
-	componentImageVectorOverwrites *string,
+	componentImageVectorOverwrites,
+	chartsImageVectorOverwrite *string,
 	uniqueName map[string]string) {
 	deployment := getEmptyGardenletDeployment()
 	expectedDeployment := getEmptyGardenletDeployment()
@@ -1317,6 +1340,10 @@ func VerifyGardenletDeployment(ctx context.Context,
 
 	if componentImageVectorOverwrites != nil {
 		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite-components"], "configmap-", deployment.Spec.Template.Annotations)
+	}
+
+	if chartsImageVectorOverwrite != nil {
+		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite-charts"], "configmap-", deployment.Spec.Template.Annotations)
 	}
 
 	if hasGardenClientConnectionKubeconfig {
