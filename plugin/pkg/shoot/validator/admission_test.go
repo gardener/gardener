@@ -6,7 +6,6 @@ package validator_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	"go.uber.org/mock/gomock"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1175,16 +1173,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.type",
 						Message: fmt.Sprintf("Invalid value: %q: provider type in shoot must equal provider type of referenced CloudProfile: %q", shoot.Spec.Provider.Type, cloudProfile.Spec.Type),
-					}))
+					})))
 			})
 
 			It("should reject because the cloud provider in shoot and secret binding differ", func() {
@@ -1204,16 +1198,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.type",
 						Message: fmt.Sprintf("Invalid value: %q: provider type in shoot must match provider type of referenced SecretBinding: %q", shoot.Spec.Provider.Type, secretBinding.Provider.Type),
-					}))
+					})))
 			})
 
 			It("should reject because the cloud provider in shoot and credentials binding differ", func() {
@@ -1236,16 +1226,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.type",
 						Message: fmt.Sprintf("Invalid value: %q: provider type in shoot must match provider type of referenced CredentialsBinding: %q", shoot.Spec.Provider.Type, credentialsBinding.Provider.Type),
-					}))
+					})))
 			})
 
 			It("should reject migration to credentials binding because a different secret is referenced", func() {
@@ -1498,22 +1484,19 @@ var _ = Describe("validator", func() {
 
 			It("should reject update because shoot changed to unknown region", func() {
 				shoot.Spec.Region = "does-not-exist"
+				// remove zones as they are validated
+				shoot.Spec.Provider.Workers[0].Zones = nil
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.region",
 						Message: "Unsupported value: \"does-not-exist\": supported values: \"europe\", \"asia\"",
-					}))
-
+					})))
 			})
 
 			It("should pass update for non existing zone in cloud profile because shoot worker zone is unchanged", func() {
@@ -1532,16 +1515,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.provider.workers[0].zones[0]",
 						Message: "Unsupported value: \"europe-a\": supported values: \"asia-a\"",
-					}))
+					})))
 			})
 
 			It("should reject update because shoot and cloud profile changed zones", func() {
@@ -1552,16 +1531,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.provider.workers[0].zones[0]",
 						Message: "Unsupported value: \"europe-a\": supported values: \"zone-1\", \"zone-2\"",
-					}))
+					})))
 			})
 
 			It("should reject due to an invalid zone", func() {
@@ -1628,16 +1603,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.accessRestrictions[0]",
 						Message: "Unsupported value: \"foo\"",
-					}))
+					})))
 			})
 
 			It("should reject creation because shoot access restrictions are supported in this region, but not supported by the seed", func() {
@@ -1675,16 +1646,18 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.accessRestrictions[0]",
 						Message: "Unsupported value: \"foo\"",
-					}))
+					},
+					metav1.StatusCause{
+						Type:    "FieldValueForbidden",
+						Message: "Forbidden: access restriction \"foo\" is not supported by the seed",
+						Field:   "spec.accessRestrictions[0]",
+					},
+				)))
 			})
 
 			It("should reject update because shoot access restrictions are supported in this region, but not supported by the seed", func() {
@@ -1697,16 +1670,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeForbidden,
 						Field:   "spec.accessRestrictions[0]",
 						Message: "Forbidden: access restriction \"foo\" is not supported by the seed",
-					}))
+					})))
 			})
 
 			It("should allow update because shoot access restrictions are supported in this region and by the seed", func() {
@@ -2446,7 +2415,7 @@ var _ = Describe("validator", func() {
 			It("should pass IPv4 shoot node and the seed node networks intersect (HA control plane)", func() {
 				shoot.Spec.Networking.Nodes = &seedNodesCIDR
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-				// must set 3 azs for zone failure
+				// a seed needs at least 3 zones to host a shoot with zone failure tolerance
 				seed.Spec.Provider.Zones = []string{"0", "1", "2"}
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2479,7 +2448,7 @@ var _ = Describe("validator", func() {
 			It("should allow IPv4 shoot pod and the seed pod networks intersect (HA control plane)", func() {
 				shoot.Spec.Networking.Pods = &seedPodsCIDR
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-				// must set 3 azs for zone failure
+				// a seed needs at least 3 zones to host a shoot with zone failure tolerance
 				seed.Spec.Provider.Zones = []string{"0", "1", "2"}
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2512,7 +2481,7 @@ var _ = Describe("validator", func() {
 			It("should pass IPv4 shoot service and the seed service networks intersect (HA control plane)", func() {
 				shoot.Spec.Networking.Services = &seedServicesCIDR
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-				// must set 3 azs for zone failure
+				// a seed needs at least 3 zones to host a shoot with zone failure tolerance
 				seed.Spec.Provider.Zones = []string{"0", "1", "2"}
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2545,7 +2514,7 @@ var _ = Describe("validator", func() {
 			It("should pass IPv4 shoot pod and the seed node networks intersect (HA control plane)", func() {
 				shoot.Spec.Networking.Pods = &seedNodesCIDR
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-				// must set 3 azs for zone failure
+				// a seed needs at least 3 zones to host a shoot with zone failure tolerance
 				seed.Spec.Provider.Zones = []string{"0", "1", "2"}
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2578,7 +2547,7 @@ var _ = Describe("validator", func() {
 			It("should pass IPv4 shoot service and the seed node networks intersect (HA control plane)", func() {
 				shoot.Spec.Networking.Services = &seedNodesCIDR
 				shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-				// must set 3 azs for zone failure
+				// a seed needs at least 3 zones to host a shoot with zone failure tolerance
 				seed.Spec.Provider.Zones = []string{"0", "1", "2"}
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -3050,16 +3019,17 @@ var _ = Describe("validator", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.provider.workers[1].kubernetes.version",
 						Message: "Unsupported value: \"1.26.8\": supported values: \"1.28.0 (preview)\", \"1.27.3\", \"1.27.2\", \"1.26.6\", \"1.26.7\", \"1.25.11\"",
-					}))
+					},
+					metav1.StatusCause{
+						Type:    "FieldValueNotSupported",
+						Message: "Unsupported value: \"\": supported values: \"some-machine-image:0.0.1\"",
+						Field:   "spec.provider.workers[1].machine.image.version",
+					})))
 			})
 
 			It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
@@ -3210,16 +3180,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved CPU: 6\": total reserved CPU (kubeReserved) cannot be more than the Node's CPU capacity '5'",
-					}))
+					})))
 			})
 
 			It("should allow creation of Shoot if reserved CPU in the global kubeletConfig is more than CPU capacity but the worker kubeletConfig has lesser reserved CPU", func() {
@@ -3245,16 +3211,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved CPU: 6\": total reserved CPU (kubeReserved) cannot be more than the Node's CPU capacity '5'",
-					}))
+					})))
 			})
 
 			It("should not allow creation of Shoot if kubeReserved CPU is more than CPU capacity", func() {
@@ -3268,16 +3230,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved CPU: 12\": total reserved CPU (kubeReserved) cannot be more than the Node's CPU capacity '5'",
-					}))
+					})))
 			})
 
 			It("should not allow creation of Shoot if sum of kubeReserved and systemReserved CPU is more than CPU capacity", func() {
@@ -3289,16 +3247,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved CPU: 6\": total reserved CPU (kubeReserved) cannot be more than the Node's CPU capacity '5'",
-					}))
+					})))
 			})
 
 			It("should not allow creation of Shoot if reserved memory in the global kubeletConfig is more than memory capacity and worker kubeletConfig is nil", func() {
@@ -3312,16 +3266,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved memory: 6Gi\": total reserved memory (kubeReserved) cannot be more than the Node's memory capacity '5Gi'",
-					}))
+					})))
 			})
 
 			It("should allow creation of Shoot if reserved memory in the global kubeletConfig is more than memory capacity but the worker kubeletConfig have lesser reserved memory", func() {
@@ -3347,16 +3297,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved memory: 6Gi\": total reserved memory (kubeReserved) cannot be more than the Node's memory capacity '5Gi'",
-					}))
+					})))
 			})
 
 			It("should not allow creation of Shoot if kubeReserved memory is more than memory capacity", func() {
@@ -3370,16 +3316,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved memory: 12Gi\": total reserved memory (kubeReserved) cannot be more than the Node's memory capacity '5Gi'",
-					}))
+					})))
 			})
 
 			It("should not allow creation of Shoot if sum of kubeReserved and systemReserved memory is more than memory capacity", func() {
@@ -3391,16 +3333,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved memory: 6Gi\": total reserved memory (kubeReserved) cannot be more than the Node's memory capacity '5Gi'",
-					}))
+					})))
 			})
 
 			It("should not allow update of Shoot if reserved CPU is more than CPU capacity", func() {
@@ -3413,16 +3351,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved CPU: 6\": total reserved CPU (kubeReserved) cannot be more than the Node's CPU capacity '5'",
-					}))
+					})))
 			})
 
 			It("should not allow update of Shoot if reserved memory is more than memory capacity", func() {
@@ -3435,16 +3369,12 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ContainElement(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Field:   "spec.provider.workers[1].kubernetes.kubelet",
 						Message: "Invalid value: \"kubeReserved memory: 6Gi\": total reserved memory (kubeReserved) cannot be more than the Node's memory capacity '5Gi'",
-					}))
+					})))
 			})
 		})
 
@@ -5764,11 +5694,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(BeInvalidError())
-				var statusErr *apierrors.StatusError
-				Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
-
-				Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
-				Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
 						Message: "Invalid value: \"azure.provider.extensions.gardener.cloud/__internal, Kind=InfrastructureConfig\": must not use apiVersion 'internal'",
@@ -5799,7 +5725,7 @@ var _ = Describe("validator", func() {
 						Message: "Invalid value: \"some.api/__internal, Kind=ContainerRuntimeConfig\": must not use apiVersion 'internal'",
 						Field:   "spec.provider.workers[1].cri.containerRuntimes[0].providerConfig",
 					},
-				))
+				)))
 			})
 
 			It("admits new clusters using other apiVersion than 'internal'", func() {
