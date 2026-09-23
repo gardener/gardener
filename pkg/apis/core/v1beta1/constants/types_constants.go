@@ -110,6 +110,11 @@ const (
 	// kubeconfig secret in the garden cluster.
 	AnnotationKeyGenericTokenKubeconfigSecretName = "generic-token-kubeconfig.secret.gardener.cloud/name"
 
+	// AnnotationSeedNames is a constant for the key of an annotation on resources (Secrets, ConfigMaps,
+	// WorkloadIdentities) referenced in a Seed's spec. Its value is a comma-separated list of seed names
+	// that are permitted to reference the resource, or `*` to allow all seeds.
+	AnnotationSeedNames = "seed.gardener.cloud/names"
+
 	// ExtensionGardenServiceAccountPrefix is the prefix of the default garden ServiceAccount generated for each
 	// ControllerInstallation.
 	ExtensionGardenServiceAccountPrefix = "extension-"
