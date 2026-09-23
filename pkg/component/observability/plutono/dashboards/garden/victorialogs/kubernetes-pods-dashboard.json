@@ -449,6 +449,6 @@
   },
   "timezone": "browser",
   "title": "Kubernetes Pods",
-  "uid": "kube-pods",
+  "uid": "vl-kube-pods",
   "version": 1
 }

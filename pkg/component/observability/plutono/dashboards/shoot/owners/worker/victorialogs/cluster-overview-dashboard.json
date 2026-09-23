@@ -1999,6 +1999,6 @@
   },
   "timezone": "utc",
   "title": "Cluster Overview",
-  "uid": "cluster-overview",
+  "uid": "vl-cluster-overview",
   "version": 1
 }
