@@ -1642,6 +1642,9 @@ var _ = Describe("validator", func() {
 			It("should reject update because shoot access restrictions are not supported in this region", func() {
 				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
 
+				seed.Spec.AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
@@ -1651,11 +1654,6 @@ var _ = Describe("validator", func() {
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.accessRestrictions[0]",
 						Message: "Unsupported value: \"foo\"",
-					},
-					metav1.StatusCause{
-						Type:    "FieldValueForbidden",
-						Message: "Forbidden: access restriction \"foo\" is not supported by the seed",
-						Field:   "spec.accessRestrictions[0]",
 					},
 				)))
 			})
@@ -2998,7 +2996,8 @@ var _ = Describe("validator", func() {
 					Machine: core.Machine{
 						Type: "machine-type-1",
 						Image: &core.ShootMachineImage{
-							Name: validMachineImageName,
+							Name:    validMachineImageName,
+							Version: "0.0.1",
 						},
 						Architecture: new("amd64"),
 					},
@@ -3024,11 +3023,6 @@ var _ = Describe("validator", func() {
 						Type:    metav1.CauseTypeFieldValueNotSupported,
 						Field:   "spec.provider.workers[1].kubernetes.version",
 						Message: "Unsupported value: \"1.26.8\": supported values: \"1.28.0 (preview)\", \"1.27.3\", \"1.27.2\", \"1.26.6\", \"1.26.7\", \"1.25.11\"",
-					},
-					metav1.StatusCause{
-						Type:    "FieldValueNotSupported",
-						Message: "Unsupported value: \"\": supported values: \"some-machine-image:0.0.1\"",
-						Field:   "spec.provider.workers[1].machine.image.version",
 					})))
 			})
 
@@ -5697,33 +5691,33 @@ var _ = Describe("validator", func() {
 				Expect(err).To(HaveStatusCauses(ConsistOf(
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
-						Message: "Invalid value: \"azure.provider.extensions.gardener.cloud/__internal, Kind=InfrastructureConfig\": must not use apiVersion 'internal'",
 						Field:   "spec.provider.infrastructureConfig",
+						Message: "Invalid value: \"azure.provider.extensions.gardener.cloud/__internal, Kind=InfrastructureConfig\": must not use apiVersion 'internal'",
 					},
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
-						Message: "Invalid value: \"aws.provider.extensions.gardener.cloud/__internal, Kind=ControlPlaneConfig\": must not use apiVersion 'internal'",
 						Field:   "spec.provider.controlPlaneConfig",
+						Message: "Invalid value: \"aws.provider.extensions.gardener.cloud/__internal, Kind=ControlPlaneConfig\": must not use apiVersion 'internal'",
 					},
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
-						Message: "Invalid value: \"calico.networking.extensions.gardener.cloud/__internal, Kind=NetworkConfig\": must not use apiVersion 'internal'",
 						Field:   "spec.networking.providerConfig",
+						Message: "Invalid value: \"calico.networking.extensions.gardener.cloud/__internal, Kind=NetworkConfig\": must not use apiVersion 'internal'",
 					},
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
-						Message: "Invalid value: \"aws.provider.extensions.gardener.cloud/__internal, Kind=WorkerConfig\": must not use apiVersion 'internal'",
 						Field:   "spec.provider.workers[1].providerConfig",
+						Message: "Invalid value: \"aws.provider.extensions.gardener.cloud/__internal, Kind=WorkerConfig\": must not use apiVersion 'internal'",
 					},
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
-						Message: "Invalid value: \"memoryone-chost.os.extensions.gardener.cloud/__internal, Kind=OperatingSystemConfiguration\": must not use apiVersion 'internal'",
 						Field:   "spec.provider.workers[1].machine.image.providerConfig",
+						Message: "Invalid value: \"memoryone-chost.os.extensions.gardener.cloud/__internal, Kind=OperatingSystemConfiguration\": must not use apiVersion 'internal'",
 					},
 					metav1.StatusCause{
 						Type:    metav1.CauseTypeFieldValueInvalid,
-						Message: "Invalid value: \"some.api/__internal, Kind=ContainerRuntimeConfig\": must not use apiVersion 'internal'",
 						Field:   "spec.provider.workers[1].cri.containerRuntimes[0].providerConfig",
+						Message: "Invalid value: \"some.api/__internal, Kind=ContainerRuntimeConfig\": must not use apiVersion 'internal'",
 					},
 				)))
 			})
