@@ -159,7 +159,7 @@ var _ = Describe("ShootState", func() {
 						{
 							Name: "machine-state",
 							Type: "machine-state",
-							Data: runtime.RawExtension{Raw: []byte(`{"state":"H4sIAAAAAAAC/+yUPWv7MBDGv8vN8mAn/8XrP0unDkmnkuEqHcRFb0iXQgj67kWynaS0kJcWUtJ4sXR6Tjz80D1bMChXnaUZee02hixHaLegyrbOy0BedxIjtBMxqueUZc9bMMSokDELLRqCdmytInENolSjR5mP4so5riqzqXxwryT7damCALTWMXLnbLEQXbluX4WUBERPMp8ORv5rjFmdBDAZr5GpnO5tHfTIvdg6RYtjDSl/AiIjr4sljZEfPYXezlB48gqZFl12a9da555jYJqzwGh8IR0/3wTplqAtd6/rlKfVVIP4SigPsPjg3jpF4WEG7W5TdQpOJ3Y+LwFyHQJZnn9ovOQx1iPK+lKUTmV5/pXbv8HyNwBbJjHgaS7PvyaTndzz72sw058Y2uaP5l9PcBzaf9dBeRv510/piHJ6z78+/1J6DwAA//+Ak3pfGAoAAA=="}`)},
+							Data: runtime.RawExtension{Raw: reencodeMachineState(`{"state":"H4sIAAAAAAAC/+yUPWv7MBDGv8vN8mAn/8XrP0unDkmnkuEqHcRFb0iXQgj67kWynaS0kJcWUtJ4sXR6Tjz80D1bMChXnaUZee02hixHaLegyrbOy0BedxIjtBMxqueUZc9bMMSokDELLRqCdmytInENolSjR5mP4so5riqzqXxwryT7damCALTWMXLnbLEQXbluX4WUBERPMp8ORv5rjFmdBDAZr5GpnO5tHfTIvdg6RYtjDSl/AiIjr4sljZEfPYXezlB48gqZFl12a9da555jYJqzwGh8IR0/3wTplqAtd6/rlKfVVIP4SigPsPjg3jpF4WEG7W5TdQpOJ3Y+LwFyHQJZnn9ovOQx1iPK+lKUTmV5/pXbv8HyNwBbJjHgaS7PvyaTndzz72sw058Y2uaP5l9PcBzaf9dBeRv510/piHJ6z78+/1J6DwAA//+Ak3pfGAoAAA=="}`)},
 						},
 					},
 					Extensions: []gardencorev1beta1.ExtensionResourceState{
@@ -291,6 +291,20 @@ var _ = Describe("ShootState", func() {
 		})
 	})
 })
+
+// reencodeMachineState decompresses the given (gzip-compressed and base64-encoded) machine state and recompresses it with
+// the current Go toolchain. The exact output of compress/gzip is not stable across Go versions (e.g. the flate encoder
+// changed with Go 1.27), so the compressed bytes cannot be hardcoded without making the test toolchain-dependent.
+// Re-encoding keeps the logical machine state pinned while producing bytes that match what Deploy computes at runtime.
+func reencodeMachineState(state string) []byte {
+	machineState, err := UnmarshalMachineState([]byte(state))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	reencoded, err := MarshalMachineState(machineState)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	return reencoded
+}
 
 func newSecret(name, namespace string, withPersistLabel bool, withManagedByLabel bool, opts ...func(*corev1.Secret)) *corev1.Secret {
 	secret := &corev1.Secret{
