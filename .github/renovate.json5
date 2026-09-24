@@ -469,16 +469,6 @@
       ],
     },
     {
-      // Go versions must be in sync with golangci-lint.
-      matchDatasources: [
-        'golang-version',
-      ],
-      matchFileNames: [
-        'hack/tools/go\\.mod',
-      ],
-      enabled: false,
-    },
-    {
       // Update only patch levels for cluster-autoscaler container images.
       // There is a different minor version for each Kubernetes version active at the same time. In this scenario,
       // renovate is able to handle patch updates properly only.
