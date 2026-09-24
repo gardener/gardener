@@ -51,13 +51,12 @@ patches:
           registryBurst: 20
           serverTLSBootstrap: true
         - |
-          # TODO(ialidzhikov): Use the kubeadm.k8s.io/v1beta4 API when kind supports it (ref https://github.com/kubernetes-sigs/kind/pull/3675).
-          # Currently kind accepts kubeadm.k8s.io/v1beta3 only.
-          apiVersion: kubeadm.k8s.io/v1beta3
+          apiVersion: kubeadm.k8s.io/v1beta4
           kind: ClusterConfiguration
           apiServer:
             extraArgs:
-              authentication-config: /etc/gardener-local/kube-apiserver/structured-authentication.yaml
+            - name: authentication-config
+              value: /etc/gardener-local/kube-apiserver/structured-authentication.yaml
             extraVolumes:
             - name: structured-authentication
               mountPath: /etc/gardener-local/kube-apiserver/structured-authentication.yaml
