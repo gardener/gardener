@@ -223,18 +223,25 @@ $(KUSTOMIZE): $(call tool_version_file,$(KUSTOMIZE),$(KUSTOMIZE_VERSION))
 # Build logcheck with the same toolchain as golangci-lint (required for plugin loading). Depending on $(GOLANGCI_LINT)
 # ensures the host binary is (re)built from the current main go.mod before the plugin is — see also the composite
 # marker on $(GOLANGCI_LINT), which guarantees both invalidate together.
+# The macOS 27 linker (ld-prime) emits chained-fixup metadata that the Go plugin runtime's dlopen path rejects with
+# "chained fixups, seg_count does not match number of segments". Forcing the classic (LC_DYLD_INFO_ONLY) fixup format
+# via -no_fixup_chains produces plugins that load. The flag is ld64-only, so restrict it to darwin builds.
+ifeq ($(SYSTEM_NAME),darwin)
+PLUGIN_BUILD_FLAGS := -ldflags=-extldflags=-Wl,-no_fixup_chains
+endif
+
 ifeq ($(IS_GARDENER),true)
 $(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
-	cd $(GARDENER_LOGCHECK_DIR); GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
+	cd $(GARDENER_LOGCHECK_DIR); GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion | cut -d- -f1) CGO_ENABLED=1 go build $(PLUGIN_BUILD_FLAGS) -o $(abspath $(LOGCHECK)) -buildmode=plugin ./plugin
 else
 $(LOGCHECK): $(call tool_version_file,$(LOGCHECK),$(LOGCHECK_VERSION)) $(GOLANGCI_LINT)
 	@[ -n "$(GARDENER_LOGCHECK_DIR)" ] || { echo "GARDENER_LOGCHECK_DIR is not set, cannot build logcheck plugin. Consider adding github.com/gardener/gardener/hack/tools/logcheck as dependency if errors occur." >&2; exit 1; }
-	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(LOGCHECK) -buildmode=plugin $(GARDENER_LOGCHECK_DIR)/plugin
+	GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion | cut -d- -f1) CGO_ENABLED=1 go build $(PLUGIN_BUILD_FLAGS) -o $(LOGCHECK) -buildmode=plugin $(GARDENER_LOGCHECK_DIR)/plugin
 endif
 
 # Build kube-api-linter plugin with the same toolchain as golangci-lint (required for plugin loading).
 $(KUBE_API_LINTER): $(call tool_version_file,$(KUBE_API_LINTER),$(KUBE_API_LINTER_VERSION)) $(GOLANGCI_LINT)
-	cd $(GARDENER_TOOL_DIR)/kube-api-linter; GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion) CGO_ENABLED=1 go build -o $(abspath $(KUBE_API_LINTER)) -buildmode=plugin ./plugin
+	cd $(GARDENER_TOOL_DIR)/kube-api-linter; GOTOOLCHAIN=$(shell go version -m -json $(GOLANGCI_LINT) | jq -r .GoVersion | cut -d- -f1) CGO_ENABLED=1 go build $(PLUGIN_BUILD_FLAGS) -o $(abspath $(KUBE_API_LINTER)) -buildmode=plugin ./plugin
 
 $(PROMTOOL): $(call tool_version_file,$(PROMTOOL),$(PROMTOOL_VERSION))
 	@PROMTOOL_VERSION=$(PROMTOOL_VERSION) $(GARDENER_TOOL_DIR)/install-promtool.sh
