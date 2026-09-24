@@ -11,6 +11,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -62,5 +63,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
-	return reconcile.Result{RequeueAfter: time.Duration(r.LeaseDurationSeconds) * time.Second / 4}, nil
+	waitTime := wait.Jitter(time.Duration(r.LeaseDurationSeconds)*time.Second/4, 0.1)
+	return reconcile.Result{RequeueAfter: waitTime}, nil
 }

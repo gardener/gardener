@@ -67,7 +67,10 @@ var _ = Describe("Reconciler", func() {
 		It("should create the heartbeat lease with the expected fields and owner reference", func() {
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.RequeueAfter).To(Equal(10 * time.Second)) // 40s / 4 = 10s
+			Expect(result.RequeueAfter).To(And(
+				BeNumerically(">=", 10*time.Second),
+				BeNumerically("<", 11*time.Second),
+			))
 
 			l := &coordinationv1.Lease{}
 			Expect(c.Get(ctx, leaseKey, l)).To(Succeed())
