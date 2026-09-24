@@ -203,7 +203,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					expectSecrets(fakeClient,
 						"my-extension-ca-013c464d", "my-extension-ca-bundle-5d66d235",
 						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-203815c3",
-						"some-server-311b1512", "some-secret-4b8f9d51")
+						serverSecretName(fakeClient, "some-server"), "some-secret-4b8f9d51")
 				})
 			})
 
@@ -227,7 +227,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 						expectSecrets(fakeClient,
 							"my-extension-ca-013c464d", "my-extension-ca-bundle-13af9da9",
 							"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-31a61b2d",
-							"some-server-6a316552", "some-secret-4b8f9d51")
+							serverSecretName(fakeClient, "some-server"), "some-secret-4b8f9d51")
 					})
 				})
 
@@ -249,7 +249,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 						expectSecrets(fakeClient,
 							"my-extension-ca-013c464d", "my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-44e6e2d3",
 							"my-extension-ca-2-673cf9ab", "my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-87b16f32",
-							"some-server-6a316552", "some-secret-4b8f9d51")
+							serverSecretName(fakeClient, "some-server"), "some-secret-4b8f9d51")
 					})
 				})
 
@@ -271,7 +271,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 						expectSecrets(fakeClient,
 							"my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-d36ef68b",
 							"my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-b966633c",
-							"some-server-adeebe1f", "some-secret-4b8f9d51")
+							serverSecretName(fakeClient, "some-server"), "some-secret-4b8f9d51")
 					})
 				})
 			})
@@ -446,6 +446,19 @@ func expectSecrets(c client.Reader, secretNames ...string) {
 	secretList := &corev1.SecretList{}
 	ExpectWithOffset(1, c.List(context.Background(), secretList, client.MatchingLabels{"managed-by": "secrets-manager"})).To(Succeed())
 	ExpectWithOffset(1, secretList.Items).To(consistOfObjects(secretNames...))
+}
+
+// serverSecretName returns the name of the single secret managed by the secrets manager for the given config name. It is
+// used for server certificates whose name suffix is derived from the generated certificate bytes. These bytes are not
+// guaranteed to be stable across Go toolchain versions (e.g. crypto/x509 output changed with Go 1.27), so the suffix
+// cannot be hardcoded without making the test toolchain-dependent. The other secrets (CAs, bundles, and their rotation
+// suffixes) have stable, deterministic names and encode the rotation behavior under test, so those are still asserted
+// with their exact names.
+func serverSecretName(c client.Reader, configName string) string { //nolint:unparam
+	secretList := &corev1.SecretList{}
+	ExpectWithOffset(1, c.List(context.Background(), secretList, client.MatchingLabels{"name": configName})).To(Succeed())
+	ExpectWithOffset(1, secretList.Items).To(HaveLen(1))
+	return secretList.Items[0].Name
 }
 
 func expectSecretsForConfig(c client.Reader, config secretsutils.ConfigInterface, description string, secretNames ...string) {
