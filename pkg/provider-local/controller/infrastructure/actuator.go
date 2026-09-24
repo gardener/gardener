@@ -48,8 +48,11 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 	}
 
 	// Apply the machine namespace first, so we can use its UUID as owner reference for the IPPools.
+	// This is done with the privileged runtime client rather than the (potentially workload-identity-scoped)
+	// provider client: the workload identity subject has no permission to create namespaces, and the Role granting it
+	// permissions lives inside this very namespace, so it cannot bootstrap itself.
 	machineNamespace := namespace(cluster.Shoot.Status.TechnicalID)
-	if err := providerClient.Patch(ctx, machineNamespace, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+	if err := a.runtimeClient.Patch(ctx, machineNamespace, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 		return err
 	}
 
@@ -82,46 +85,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 			Name:     claims.Subject,
 		}
 
-		role := emptyRole(infrastructure.Namespace)
-		role.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{corev1.SchemeGroupVersion.Group},
-				Resources: []string{"services"},
-				Verbs:     []string{"create", "delete", "get", "patch"},
-			},
-			{
-				APIGroups: []string{networkingv1.SchemeGroupVersion.Group},
-				Resources: []string{"networkpolicies"},
-				Verbs:     []string{"create", "delete", "get", "patch"},
-			},
-		}
-
-		roleBinding := emptyRoleBinding(infrastructure.Namespace)
-		roleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.SchemeGroupVersion.Group,
-			Kind:     "Role",
-			Name:     role.Name,
-		}
-		roleBinding.Subjects = []rbacv1.Subject{subject}
-
-		clusterRole := emptyClusterRole(infrastructure.Namespace)
-		clusterRole.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{"crd.projectcalico.org"},
-				Resources: []string{"ippools"},
-				Verbs:     []string{"create", "delete", "get", "patch"},
-			},
-		}
-
-		clusterRoleBinding := emptyClusterRoleBinding(infrastructure.Namespace)
-		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.SchemeGroupVersion.Group,
-			Kind:     "ClusterRole",
-			Name:     clusterRole.Name,
-		}
-		clusterRoleBinding.Subjects = []rbacv1.Subject{subject}
-
-		for _, obj := range []client.Object{role, roleBinding, clusterRole, clusterRoleBinding} {
+		for _, obj := range workloadIdentityRBACObjects(NamespaceName(cluster.Shoot.Status.TechnicalID), infrastructure.Namespace, subject) {
 			if err := a.runtimeClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 				return err
 			}
@@ -179,9 +143,9 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 		return err
 	}
 
+	// The workload identity Role/RoleBinding live in the machine namespace and are removed by the namespace deletion
+	// above. Only the cluster-scoped ClusterRole/ClusterRoleBinding must be cleaned up explicitly.
 	return kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
-		emptyRole(infrastructure.Namespace),
-		emptyRoleBinding(infrastructure.Namespace),
 		emptyClusterRole(infrastructure.Namespace),
 		emptyClusterRoleBinding(infrastructure.Namespace),
 	)
@@ -247,6 +211,68 @@ func emptyClusterRoleBinding(namespace string) *rbacv1.ClusterRoleBinding {
 			Name: "provider-local-infrastructure:" + namespace,
 		},
 	}
+}
+
+// workloadIdentityRBACObjects returns the RBAC objects that authorize the workload identity subject to manage the
+// provider-local machine resources. The Role/RoleBinding live in the machine namespace (infra-<technicalID>), where the
+// machine-controller-manager creates pods, userdata secrets and services. The cluster-scoped ClusterRole/
+// ClusterRoleBinding (named after the shoot control plane namespace) grant access to the calico IPPools.
+func workloadIdentityRBACObjects(machineNamespace, shootNamespace string, subject rbacv1.Subject) []client.Object {
+	role := emptyRole(machineNamespace)
+	role.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"pods"},
+			Verbs:     []string{"create", "delete", "get", "list", "patch", "watch"},
+		},
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"pods/exec"},
+			Verbs:     []string{"create", "get"},
+		},
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"create", "get", "patch"},
+		},
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"services"},
+			Verbs:     []string{"create", "delete", "get", "patch"},
+		},
+		{
+			APIGroups: []string{networkingv1.SchemeGroupVersion.Group},
+			Resources: []string{"networkpolicies"},
+			Verbs:     []string{"create", "delete", "get", "patch"},
+		},
+	}
+
+	roleBinding := emptyRoleBinding(machineNamespace)
+	roleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.SchemeGroupVersion.Group,
+		Kind:     "Role",
+		Name:     role.Name,
+	}
+	roleBinding.Subjects = []rbacv1.Subject{subject}
+
+	clusterRole := emptyClusterRole(shootNamespace)
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"crd.projectcalico.org"},
+			Resources: []string{"ippools"},
+			Verbs:     []string{"create", "delete", "get", "patch"},
+		},
+	}
+
+	clusterRoleBinding := emptyClusterRoleBinding(shootNamespace)
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.SchemeGroupVersion.Group,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{subject}
+
+	return []client.Object{role, roleBinding, clusterRole, clusterRoleBinding}
 }
 
 func namespace(technicalID string) *corev1.Namespace {
