@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -306,6 +307,55 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 
 		It("should not create any network policies", func() {
 			By("Ensure no policies are created")
+			ensureNetworkPoliciesDoNotGetCreated()
+		})
+	})
+
+	Context("service with a network policy pod selector override", func() {
+		BeforeEach(func() {
+			service.Spec.Selector = map[string]string{
+				"statefulset.kubernetes.io/pod-name": "vpn-seed-server-0",
+			}
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingNetworkPolicyPodSelector, "{\"matchLabels\":{\"app\":\"vpn-seed-server\"}}")
+		})
+
+		It("should use the override for generated policies while preserving the Service selector", func() {
+			By("Wait until the ingress policy was created")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port1Suffix, Namespace: service.Namespace}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "vpn-seed-server"}},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{{
+					From:  []networkingv1.NetworkPolicyPeer{{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + service.Name + port1Suffix: "allowed"}}}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port1Protocol, Port: &port1TargetPort}},
+				}},
+			}))
+
+			By("Wait until the egress policy was created")
+			Eventually(func(g Gomega) networkingv1.NetworkPolicySpec {
+				networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Name + port1Suffix, Namespace: service.Namespace}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)).To(Succeed())
+				return networkPolicy.Spec
+			}).Should(Equal(networkingv1.NetworkPolicySpec{
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.resources.gardener.cloud/to-" + service.Name + port1Suffix: "allowed"}},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					To:    []networkingv1.NetworkPolicyPeer{{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "vpn-seed-server"}}}},
+					Ports: []networkingv1.NetworkPolicyPort{{Protocol: &port1Protocol, Port: &port1TargetPort}},
+				}},
+			}))
+		})
+	})
+
+	Context("service with an empty network policy pod selector override", func() {
+		BeforeEach(func() {
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingNetworkPolicyPodSelector, "{}")
+		})
+
+		It("should not create any network policies", func() {
 			ensureNetworkPoliciesDoNotGetCreated()
 		})
 	})
