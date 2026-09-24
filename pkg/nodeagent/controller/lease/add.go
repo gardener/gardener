@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -44,7 +45,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		For(&corev1.Node{}, builder.WithPredicates(nodePredicate, predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
-			RateLimiter:             workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Millisecond, 2*time.Second),
+			RateLimiter:             workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](wait.Jitter(time.Millisecond, 0.1), wait.Jitter(10*time.Second, 0.1)),
 			ReconciliationTimeout:   time.Duration(r.LeaseDurationSeconds) * time.Second,
 		}).
 		Complete(r)
