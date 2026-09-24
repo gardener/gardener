@@ -142,6 +142,7 @@ type ControlPlane struct {
 	EtcdDruid                component.DeployWaiter
 	EtcdMain                 etcd.Interface
 	EtcdEvents               etcd.Interface
+	EtcdPeerExposure         component.DeployWaiter
 	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
 	EventLogger              component.Deployer
 	IstioBasicAuthServer     component.DeployWaiter
