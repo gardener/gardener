@@ -6,6 +6,8 @@ package matchers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
@@ -13,6 +15,7 @@ import (
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -160,4 +163,19 @@ func ContainAnyOf(wanted ...string) types.GomegaMatcher {
 	}
 
 	return Or(matchers...)
+}
+
+// HaveStatusCauses transforms an error into the Causes of its *apierrors.StatusError
+// and applies the given matcher (e.g. ConsistOf / ContainElement).
+func HaveStatusCauses(causesMatcher types.GomegaMatcher) types.GomegaMatcher {
+	return WithTransform(func(err error) ([]metav1.StatusCause, error) {
+		var statusErr *apierrors.StatusError
+		if !errors.As(err, &statusErr) {
+			return nil, fmt.Errorf("expected an *apierrors.StatusError, got %T", err)
+		}
+		if statusErr.ErrStatus.Details == nil {
+			return nil, errors.New("expected .Status.Details to be set, got nil")
+		}
+		return statusErr.ErrStatus.Details.Causes, nil
+	}, causesMatcher)
 }
