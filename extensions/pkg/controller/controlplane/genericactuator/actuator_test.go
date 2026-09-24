@@ -7,6 +7,9 @@ package genericactuator
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
+	"maps"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -43,6 +46,7 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -128,16 +132,17 @@ var _ = Describe("Actuator", func() {
 
 		imageVector = imagevector.ImageVector([]*imagevector.ImageSource{})
 
-		checksums = map[string]string{
+		// staticChecksums and staticChecksumsNoConfig only contain the checksums of secrets/configmaps with deterministic
+		// content (the cloud provider secret and config). These are stable across Go toolchain versions. The checksums of
+		// the generated CA and cloud-controller-manager certificates are verified dynamically (see matchChecksums), because
+		// the certificate bytes are not guaranteed to be stable across toolchains (e.g. crypto/x509 output changed with Go
+		// 1.27).
+		staticChecksums = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
 			cloudProviderConfigName:                  "08a7bc7fe8f59b055f173145e211760a83f02cf89635cef26ebb351378635606",
-			caNameControlPlane:                       "4eaacd526bec01da8f0fbf602077712294caffe81f9fb366bb7d5dea91204246",
-			"cloud-controller-manager":               "1dac327f1cd4dd1c108446bb8b414e7a0551f792ad9ff1139b743a0046a1d659",
 		}
-		checksumsNoConfig = map[string]string{
+		staticChecksumsNoConfig = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
-			caNameControlPlane:                       "4eaacd526bec01da8f0fbf602077712294caffe81f9fb366bb7d5dea91204246",
-			"cloud-controller-manager":               "1dac327f1cd4dd1c108446bb8b414e7a0551f792ad9ff1139b743a0046a1d659",
 		}
 
 		configChartValues = map[string]any{
@@ -300,7 +305,7 @@ var _ = Describe("Actuator", func() {
 	})
 
 	DescribeTable("#Reconcile",
-		func(configName string, checksums map[string]string, webhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, withShootCRDsChart bool) {
+		func(configName string, staticChecksums map[string]string, webhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, withShootCRDsChart bool) {
 			var atomicWebhookConfig *atomic.Value
 			if webhookConfig != nil {
 				atomicWebhookConfig = &atomic.Value{}
@@ -372,6 +377,7 @@ var _ = Describe("Actuator", func() {
 			if configName != "" {
 				vp.EXPECT().GetConfigChartValues(ctx, cp, cluster).Return(configChartValues, nil)
 			}
+			checksums := matchChecksums(ctx, fakeClient, staticChecksums)
 			vp.EXPECT().GetControlPlaneChartValues(ctx, cp, cluster, gomock.Any(), checksums, false).Return(controlPlaneChartValues, nil)
 			vp.EXPECT().GetControlPlaneShootChartValues(ctx, cp, cluster, gomock.Any(), checksums).Return(controlPlaneShootChartValues, nil)
 			if withShootCRDsChart {
@@ -406,8 +412,8 @@ var _ = Describe("Actuator", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(ctx, fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-05334c48", "ca-provider-test-controlplane-bundle-67817cb3",
-				"cloud-controller-manager-c249bd1b",
+				caNameControlPlane, caNameControlPlane+"-bundle",
+				"cloud-controller-manager",
 			)
 
 			if webhookConfig != nil {
@@ -445,10 +451,10 @@ webhooks:
 
 			expectManagedResourceCreated(ctx, c, createdMRSecretForControlPlaneSeedChart, createdMRForControlPlaneSeedChart)
 		},
-		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", checksumsNoConfig, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no webhook)", cloudProviderConfigName, checksums, nil, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no shoot CRDs chart)", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false),
+		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, staticChecksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
+		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", staticChecksumsNoConfig, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
+		Entry("should deploy secrets and apply charts with correct parameters (no webhook)", cloudProviderConfigName, staticChecksums, nil, true),
+		Entry("should deploy secrets and apply charts with correct parameters (no shoot CRDs chart)", cloudProviderConfigName, staticChecksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false),
 	)
 
 	DescribeTable("#Delete",
@@ -602,10 +608,15 @@ func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfig
 }
 
 var (
+	// objectIdentifier identifies secrets managed by the secrets manager by their stable 'name' label instead of the
+	// hash-suffixed object name. The suffix is derived from the generated certificate bytes, which are not guaranteed to
+	// be stable across Go toolchain versions (e.g. crypto/x509 output changed with Go 1.27), so pinning it here would make
+	// the test toolchain-dependent. The actual content of the deployed resources is still verified by
+	// expectManagedResourceCreated.
 	objectIdentifier = Identifier(func(obj any) string {
 		switch o := obj.(type) {
 		case corev1.Secret:
-			return o.GetName()
+			return o.Labels[secretsmanager.LabelKeyName]
 		}
 		return obj.(client.Object).GetName()
 	})
@@ -625,6 +636,49 @@ func expectSecretsManagedBySecretsManager(ctx context.Context, c client.Reader, 
 	secretList := &corev1.SecretList{}
 	ExpectWithOffset(1, c.List(ctx, secretList, client.MatchingLabels{"managed-by": "secrets-manager"})).To(Succeed())
 	ExpectWithOffset(1, secretList.Items).To(consistOfObjects(secretNames...), description)
+}
+
+// matchChecksums returns a gomock matcher for the checksums map passed to the value provider. It verifies the entries for
+// secrets/configmaps with deterministic content (staticChecksums) against the expected literal values, and the entries
+// for the generated CA and cloud-controller-manager certificates against the checksum of the actually deployed secret
+// data. This avoids hardcoding the certificate checksums, which are not guaranteed to be stable across Go toolchain
+// versions. The matcher is evaluated at call time, i.e. after the secrets manager has deployed the secrets.
+func matchChecksums(ctx context.Context, c client.Reader, staticChecksums map[string]string) gomock.Matcher {
+	return &checksumsMatcher{ctx: ctx, client: c, staticChecksums: staticChecksums}
+}
+
+type checksumsMatcher struct {
+	ctx             context.Context
+	client          client.Reader
+	staticChecksums map[string]string
+	expected        map[string]string
+}
+
+func (m *checksumsMatcher) Matches(x any) bool {
+	actual, ok := x.(map[string]string)
+	if !ok {
+		return false
+	}
+
+	// Build the expected checksums: the static entries as-is, plus the checksums of the generated CA and
+	// cloud-controller-manager secrets computed from the data that the secrets manager actually deployed.
+	m.expected = maps.Clone(m.staticChecksums)
+	for _, name := range []string{caNameControlPlane, "cloud-controller-manager"} {
+		secretList := &corev1.SecretList{}
+		if err := m.client.List(m.ctx, secretList, client.MatchingLabels{secretsmanager.LabelKeyName: name}); err != nil {
+			return false
+		}
+		if len(secretList.Items) != 1 {
+			return false
+		}
+		m.expected[name] = utils.ComputeChecksum(secretList.Items[0].Data)
+	}
+
+	return reflect.DeepEqual(actual, m.expected)
+}
+
+func (m *checksumsMatcher) String() string {
+	return fmt.Sprintf("is equal to %v (static entries plus checksums of the deployed CA and cloud-controller-manager secrets)", m.expected)
 }
 
 func expectManagedResourceCreated(ctx context.Context, c client.Client, s *corev1.Secret, mr *resourcesv1alpha1.ManagedResource) {
