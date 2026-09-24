@@ -502,7 +502,6 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
 			features.DefaultFeatureGate.Enabled(features.RemoveVali) {
 			ignorePaths.Insert("vali")
-			ignorePaths.Insert("vali")
 		} else {
 			ignorePaths.Insert("victorialogs")
 		}
