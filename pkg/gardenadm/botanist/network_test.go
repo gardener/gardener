@@ -135,6 +135,41 @@ var _ = Describe("Network", func() {
 		})
 	})
 
+	Describe("#CheckControlPlaneNodeLabeled", func() {
+		var (
+			hostName = "foo"
+
+			node *corev1.Node
+		)
+
+		BeforeEach(func() {
+			node = &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "node-",
+					Labels:       map[string]string{"kubernetes.io/hostname": hostName},
+				},
+			}
+			b.HostName = hostName
+		})
+
+		It("should return an error because the Node does not exist yet", func() {
+			Expect(b.CheckControlPlaneNodeLabeled(ctx)).To(MatchError(ContainSubstring("was not created yet")))
+		})
+
+		It("should return an error because the Node does not carry the control-plane label yet", func() {
+			Expect(b.SeedClientSet.Client().Create(ctx, node)).To(Succeed())
+
+			Expect(b.CheckControlPlaneNodeLabeled(ctx)).To(MatchError(ContainSubstring("does not yet carry the \"node-role.kubernetes.io/control-plane\" label")))
+		})
+
+		It("should succeed because the Node carries the control-plane label", func() {
+			node.Labels["node-role.kubernetes.io/control-plane"] = ""
+			Expect(b.SeedClientSet.Client().Create(ctx, node)).To(Succeed())
+
+			Expect(b.CheckControlPlaneNodeLabeled(ctx)).To(Succeed())
+		})
+	})
+
 	Describe("#MachineIP", func() {
 		var ipv4, ipv6 net.IP
 

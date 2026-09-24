@@ -94,6 +94,9 @@ var _ = Describe("Reconciler", func() {
 						}
 
 						Expect(podSpec.Tolerations).To(ContainElement(corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule}))
+						Expect(podSpec.NodeSelector).To(HaveKeyWithValue("node-role.kubernetes.io/control-plane", ""))
+					} else {
+						Expect(podSpec.NodeSelector).NotTo(HaveKey("node-role.kubernetes.io/control-plane"))
 					}
 
 					Expect(podSpec.Tolerations).To(ContainElement(corev1.Toleration{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists}))
