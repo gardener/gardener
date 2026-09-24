@@ -27,14 +27,13 @@ func serialReconciliation(secret *corev1.Secret) bool {
 type leaderElector struct {
 	log    logr.Logger
 	client client.Client
-	reader client.Reader
 	clock  clock.Clock
 
 	identity string
 	lease    *coordinationv1.Lease
 }
 
-func newLeaderElectorForSecret(log logr.Logger, c client.Client, reader client.Reader, clock clock.Clock, secret *corev1.Secret, identity string) *leaderElector {
+func newLeaderElectorForSecret(log logr.Logger, c client.Client, clock clock.Clock, secret *corev1.Secret, identity string) *leaderElector {
 	var (
 		logger = log.WithName("leader-elector")
 		lease  *coordinationv1.Lease
@@ -55,7 +54,6 @@ func newLeaderElectorForSecret(log logr.Logger, c client.Client, reader client.R
 	return &leaderElector{
 		log:      logger,
 		client:   c,
-		reader:   reader,
 		clock:    clock,
 		identity: identity,
 		lease:    lease,
@@ -137,7 +135,7 @@ func (l *leaderElector) reload(ctx context.Context) error {
 		return nil
 	}
 
-	return client.IgnoreNotFound(l.reader.Get(ctx, client.ObjectKeyFromObject(l.lease), l.lease))
+	return client.IgnoreNotFound(l.client.Get(ctx, client.ObjectKeyFromObject(l.lease), l.lease))
 }
 
 func (l *leaderElector) tryAcquireOrRenew(ctx context.Context) error {
