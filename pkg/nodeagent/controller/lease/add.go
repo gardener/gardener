@@ -28,9 +28,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
-	if r.APIReader == nil {
-		r.APIReader = mgr.GetAPIReader()
-	}
 	if r.LeaseDurationSeconds == 0 {
 		r.LeaseDurationSeconds = 40
 	}
@@ -47,8 +44,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		For(&corev1.Node{}, builder.WithPredicates(nodePredicate, predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
+			RateLimiter:             workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Millisecond, 2*time.Second),
 			ReconciliationTimeout:   time.Duration(r.LeaseDurationSeconds) * time.Second,
-			RateLimiter:             workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Millisecond, time.Duration(r.LeaseDurationSeconds)*time.Second/8),
 		}).
 		Complete(r)
 }
