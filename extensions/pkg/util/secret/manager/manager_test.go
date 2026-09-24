@@ -17,6 +17,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/cert"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -203,7 +204,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					expectSecrets(fakeClient,
 						"my-extension-ca-013c464d", "my-extension-ca-bundle-5d66d235",
 						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-203815c3",
-						"some-server-311b1512", "some-secret-4b8f9d51")
+						expectServerSecretSignedByCA(fakeClient, "my-extension-ca-013c464d"), "some-secret-4b8f9d51")
 				})
 			})
 
@@ -227,7 +228,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 						expectSecrets(fakeClient,
 							"my-extension-ca-013c464d", "my-extension-ca-bundle-13af9da9",
 							"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-31a61b2d",
-							"some-server-6a316552", "some-secret-4b8f9d51")
+							expectServerSecretSignedByCA(fakeClient, "my-extension-ca-013c464d"), "some-secret-4b8f9d51")
 					})
 				})
 
@@ -249,7 +250,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 						expectSecrets(fakeClient,
 							"my-extension-ca-013c464d", "my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-44e6e2d3",
 							"my-extension-ca-2-673cf9ab", "my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-87b16f32",
-							"some-server-6a316552", "some-secret-4b8f9d51")
+							expectServerSecretSignedByCA(fakeClient, "my-extension-ca-013c464d"), "some-secret-4b8f9d51")
 					})
 				})
 
@@ -271,7 +272,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 						expectSecrets(fakeClient,
 							"my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-d36ef68b",
 							"my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-b966633c",
-							"some-server-adeebe1f", "some-secret-4b8f9d51")
+							expectServerSecretSignedByCA(fakeClient, "my-extension-ca-013c464d-431ab"), "some-secret-4b8f9d51")
 					})
 				})
 			})
@@ -446,6 +447,32 @@ func expectSecrets(c client.Reader, secretNames ...string) {
 	secretList := &corev1.SecretList{}
 	ExpectWithOffset(1, c.List(context.Background(), secretList, client.MatchingLabels{"managed-by": "secrets-manager"})).To(Succeed())
 	ExpectWithOffset(1, secretList.Items).To(consistOfObjects(secretNames...))
+}
+
+// expectServerSecretSignedByCA verifies that the single some-server secret is signed by the expected CA and returns its
+// name. Certificate bytes and their name suffixes can change across Go toolchains, so assert the signing CA instead to
+// verify that Preparing uses the old CA and Completing switches to the new CA.
+func expectServerSecretSignedByCA(c client.Reader, caSecretName string) string {
+	GinkgoHelper()
+
+	secretList := &corev1.SecretList{}
+	Expect(c.List(context.Background(), secretList, client.MatchingLabels{secretsmanager.LabelKeyName: "some-server"})).To(Succeed())
+	Expect(secretList.Items).To(HaveLen(1))
+	serverSecret := secretList.Items[0]
+
+	caSecret := &corev1.Secret{}
+	Expect(c.Get(context.Background(), client.ObjectKey{Namespace: serverSecret.Namespace, Name: caSecretName}, caSecret)).To(Succeed())
+	Expect(serverSecret.Data[secretsutils.DataKeyCertificateCA]).To(Equal(caSecret.Data[secretsutils.DataKeyCertificateCA]))
+
+	serverCertificates, err := cert.ParseCertsPEM(serverSecret.Data[secretsutils.DataKeyCertificate])
+	Expect(err).NotTo(HaveOccurred())
+	Expect(serverCertificates).To(HaveLen(1))
+	caCertificates, err := cert.ParseCertsPEM(caSecret.Data[secretsutils.DataKeyCertificateCA])
+	Expect(err).NotTo(HaveOccurred())
+	Expect(caCertificates).To(HaveLen(1))
+	Expect(serverCertificates[0].CheckSignatureFrom(caCertificates[0])).To(Succeed())
+
+	return serverSecret.Name
 }
 
 func expectSecretsForConfig(c client.Reader, config secretsutils.ConfigInterface, description string, secretNames ...string) {
