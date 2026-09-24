@@ -69,7 +69,9 @@ spec:
                       headers:
                       - name: Connection
                         string_match:
-                          exact: Upgrade
+                          safe_regex:
+                            # ConnectionUpgradeRegex matches the HTTP Connection header value for connection upgrade requests with multiple values and case insensitive
+                            regex: '(?i).*\bupgrade\b.*'
                       - name: Upgrade
                         present_match: true
                     route:

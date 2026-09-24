@@ -5,6 +5,8 @@
 package istio_test
 
 import (
+	"regexp"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -65,7 +67,7 @@ var _ = Describe("VirtualService", func() {
 		if withUpgrade {
 			Expect(virtualService.Spec.Http[0].Match).To(HaveLen(1))
 			Expect(virtualService.Spec.Http[0].Match[0].Headers).To(HaveLen(2))
-			Expect(virtualService.Spec.Http[0].Match[0].Headers["Connection"]).To(Equal(&istioapinetworkingv1beta1.StringMatch{MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}}))
+			Expect(virtualService.Spec.Http[0].Match[0].Headers["Connection"]).To(Equal(&istioapinetworkingv1beta1.StringMatch{MatchType: &istioapinetworkingv1beta1.StringMatch_Regex{Regex: ConnectionUpgradeRegex}}))
 			Expect(virtualService.Spec.Http[0].Match[0].Headers["Upgrade"]).To(Equal(&istioapinetworkingv1beta1.StringMatch{}))
 			Expect(virtualService.Spec.Http[0].Route).To(HaveLen(1))
 			Expect(virtualService.Spec.Http[0].Name).To(Equal(connectionUpgradeRouteName))
@@ -86,5 +88,24 @@ var _ = Describe("VirtualService", func() {
 		Entry("Nil values", nil, nil, nil, "", uint32(0), "", "", "", false),
 		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"foo-namespace"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "destination-upgrade.namespace.svc.cluster.local", "connection-upgrade", true),
 		Entry("Some values without upgrade", map[string]string{"foo": "bar", "key": "value"}, []string{"foo-namespace"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local", "", "", false),
+	)
+
+	DescribeTable("ConnectionUpgradeRegex",
+		func(headerValue string, expectedMatch bool) {
+			re := regexp.MustCompile(ConnectionUpgradeRegex)
+			Expect(re.MatchString(headerValue)).To(Equal(expectedMatch))
+		},
+		Entry("exact match capital Upgrade", "Upgrade", true),
+		Entry("lowercase upgrade", "upgrade", true),
+		Entry("uppercase UPGRADE", "UPGRADE", true),
+		Entry("multi-value with keep-alive prefix", "keep-alive, Upgrade", true),
+		Entry("multi-value with keep-alive prefix lowercase", "keep-alive, upgrade", true),
+		Entry("multi-value with keep-alive suffix", "Upgrade, keep-alive", true),
+		Entry("multi-value without space", "keep-alive,upgrade", true),
+		Entry("multi-value with multiple tokens", "keep-alive, upgrade, foo", true),
+		Entry("no match for close", "close", false),
+		Entry("no match for keep-alive", "keep-alive", false),
+		Entry("no match for empty header", "", false),
+		Entry("no match for word with upgrade as substring", "something_upgrade", false),
 	)
 })
