@@ -227,7 +227,7 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 				ClientEndpoints: []string{
 					fmt.Sprintf("https://%s:%d",
 						LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role),
-						etcdconstants.PortEtcdClient),
+						443),
 				},
 			},
 			ExtraPeerServiceDNSNames:    crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
