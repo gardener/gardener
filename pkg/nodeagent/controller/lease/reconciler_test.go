@@ -55,7 +55,6 @@ var _ = Describe("Reconciler", func() {
 
 			reconciler = &lease.Reconciler{
 				Client:               c,
-				APIReader:            c,
 				LeaseDurationSeconds: 40,
 				Namespace:            metav1.NamespaceSystem,
 				Clock:                fakeClock,
