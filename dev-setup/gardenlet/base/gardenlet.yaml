@@ -16,6 +16,7 @@ spec:
       PrometheusHealthChecks: true
       VictoriaLogsBackend: true
       RemoveHTTPProxyLegacyPort: true
+      LiveControlPlaneMigration: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true

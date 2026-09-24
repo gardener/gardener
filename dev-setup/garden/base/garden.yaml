@@ -59,6 +59,7 @@ spec:
         admissionPlugins:
         - name: MutatingAdmissionPolicy
         featureGates:
+          LiveControlPlaneMigration: true
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
           DisableNginxIngressInShoot: true
