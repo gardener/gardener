@@ -48,7 +48,7 @@ func (credentialsBindingStrategy) Validate(_ context.Context, obj runtime.Object
 func (credentialsBindingStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (credentialsBindingStrategy) AllowCreateOnUpdate() bool {
+func (credentialsBindingStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -58,7 +58,7 @@ func (credentialsBindingStrategy) ValidateUpdate(_ context.Context, newObj, oldO
 	return validation.ValidateCredentialsBindingUpdate(newCredentialsBinding, oldCredentialsBinding)
 }
 
-func (credentialsBindingStrategy) AllowUnconditionalUpdate() bool {
+func (credentialsBindingStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

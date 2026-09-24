@@ -39,7 +39,7 @@ func (quotaStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 func (quotaStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (quotaStrategy) AllowCreateOnUpdate() bool {
+func (quotaStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -53,7 +53,7 @@ func (quotaStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Ob
 	return validation.ValidateQuotaUpdate(newQuota, oldQuota)
 }
 
-func (quotaStrategy) AllowUnconditionalUpdate() bool {
+func (quotaStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return true
 }
 

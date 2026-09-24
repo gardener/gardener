@@ -248,6 +248,14 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	return auth.DecisionNoOpinion, "", nil
 }
 
+func (a *authorizer) ConditionsAwareAuthorize(ctx context.Context, attrs auth.Attributes) auth.ConditionsAwareDecision {
+	return auth.ConditionsAwareDecisionFromParts(a.Authorize(ctx, attrs))
+}
+
+func (a *authorizer) EvaluateConditions(_ context.Context, _ auth.ConditionsAwareDecision, _ auth.ConditionsData) (auth.Decision, string, error) {
+	return auth.DecisionDeny, "", auth.ErrorConditionEvaluationNotSupported
+}
+
 func (a *authorizer) authorizeClusterRoleBinding(requestAuthorizer *authwebhook.RequestAuthorizer, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlet to delete its cluster role binding after bootstrapping (in this case, there is no `Seed` resource
 	// in the system yet, so we can't rely on the graph).
