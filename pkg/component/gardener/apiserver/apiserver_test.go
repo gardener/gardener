@@ -66,6 +66,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		clusterIP = "1.2.3.4"
 
 		fakeClient        client.Client
+		fakeAPIReader     client.Client
 		fakeSecretManager secretsmanager.Interface
 		values            Values
 		deployer          Interface
@@ -123,6 +124,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
+		fakeAPIReader = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Values: apiserver.Values{
@@ -145,7 +147,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			WorkloadIdentityTokenIssuer:       workloadIdentityIssuer,
 			TargetVersion:                     semver.MustParse("1.33.1"),
 		}
-		deployer = New(fakeClient, namespace, fakeSecretManager, values)
+		deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -804,7 +806,7 @@ resources:
 
 					DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
 						func(encryptWithCurrentKey bool) {
-							deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+							deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, Values{
 								Values: apiserver.Values{
 									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"}},
 									RuntimeVersion: semver.MustParse("1.33.1"),
@@ -922,7 +924,7 @@ resources:
 						auditConfig = &apiserver.AuditConfig{Webhook: &apiserver.AuditWebhook{Kubeconfig: kubeconfig}}
 					)
 
-					deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+					deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, Values{
 						Values: apiserver.Values{
 							Audit:          auditConfig,
 							RuntimeVersion: semver.MustParse("1.33.1"),
@@ -983,7 +985,7 @@ resources:
 							{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz"}, Kubeconfig: []byte("foo")},
 						}
 
-						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+						deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
@@ -1051,7 +1053,7 @@ rules:
 							auditConfig = &apiserver.AuditConfig{Policy: &policy}
 						)
 
-						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+						deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								Audit:          auditConfig,
 								RuntimeVersion: semver.MustParse("1.33.1"),
@@ -1133,7 +1135,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 							},
 						}
 
-						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+						deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
@@ -1207,7 +1209,7 @@ kubeConfigFile: /etc/kubernetes/foobar.yaml
 							},
 						}
 
-						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+						deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
@@ -1271,7 +1273,7 @@ kubeConfigFile: ""
 							},
 						}
 
-						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+						deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, Values{
 							Values: apiserver.Values{
 								EnabledAdmissionPlugins: admissionPlugins,
 								RuntimeVersion:          semver.MustParse("1.33.1"),
@@ -1413,7 +1415,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				Context("Kubernetes version >= 1.34", func() {
 					BeforeEach(func() {
 						values.RuntimeVersion = semver.MustParse("1.34.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
+						deployer = New(fakeClient, fakeAPIReader, namespace, fakeSecretManager, values)
 					})
 
 					It("should successfully deploy all resources", func() {
@@ -1458,7 +1460,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 			})
 
 			It("should fail because the runtime ManagedResource is unhealthy", func() {
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				Expect(fakeAPIReader.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceNameRuntime,
 						Namespace:  namespace,
@@ -1471,7 +1473,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 			})
 
 			It("should fail because the runtime ManagedResource is still progressing", func() {
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				Expect(fakeAPIReader.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceNameRuntime,
 						Namespace:  namespace,
@@ -1500,7 +1502,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 			})
 
 			It("should fail because the virtual ManagedResource is unhealthy", func() {
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				Expect(fakeAPIReader.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceNameRuntime,
 						Namespace:  namespace,
@@ -1525,7 +1527,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					},
 				})).To(Succeed())
 
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				Expect(fakeAPIReader.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceNameVirtual,
 						Namespace:  namespace,
@@ -1538,7 +1540,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 			})
 
 			It("should succeed because the both ManagedResource are healthy and progressed", func() {
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				Expect(fakeAPIReader.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceNameRuntime,
 						Namespace:  namespace,
@@ -1563,7 +1565,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					},
 				})).To(Succeed())
 
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				Expect(fakeAPIReader.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceNameVirtual,
 						Namespace:  namespace,
