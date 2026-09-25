@@ -686,7 +686,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 							},
 							Annotations: map[string]string{
 								"summary":     "Etcd3 " + e.values.Role + " DB size is approaching its configured quota.",
-								"description": "Etcd3 " + e.values.Role + ` DB size has reached {{ $value | humanizePercentage }} of its configured etcd quota. DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}, quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}. Etcd quota might need to be increased.`,
+								"description": "Etcd3 " + e.values.Role + ` DB size has reached {{ with query (printf "(etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"} / on (pod) group_left etcd_server_quota_backend_bytes{pod=\"%s\"}) * 100" $labels.pod $labels.pod) }}{{ . | first | value | printf "%.0f" }}{{ end }}% of its configured etcd quota. DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}, quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}. Etcd quota might need to be increased.`,
 							},
 						},
 						{
@@ -701,7 +701,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 							},
 							Annotations: map[string]string{
 								"summary":     "Etcd3 " + e.values.Role + " DB size has crossed its configured quota.",
-								"description": "Etcd3 " + e.values.Role + ` DB size has reached {{ $value | humanizePercentage }} of its configured etcd quota. DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}, quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}. Etcd quota must be increased to allow updates.`,
+								"description": "Etcd3 " + e.values.Role + ` DB size has reached {{ with query (printf "(etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"} / on (pod) group_left etcd_server_quota_backend_bytes{pod=\"%s\"}) * 100" $labels.pod $labels.pod) }}{{ . | first | value | printf "%.0f" }}{{ end }}% of its configured etcd quota. DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}, quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}. Etcd quota must be increased to allow updates.`,
 							},
 						},
 						{
