@@ -2372,7 +2372,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (priority_level) (apiserver_flowcontrol_request_concurrency_in_use{job=~\"$job\",pod=~\"$pod\"}) / on(priority_level) group_left apiserver_flowcontrol_nominal_limit_seats{job=~\"$job\",pod=~\"$pod\"} * 100",
+              "expr": "sum by (priority_level) (apiserver_flowcontrol_current_executing_seats{job=~\"$job\",pod=~\"$pod\"} or apiserver_flowcontrol_request_concurrency_in_use{job=~\"$job\",pod=~\"$pod\"}) / on(priority_level) group_left() apiserver_flowcontrol_nominal_limit_seats{job=~\"$job\",pod=~\"$pod\"} * 100",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{priority_level}}",
