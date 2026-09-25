@@ -67,6 +67,9 @@ func (c *ControlPlaneNodesEndpoints) Start(ctx context.Context) error {
 		return fmt.Errorf("failed creating directory %s: %w", filepath.Dir(v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints), err)
 	}
 
-	c.Log.Info("Writing file containing IP addresses of control plane nodes", "path", v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints)
+	c.Log.Info("Writing file containing IP addresses of control plane nodes",
+		"path", v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints,
+		"endpoints", endpoints,
+	)
 	return c.FS.WriteFile(v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints, []byte(strings.Join(endpoints, "\n")), 0600)
 }
