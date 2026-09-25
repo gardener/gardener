@@ -449,7 +449,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
 	}
 
-	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
+	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, newObjectMeta.Annotations, helper.IsShootSelfHosted(newSpec.Provider.Workers), fldPath.Child("dns"))...)
 	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
@@ -848,7 +848,18 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	return allErrs
 }
 
-func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, fldPath *field.Path) field.ErrorList {
+var domainChangeOperations = sets.New(
+	v1beta1constants.OperationRotateCAStart,
+	v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+	v1beta1constants.OperationRotateCredentialsStart,
+	v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
+)
+
+func domainChangeRequested(annotations map[string]string) bool {
+	return slices.ContainsFunc(v1beta1helper.GetShootGardenerOperations(annotations), domainChangeOperations.Has)
+}
+
+func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, annotations map[string]string, isSelfHosted bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if oldDNS != nil && newDNS == nil {
@@ -856,8 +867,8 @@ func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, fldPath *
 	}
 
 	if newDNS != nil && oldDNS != nil {
-		if oldDNS.Domain != nil && newDNS.Domain != oldDNS.Domain {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newDNS.Domain, oldDNS.Domain, fldPath.Child("domain"))...)
+		if oldDNS.Domain != nil && ptr.Deref(newDNS.Domain, "") != ptr.Deref(oldDNS.Domain, "") {
+			allErrs = append(allErrs, validateDomainChange(newDNS, oldDNS, annotations, isSelfHosted, fldPath)...)
 		}
 
 		if seedGotAssigned {
@@ -878,6 +889,32 @@ func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, fldPath *
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "changing primary provider type is not allowed"))
 			}
 		}
+	}
+
+	return allErrs
+}
+
+func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]string, isSelfHosted bool, fldPath *field.Path) field.ErrorList {
+	domainPath := fldPath.Child("domain")
+
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return apivalidation.ValidateImmutableField(newDNS.Domain, oldDNS.Domain, domainPath)
+	}
+
+	allErrs := field.ErrorList{}
+
+	switch {
+	case newDNS.Domain == nil:
+		allErrs = append(allErrs, field.Forbidden(domainPath, "the domain cannot be unset"))
+	// TODO(ftl): Remove this check once the selfhostedshootexposure controller patches all external DNSRecords.
+	case isSelfHosted:
+		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported for self-hosted shoots"))
+	case !domainChangeRequested(annotations):
+		allErrs = append(allErrs, field.Forbidden(domainPath, fmt.Sprintf("changing the domain is only allowed if the %s annotation requests one of the operations %v in the same request", v1beta1constants.GardenerOperation, sets.List(domainChangeOperations))))
+	}
+
+	if !apiequality.Semantic.DeepEqual(newDNS.Providers, oldDNS.Providers) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("providers"), "the DNS providers cannot be changed while the domain is changed"))
 	}
 
 	return allErrs

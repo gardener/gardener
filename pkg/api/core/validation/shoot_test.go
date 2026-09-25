@@ -2296,6 +2296,108 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			Context("changing the domain", func() {
+				var newShoot *core.Shoot
+
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile, State: core.LastOperationStateSucceeded}
+
+					newShoot = prepareShootForUpdate(shoot)
+					newShoot.Spec.DNS.Domain = new("another-domain.com")
+				})
+
+				It("should forbid updating the dns domain without an operation annotation", func() {
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.domain"),
+					}))))
+				})
+
+				DescribeTable("should allow updating the dns domain together with the start of a CA rotation",
+					func(operation string) {
+						metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, "gardener.cloud/operation", operation)
+
+						Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+					},
+
+					Entry("rotate-ca-start", "rotate-ca-start"),
+					Entry("rotate-ca-start-without-workers-rollout", "rotate-ca-start-without-workers-rollout"),
+					Entry("rotate-credentials-start", "rotate-credentials-start"),
+					Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
+				)
+
+				It("should forbid updating the dns domain with an unrelated operation annotation", func() {
+					metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, "gardener.cloud/operation", "reconcile")
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.domain"),
+					}))))
+				})
+
+				It("should forbid unsetting the dns domain", func() {
+					metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+					newShoot.Spec.DNS.Domain = nil
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.domain"),
+						"Detail": Equal("the domain cannot be unset"),
+					}))))
+				})
+
+				It("should forbid updating the dns domain of a self-hosted shoot", func() {
+					metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+					newShoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.domain"),
+						"Detail": Equal("changing the domain is not supported for self-hosted shoots"),
+					}))))
+				})
+
+				It("should forbid updating the dns providers while the domain is changed", func() {
+					metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+					newShoot.Spec.DNS.Providers[0].Domains = &core.DNSIncludeExclude{Include: []string{"foo.example.com"}}
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.providers"),
+						"Detail": Equal("the DNS providers cannot be changed while the domain is changed"),
+					}))))
+				})
+
+				It("should forbid updating the dns domain while a CA rotation is in progress", func() {
+					metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+					newShoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.CARotation{Phase: core.RotationPrepared},
+						},
+					}
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"),
+					}))))
+				})
+			})
+
 			It("should forbid updating the dns providers", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.DNS.Providers[0].Type = new("some-dns-provider")

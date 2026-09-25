@@ -23,7 +23,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 )
@@ -786,6 +788,53 @@ var _ = Describe("dns", func() {
 				attrs := admission.NewAttributesRecord(shoot, shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			Context("changing the domain", func() {
+				var oldShoot *core.Shoot
+
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
+
+					oldShoot = shoot.DeepCopy()
+					oldShoot.Spec.DNS.Domain = new("previous.domain.com")
+				})
+
+				It("should reject a changed domain which does not match the default domain scheme", func() {
+					shoot.Spec.DNS.Domain = new(fmt.Sprintf("%s.other-project.%s", shootName, domain))
+
+					attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					err := admissionHandler.Validate(ctx, attrs, nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.dns.domain"),
+							"Detail": ContainSubstring("shoot uses a default domain but does not match expected scheme"),
+						})),
+					))
+				})
+
+				It("should accept a changed domain which matches the default domain scheme", func() {
+					shoot.Spec.DNS.Domain = new(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain))
+
+					attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should accept a changed custom domain", func() {
+					shoot.Spec.DNS.Domain = new("my-own.domain.com")
+
+					attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
 			})
 
 			Context("#Shoot GenerateName used", func() {
