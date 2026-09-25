@@ -3009,6 +3009,12 @@ func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) 
 	}
 
 	if helper.IsShootSelfHosted(workers) {
+		for i, worker := range workers {
+			if worker.ControlPlane != nil && !helper.SystemComponentsAllowed(&worker) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("systemComponents", "allow"), "the control plane worker pool must allow system components"))
+			}
+		}
+
 		controlPlaneWorkersZonesSet := sets.New[string]()
 		for _, worker := range workers {
 			if worker.ControlPlane != nil {

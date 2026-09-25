@@ -10048,6 +10048,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(BeEmpty())
 			})
 
+			It("should forbid disallowing systemComponents on the control plane worker pool", func() {
+				workers[0].SystemComponents = &core.WorkerSystemComponents{Allow: false}
+
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("workers[0].systemComponents.allow"),
+					"Detail": ContainSubstring("the control plane worker pool must allow system components"),
+				}))))
+			})
+
 			It("should allow systemComponents on non control-plane worker pool if its zones are equal to the control-plane worker pool zones", func() {
 				workers[0].Zones = []string{"1"}
 				workers[1].Zones = []string{"1"}
