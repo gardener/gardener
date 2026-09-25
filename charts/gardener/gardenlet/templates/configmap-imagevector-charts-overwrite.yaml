@@ -1,0 +1,17 @@
+{{- if .Values.chartsImageVectorOverwrite }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gardenlet.imagevector-overwrite-charts.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" | trunc 32 }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
+data:
+{{ include "gardenlet.imagevector-overwrite-charts.data" . | indent 2 }}
+{{- end }}
