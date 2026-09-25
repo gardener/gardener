@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -879,6 +880,12 @@ func GetBackupConfigForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1b
 // end result is 'api.<domain>'.
 func GetAPIServerDomain(domain string) string {
 	return fmt.Sprintf("%s.%s", v1beta1constants.APIServerFQDNPrefix, domain)
+}
+
+// GetDomainFromAPIServerURL returns the domain for an api-server URL as it is advertised in
+// Shoot.status.advertisedAddresses, i.e. it reverses "https://" + GetAPIServerDomain(domain).
+func GetDomainFromAPIServerURL(url string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(url, "https://"), v1beta1constants.APIServerFQDNPrefix+".")
 }
 
 // IsKubeProxyIPVSMode checks if the shoot is running with kube-proxy in IPVS mode.
