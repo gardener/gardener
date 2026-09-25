@@ -1232,6 +1232,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 	return sharedcomponent.NewGardenerAPIServer(
 		ctx,
 		r.RuntimeClientSet.Client(),
+		r.RuntimeClientSet.APIReader(),
 		r.GardenNamespace,
 		metav1.ObjectMeta{Namespace: r.GardenNamespace, Name: garden.Name},
 		r.RuntimeVersion,
