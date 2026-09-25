@@ -5,9 +5,8 @@
 package health
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	pvcautoscalingv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CheckPersistentVolumeClaimAutoscaler checks whether the given PersistentVolumeClaimAutoscaler is healthy.
