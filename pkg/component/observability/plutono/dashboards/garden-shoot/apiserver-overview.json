@@ -3510,6 +3510,130 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "5xx error rate and 429 throttle rate as a percentage of total requests. 5xx indicates a server-side failure; 429 indicates intentional load shedding by APF. Streaming subresources are excluded from both.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "hiddenSeries": false,
+      "id": 107,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.2.1",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\",code=~\"5..\",subresource!~\"log|portforward|exec|proxy|attach\"}[$__rate_interval])) / sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\",subresource!~\"log|portforward|exec|proxy|attach\"}[$__rate_interval])) * 100",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "5xx \u2014 server errors",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\",code=\"429\",subresource!~\"log|portforward|exec|proxy|attach\"}[$__rate_interval])) / sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\",subresource!~\"log|portforward|exec|proxy|attach\"}[$__rate_interval])) * 100",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "429 \u2014 throttled (load shedding)",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "warning",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 1,
+          "yaxis": "left"
+        },
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 10,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Error & Throttle Rate %",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "% of requests",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": false,
