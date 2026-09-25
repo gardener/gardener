@@ -461,7 +461,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         "",
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -482,7 +481,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					})).To(Succeed())
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPreparing,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -504,7 +502,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					gardenerAPIServer.EXPECT().Wait(ctx)
 
 					gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(apiserver.ETCDEncryptionConfig{
-						RotationPhase:         gardencorev1beta1.RotationPreparing,
 						EncryptWithCurrentKey: true,
 						ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 						EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -513,7 +510,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					gardenerAPIServer.EXPECT().Deploy(ctx)
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPreparing,
 					EncryptWithCurrentKey: false,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -529,7 +525,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.RotationPrepared,
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPrepared,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -550,7 +545,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					})).To(Succeed())
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationCompleting,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -566,7 +560,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.RotationCompleted,
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationCompleted,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),

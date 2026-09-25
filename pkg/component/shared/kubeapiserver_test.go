@@ -1404,7 +1404,6 @@ authorizers:
 					})).To(Succeed())
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPreparing,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    []string{"secrets"},
 					EncryptedResources:    []string{"secrets"},
@@ -1426,7 +1425,6 @@ authorizers:
 					kubeAPIServer.EXPECT().Wait(ctx)
 
 					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(apiserver.ETCDEncryptionConfig{
-						RotationPhase:         gardencorev1beta1.RotationPreparing,
 						EncryptWithCurrentKey: true,
 						ResourcesToEncrypt:    []string{"secrets"},
 						EncryptedResources:    []string{"secrets"},
@@ -1435,7 +1433,6 @@ authorizers:
 					kubeAPIServer.EXPECT().Deploy(ctx)
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPreparing,
 					EncryptWithCurrentKey: false,
 					ResourcesToEncrypt:    []string{"secrets"},
 					EncryptedResources:    []string{"secrets"},
@@ -1451,7 +1448,6 @@ authorizers:
 				gardencorev1beta1.RotationPrepared,
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPrepared,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    []string{"secrets"},
 					EncryptedResources:    []string{"secrets"},
@@ -1472,7 +1468,6 @@ authorizers:
 					})).To(Succeed())
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationCompleting,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    []string{"secrets"},
 					EncryptedResources:    []string{"secrets"},
@@ -1488,7 +1483,6 @@ authorizers:
 				gardencorev1beta1.RotationCompleted,
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationCompleted,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    []string{"secrets"},
 					EncryptedResources:    []string{"secrets"},

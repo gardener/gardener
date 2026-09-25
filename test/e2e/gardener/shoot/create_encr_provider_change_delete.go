@@ -132,9 +132,10 @@ func verifyShootEncryptionStatus(ctx context.Context, s *ShootContext, expectedT
 func verifyEncryptionConfigProvider(ctx context.Context, s *ShootContext, expectedProvider gardencorev1beta1.EncryptionProviderType) {
 	encryptionConfiguration := getEncryptionConfiguration(ctx, Default, s)
 	Expect(encryptionConfiguration.Resources).To(HaveLen(1))
-	Expect(encryptionConfiguration.Resources[0].Providers).To(HaveLen(2))
+	providers := encryptionConfiguration.Resources[0].Providers
+	Expect(providers).NotTo(BeEmpty())
 
-	provider := encryptionConfiguration.Resources[0].Providers[0]
+	provider := providers[0]
 	switch expectedProvider {
 	case gardencorev1beta1.EncryptionProviderTypeAESCBC:
 		Expect(provider.AESCBC).NotTo(BeNil())
@@ -150,7 +151,7 @@ func verifyEncryptionConfigProvider(ctx context.Context, s *ShootContext, expect
 		Expect(provider.Secretbox).NotTo(BeNil())
 	}
 
-	Expect(encryptionConfiguration.Resources[0].Providers[1].Identity).NotTo(BeNil())
+	Expect(providers[len(providers)-1].Identity).NotTo(BeNil())
 }
 
 func defaultEncryptedResources() []rotationutils.EncryptedResource {

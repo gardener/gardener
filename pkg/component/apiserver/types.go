@@ -79,8 +79,6 @@ type AuditWebhook struct {
 
 // ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.
 type ETCDEncryptionConfig struct {
-	// RotationPhase specifies the credentials rotation phase of the encryption key.
-	RotationPhase gardencorev1beta1.CredentialsRotationPhase
 	// EncryptWithCurrentKey specifies whether the current encryption key should be used for encryption. If this is
 	// false and if there are two keys then the old key will be used for encryption while the current/new key will only
 	// be used for decryption.
