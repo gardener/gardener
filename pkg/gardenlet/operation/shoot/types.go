@@ -90,6 +90,9 @@ type Shoot struct {
 	InternalClusterDomain *string
 	// ExternalClusterDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalClusterDomain *string
+	// PriorExternalClusterDomain is the external domain which is replaced during a running domain migration.
+	// It is nil if no domain migration is running.
+	PriorExternalClusterDomain *string
 	// ExternalDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalDomain *gardenerutils.Domain
 
