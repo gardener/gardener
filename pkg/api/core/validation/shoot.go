@@ -1723,6 +1723,7 @@ func ValidateVerticalPodAutoscalerMaxAllowed(maxAllowed corev1.ResourceList, fld
 		}
 
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+		allErrs = append(allErrs, validateResourceQuantityResolution(resource, quantity, resourcePath)...)
 	}
 
 	return allErrs
@@ -3937,6 +3938,30 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 			}
 
 			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+			allErrs = append(allErrs, validateResourceQuantityResolution(resource, quantity, resourcePath)...)
+		}
+	}
+
+	return allErrs
+}
+
+// validateResourceQuantityResolution validates that the given quantity does not exceed the resolution supported by
+// the `vpa.k8s.io` admission webhook, i.e., that CPU quantities are a whole number of milli CPUs and memory
+// quantities are a whole number of bytes. Otherwise, the VerticalPodAutoscaler resource created from this value
+// would be rejected by the webhook, causing the reconciliation to fail.
+// See https://github.com/kubernetes/autoscaler/blob/9344916ae8eb013904419cbb4844f468e8b7cd73/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go#L343-L367
+// (validateResourceResolution, unexported).
+func validateResourceQuantityResolution(resourceName corev1.ResourceName, quantity resource.Quantity, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	switch resourceName {
+	case corev1.ResourceCPU:
+		if _, precisionPreserved := quantity.AsScale(resource.Milli); !precisionPreserved {
+			allErrs = append(allErrs, field.Invalid(fldPath, quantity.String(), "must be a whole number of milli CPUs"))
+		}
+	case corev1.ResourceMemory:
+		if _, precisionPreserved := quantity.AsScale(resource.Scale(0)); !precisionPreserved {
+			allErrs = append(allErrs, field.Invalid(fldPath, quantity.String(), "must be a whole number of bytes"))
 		}
 	}
 
