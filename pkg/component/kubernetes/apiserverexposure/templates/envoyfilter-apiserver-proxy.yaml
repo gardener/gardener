@@ -70,8 +70,7 @@ spec:
                       - name: Connection
                         string_match:
                           safe_regex:
-                            # ConnectionUpgradeRegex matches the HTTP Connection header value for connection upgrade requests with multiple values and case insensitive
-                            regex: '(?i).*\bupgrade\b.*'
+                            regex: '{{ .ConnectionUpgradeRegex }}'
                       - name: Upgrade
                         present_match: true
                     route:
