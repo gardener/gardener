@@ -1,0 +1,133 @@
+name: Renovate Post-Upgrade Tasks
+
+on:
+  pull_request:
+    branches:
+      - master
+      - 'release-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  post-upgrade-tasks:
+    name: Run Post-Upgrade Tasks
+    # Only run for Renovate PRs originating from a branch in this repository.
+    if: >-
+      github.repository == 'gardener/gardener' &&
+      startsWith(github.head_ref, 'renovate/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has-changes: ${{ steps.diff.outputs.has-changes }}
+      run-tidy: ${{ steps.tasks.outputs.run-tidy }}
+      run-generate: ${{ steps.tasks.outputs.run-generate }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: false
+          # Full history is required to diff against the PR base commit.
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Determine required tasks
+        id: tasks
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(git diff --name-only "${BASE_SHA}...HEAD")"
+
+          run_tidy=false
+          run_generate=false
+
+          # Run `make tidy` when any module's go.mod/go.sum changed. The repository contains multiple modules
+          # wired via `go.work` that all need to stay in sync, which `gomodTidy` alone does not guarantee.
+          if echo "${changed_files}" | grep -Eq '(^|/)go\.(mod|sum)$'; then
+            run_tidy=true
+          fi
+
+          # Run `make generate` when a changed go.mod bumps a Go API package because CRDs might have changed.
+          gomod_files="$(echo "${changed_files}" | grep -E '(^|/)go\.mod$' || true)"
+          if [ -n "${gomod_files}" ]; then
+            api_pattern='(/api(/|[[:space:]])|/apis(/|[[:space:]])|gardener/etcd-druid[[:space:]/]|gardener/machine-controller-manager[[:space:]/]|gardener/terminal-controller-manager[[:space:]/]|gardener/pvc-autoscaler[[:space:]/]|open-telemetry/opentelemetry-operator/apis[[:space:]/]|VictoriaMetrics/operator/api[[:space:]/]|perses/perses-operator[[:space:]/]|sigs\.k8s\.io/controller-tools[[:space:]/])'
+            # Match added content lines only ('^\+[^+]' skips the '+++ b/...' diff header, whose path may
+            # itself contain '/apis/' and cause a false positive).
+            if git diff "${BASE_SHA}...HEAD" -- ${gomod_files} | grep -E '^\+[^+]' | grep -Eq "${api_pattern}"; then
+              run_generate=true
+              run_tidy=true
+            fi
+          fi
+
+          echo "run-tidy=${run_tidy}" >> "${GITHUB_OUTPUT}"
+          echo "run-generate=${run_generate}" >> "${GITHUB_OUTPUT}"
+      - name: Run make tidy
+        if: steps.tasks.outputs.run-tidy == 'true'
+        run: PATH="${PATH}:$(go env GOROOT)/bin" make tidy
+      - name: Run make generate
+        if: steps.tasks.outputs.run-generate == 'true'
+        run: PATH="${PATH}:$(go env GOROOT)/bin" make generate MODE=sequential
+      - name: Capture changes
+        id: diff
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "has-changes=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "has-changes=true" >> "${GITHUB_OUTPUT}"
+            git diff --cached --binary > "${RUNNER_TEMP}/post-upgrade.patch"
+          fi
+      - name: Upload patch
+        if: steps.diff.outputs.has-changes == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: post-upgrade-changes
+          path: ${{ runner.temp }}/post-upgrade.patch
+          retention-days: 1
+
+  commit:
+    name: Commit Changes
+    needs: post-upgrade-tasks
+    if: needs.post-upgrade-tasks.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Set up git identity
+        uses: gardener/cc-utils/.github/actions/setup-git-identity@v1
+      - name: Download patch
+        uses: actions/download-artifact@v8
+        with:
+          name: post-upgrade-changes
+          path: ${{ runner.temp }}
+      - name: Apply patch and push
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          RUN_TIDY: ${{ needs.post-upgrade-tasks.outputs.run-tidy }}
+          RUN_GENERATE: ${{ needs.post-upgrade-tasks.outputs.run-generate }}
+        run: |
+          set -euo pipefail
+
+          git apply --3way --whitespace=nowarn "${RUNNER_TEMP}/post-upgrade.patch"
+          git add -A
+
+          if [ "${RUN_GENERATE}" = "true" ]; then
+            message="Run make tidy and make generate"
+          else
+            message="Run make tidy"
+          fi
+
+          git commit -m "${message}"
+          git push origin "HEAD:${HEAD_REF}"

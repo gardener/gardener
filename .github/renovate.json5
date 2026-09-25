@@ -18,6 +18,12 @@
   prFooter: '**Release note**:\n```other dependency\nNONE\n```',
   // Only rebase when there are conflicts. Prow tests against the latest state of master branch anyway before merging the PR.
   rebaseWhen: 'conflicted',
+  // Ignore the commits pushed by the `renovate-post-upgrade` GitHub Action (running `make tidy`/`make generate`)
+  // when detecting whether a branch was manually edited. Otherwise, Renovate would treat the branch as modified
+  // and stop updating the PR.
+  gitIgnoredAuthors: [
+    '41898282+github-actions[bot]@users.noreply.github.com',
+  ],
   customManagers: [
     {
       // Generic detection for pod-like image specifications.
@@ -130,47 +136,6 @@
         'digest',
       ],
       automerge: true,
-    },
-    {
-      // Run `make tidy` for all gomod updates because `gomodTidy` postUpdateOption only tidies the updated module,
-      // while this repository contains multiple modules wired via `go.work` that all need to stay in sync.
-      matchManagers: [
-        'gomod',
-      ],
-      postUpgradeTasks: {
-        commands: [
-          '/bin/bash -c "PATH=$PATH:$(go env GOROOT)/bin make tidy"',
-        ],
-        executionMode: 'branch',
-      },
-    },
-    {
-      // Run make generate when Go API packages have been changed because CRDs might have changed.
-      // Updates that match both this rule and the gomod make tidy rule above would run make generate only and
-      // silently skip make tidy, so this also runs make tidy.
-      matchDatasources: [
-        'go',
-        'github-releases', // Required for the gardener groups.
-      ],
-      postUpgradeTasks: {
-        commands: [
-          '/bin/bash -c "PATH=$PATH:$(go env GOROOT)/bin make tidy"',
-          '/bin/bash -c "PATH=$PATH:$(go env GOROOT)/bin make generate MODE=sequential"',
-        ],
-        executionMode: 'branch',
-      },
-      matchPackageNames: [
-        '/.+/api(/.+|$)/',
-        '/.+/apis(/.+|$)/',
-        '/.*gardener/etcd-druid$/',
-        '/.*gardener/machine-controller-manager$/',
-        '/.*gardener/terminal-controller-manager$/',
-        '/.*gardener/pvc-autoscaler$/',
-        '/.*open-telemetry/opentelemetry-operator/apis$/',
-        '/.*VictoriaMetrics/operator/api$/',
-        '/.*perses/perses-operator$/',
-        '/sigs\\.k8s\\.io/controller-tools/',
-      ],
     },
     {
       // Group Istio updates in one PR.
