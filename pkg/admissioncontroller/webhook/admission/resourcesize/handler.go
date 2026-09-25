@@ -6,6 +6,7 @@ package resourcesize
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -112,23 +113,30 @@ func (h *Handler) handle(ctx context.Context, req admission.Request) error {
 }
 
 func (h *Handler) handleSizeLimit(req admission.Request, log logr.Logger, limit *resource.Quantity) error {
-	objectSize, err := relevantObjectSize(req.Object.Raw)
+	// First try to compare the full object size which is faster and avoids decoding the object.
+	fullObjectSize := int64(len(req.Object.Raw))
+	if limit.CmpInt64(fullObjectSize) != -1 {
+		return nil
+	}
+
+	// If the full object size exceeds the limit, we decode the object and calculate the object size without irrelevant fields (status and managedFields) to avoid false positives.
+	reducedObjectSize, err := reducedObjectSize(req.Object.Raw)
 	if err != nil {
 		return err
 	}
-	if limit.CmpInt64(objectSize) == -1 {
+	if limit.CmpInt64(reducedObjectSize) == -1 {
 		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfigv1alpha1.AdmissionModeBlock {
-			log.Info("Maximum resource size exceeded, rejected request", "requestObjectSize", objectSize, "limit", limit)
+			log.Info("Maximum resource size exceeded, rejected request", "requestObjectSize", reducedObjectSize, "limit", limit)
 			metrics.RejectedResources.WithLabelValues(
 				fmt.Sprint(req.Operation),
 				req.Kind.Kind,
 				req.Namespace,
 				metricReasonSizeExceeded,
 			).Inc()
-			return apierrors.NewForbidden(schema.GroupResource{Group: req.Resource.Group, Resource: req.Resource.Resource}, req.Name, fmt.Errorf("maximum resource size exceeded! Size in request: %d bytes, max allowed: %s", objectSize, limit))
+			return apierrors.NewForbidden(schema.GroupResource{Group: req.Resource.Group, Resource: req.Resource.Resource}, req.Name, fmt.Errorf("maximum resource size exceeded! Size in request: %d bytes, max allowed: %s", reducedObjectSize, limit))
 		}
 
-		log.Info("Maximum resource size exceeded, request would be denied in blocking mode", "requestObjectSize", objectSize, "limit", limit)
+		log.Info("Maximum resource size exceeded, request would be denied in blocking mode", "requestObjectSize", reducedObjectSize, "limit", limit)
 	}
 
 	return nil
@@ -171,18 +179,28 @@ func (h *Handler) handleCountLimit(ctx context.Context, req admission.Request, l
 	return nil
 }
 
-func relevantObjectSize(rawObject []byte) (int64, error) {
-	var obj map[string]any
-	err := json.Unmarshal(rawObject, &obj)
-	if err != nil {
-		return 0, err
+func reducedObjectSize(rawObject []byte) (int64, error) {
+	var obj map[string]stdjson.RawMessage
+	if err := json.Unmarshal(rawObject, &obj); err != nil {
+		return 0, fmt.Errorf("failed to decode object: %w", err)
 	}
-	delete(obj, "status")
-	if obj["metadata"] != nil {
-		delete(obj["metadata"].(map[string]any), "managedFields")
+
+	objectSize := len(rawObject)
+
+	// Subtract status sub-resource
+	objectSize -= len(obj["status"])
+
+	// Subtract managedFields from metadata
+	if metadata, ok := obj["metadata"]; ok {
+		var metadataObj map[string]stdjson.RawMessage
+		if err := json.Unmarshal(metadata, &metadataObj); err != nil {
+			return 0, fmt.Errorf("failed to decode metadata: %w", err)
+		}
+
+		objectSize -= len(metadataObj["managedFields"])
 	}
-	marshalled, err := json.Marshal(obj)
-	return int64(len(marshalled)), err
+
+	return int64(objectSize), nil
 }
 
 func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {
