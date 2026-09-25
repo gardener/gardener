@@ -144,6 +144,10 @@ message GardenletSelfDeployment {
   // gardenlet.
   // +optional
   optional string componentImageVectorOverwrite = 4;
+
+  // ChartsImageVectorOverwrite is the image vector overwrite for the chart images deployed by this gardenlet.
+  // +optional
+  optional string chartsImageVectorOverwrite = 5;
 }
 
 // GardenletSpec specifies gardenlet deployment parameters and the configuration used to configure gardenlet.

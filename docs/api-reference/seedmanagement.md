@@ -579,6 +579,18 @@ string
 <p>ComponentImageVectorOverwrite is the component image vector overwrite for the components deployed by this<br />gardenlet.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>chartsImageVectorOverwrite</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ChartsImageVectorOverwrite is the image vector overwrite for the chart images deployed by this gardenlet.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
