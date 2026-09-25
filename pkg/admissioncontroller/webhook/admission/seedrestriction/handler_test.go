@@ -1156,7 +1156,7 @@ var _ = Describe("handler", func() {
 				})
 			})
 
-			When("resource is controllerinstallation", func() {
+			When("requested for ControllerInstallations", func() {
 				BeforeEach(func() {
 					request.Resource = metav1.GroupVersionResource{
 						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
@@ -1215,7 +1215,7 @@ var _ = Describe("handler", func() {
 				})
 			})
 
-			When("resource is managedseed", func() {
+			When("requested for ManagedSeeds", func() {
 				BeforeEach(func() {
 					request.Resource = metav1.GroupVersionResource{
 						Group:    seedmanagementv1alpha1.SchemeGroupVersion.Group,

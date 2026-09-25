@@ -144,25 +144,7 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 		if err := h.Decoder.Decode(request, newBucket); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
-
-		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
-		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-
-		if seed.Spec.Backup == nil {
-			return admission.Errored(http.StatusForbidden, errors.New("gardenlet's seed has no backup configuration"))
-		}
-
-		backup := seed.Spec.Backup
-		region := ptr.Deref(backup.Region, seed.Spec.Provider.Region)
-		if newBucket.Spec.Provider.Type != backup.Provider ||
-			newBucket.Spec.Provider.Region != region ||
-			!apiequality.Semantic.DeepEqual(newBucket.Spec.ProviderConfig, backup.ProviderConfig) ||
-			!apiequality.Semantic.DeepEqual(newBucket.Spec.CredentialsRef, backup.CredentialsRef) {
-			return admission.Errored(http.StatusForbidden, errors.New("BackupBucket spec does not match the backup configuration of the gardenlet's seed"))
-		}
-		return admission.Allowed("")
+		return h.admitBackupBucketSpecMatchesSeedBackup(ctx, seedName, newBucket)
 
 	case admissionv1.Create:
 		// If a gardenlet tries to create a BackupBucket then the request may only be allowed if the used `.spec.seedName`
@@ -176,25 +158,7 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 			return resp
 		}
 
-		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
-		if err := h.Client.Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-
-		if seed.Spec.Backup == nil {
-			return admission.Errored(http.StatusForbidden, errors.New("gardenlet's seed has no backup configuration"))
-		}
-
-		backup := seed.Spec.Backup
-		region := ptr.Deref(backup.Region, seed.Spec.Provider.Region)
-		if backupBucket.Spec.Provider.Type != backup.Provider ||
-			backupBucket.Spec.Provider.Region != region ||
-			!apiequality.Semantic.DeepEqual(backupBucket.Spec.ProviderConfig, backup.ProviderConfig) ||
-			!apiequality.Semantic.DeepEqual(backupBucket.Spec.CredentialsRef, backup.CredentialsRef) {
-			return admission.Errored(http.StatusForbidden, errors.New("BackupBucket spec does not match the backup configuration of the gardenlet's seed"))
-		}
-
-		return admission.Allowed("")
+		return h.admitBackupBucketSpecMatchesSeedBackup(ctx, seedName, backupBucket)
 
 	case admissionv1.Delete:
 		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the name is equal to the UID of
@@ -210,6 +174,28 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 	}
 
 	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+}
+
+func (h *Handler) admitBackupBucketSpecMatchesSeedBackup(ctx context.Context, seedName string, backupBucket *gardencorev1beta1.BackupBucket) admission.Response {
+	seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
+	if err := h.Client.Get(ctx, client.ObjectKeyFromObject(seed), seed); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if seed.Spec.Backup == nil {
+		return admission.Errored(http.StatusForbidden, errors.New("gardenlet's seed has no backup configuration"))
+	}
+
+	backup := seed.Spec.Backup
+	region := ptr.Deref(backup.Region, seed.Spec.Provider.Region)
+	if backupBucket.Spec.Provider.Type != backup.Provider ||
+		backupBucket.Spec.Provider.Region != region ||
+		!apiequality.Semantic.DeepEqual(backupBucket.Spec.ProviderConfig, backup.ProviderConfig) ||
+		!apiequality.Semantic.DeepEqual(backupBucket.Spec.CredentialsRef, backup.CredentialsRef) {
+		return admission.Errored(http.StatusForbidden, errors.New("BackupBucket spec does not match the backup configuration of the gardenlet's seed"))
+	}
+
+	return admission.Allowed("")
 }
 
 func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request admission.Request) admission.Response {
