@@ -56,3 +56,33 @@ func (mr *MockAuthorizerMockRecorder) Authorize(ctx, a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorize", reflect.TypeOf((*MockAuthorizer)(nil).Authorize), ctx, a)
 }
+
+// ConditionsAwareAuthorize mocks base method.
+func (m *MockAuthorizer) ConditionsAwareAuthorize(ctx context.Context, a authorizer.Attributes) authorizer.ConditionsAwareDecision {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConditionsAwareAuthorize", ctx, a)
+	ret0, _ := ret[0].(authorizer.ConditionsAwareDecision)
+	return ret0
+}
+
+// ConditionsAwareAuthorize indicates an expected call of ConditionsAwareAuthorize.
+func (mr *MockAuthorizerMockRecorder) ConditionsAwareAuthorize(ctx, a any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConditionsAwareAuthorize", reflect.TypeOf((*MockAuthorizer)(nil).ConditionsAwareAuthorize), ctx, a)
+}
+
+// EvaluateConditions mocks base method.
+func (m *MockAuthorizer) EvaluateConditions(ctx context.Context, decision authorizer.ConditionsAwareDecision, data authorizer.ConditionsData) (authorizer.Decision, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EvaluateConditions", ctx, decision, data)
+	ret0, _ := ret[0].(authorizer.Decision)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// EvaluateConditions indicates an expected call of EvaluateConditions.
+func (mr *MockAuthorizerMockRecorder) EvaluateConditions(ctx, decision, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateConditions", reflect.TypeOf((*MockAuthorizer)(nil).EvaluateConditions), ctx, decision, data)
+}

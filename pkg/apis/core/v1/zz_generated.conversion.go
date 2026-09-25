@@ -13,7 +13,6 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -164,8 +163,7 @@ func Convert_core_HelmControllerDeployment_To_v1_HelmControllerDeployment(in *co
 }
 
 func autoConvert_v1_NamedResourceReference_To_core_NamedResourceReference(in *NamedResourceReference, out *core.NamedResourceReference, s conversion.Scope) error {
-	out.Name = in.Name
-	out.ResourceRef = in.ResourceRef
+	*out = *(*core.NamedResourceReference)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -175,8 +173,7 @@ func Convert_v1_NamedResourceReference_To_core_NamedResourceReference(in *NamedR
 }
 
 func autoConvert_core_NamedResourceReference_To_v1_NamedResourceReference(in *core.NamedResourceReference, out *NamedResourceReference, s conversion.Scope) error {
-	out.Name = in.Name
-	out.ResourceRef = in.ResourceRef
+	*out = *(*NamedResourceReference)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -186,12 +183,7 @@ func Convert_core_NamedResourceReference_To_v1_NamedResourceReference(in *core.N
 }
 
 func autoConvert_v1_OCIRepository_To_core_OCIRepository(in *OCIRepository, out *core.OCIRepository, s conversion.Scope) error {
-	out.Ref = (*string)(unsafe.Pointer(in.Ref))
-	out.Repository = (*string)(unsafe.Pointer(in.Repository))
-	out.Tag = (*string)(unsafe.Pointer(in.Tag))
-	out.Digest = (*string)(unsafe.Pointer(in.Digest))
-	out.PullSecretRef = (*corev1.LocalObjectReference)(unsafe.Pointer(in.PullSecretRef))
-	out.CABundleSecretRef = (*corev1.LocalObjectReference)(unsafe.Pointer(in.CABundleSecretRef))
+	*out = *(*core.OCIRepository)(unsafe.Pointer(in))
 	return nil
 }
 
@@ -201,12 +193,7 @@ func Convert_v1_OCIRepository_To_core_OCIRepository(in *OCIRepository, out *core
 }
 
 func autoConvert_core_OCIRepository_To_v1_OCIRepository(in *core.OCIRepository, out *OCIRepository, s conversion.Scope) error {
-	out.Ref = (*string)(unsafe.Pointer(in.Ref))
-	out.Repository = (*string)(unsafe.Pointer(in.Repository))
-	out.Tag = (*string)(unsafe.Pointer(in.Tag))
-	out.Digest = (*string)(unsafe.Pointer(in.Digest))
-	out.PullSecretRef = (*corev1.LocalObjectReference)(unsafe.Pointer(in.PullSecretRef))
-	out.CABundleSecretRef = (*corev1.LocalObjectReference)(unsafe.Pointer(in.CABundleSecretRef))
+	*out = *(*OCIRepository)(unsafe.Pointer(in))
 	return nil
 }
 

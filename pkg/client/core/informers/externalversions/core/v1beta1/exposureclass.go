@@ -22,11 +22,39 @@ import (
 )
 
 // ExposureClassInformer provides access to a shared informer and lister for
-// ExposureClasses.
+// ExposureClasses. Prefer using the type-safe variant (see [TypedExposureClassInformer]).
 type ExposureClassInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.ExposureClassLister
 }
+
+// TypedExposureClassInformer provides access to a shared informer and lister for
+// ExposureClasses, including the type-safe TypedInformer variant.
+// It is a superset of ExposureClassInformer.
+type TypedExposureClassInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ExposureClassIndexInformer
+	Lister() corev1beta1.ExposureClassLister
+}
+
+// ExposureClassIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ExposureClassIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.ExposureClass]
+
+// ExposureClassHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for ExposureClass.
+type ExposureClassHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.ExposureClass]
+
+// ExposureClassDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for ExposureClass.
+type ExposureClassDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.ExposureClass]
+
+// ExposureClassFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for ExposureClass.
+type ExposureClassFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.ExposureClass]
+
+// ExposureClassIndexers is a specialization of [cache.TypedIndexers] for ExposureClass.
+type ExposureClassIndexers = cache.TypedIndexers[*apiscorev1beta1.ExposureClass]
+
+// DeletedExposureClass is a specialization of [cache.DeletedObject] for ExposureClass.
+type DeletedExposureClass = cache.DeletedObject[*apiscorev1beta1.ExposureClass]
 
 type exposureClassInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -36,25 +64,49 @@ type exposureClassInformer struct {
 // NewExposureClassInformer constructs a new informer for ExposureClass type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedExposureClassInformer]).
 func NewExposureClassInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewExposureClassInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedExposureClassInformer constructs a new informer for ExposureClass type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedExposureClassInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ExposureClassIndexers) ExposureClassIndexInformer {
+	return NewTypedExposureClassInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredExposureClassInformer constructs a new informer for ExposureClass type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredExposureClassInformer]).
 func NewFilteredExposureClassInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewExposureClassInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedExposureClassInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredExposureClassInformer constructs a new informer for ExposureClass type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredExposureClassInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ExposureClassIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ExposureClassIndexInformer {
+	return NewTypedExposureClassInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewExposureClassInformerWithOptions constructs a new informer for ExposureClass type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedExposureClassInformerWithOptions]).
 func NewExposureClassInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedExposureClassInformerWithOptions(client, options)
+}
+
+// NewTypedExposureClassInformerWithOptions constructs a new informer for ExposureClass type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedExposureClassInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) ExposureClassIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "exposureclasss"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ExposureClass](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -87,17 +139,57 @@ func NewExposureClassInformerWithOptions(client versioned.Interface, options int
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *exposureClassInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewExposureClassInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedExposureClassInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *exposureClassInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.ExposureClass{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *exposureClassInformer) TypedInformer() ExposureClassIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ExposureClass](f.factory.InformerFor(&apiscorev1beta1.ExposureClass{}, f.defaultInformer))
 }
 
 func (f *exposureClassInformer) Lister() corev1beta1.ExposureClassLister {
 	return corev1beta1.NewExposureClassLister(f.Informer().GetIndexer())
+}
+
+// ToTypedExposureClassInformer converts an untyped informer into a TypedExposureClassInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ExposureClass. If that is not the case, calling type-safe methods of the returned
+// TypedExposureClassInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedExposureClassInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedExposureClassInformer(informer ExposureClassInformer) TypedExposureClassInformer {
+	if informer, ok := informer.(TypedExposureClassInformer); ok {
+		return informer
+	}
+	return &exposureClassTypedInformerAdapter{informer}
+}
+
+type exposureClassTypedInformerAdapter struct {
+	ExposureClassInformer
+}
+
+func (a *exposureClassTypedInformerAdapter) TypedInformer() ExposureClassIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ExposureClass](a.Informer())
+}
+
+// ToExposureClassIndexInformer converts an untyped informer into a ExposureClassIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ExposureClass. If that is not the case, calling type-safe methods of the returned
+// ExposureClassIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ExposureClassIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToExposureClassIndexInformer(informer cache.SharedIndexInformer) ExposureClassIndexInformer {
+	if informer, ok := informer.(ExposureClassIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ExposureClass](informer)
 }
