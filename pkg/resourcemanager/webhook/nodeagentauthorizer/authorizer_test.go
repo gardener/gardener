@@ -386,6 +386,7 @@ var _ = Describe("Authorizer", func() {
 			},
 				Entry("get", "get"),
 				Entry("update", "update"),
+				Entry("patch", "patch"),
 				Entry("list", "list"),
 				Entry("watch", "watch"),
 			)
@@ -436,6 +437,7 @@ var _ = Describe("Authorizer", func() {
 				},
 					Entry("get", "get"),
 					Entry("update", "update"),
+					Entry("patch", "patch"),
 					Entry("list", "list"),
 					Entry("watch", "watch"),
 				)
@@ -499,9 +501,8 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create update]"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create update patch]"))
 			},
-				Entry("patch", "patch"),
 				Entry("delete", "delete"),
 				Entry("deletecollection", "deletecollection"),
 			)

@@ -164,7 +164,7 @@ func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machin
 		return auth.DecisionDeny, reason, nil
 	}
 
-	allowedVerbs := []string{"get", "list", "watch", "create", "update"}
+	allowedVerbs := []string{"get", "list", "watch", "create", "update", "patch"}
 	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
 		return auth.DecisionDeny, reason, nil
 	}

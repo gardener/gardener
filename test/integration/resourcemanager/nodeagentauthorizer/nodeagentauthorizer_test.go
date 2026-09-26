@@ -292,13 +292,29 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 					lease.SetLabels(map[string]string{"foo": "bar"})
 					ExpectWithOffset(1, testClientNodeAgent.Patch(ctx, lease.DeepCopy(), patch)).To(BeForbiddenError())
 				},
-				Entry("forbid own gardener-node-agent", nodeAgentLeaseName, "kube-system", true),
 				Entry("forbid if no own node", nodeAgentLeaseName, "kube-system", false),
 				Entry("forbid other gardener-node-agent", otherNodeAgentLeaseName, "kube-system", true),
 				Entry("forbid other gardener-node-agent if no own node", otherNodeAgentLeaseName, "kube-system", false),
 				Entry("forbid in default namespace", "foo-bar", "default", true),
 				Entry("forbid in default namespace without node", "foo-bar", "default", false),
 			)
+
+			It("should allow patching own gardener-node-agent lease", func() {
+				createNode(node, machine)
+				lease := &coordinationv1.Lease{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      nodeAgentLeaseName,
+						Namespace: "kube-system",
+					},
+				}
+				Expect(testClient.Create(ctx, lease)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
+				})
+				patch := client.MergeFrom(lease)
+				lease.SetLabels(map[string]string{"foo": "bar"})
+				Expect(testClientNodeAgent.Patch(ctx, lease.DeepCopy(), patch)).To(Succeed())
+			})
 
 			DescribeTable("#delete",
 				func(name, namespace string, withNode bool) {
