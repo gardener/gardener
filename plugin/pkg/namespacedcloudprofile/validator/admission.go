@@ -31,6 +31,18 @@ import (
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
+// getExpiryStage extracts the expired LifecycleStage from a version's lifecycle stages.
+// For legacy classifications it converts it to LifecycleStages.
+// If the version does not have an Expired stage, it returns nil.
+func getExpiryStage(version gardencore.ExpirableVersion) *gardencore.LifecycleStage {
+	for _, stage := range gardencorehelper.ToLifecycleStages(version) {
+		if stage.Classification == gardencore.ClassificationExpired {
+			return &stage
+		}
+	}
+	return nil
+}
+
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameNamespacedCloudProfileValidator, func(_ io.Reader) (admission.Interface, error) {
@@ -205,11 +217,18 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 		if _, exists := parentVersions[newVersion.Version]; !exists {
 			return fmt.Errorf("invalid kubernetes version specified: '%s' does not exist in parent CloudProfile and thus cannot be overridden", newVersion.Version)
 		}
-		if newVersion.ExpirationDate == nil {
-			return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
-		}
+		if len(newVersion.Lifecycle) == 0 {
+			// Legacy override: still requires an explicit expiration date.
+			if newVersion.ExpirationDate == nil {
+				return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
+			}
+		} // else: lifecycle classification override is a full replacement, its validity is checked in
+		// validateSimulatedCloudProfileStatusMergeResult using the same rules as a normal CloudProfile.
 		if attr.GetOperation() == admission.Update && gardencorehelper.VersionIsExpired(newVersion) {
-			if override, exists := currentVersionsMerged[newVersion.Version]; !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
+			override, exists := currentVersionsMerged[newVersion.Version]
+			overrideStage := getExpiryStage(override)
+			newStage := getExpiryStage(newVersion)
+			if !exists || overrideStage == nil || overrideStage.StartTime == nil || newStage == nil || newStage.StartTime == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 				return fmt.Errorf("expiration date for version %q is in the past", newVersion.Version)
 			}
 		}
@@ -256,7 +275,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 				imageVersionIndexPath := imageIndexPath.Child("versions").Index(imageVersionIndex)
 				if _, isExistingVersion := parentImages.GetImageVersion(image.Name, imageVersion.Version); isExistingVersion {
 					// An image with the specified version is already present in the parent CloudProfile.
-					// Ensure that only the expiration date is overridden.
+					// Ensure that only the expiration date or lifecycle is overridden.
 					// For new versions added to an existing image, the validation will be done on the simulated merge result.
 
 					// If in the meantime an image version specified only in the NamespacedCloudProfile has been
@@ -270,20 +289,26 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						machineImageVersionWithoutExpiration := imageVersion.DeepCopy()
 						oldMachineImageVersionWithoutExpiration.ExpirationDate = nil
 						machineImageVersionWithoutExpiration.ExpirationDate = nil
-						// Compare the old and new image version without considering the expiration date.
-						// The expiration date is neglected here because it is the only field allowed to change for an existing image version.
-						// If the image versions are equal except for the expiration date, then the update is allowed.
+						oldMachineImageVersionWithoutExpiration.Lifecycle = nil
+						machineImageVersionWithoutExpiration.Lifecycle = nil
+						// Compare the old and new image version without considering the expiration date or lifecycle.
+						// The expiration date and lifecycle are neglected here because they are the only fields allowed to change for an existing image version.
+						// If the image versions are equal except for the expiration date or lifecycle, then the update is allowed.
 						if imageVersionAlreadyInNamespacedCloudProfile && !reflect.DeepEqual(oldMachineImageVersionWithoutExpiration, machineImageVersionWithoutExpiration) {
-							allErrs = append(allErrs, field.Forbidden(imageVersionIndexPath, fmt.Sprintf("cannot update the machine image version spec (except for the expiration date) of \"%s@%s\", as this version has been added to the parent CloudProfile by now", image.Name, imageVersion.Version)))
+							allErrs = append(allErrs, field.Forbidden(imageVersionIndexPath, fmt.Sprintf("cannot update the machine image version spec (except for the expiration date or lifecycle) of \"%s@%s\", as this version has been added to the parent CloudProfile by now", image.Name, imageVersion.Version)))
 						}
 					}
 
 					if !imageVersionAlreadyInNamespacedCloudProfile {
 						allErrs = append(allErrs, validateNamespacedCloudProfileExtendedMachineImages(imageVersion, imageVersionIndexPath)...)
 
-						if imageVersion.ExpirationDate == nil {
-							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q must be set", imageVersion.Version)))
-						}
+						if len(imageVersion.Lifecycle) == 0 {
+							// Legacy override: still requires an explicit expiration date.
+							if imageVersion.ExpirationDate == nil {
+								allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q must be set", imageVersion.Version)))
+							}
+						} // else: lifecycle classification override is a full replacement, its validity is checked in
+						// validateSimulatedCloudProfileStatusMergeResult using the same rules as a normal CloudProfile.
 					}
 
 					if attr.GetOperation() == admission.Update && gardencorehelper.VersionIsExpired(imageVersion.ExpirableVersion) {
@@ -294,7 +319,9 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						if oldVersionsMerged != nil {
 							override, exists = oldVersionsMerged.GetImageVersion(image.Name, imageVersion.Version)
 						}
-						if !exists || !override.ExpirationDate.Equal(imageVersion.ExpirationDate) {
+						overrideStage := getExpiryStage(override.ExpirableVersion)
+						newStage := getExpiryStage(imageVersion.ExpirableVersion)
+						if !exists || overrideStage == nil || overrideStage.StartTime == nil || newStage == nil || newStage.StartTime == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q is in the past", imageVersion.Version)))
 						}
 					}
