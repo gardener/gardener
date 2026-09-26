@@ -730,6 +730,8 @@ func (o *otelCollector) rbacProxyCommonArgs() []string {
 		"--kubeconfig=" + gardenerutils.VolumeMountPathGenericKubeconfig + "/kubeconfig",
 		"--logtostderr=true",
 		"--v=6",
+		"--kube-api-burst=200",
+		"--kube-api-qps=100",
 	}
 }
 
