@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -16,9 +17,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardensecurityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/seed/validator"
 )
@@ -28,6 +32,7 @@ var _ = Describe("validator", func() {
 		var (
 			admissionHandler        *ValidateSeed
 			coreInformerFactory     gardencoreinformers.SharedInformerFactory
+			kubeInformerFactory     kubeinformers.SharedInformerFactory
 			securityInformerFactory gardensecurityinformers.SharedInformerFactory
 			backupBucket            gardencorev1beta1.BackupBucket
 			seed                    core.Seed
@@ -75,8 +80,10 @@ var _ = Describe("validator", func() {
 
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			securityInformerFactory = gardensecurityinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
 		})
 
@@ -290,6 +297,357 @@ var _ = Describe("validator", func() {
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
 			})
+
+			When("AllowlistSeedReferences feature gate", func() {
+				var newSeed *core.Seed
+
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.AllowlistSeedReferences, true))
+					newSeed = seedBase.DeepCopy()
+				})
+
+				It("should pass when feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.AllowlistSeedReferences, false))
+					newSeed.Spec.Backup = &core.Backup{
+						Provider: providerType,
+						CredentialsRef: &corev1.ObjectReference{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+							Namespace:  namespaceName,
+							Name:       "backup-secret",
+						},
+					}
+					attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should pass when the seed is being deleted and the spec is unchanged (finalizer removal)", func() {
+					now := metav1.Now()
+					newSeed.DeletionTimestamp = &now
+					newSeed.Spec.Backup = &core.Backup{
+						Provider: providerType,
+						CredentialsRef: &corev1.ObjectReference{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+							Namespace:  namespaceName,
+							Name:       "backup-secret",
+						},
+					}
+					oldSeed := newSeed.DeepCopy()
+					oldSeed.DeletionTimestamp = nil
+					// No annotation — would be rejected for a live Seed; must not block finalizer removal.
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "backup-secret", Namespace: namespaceName},
+					})).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid when the seed is being deleted but the spec changed to a non-allowlisted reference", func() {
+					now := metav1.Now()
+					newSeed.DeletionTimestamp = &now
+					newSeed.Spec.Backup = &core.Backup{
+						Provider: providerType,
+						CredentialsRef: &corev1.ObjectReference{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+							Namespace:  namespaceName,
+							Name:       "backup-secret",
+						},
+					}
+					// No annotation on the secret.
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "backup-secret", Namespace: namespaceName},
+					})).To(Succeed())
+					attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+				})
+
+				When("spec.backup.credentialsRef is a Secret", func() {
+					BeforeEach(func() {
+						newSeed.Spec.Backup = &core.Backup{
+							Provider: providerType,
+							CredentialsRef: &corev1.ObjectReference{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "Secret",
+								Namespace:  namespaceName,
+								Name:       "backup-secret",
+							},
+						}
+					})
+
+					It("should allow when annotation lists the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "backup-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should allow when annotation contains wildcard", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "backup-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: "*"},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should allow when annotation is a comma-separated list containing the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "backup-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: "other-seed, " + seedName + ", yet-another"},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "backup-secret", Namespace: namespaceName},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should forbid when annotation lists a different seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "backup-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: "other-seed"},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should forbid when Secret does not exist", func() {
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+				})
+
+				When("spec.dns.provider.credentialsRef is a Secret", func() {
+					BeforeEach(func() {
+						newSeed.Spec.DNS.Provider = &core.SeedDNSProvider{
+							Type: "provider",
+							CredentialsRef: &corev1.ObjectReference{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "Secret",
+								Namespace:  namespaceName,
+								Name:       "dns-provider-secret",
+							},
+						}
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "dns-provider-secret", Namespace: namespaceName},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should allow when annotation lists the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "dns-provider-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				When("spec.dns.internal.credentialsRef is a Secret", func() {
+					BeforeEach(func() {
+						newSeed.Spec.DNS.Internal = &core.SeedDNSProviderConfig{
+							CredentialsRef: corev1.ObjectReference{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "Secret",
+								Namespace:  namespaceName,
+								Name:       "dns-internal-secret",
+							},
+						}
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "dns-internal-secret", Namespace: namespaceName},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should allow when annotation lists the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "dns-internal-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				When("spec.dns.defaults[].credentialsRef is a Secret", func() {
+					BeforeEach(func() {
+						newSeed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
+							{
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: corev1.SchemeGroupVersion.String(),
+									Kind:       "Secret",
+									Namespace:  namespaceName,
+									Name:       "dns-default-secret",
+								},
+							},
+						}
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "dns-default-secret", Namespace: namespaceName},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should allow when annotation lists the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "dns-default-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				When("spec.resources[].resourceRef is a ConfigMap", func() {
+					BeforeEach(func() {
+						newSeed.Spec.Resources = []core.NamedResourceReference{
+							{
+								Name: "my-config",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									APIVersion: corev1.SchemeGroupVersion.String(),
+									Kind:       "ConfigMap",
+									Name:       "my-configmap",
+								},
+							},
+						}
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "my-configmap", Namespace: "garden"},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should allow when annotation lists the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "my-configmap",
+								Namespace:   "garden",
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				When("spec.resources[].resourceRef is a WorkloadIdentity", func() {
+					BeforeEach(func() {
+						newSeed.Spec.Resources = []core.NamedResourceReference{
+							{
+								Name: "my-wi",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									APIVersion: securityv1alpha1.SchemeGroupVersion.String(),
+									Kind:       "WorkloadIdentity",
+									Name:       "my-workload-identity",
+								},
+							},
+						}
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(securityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&securityv1alpha1.WorkloadIdentity{
+							ObjectMeta: metav1.ObjectMeta{Name: "my-workload-identity", Namespace: "garden"},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should allow when annotation contains wildcard", func() {
+						Expect(securityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&securityv1alpha1.WorkloadIdentity{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "my-workload-identity",
+								Namespace:   "garden",
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: "*"},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				It("should enforce on Create as well", func() {
+					createSeed := seedBase.DeepCopy()
+					createSeed.Spec.Backup = &core.Backup{
+						Provider: providerType,
+						CredentialsRef: &corev1.ObjectReference{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+							Namespace:  namespaceName,
+							Name:       "backup-secret",
+						},
+					}
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "backup-secret", Namespace: namespaceName},
+					})).To(Succeed())
+					attrs := admission.NewAttributesRecord(createSeed, nil, core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+				})
+			})
 		})
 
 		// The verification of protection is independent of the Cloud Provider (being checked before).
@@ -422,6 +780,17 @@ var _ = Describe("validator", func() {
 			Expect(err).To(MatchError("missing shoot lister"))
 		})
 
+		It("should return error if no ConfigMapLister is set", func() {
+			dr, _ := New()
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
+
+			err := dr.ValidateInitialization()
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("missing ConfigMap lister"))
+		})
+
 		It("should return error if no WorkloadIdentityLister is set", func() {
 			dr, _ := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
@@ -442,17 +811,6 @@ var _ = Describe("validator", func() {
 			err := dr.ValidateInitialization()
 
 			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("should return error if no SecretLister is set", func() {
-			dr, _ := New()
-			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
-
-			err := dr.ValidateInitialization()
-
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("missing secret lister"))
 		})
 	})
 

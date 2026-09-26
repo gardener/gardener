@@ -2,19 +2,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validator_test
+package refallowlist_test
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gardener/gardener/pkg/apiserver/features"
 )
 
-func TestValidator(t *testing.T) {
+func TestRefAllowlist(t *testing.T) {
 	RegisterFailHandler(Fail)
-	features.RegisterFeatureGates()
-	RunSpecs(t, "AdmissionPlugin Seed Validator Suite")
+	RunSpecs(t, "ControllerManager Controller Seed RefAllowlist Suite")
 }
