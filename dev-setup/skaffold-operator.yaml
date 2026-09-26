@@ -1300,9 +1300,13 @@ build:
             - pkg/chartrenderer
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
+            - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/v1alpha1
             - pkg/provider-local/cloud-provider/api/v1alpha1
+            - pkg/provider-local/cloud-provider/instances
             - pkg/provider-local/cloud-provider/loadbalancer
             - pkg/provider-local/cloud-provider/provider
+            - pkg/provider-local/machine-provider/api/v1alpha1
             - pkg/utils
             - pkg/utils/errors
             - pkg/utils/validation/kubernetesversion
@@ -1351,6 +1355,8 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/logger
+            - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/v1alpha1
             - pkg/provider-local/local
             - pkg/provider-local/machine-provider/api/v1alpha1
             - pkg/provider-local/machine-provider/api/validation

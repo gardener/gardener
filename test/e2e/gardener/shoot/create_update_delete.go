@@ -316,6 +316,10 @@ func verifyWorkerNodeLabels(s *ShootContext) {
 				}
 				expectedNodeLabels["worker.gardener.cloud/kubernetes-version"] = kubernetesVersion
 
+				// The node controller of cloud-controller-manager-local sets the topology labels based on the machine class.
+				expectedNodeLabels[corev1.LabelTopologyRegion] = s.Shoot.Spec.Region
+				expectedNodeLabels[corev1.LabelInstanceTypeStable] = workerPool.Machine.Type
+
 				nodeList := &corev1.NodeList{}
 				g.Expect(s.ShootClient.List(ctx, nodeList, client.MatchingLabels{
 					"worker.gardener.cloud/pool": workerPool.Name,
@@ -327,6 +331,15 @@ func verifyWorkerNodeLabels(s *ShootContext) {
 					for key, value := range expectedNodeLabels {
 						g.Expect(node.Labels).To(HaveKeyWithValue(key, value), "worker pool %s node %s should have label %s=%s", workerPool.Name, node.Name, key, value)
 					}
+					if len(workerPool.Zones) > 0 {
+						g.Expect(node.Labels).To(HaveKeyWithValue(corev1.LabelTopologyZone, BeElementOf(workerPool.Zones)), "worker pool %s node %s should have a zone label", workerPool.Name, node.Name)
+					} else {
+						// The region is used as fallback zone for worker pools without zones.
+						g.Expect(node.Labels).To(HaveKeyWithValue(corev1.LabelTopologyZone, s.Shoot.Spec.Region), "worker pool %s node %s should have the region as fallback zone label", workerPool.Name, node.Name)
+					}
+					// The node controller of cloud-controller-manager-local sets the provider ID to the machine pod name, which is
+					// also the node name.
+					g.Expect(node.Spec.ProviderID).To(Equal(node.Name), "worker pool %s node %s should have the provider ID set", workerPool.Name, node.Name)
 				}
 			}
 		}).Should(Succeed())
