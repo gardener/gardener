@@ -30,6 +30,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -533,7 +534,7 @@ var _ = Describe("#SNI", func() {
 						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
 							{
 								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
-									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Regex{Regex: istio.ConnectionUpgradeRegex}},
 									"Upgrade":    {},
 								},
 							},
@@ -599,7 +600,7 @@ var _ = Describe("#SNI", func() {
 						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
 							{
 								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
-									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Regex{Regex: istio.ConnectionUpgradeRegex}},
 									"Upgrade":    {},
 								},
 							},
@@ -665,7 +666,7 @@ var _ = Describe("#SNI", func() {
 						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
 							{
 								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
-									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Regex{Regex: istio.ConnectionUpgradeRegex}},
 									"Upgrade":    {},
 								},
 							},
@@ -746,7 +747,7 @@ var _ = Describe("#SNI", func() {
 						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
 							{
 								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
-									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Regex{Regex: istio.ConnectionUpgradeRegex}},
 									"Upgrade":    {},
 								},
 							},
@@ -826,7 +827,7 @@ var _ = Describe("#SNI", func() {
 						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
 							{
 								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
-									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Regex{Regex: istio.ConnectionUpgradeRegex}},
 									"Upgrade":    {},
 								},
 							},
@@ -859,7 +860,7 @@ var _ = Describe("#SNI", func() {
 						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
 							{
 								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
-									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Regex{Regex: istio.ConnectionUpgradeRegex}},
 									"Upgrade":    {},
 								},
 							},

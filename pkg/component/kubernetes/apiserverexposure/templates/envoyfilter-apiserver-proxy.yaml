@@ -69,7 +69,8 @@ spec:
                       headers:
                       - name: Connection
                         string_match:
-                          exact: Upgrade
+                          safe_regex:
+                            regex: '{{ .ConnectionUpgradeRegex }}'
                       - name: Upgrade
                         present_match: true
                     route:

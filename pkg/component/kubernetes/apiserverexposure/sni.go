@@ -171,6 +171,7 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	Host                                      string
 	MutualTLSHost                             string
 	ConnectionUpgradeHost                     string
+	ConnectionUpgradeRegex                    string
 	Port                                      int
 	APIServerClusterIPPrefixLen               int
 	APIServerRequestHeaderUserName            string
@@ -256,6 +257,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			Host:                           hostName,
 			MutualTLSHost:                  mTLSHostName,
 			ConnectionUpgradeHost:          connectionUpgradeHostName,
+			ConnectionUpgradeRegex:         istio.ConnectionUpgradeRegex,
 			Port:                           kubeapiserverconstants.Port,
 			APIServerClusterIPPrefixLen:    apiServerClusterIPPrefixLen,
 			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
