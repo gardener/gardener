@@ -18,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -334,11 +335,19 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{gardencorev1beta1.GroupName},
 							APIVersions: []string{"v1beta1"},
-							Resources:   []string{"backupentries", "internalsecrets", "shootstates"},
+							Resources:   []string{"internalsecrets", "shootstates"},
 						},
 					},
 					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Delete},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"backupentries"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{gardencorev1beta1.GroupName},
 							APIVersions: []string{"v1beta1"},
@@ -354,13 +363,40 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						},
 					},
 					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{operationsv1alpha1.GroupName},
 							APIVersions: []string{"v1alpha1"},
 							Resources:   []string{"bastions"},
 						},
 					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"controllerinstallations"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"shoots"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"gardenlets", "managedseeds"},
+						},
+					},
+				},
+				MatchConditions: []admissionregistrationv1.MatchCondition{
+					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
 				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
@@ -391,6 +427,41 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 							Resources:   []string{"backupbuckets", "backupentries", "internalsecrets", "projects", "shoots"},
 						},
 					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{gardencorev1beta1.SchemeGroupVersion.Version},
+							Resources:   []string{"backupbuckets", "backupentries", "controllerinstallations", "shoots"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{operationsv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"bastions"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"gardenlets"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"managedseeds"},
+						},
+					},
+				},
+				MatchConditions: []admissionregistrationv1.MatchCondition{
+					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
 				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,

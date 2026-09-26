@@ -6,6 +6,7 @@ package seedrestriction_test
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -296,25 +297,52 @@ var _ = Describe("handler", func() {
 					}
 				})
 
-				DescribeTable("should not allow the request because no allowed verb",
-					func(operation admissionv1.Operation) {
-						request.Operation = operation
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
-									Message: fmt.Sprintf("unexpected operation: %q", operation),
-								},
-							},
-						}))
-					},
-
-					Entry("update", admissionv1.Update),
-				)
-
 				Context("when operation is create", func() {
+					var (
+						providerType   = "foo-provider"
+						providerRegion = "foo-region"
+						credentialsRef = corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Namespace:  "garden",
+							Name:       "foo-credentials",
+						}
+
+						encodeBucket = func(bb *gardencorev1beta1.BackupBucket) []byte {
+							GinkgoHelper()
+							objData, err := runtime.Encode(encoder, bb)
+							Expect(err).NotTo(HaveOccurred())
+							return objData
+						}
+
+						seedWithBackup = func(region *string) *gardencorev1beta1.Seed {
+							return &gardencorev1beta1.Seed{
+								ObjectMeta: metav1.ObjectMeta{Name: seedName},
+								Spec: gardencorev1beta1.SeedSpec{
+									Provider: gardencorev1beta1.SeedProvider{Region: providerRegion},
+									Backup: &gardencorev1beta1.Backup{
+										Provider:       providerType,
+										Region:         region,
+										CredentialsRef: &credentialsRef,
+									},
+								},
+							}
+						}
+
+						validBucket = func(region string) *gardencorev1beta1.BackupBucket {
+							return &gardencorev1beta1.BackupBucket{
+								Spec: gardencorev1beta1.BackupBucketSpec{
+									SeedName: &seedName,
+									Provider: gardencorev1beta1.BackupBucketProvider{
+										Type:   providerType,
+										Region: region,
+									},
+									CredentialsRef: &credentialsRef,
+								},
+							}
+						}
+					)
+
 					BeforeEach(func() {
 						request.Operation = admissionv1.Create
 					})
@@ -358,14 +386,91 @@ var _ = Describe("handler", func() {
 						Entry("seed name is different", new("some-different-seed")),
 					)
 
-					It("should allow the request because seed name matches", func() {
-						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
-							Spec: gardencorev1beta1.BackupBucketSpec{
-								SeedName: &seedName,
+					It("should return an error because reading the Seed failed", func() {
+						fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+							Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+								return fakeErr
 							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
+						}).Build()
+						handler = &Handler{Logger: log, Client: fakeClient, Decoder: decoder}
+
+						request.Object.Raw = encodeBucket(validBucket(providerRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusInternalServerError),
+									Message: fakeErr.Error(),
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because the seed has no backup configuration", func() {
+						seed := &gardencorev1beta1.Seed{
+							ObjectMeta: metav1.ObjectMeta{Name: seedName},
+							Spec: gardencorev1beta1.SeedSpec{
+								Provider: gardencorev1beta1.SeedProvider{Region: providerRegion},
+							},
+						}
+						Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+
+						request.Object.Raw = encodeBucket(validBucket(providerRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "gardenlet's seed has no backup configuration",
+								},
+							},
+						}))
+					})
+
+					DescribeTable("should forbid the request because the BackupBucket spec does not match the seed's backup configuration",
+						func(mutateBucket func(*gardencorev1beta1.BackupBucket)) {
+							Expect(fakeClient.Create(ctx, seedWithBackup(new(providerRegion)))).To(Succeed())
+
+							bucket := validBucket(providerRegion)
+							mutateBucket(bucket)
+							request.Object.Raw = encodeBucket(bucket)
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: "BackupBucket spec does not match the backup configuration of the gardenlet's seed",
+									},
+								},
+							}))
+						},
+
+						Entry("provider type mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.Provider.Type = "other-provider"
+						}),
+						Entry("provider region mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.Provider.Region = "other-region"
+						}),
+						Entry("credentialsRef mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.CredentialsRef = &corev1.ObjectReference{Name: "other-credentials"}
+						}),
+					)
+
+					It("should allow the request when spec matches and backup region is set explicitly", func() {
+						Expect(fakeClient.Create(ctx, seedWithBackup(new(providerRegion)))).To(Succeed())
+
+						request.Object.Raw = encodeBucket(validBucket(providerRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should allow the request when spec matches and backup region falls back to provider region", func() {
+						Expect(fakeClient.Create(ctx, seedWithBackup(nil))).To(Succeed())
+
+						request.Object.Raw = encodeBucket(validBucket(providerRegion))
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
@@ -420,6 +525,154 @@ var _ = Describe("handler", func() {
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 				})
+
+				When("operation is UPDATE", func() {
+					var (
+						updateProviderType   = "foo-provider"
+						updateProviderRegion = "foo-region"
+						updateCredentialsRef = corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Namespace:  "garden",
+							Name:       "foo-credentials",
+						}
+
+						updateSeedWithBackup = func(region *string) *gardencorev1beta1.Seed {
+							return &gardencorev1beta1.Seed{
+								ObjectMeta: metav1.ObjectMeta{Name: seedName},
+								Spec: gardencorev1beta1.SeedSpec{
+									Provider: gardencorev1beta1.SeedProvider{Region: updateProviderRegion},
+									Backup: &gardencorev1beta1.Backup{
+										Provider:       updateProviderType,
+										Region:         region,
+										CredentialsRef: &updateCredentialsRef,
+									},
+								},
+							}
+						}
+
+						updateValidBucket = func(region string) *gardencorev1beta1.BackupBucket {
+							return &gardencorev1beta1.BackupBucket{
+								ObjectMeta: metav1.ObjectMeta{Name: "bucket-" + seedName},
+								Spec: gardencorev1beta1.BackupBucketSpec{
+									SeedName: &seedName,
+									Provider: gardencorev1beta1.BackupBucketProvider{
+										Type:   updateProviderType,
+										Region: region,
+									},
+									CredentialsRef: &updateCredentialsRef,
+								},
+							}
+						}
+
+						encodeUpdateBucket = func(bb *gardencorev1beta1.BackupBucket) []byte {
+							GinkgoHelper()
+							objData, err := runtime.Encode(encoder, bb)
+							Expect(err).NotTo(HaveOccurred())
+							return objData
+						}
+					)
+
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Resource = metav1.GroupVersionResource{
+							Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+							Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+							Resource: "backupbuckets",
+						}
+						request.Name = "bucket-" + seedName
+						request.UserInfo = gardenletUser
+					})
+
+					It("should return an error because reading the Seed failed", func() {
+						fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+							Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+								return fakeErr
+							},
+						}).Build()
+						handler = &Handler{Logger: log, Client: fakeClient, Decoder: decoder}
+
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusInternalServerError),
+									Message: fakeErr.Error(),
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because the seed has no backup configuration", func() {
+						seed := &gardencorev1beta1.Seed{
+							ObjectMeta: metav1.ObjectMeta{Name: seedName},
+							Spec: gardencorev1beta1.SeedSpec{
+								Provider: gardencorev1beta1.SeedProvider{Region: updateProviderRegion},
+							},
+						}
+						Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "gardenlet's seed has no backup configuration",
+								},
+							},
+						}))
+					})
+
+					DescribeTable("should forbid the request because the BackupBucket spec does not match the seed's backup configuration",
+						func(mutateBucket func(*gardencorev1beta1.BackupBucket)) {
+							Expect(fakeClient.Create(ctx, updateSeedWithBackup(new(updateProviderRegion)))).To(Succeed())
+
+							bucket := updateValidBucket(updateProviderRegion)
+							mutateBucket(bucket)
+							request.Object.Raw = encodeUpdateBucket(bucket)
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: "BackupBucket spec does not match the backup configuration of the gardenlet's seed",
+									},
+								},
+							}))
+						},
+
+						Entry("provider type mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.Provider.Type = "other-provider"
+						}),
+						Entry("provider region mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.Provider.Region = "other-region"
+						}),
+						Entry("credentialsRef mismatch", func(b *gardencorev1beta1.BackupBucket) {
+							b.Spec.CredentialsRef = &corev1.ObjectReference{Name: "other-credentials"}
+						}),
+					)
+
+					It("should allow the request when spec matches and backup region is set explicitly", func() {
+						Expect(fakeClient.Create(ctx, updateSeedWithBackup(new(updateProviderRegion)))).To(Succeed())
+
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should allow the request when spec matches and backup region falls back to provider region", func() {
+						Expect(fakeClient.Create(ctx, updateSeedWithBackup(nil))).To(Succeed())
+
+						request.Object.Raw = encodeUpdateBucket(updateValidBucket(updateProviderRegion))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
 			})
 
 			Context("when requested for BackupEntries", func() {
@@ -454,7 +707,6 @@ var _ = Describe("handler", func() {
 						}))
 					},
 
-					Entry("update", admissionv1.Update),
 					Entry("delete", admissionv1.Delete),
 				)
 
@@ -687,6 +939,105 @@ var _ = Describe("handler", func() {
 						})
 					})
 				})
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Resource = metav1.GroupVersionResource{
+							Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+							Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+							Resource: "backupentries",
+						}
+						request.Name = "entry-" + seedName
+						request.UserInfo = gardenletUser
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldEntry := &gardencorev1beta1.BackupEntry{
+							ObjectMeta: metav1.ObjectMeta{Name: "entry-" + seedName},
+							Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: "bucket-a", SeedName: &seedName},
+						}
+						newEntry := oldEntry.DeepCopy()
+						newEntry.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldEntry)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newEntry)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when shootRef is changed", func() {
+						oldEntry := &gardencorev1beta1.BackupEntry{
+							ObjectMeta: metav1.ObjectMeta{Name: "entry-" + seedName},
+							Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: "bucket-a", SeedName: &seedName},
+						}
+						newEntry := oldEntry.DeepCopy()
+						newEntry.Spec.ShootRef = &corev1.ObjectReference{Name: "some-shoot", Namespace: "some-ns"}
+
+						oldRaw, err := stdjson.Marshal(oldEntry)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newEntry)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec.shootRef of BackupEntry"))
+					})
+
+					It("should deny when bucketName is changed to a bucket belonging to a different seed", func() {
+						otherSeedName := "other-seed"
+						Expect(fakeClient.Create(ctx, &gardencorev1beta1.BackupBucket{
+							ObjectMeta: metav1.ObjectMeta{Name: "other-bucket"},
+							Spec:       gardencorev1beta1.BackupBucketSpec{SeedName: &otherSeedName},
+						})).To(Succeed())
+
+						oldEntry := &gardencorev1beta1.BackupEntry{
+							ObjectMeta: metav1.ObjectMeta{Name: "entry-" + seedName},
+							Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: "bucket-a", SeedName: &seedName},
+						}
+						newEntry := oldEntry.DeepCopy()
+						newEntry.Spec.BucketName = "other-bucket"
+
+						oldRaw, err := stdjson.Marshal(oldEntry)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newEntry)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+					})
+
+					It("should allow when bucketName is changed to a bucket belonging to the same seed (migration)", func() {
+						Expect(fakeClient.Create(ctx, &gardencorev1beta1.BackupBucket{
+							ObjectMeta: metav1.ObjectMeta{Name: "new-bucket"},
+							Spec:       gardencorev1beta1.BackupBucketSpec{SeedName: &seedName},
+						})).To(Succeed())
+
+						oldEntry := &gardencorev1beta1.BackupEntry{
+							ObjectMeta: metav1.ObjectMeta{Name: "entry-" + seedName},
+							Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: "bucket-a", SeedName: &seedName},
+						}
+						newEntry := oldEntry.DeepCopy()
+						newEntry.Spec.BucketName = "new-bucket"
+
+						oldRaw, err := stdjson.Marshal(oldEntry)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newEntry)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
 			})
 
 			Context("when requested for Bastions", func() {
@@ -718,7 +1069,6 @@ var _ = Describe("handler", func() {
 						}))
 					},
 
-					Entry("update", admissionv1.Update),
 					Entry("delete", admissionv1.Delete),
 				)
 
@@ -753,6 +1103,175 @@ var _ = Describe("handler", func() {
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 				})
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Resource = metav1.GroupVersionResource{
+							Group:    operationsv1alpha1.SchemeGroupVersion.Group,
+							Version:  operationsv1alpha1.SchemeGroupVersion.Version,
+							Resource: "bastions",
+						}
+						request.Name = "bastion-" + seedName
+						request.UserInfo = gardenletUser
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldBastion := &operationsv1alpha1.Bastion{
+							ObjectMeta: metav1.ObjectMeta{Name: "bastion-" + seedName},
+							Spec:       operationsv1alpha1.BastionSpec{SSHPublicKey: "ssh-rsa AAAA", SeedName: &seedName},
+						}
+						newBastion := oldBastion.DeepCopy()
+						newBastion.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldBastion)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newBastion)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldBastion := &operationsv1alpha1.Bastion{
+							ObjectMeta: metav1.ObjectMeta{Name: "bastion-" + seedName},
+							Spec:       operationsv1alpha1.BastionSpec{SSHPublicKey: "ssh-rsa AAAA", SeedName: &seedName},
+						}
+						newBastion := oldBastion.DeepCopy()
+						newBastion.Spec.SSHPublicKey = "ssh-rsa BBBB"
+
+						oldRaw, err := stdjson.Marshal(oldBastion)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newBastion)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Bastion"))
+					})
+				})
+			})
+
+			When("requested for ControllerInstallations", func() {
+				BeforeEach(func() {
+					request.Resource = metav1.GroupVersionResource{
+						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+						Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+						Resource: "controllerinstallations",
+					}
+					request.UserInfo = gardenletUser
+				})
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldCI := &gardencorev1beta1.ControllerInstallation{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+							Spec: gardencorev1beta1.ControllerInstallationSpec{
+								SeedRef: &corev1.ObjectReference{Name: seedName},
+							},
+						}
+						newCI := oldCI.DeepCopy()
+						newCI.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldCI)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newCI)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldCI := &gardencorev1beta1.ControllerInstallation{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+							Spec: gardencorev1beta1.ControllerInstallationSpec{
+								SeedRef: &corev1.ObjectReference{Name: seedName},
+							},
+						}
+						newCI := oldCI.DeepCopy()
+						newCI.Spec.SeedRef.Name = "other-seed"
+
+						oldRaw, err := stdjson.Marshal(oldCI)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newCI)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of ControllerInstallation"))
+					})
+				})
+			})
+
+			When("requested for ManagedSeeds", func() {
+				BeforeEach(func() {
+					request.Resource = metav1.GroupVersionResource{
+						Group:    seedmanagementv1alpha1.SchemeGroupVersion.Group,
+						Version:  seedmanagementv1alpha1.SchemeGroupVersion.Version,
+						Resource: "managedseeds",
+					}
+					request.UserInfo = gardenletUser
+				})
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldMS := &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+							Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+								Shoot: &seedmanagementv1alpha1.Shoot{Name: "my-shoot"},
+							},
+						}
+						newMS := oldMS.DeepCopy()
+						newMS.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldMS)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newMS)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldMS := &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+							Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+								Shoot: &seedmanagementv1alpha1.Shoot{Name: "my-shoot"},
+							},
+						}
+						newMS := oldMS.DeepCopy()
+						newMS.Spec.Shoot.Name = "other-shoot"
+
+						oldRaw, err := stdjson.Marshal(oldMS)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newMS)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of ManagedSeed"))
+					})
+				})
 			})
 
 			Context("when requested for Seeds", func() {
@@ -773,13 +1292,39 @@ var _ = Describe("handler", func() {
 					return func() {
 						BeforeEach(func() {
 							request.Operation = operation
+
+							if operation == admissionv1.Update {
+								seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: request.Name}}
+								raw, err := stdjson.Marshal(seed)
+								Expect(err).NotTo(HaveOccurred())
+								request.OldObject = runtime.RawExtension{Raw: raw}
+								request.Object = runtime.RawExtension{Raw: raw}
+							}
 						})
 
-						It("should allow the request because seed name matches", func() {
-							request.Name = seedName
+						if operation != admissionv1.Delete {
+							It("should allow the request because seed name matches", func() {
+								request.Name = seedName
 
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
+								Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+							})
+						}
+
+						if operation == admissionv1.Delete {
+							It("should forbid the request because a gardenlet must not delete its own Seed", func() {
+								request.Name = seedName
+
+								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+									AdmissionResponse: admissionv1.AdmissionResponse{
+										Allowed: false,
+										Result: &metav1.Status{
+											Code:    int32(http.StatusForbidden),
+											Message: "gardenlet must not delete its own Seed",
+										},
+									},
+								}))
+							})
+						}
 
 						Context("requiring information from managedseed", func() {
 							var (
@@ -983,6 +1528,37 @@ var _ = Describe("handler", func() {
 				Context("when operation is create", generateTestsForOperation(admissionv1.Create))
 				Context("when operation is update", generateTestsForOperation(admissionv1.Update))
 				Context("when operation is delete", generateTestsForOperation(admissionv1.Delete))
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Resource = metav1.GroupVersionResource{
+							Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+							Version:  gardencorev1beta1.SchemeGroupVersion.Version,
+							Resource: "seeds",
+						}
+						request.Name = seedName
+						request.UserInfo = gardenletUser
+					})
+
+					It("should allow spec changes to own seed", func() {
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny updates to a foreign seed", func() {
+						request.Name = "other-seed"
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+								},
+							},
+						}))
+					})
+				})
 			})
 
 			Context("when requested for Secrets", func() {
@@ -2859,6 +3435,125 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 				})
 			})
 
+			When("requested for Shoots", func() {
+				BeforeEach(func() {
+					request.Name = "foo"
+					request.Namespace = "bar"
+					request.UserInfo = seedUser
+					request.Resource = metav1.GroupVersionResource{
+						Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+						Resource: "shoots",
+					}
+				})
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldShoot := &gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"},
+							Spec:       gardencorev1beta1.ShootSpec{Region: "eu-west-1"},
+						}
+						newShoot := oldShoot.DeepCopy()
+						newShoot.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldShoot)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newShoot)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldShoot := &gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"},
+							Spec:       gardencorev1beta1.ShootSpec{Region: "eu-west-1"},
+						}
+						newShoot := oldShoot.DeepCopy()
+						newShoot.Spec.Region = "us-east-1"
+
+						oldRaw, err := stdjson.Marshal(oldShoot)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newShoot)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Shoot"))
+					})
+
+					It("should allow setting .spec.networking.nodes from nil", func() {
+						nodes := "10.0.0.0/16"
+						oldShoot := &gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"},
+							Spec:       gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{}},
+						}
+						newShoot := oldShoot.DeepCopy()
+						newShoot.Spec.Networking.Nodes = &nodes
+
+						oldRaw, err := stdjson.Marshal(oldShoot)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newShoot)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny setting .spec.networking.nodes from nil alongside another spec change", func() {
+						nodes := "10.0.0.0/16"
+						oldShoot := &gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"},
+							Spec:       gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{}},
+						}
+						newShoot := oldShoot.DeepCopy()
+						newShoot.Spec.Networking.Nodes = &nodes
+						newShoot.Spec.Region = "us-east-1"
+
+						oldRaw, err := stdjson.Marshal(oldShoot)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newShoot)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Shoot"))
+					})
+
+					It("should deny changing .spec.networking.nodes when already set", func() {
+						oldNodes := "10.0.0.0/16"
+						newNodes := "192.168.0.0/16"
+						oldShoot := &gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"},
+							Spec:       gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{Nodes: &oldNodes}},
+						}
+						newShoot := oldShoot.DeepCopy()
+						newShoot.Spec.Networking.Nodes = &newNodes
+
+						oldRaw, err := stdjson.Marshal(oldShoot)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newShoot)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Shoot"))
+					})
+				})
+			})
+
 			Context("when requested for Gardenlets", func() {
 				var name, namespace string
 
@@ -2889,26 +3584,62 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						}))
 					},
 
-					Entry("update", admissionv1.Update),
 					Entry("delete", admissionv1.Delete),
 				)
+
+				When("operation is UPDATE", func() {
+					BeforeEach(func() {
+						request.Operation = admissionv1.Update
+						request.Resource = metav1.GroupVersionResource{
+							Group:    seedmanagementv1alpha1.SchemeGroupVersion.Group,
+							Version:  seedmanagementv1alpha1.SchemeGroupVersion.Version,
+							Resource: "gardenlets",
+						}
+						request.Name = seedName
+						request.Namespace = v1beta1constants.GardenNamespace
+					})
+
+					It("should allow when spec is unchanged", func() {
+						oldGardenlet := &seedmanagementv1alpha1.Gardenlet{
+							ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+						}
+						newGardenlet := oldGardenlet.DeepCopy()
+						newGardenlet.Annotations = map[string]string{"foo": "bar"}
+
+						oldRaw, err := stdjson.Marshal(oldGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should deny when spec is changed", func() {
+						oldGardenlet := &seedmanagementv1alpha1.Gardenlet{
+							ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+						}
+						newGardenlet := oldGardenlet.DeepCopy()
+						replicaCount := int32(3)
+						newGardenlet.Spec.Deployment.ReplicaCount = &replicaCount
+
+						oldRaw, err := stdjson.Marshal(oldGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Gardenlet"))
+					})
+				})
 
 				Context("when operation is create", func() {
 					BeforeEach(func() {
 						request.Operation = admissionv1.Create
-					})
-
-					It("should forbid the request because it does not belong to the seed", func() {
-						request.Name = "some-other-name"
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusForbidden),
-									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
-								},
-							},
-						}))
 					})
 
 					It("should forbid the request because the namespace is not 'garden'", func() {
@@ -2924,7 +3655,82 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						}))
 					})
 
-					It("should allow because it belongs to the seed", func() {
+					It("should forbid the request because it does not belong to the seed", func() {
+						request.Name = "some-other-name"
+						objData, err := runtime.Encode(encoder, &seedmanagementv1alpha1.Gardenlet{})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+								},
+							},
+						}))
+					})
+
+					It("should return an error because decoding the object failed", func() {
+						request.Object.Raw = []byte(`{]`)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because a ManagedSeed exists for this seed", func() {
+						Expect(fakeClient.Create(ctx, &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace},
+						})).To(Succeed())
+
+						objData, err := runtime.Encode(encoder, &seedmanagementv1alpha1.Gardenlet{})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "managed-seed gardenlet must not create Gardenlet resources",
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because .spec.kubeconfigSecretRef is set", func() {
+						objData, err := runtime.Encode(encoder, &seedmanagementv1alpha1.Gardenlet{
+							Spec: seedmanagementv1alpha1.GardenletSpec{
+								KubeconfigSecretRef: &corev1.LocalObjectReference{Name: "some-secret"},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "gardenlet must not set .spec.kubeconfigSecretRef",
+								},
+							},
+						}))
+					})
+
+					It("should allow because it belongs to the seed and has no kubeconfigSecretRef", func() {
+						objData, err := runtime.Encode(encoder, &seedmanagementv1alpha1.Gardenlet{})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 				})

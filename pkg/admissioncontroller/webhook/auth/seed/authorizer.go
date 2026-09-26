@@ -206,8 +206,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeSecret(requestAuthorizer, attrs)
 		case workloadIdentityResource:
 			return requestAuthorizer.Check(graph.VertexTypeWorkloadIdentity, attrs,
-				authwebhook.WithAllowedVerbs("get", "list", "watch", "create", "patch"),
-				authwebhook.WithAllowedSubresources("token"),
+				authwebhook.WithAllowedVerbs("get", "list", "watch"),
+				authwebhook.WithSubresourcesAndVerb([]string{"token"}, []string{"create"}),
 			)
 		case seedResource:
 			return requestAuthorizer.Check(graph.VertexTypeSeed, attrs,
