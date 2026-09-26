@@ -39,7 +39,7 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/onsi/ginkgo/v2 v2.33.0
 	github.com/onsi/gomega v1.43.0
-	github.com/open-telemetry/opentelemetry-operator/apis v0.158.0
+	github.com/open-telemetry/opentelemetry-operator/apis v0.159.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pelletier/go-toml v1.9.5
 	github.com/perses/perses v0.54.0
