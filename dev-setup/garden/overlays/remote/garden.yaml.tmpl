@@ -43,16 +43,20 @@ spec:
       # Enter service CIDRs of your virtual garden
       services: []
     gardener:
+      # Discovery Server is disabled by default. To enable it, replace the block below with:
+      #   gardenerDiscoveryServer:
+      #     domain:
+      #       name: ""  # e.g. "discovery.my-garden.my-domain.com"
+      #       provider: primary
       gardenerDiscoveryServer:
-        domain:
-          # Enter subdomain of your primary domain e.g. "discovery.my-garden.my-domain.com"
-          name: ""
-          provider: primary
+        $patch: delete
+      # Dashboard is disabled by default. To enable it, replace the block below with:
+      #   gardenerDashboard:
+      #     domain:
+      #       name: ""  # e.g. "dashboard.my-garden.my-domain.com"
+      #       provider: primary
       gardenerDashboard:
-        domain:
-          # Enter subdomain of your primary domain e.g. "dashboard.my-garden.my-domain.com"
-          name: ""
-          provider: primary
+        $patch: delete
       gardenerScheduler:
         # Required for the remote getting-started flow so shoots of different providers can be scheduled to the same seed.
         strategy: MinimalDistance
