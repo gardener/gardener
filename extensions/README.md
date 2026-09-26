@@ -18,7 +18,6 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [Alibaba Cloud](https://github.com/gardener/gardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardener/gardener-extension-provider-aws)
 - [Azure](https://github.com/gardener/gardener-extension-provider-azure)
-- [Equinix Metal](https://github.com/gardener/gardener-extension-provider-equinix-metal)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
 - [Hetzner Cloud](https://github.com/23technologies/gardener-extension-provider-hcloud)
 - [IronCore](https://github.com/ironcore-dev/gardener-extension-provider-ironcore)
