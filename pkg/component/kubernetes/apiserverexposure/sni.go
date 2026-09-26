@@ -178,6 +178,11 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	APIServerAuthenticationDynamicMetadataKey string
 	IstioTLSSecret                            string
 	TargetClusterAPIServerProxy               string
+	TCPKeepaliveTime                          int
+	TCPKeepaliveInterval                      int
+	TCPKeepaliveProbes                        int
+	HTTP2ConnectionKeepaliveInterval          string
+	HTTP2ConnectionKeepaliveTimeout           string
 }
 
 type envoyFilterIstioTLSTerminationTemplateValues struct {
@@ -261,8 +266,13 @@ func (s *sni) Deploy(ctx context.Context) error {
 			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
 			APIServerRequestHeaderGroup:    kubeapiserverconstants.RequestHeaderGroup,
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
-			IstioTLSSecret:              s.emptyIstioTLSSecret().Name,
-			TargetClusterAPIServerProxy: targetClusterAPIServerProxy,
+			IstioTLSSecret:                   s.emptyIstioTLSSecret().Name,
+			TargetClusterAPIServerProxy:      targetClusterAPIServerProxy,
+			TCPKeepaliveTime:                 istio.TCPKeepaliveTime,
+			TCPKeepaliveInterval:             istio.TCPKeepaliveInterval,
+			TCPKeepaliveProbes:               istio.TCPKeepaliveProbes,
+			HTTP2ConnectionKeepaliveInterval: istio.HTTP2ConnectionKeepaliveInterval,
+			HTTP2ConnectionKeepaliveTimeout:  istio.HTTP2ConnectionKeepaliveTimeout,
 		}); err != nil {
 			return err
 		}

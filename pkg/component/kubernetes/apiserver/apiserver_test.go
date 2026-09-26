@@ -3199,6 +3199,7 @@ kind: AuthorizationConfiguration
 						"--external-hostname="+externalHostname,
 						"--livez-grace-period=1m",
 						"--shutdown-delay-duration=15s",
+						"--shutdown-watch-termination-grace-period=10s",
 						"--profiling=false",
 						"--proxy-client-cert-file=/srv/kubernetes/aggregator/tls.crt",
 						"--proxy-client-key-file=/srv/kubernetes/aggregator/tls.key",

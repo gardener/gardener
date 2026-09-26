@@ -177,11 +177,15 @@ spec:
               http2_protocol_options:
                 initial_stream_window_size: 65536 # 64 KiB
                 initial_connection_window_size: 1048576 # 1 MiB
+                connection_keepalive:
+                  interval: {{ .HTTP2ConnectionKeepaliveInterval }}
+                  timeout: {{ .HTTP2ConnectionKeepaliveTimeout }}
         per_connection_buffer_limit_bytes: 32768
         upstream_connection_options:
           tcp_keepalive:
-            keepalive_interval: 75
-            keepalive_time: 7200
+            keepalive_interval: {{ .TCPKeepaliveInterval }}
+            keepalive_time: {{ .TCPKeepaliveTime }}
+            keepalive_probes: {{ .TCPKeepaliveProbes }}
         load_assignment:
           cluster_name: {{ .TargetClusterAPIServerProxy }}
           endpoints:

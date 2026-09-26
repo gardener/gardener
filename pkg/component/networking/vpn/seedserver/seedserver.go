@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	istioutils "github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -826,11 +827,12 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 						MaxConnections: 5000,
 						TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
 							Interval: &durationpb.Duration{
-								Seconds: 75,
+								Seconds: istioutils.TCPKeepaliveInterval,
 							},
 							Time: &durationpb.Duration{
-								Seconds: 7200,
+								Seconds: istioutils.TCPKeepaliveTime,
 							},
+							Probes: istioutils.TCPKeepaliveProbes,
 						},
 					},
 				},

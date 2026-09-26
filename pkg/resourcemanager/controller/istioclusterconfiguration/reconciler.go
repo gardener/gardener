@@ -268,6 +268,12 @@ func getEnvoyConfigPatch(clusterName string, httpProtocolPolicy istioutils.HTTPP
 		Fields: map[string]*structpb.Value{
 			"initial_stream_window_size":     structpb.NewNumberValue(http2InitialStreamWindowSize),
 			"initial_connection_window_size": structpb.NewNumberValue(http2InitialConnectionWindowSize),
+			"connection_keepalive": structpb.NewStructValue(&structpb.Struct{
+				Fields: map[string]*structpb.Value{
+					"interval": structpb.NewStringValue(istioutils.HTTP2ConnectionKeepaliveInterval),
+					"timeout":  structpb.NewStringValue(istioutils.HTTP2ConnectionKeepaliveTimeout),
+				},
+			}),
 		},
 	}
 

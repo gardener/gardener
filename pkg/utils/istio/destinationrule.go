@@ -15,6 +15,30 @@ import (
 // MaxConnectionDuration is the maximum duration of a connection in seconds. It is set to 24 hours (86400 seconds) to prevent issues with expiring client certificates.
 const MaxConnectionDuration = 86400
 
+// TCPKeepaliveTime is the duration in seconds a connection needs to be idle before TCP keepalive probes are sent.
+// TCPKeepaliveInterval is the duration in seconds between individual TCP keepalive probes.
+// TCPKeepaliveProbes is the number of TCP keepalive probes to send before considering the connection dead.
+// => After 60s + 30s * 5 = 210s (3.5 minutes) of idle time without answers to the keepalive probes, the connection will be considered dead and closed.
+// Values are chosen between the kubernetes client and server defaults, which are between 30s and 120s for the TCPKeepaliveTime and unspecified
+// TCPKeepaliveInterval and TCPKeepaliveProbes.
+// client: https://github.com/kubernetes/kubernetes/blob/b264d0913501e614a75eb021a0e2578ee12d0281/staging/src/k8s.io/client-go/transport/cache.go#L123
+// server: https://github.com/kubernetes/kubernetes/blob/b264d0913501e614a75eb021a0e2578ee12d0281/staging/src/k8s.io/apiserver/pkg/server/secure_serving.go#L288
+const (
+	TCPKeepaliveTime     = 60
+	TCPKeepaliveInterval = 30
+	TCPKeepaliveProbes   = 5
+)
+
+// HTTP2ConnectionKeepaliveInterval is the interval between HTTP/2 keepalive PING frames sent on upstream (todo: check) connections.
+// HTTP2ConnectionKeepaliveTimeout is the timeout after which an unacknowledged HTTP/2 keepalive PING causes the connection to be closed.
+// => At the latest after 45s (earliest after 15s) of unsanswered pings, the connection will be considered dead and closed.
+// Values chosen in line with the kubernetes client defaults:
+// https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/net/http.go#L178
+const (
+	HTTP2ConnectionKeepaliveInterval = "30s"
+	HTTP2ConnectionKeepaliveTimeout  = "15s"
+)
+
 // DestinationRuleWithLocalityPreference returns a function setting the given attributes to a destination rule object.
 func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, exportTo []string, destinationHost string) func() error {
 	return DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, exportTo, destinationHost, &istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE})
@@ -87,8 +111,9 @@ func destinationRuleWithTrafficPolicy(
 					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 						MaxConnectionDuration: &durationpb.Duration{Seconds: MaxConnectionDuration},
 						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Time:     &durationpb.Duration{Seconds: 7200},
-							Interval: &durationpb.Duration{Seconds: 75},
+							Time:     &durationpb.Duration{Seconds: TCPKeepaliveTime},
+							Interval: &durationpb.Duration{Seconds: TCPKeepaliveInterval},
+							Probes:   TCPKeepaliveProbes,
 						},
 					},
 					Http: httpConnectionPool,
