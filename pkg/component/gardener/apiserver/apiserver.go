@@ -102,9 +102,10 @@ type AutoscalingConfig struct {
 }
 
 // New creates a new instance of DeployWaiter for the gardener-apiserver.
-func New(client client.Client, namespace string, secretsManager secretsmanager.Interface, values Values) Interface {
+func New(client client.Client, apiReader client.Reader, namespace string, secretsManager secretsmanager.Interface, values Values) Interface {
 	return &gardenerAPIServer{
 		client:         client,
+		apiReader:      apiReader,
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
@@ -113,6 +114,7 @@ func New(client client.Client, namespace string, secretsManager secretsmanager.I
 
 type gardenerAPIServer struct {
 	client         client.Client
+	apiReader      client.Reader
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
@@ -267,14 +269,14 @@ func (g *gardenerAPIServer) Wait(ctx context.Context) error {
 	// virtual resources. This is important for credentials rotation since we want all GAPI pods to run with the new
 	// server certificate before we drop the old CA from the bundle in the APIServices (which get deployed via the
 	// virtual resources).
-	if err := managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, g.client, g.namespace, ManagedResourceNameRuntime); err != nil {
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, g.apiReader, g.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, ManagedResourceNameVirtual)
+	return managedresources.WaitUntilHealthy(timeoutCtx, g.apiReader, g.namespace, ManagedResourceNameVirtual)
 }
 
 func (g *gardenerAPIServer) WaitCleanup(ctx context.Context) error {

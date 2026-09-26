@@ -38,6 +38,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		ctx = context.TODO()
 
 		runtimeClient               client.Client
+		runtimeAPIReader            client.Reader
 		namespace                   = "foo"
 		clusterIdentity             = "cluster-id"
 		encryptionProviderType      = gardencorev1beta1.EncryptionProviderTypeAESCBC
@@ -49,6 +50,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 	BeforeEach(func() {
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		runtimeAPIReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		apiServerConfig = nil
 	})
 
@@ -93,7 +95,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []apiserver.AdmissionPluginConfig) {
 					apiServerConfig.AdmissionPlugins = configuredPlugins
 
-					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(gardenerAPIServer.GetValues().EnabledAdmissionPlugins).To(Equal(expectedPlugins))
 				},
@@ -130,7 +132,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				var expectedDisabledPlugins []gardencorev1beta1.AdmissionPlugin
 
 				AfterEach(func() {
-					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(gardenerAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
@@ -197,7 +199,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						prepTest()
 					}
 
-					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 					Expect(err).To(errMatcher)
 					if gardenerAPIServer != nil {
 						Expect(gardenerAPIServer.GetValues().Audit).To(Equal(expectedConfig))
@@ -330,7 +332,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("FeatureGates", func() {
 			It("should set the field to nil by default", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().FeatureGates).To(BeNil())
 			})
@@ -344,7 +346,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					},
 				}
 
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().FeatureGates).To(Equal(featureGates))
 			})
@@ -352,7 +354,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("Requests", func() {
 			It("should set the field to nil by default", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().Requests).To(BeNil())
 			})
@@ -364,7 +366,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				}
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{Requests: requests}
 
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().Requests).To(Equal(requests))
 			})
@@ -372,7 +374,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("WatchCacheSizes", func() {
 			It("should set the field to nil by default", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().WatchCacheSizes).To(BeNil())
 			})
@@ -384,7 +386,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				}
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{WatchCacheSizes: watchCacheSizes}
 
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().WatchCacheSizes).To(Equal(watchCacheSizes))
 			})
@@ -392,7 +394,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("ShootAdminKubeconfigMaxExpiration", func() {
 			It("should set the field to nil by default", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().ShootAdminKubeconfigMaxExpiration).To(BeNil())
 			})
@@ -401,7 +403,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				shootAdminKubeconfigMaxExpiration := &metav1.Duration{Duration: 1 * time.Hour}
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{ShootAdminKubeconfigMaxExpiration: shootAdminKubeconfigMaxExpiration}
 
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().ShootAdminKubeconfigMaxExpiration).To(Equal(shootAdminKubeconfigMaxExpiration))
 			})
@@ -409,7 +411,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("TargetVersion", func() {
 			It("should set the field to the configured values", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, runtimeAPIReader, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance, targetVersion)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().TargetVersion).To(Equal(targetVersion))
 			})
@@ -459,7 +461,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         "",
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -480,7 +481,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					})).To(Succeed())
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPreparing,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -502,7 +502,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					gardenerAPIServer.EXPECT().Wait(ctx)
 
 					gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(apiserver.ETCDEncryptionConfig{
-						RotationPhase:         gardencorev1beta1.RotationPreparing,
 						EncryptWithCurrentKey: true,
 						ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 						EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -511,7 +510,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					gardenerAPIServer.EXPECT().Deploy(ctx)
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPreparing,
 					EncryptWithCurrentKey: false,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -527,7 +525,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.RotationPrepared,
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationPrepared,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -548,7 +545,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					})).To(Succeed())
 				},
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationCompleting,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
@@ -564,7 +560,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardencorev1beta1.RotationCompleted,
 				nil,
 				apiserver.ETCDEncryptionConfig{
-					RotationPhase:         gardencorev1beta1.RotationCompleted,
 					EncryptWithCurrentKey: true,
 					ResourcesToEncrypt:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),
 					EncryptedResources:    sets.List(gardenerutils.DefaultGardenerResourcesForEncryption()),

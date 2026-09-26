@@ -132,9 +132,8 @@ func (v *ETCDEncryptionKeyVerifier) afterCompleted(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetETCDSecretNamespace()), v.SecretsManagerLabelSelector)).To(Succeed())
 		grouped := GroupByName(secretList.Items)
-		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "there should be only one etcd encryption key")
-		g.Expect(grouped[v.EncryptionKey]).ToNot(ContainElement(v.secretsBefore[v.EncryptionKey][0]), "old etcd encryption key secret should not be kept")
-		newKeySecret = grouped[v.EncryptionKey][0]
+		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(2), "there should be two etcd encryption key secrets (new + old retained for DR)")
+		newKeySecret = grouped[v.EncryptionKey][1]
 	}).Should(Succeed())
 
 	By("Verify new etcd encryption config secret")
@@ -151,18 +150,25 @@ func (v *ETCDEncryptionKeyVerifier) afterCompleted(ctx context.Context) {
 		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
 			{
 				AESCBC: &apiserverconfigv1.AESConfiguration{
-					Keys: []apiserverconfigv1.Key{{
-						// new key
-						Name:   string(newKeySecret.Data["key"]),
-						Secret: getBase64EncodedETCDEncryptionKeyFromSecret(newKeySecret),
-					}},
+					Keys: []apiserverconfigv1.Key{
+						{
+							// new key
+							Name:   string(newKeySecret.Data["key"]),
+							Secret: getBase64EncodedETCDEncryptionKeyFromSecret(newKeySecret),
+						},
+						{
+							// old key retained for DR
+							Name:   string(v.secretsBefore[v.EncryptionKey][0].Data["key"]),
+							Secret: getBase64EncodedETCDEncryptionKeyFromSecret(v.secretsBefore[v.EncryptionKey][0]),
+						},
+					},
 				},
 			},
 			{
 				Identity: &apiserverconfigv1.IdentityConfiguration{},
 			},
 		}))
-	}).Should(Succeed(), "etcd encryption config should only have new key")
+	}).Should(Succeed(), "etcd encryption config should have new key, old key (DR), and identity")
 }
 
 func getBase64EncodedETCDEncryptionKeyFromSecret(secret corev1.Secret) string {

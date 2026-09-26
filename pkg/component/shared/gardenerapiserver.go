@@ -28,6 +28,7 @@ import (
 func NewGardenerAPIServer(
 	ctx context.Context,
 	runtimeClient client.Client,
+	runtimeAPIReader client.Reader,
 	runtimeNamespace string,
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
@@ -88,6 +89,7 @@ func NewGardenerAPIServer(
 
 	return gardenerapiserver.New(
 		runtimeClient,
+		runtimeAPIReader,
 		runtimeNamespace,
 		secretsManager,
 		gardenerapiserver.Values{
