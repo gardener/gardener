@@ -104,15 +104,19 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccess
 
 		mutateETCDPodFn = func(pod *corev1.Pod) {
 			// TODO(CaptainIRS): Remove this mutation once https://github.com/gardener/etcd-druid/issues/1317 is resolved,
-			// as the kubeconfig volume and env var can then be specified directly via the Etcd CR API.
+			//  as the kubeconfig volume and env var can then be specified directly via the Etcd CR API.
+			const endpointsVolumeName = "controlplane-nodes-endpoints"
+
 			genericTokenKubeconfigSecret, _ := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(pod, genericTokenKubeconfigSecret.Name, gardenerutils.NewShootAccessSecret(pod.Name, pod.Namespace).Secret.Name, etcdconstants.ContainerNameBackupRestore))
+
 			utilruntime.Must(kubernetesutils.VisitPodSpec(pod, func(podSpec *corev1.PodSpec) {
+				kubernetesutils.AddVolume(podSpec, corev1.Volume{Name: endpointsVolumeName, VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints}}}, true)
 				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
-					if container.Name == etcdconstants.ContainerNameBackupRestore {
-						kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "KUBECONFIG", Value: gardenerutils.PathGenericKubeconfig}, true)
-					}
-				})
+					kubernetesutils.AddVolumeMount(container, corev1.VolumeMount{Name: endpointsVolumeName, MountPath: v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints, ReadOnly: true}, true)
+					kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "ENDPOINTS", Value: v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints}, true)
+					kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "KUBECONFIG", Value: gardenerutils.PathGenericKubeconfig}, true)
+				}, etcdconstants.ContainerNameBackupRestore)
 			}))
 		}
 	)

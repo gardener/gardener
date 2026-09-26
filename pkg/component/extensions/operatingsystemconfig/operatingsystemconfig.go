@@ -733,7 +733,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		ClusterDomain:                           d.clusterDomain,
 		CRIName:                                 d.criName,
 		Images:                                  d.images,
-		NodeLabels:                              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key, ptr.Deref(d.region, "")),
+		NodeLabels:                              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6, d.key, ptr.Deref(d.region, "")),
 		NodeMonitorGracePeriod:                  d.nodeMonitorGracePeriod,
 		KubeletCABundle:                         d.kubeletCABundle,
 		KubeletConfigParameters:                 d.kubeletConfigParameters,
@@ -752,6 +752,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		PreferIPv6:                              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 		Taints:                                  d.taints,
 		SyncControlPlaneAuthTokens:              d.syncControlPlaneAuthTokens && d.worker.ControlPlane != nil,
+		IsControlPlanePool:                      d.worker.ControlPlane != nil,
 	}
 
 	switch d.purpose {
@@ -759,7 +760,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		units, files, err = InitConfigFn(
 			d.worker,
 			d.images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
-			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, nil),
+			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, nil, d.worker.ControlPlane != nil),
 			d.clusterCABundle,
 			d.registryCABundle != nil,
 		)
