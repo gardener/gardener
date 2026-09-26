@@ -1037,6 +1037,7 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		gardenlethelper.IsLoggingEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
+		false,
 	)
 }
 
