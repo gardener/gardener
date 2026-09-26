@@ -578,6 +578,42 @@ var _ = Describe("CloudProfile Helper", func() {
 			"1.17.1",
 			false,
 		),
+		Entry("Expect no version to be found, as the current version is still supported and no non-deprecated higher version exists",
+			[]gardencorev1beta1.ExpirableVersion{
+				{
+					Version:        "2.3.0",
+					Classification: &deprecatedClassification,
+				},
+				{
+					Version:        "2.2.0",
+					Classification: &supportedClassification,
+				},
+				{
+					Version:        "2.1.0",
+					ExpirationDate: &expirationDateInThePast,
+				},
+			},
+			"2.2.0",
+			false,
+			"",
+			false,
+		),
+		Entry("Expect newer deprecated version to be selected, as the current version is already deprecated",
+			[]gardencorev1beta1.ExpirableVersion{
+				{
+					Version:        "2.3.0",
+					Classification: &deprecatedClassification,
+				},
+				{
+					Version:        "2.2.0",
+					Classification: &deprecatedClassification,
+				},
+			},
+			"2.2.0",
+			true,
+			"2.3.0",
+			false,
+		),
 	)
 
 	DescribeTable("#GetLatestQualifyingVersion",
