@@ -7,6 +7,7 @@ package victorialogs
 import (
 	"context"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -34,11 +35,17 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
 	timeoutWaitForManagedResources = 2 * time.Minute
+
+	vlServerTLSVolumeName = "vl-server-tls"
+	vlServerTLSMountPath  = "/etc/victorialogs/tls"
 )
 
 // Values is the values for VictoriaLogs configurations.
@@ -61,6 +68,8 @@ type Values struct {
 	PriorityClassName string
 	// PVCAutoscaler configures whether and how the VictoriaLogs PVC is autoscaled.
 	PVCAutoscaling PVCAutoscalingConfig
+	// SecretNameServerCA is the name of the CA secret used to sign the server TLS cert.
+	SecretNameServerCA string
 }
 
 // PVCAutoscalingConfig configures whether and up to what capacity the VictoriaLogs PVC is autoscaled.
@@ -72,9 +81,10 @@ type PVCAutoscalingConfig struct {
 }
 
 type victoriaLogs struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	values         Values
+	secretsManager secretsmanager.Interface
 }
 
 // New creates a new instance of VictoriaLogs deployer.
@@ -82,11 +92,13 @@ func New(
 	client client.Client,
 	namespace string,
 	values Values,
+	secretsManager secretsmanager.Interface,
 ) component.DeployWaiter {
 	return &victoriaLogs{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		values:         values,
+		secretsManager: secretsManager,
 	}
 }
 
@@ -105,8 +117,27 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
+	if v.values.SecretNameServerCA == "" {
+		return fmt.Errorf("secretNameServerCA must be set")
+	}
+
+	serverTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        "victoria-logs-server-tls",
+		CommonName:                  fmt.Sprintf("%s.%s.svc", constants.ServiceName, v.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(constants.ServiceName, v.namespace),
+		CertType:                    secrets.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA))
+	if err != nil {
+		return err
+	}
+
+	if serverTLSSecret == nil || serverTLSSecret.Name == "" {
+		return fmt.Errorf("failed to generate victoria-logs-server-tls secret")
+	}
+
 	resources := []client.Object{
-		v.vlSingle(),
+		v.vlSingle(serverTLSSecret.Name),
 		v.getVPA(),
 		v.getServiceMonitor(),
 		v.getPrometheusRule(),
@@ -142,7 +173,7 @@ func (v *victoriaLogs) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, constants.ManagedResourceNameRuntime)
 }
 
-func (v *victoriaLogs) vlSingle() *victoriametricsv1.VLSingle {
+func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1.VLSingle {
 	storage := resource.MustParse("30Gi")
 	if v.values.Storage != nil {
 		storage = *v.values.Storage
@@ -221,6 +252,41 @@ func (v *victoriaLogs) vlSingle() *victoriametricsv1.VLSingle {
 			Annotations: managedAnnotations,
 		}
 	}
+
+	// Port order matters => do not reorder
+	vlSingle.Spec.ExtraArgs = map[string]string{
+		"httpListenAddr": fmt.Sprintf(":%d,:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
+		"tls":            "true,false",
+		"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
+		"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
+	}
+
+	// Exposing both ports. The http port is left for extension compatibility reasons.
+	vlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
+		{
+			Name:       "https",
+			Port:       constants.VictoriaLogsPort,
+			TargetPort: intstr.FromInt32(constants.VictoriaLogsPort),
+			Protocol:   corev1.ProtocolTCP,
+		},
+		{
+			Name:       "http",
+			Port:       constants.VictoriaLogsHttpPort,
+			TargetPort: intstr.FromInt32(constants.VictoriaLogsHttpPort),
+			Protocol:   corev1.ProtocolTCP,
+		},
+	}
+	vlSingle.Spec.Volumes = []corev1.Volume{{
+		Name: vlServerTLSVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{SecretName: vlServerTLSSecretName},
+		},
+	}}
+	vlSingle.Spec.VolumeMounts = []corev1.VolumeMount{{
+		Name:      vlServerTLSVolumeName,
+		MountPath: vlServerTLSMountPath,
+		ReadOnly:  true,
+	}}
 
 	return vlSingle
 }
@@ -316,18 +382,15 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app.kubernetes.io/name":      "vlsingle",
-					"app.kubernetes.io/instance":  constants.VLSingleResourceName,
-					"app.kubernetes.io/component": "monitoring",
-					"managed-by":                  "vm-operator",
+					"app.kubernetes.io/name":                          "vlsingle",
+					"app.kubernetes.io/instance":                      constants.VLSingleResourceName,
+					"app.kubernetes.io/component":                     "monitoring",
+					"managed-by":                                      "vm-operator",
+					"operator.victoriametrics.com/additional-service": "managed",
 				},
-				MatchExpressions: []metav1.LabelSelectorRequirement{{
-					Key:      "operator.victoriametrics.com/additional-service",
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				}},
 			},
 			Endpoints: []monitoringv1.Endpoint{{
-				Port: "http",
+				Port: "https",
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
@@ -337,6 +400,12 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 					{
 						Action: "labelmap",
 						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					},
+				},
+				Scheme: new(monitoringv1.SchemeHTTPS),
+				HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+					HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+						TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 					},
 				},
 			}},

@@ -56,6 +56,9 @@ const (
 	tlsMountPath             = "/tls"
 	tlsCertificateVolumeName = "tls-certificate"
 
+	caBundleVolumeName = "ca-bundle"
+	caBundleMountPath  = "/etc/otel/tls"
+
 	metricsPort                    = 8888
 	timeoutWaitForManagedResources = 2 * time.Minute
 )
@@ -143,6 +146,15 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		seedObjects                      = []client.Object{}
 	)
 
+	if o.values.SecretNameServerCA == "" {
+		return fmt.Errorf("secretNameServerCA must be set")
+	}
+
+	caBundle, found := o.secretsManager.Get(o.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("the CA trust bundle for %q was not found", o.values.SecretNameServerCA)
+	}
+
 	if o.values.ClusterType == component.ClusterTypeShoot {
 		if o.values.WithRBACProxy {
 			if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
@@ -163,11 +175,6 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
 		if err != nil {
 			return err
-		}
-
-		caBundle, found := o.secretsManager.Get(o.values.SecretNameServerCA)
-		if !found {
-			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
 		}
 
 		genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -214,7 +221,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 	}
 
-	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName, ingressTLSSecret))
+	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName, ingressTLSSecret, caBundle))
 	seedObjects = append(seedObjects, o.serviceMonitor())
 	seedObjects = append(seedObjects, o.serviceAccount())
 	seedObjects = append(seedObjects, o.vpa())
@@ -388,7 +395,7 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 	}
 }
 
-func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string, ingressTLSSecret *corev1.Secret) *otelv1beta1.OpenTelemetryCollector {
+func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string, ingressTLSSecret *corev1.Secret, caBundle *corev1.Secret) *otelv1beta1.OpenTelemetryCollector {
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      collectorconstants.OpenTelemetryCollectorResourceName,
@@ -538,9 +545,12 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							"verbosity": "basic",
 						},
 						"otlphttp/victorialogs": map[string]any{
-							"logs_endpoint": "http://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint,
+							"logs_endpoint": fmt.Sprintf("https://%s:%d%s", victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort, victorialogsconstants.PushEndpoint),
 							"headers": map[string]any{
 								"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
+							},
+							"tls": map[string]any{
+								"ca_file": path.Join(caBundleMountPath, secrets.DataKeyCertificateBundle),
 							},
 						},
 					},
@@ -628,6 +638,26 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 			// no tls => no istio => assume another type of network policies were configured
 			o.injectInsecureRBACProxy(obj, genericTokenKubeconfigSecretName)
 		}
+	}
+
+	if caBundle != nil {
+		obj.Spec.Volumes = append(obj.Spec.Volumes, corev1.Volume{
+			Name: caBundleVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: caBundle.Name,
+					Items: []corev1.KeyToPath{{
+						Key:  secrets.DataKeyCertificateBundle,
+						Path: secrets.DataKeyCertificateBundle,
+					}},
+				},
+			},
+		})
+		obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts, corev1.VolumeMount{
+			Name:      caBundleVolumeName,
+			MountPath: caBundleMountPath,
+			ReadOnly:  true,
+		})
 	}
 
 	// We want these annotations to be passed down to the service that will be created by the OpenTelemetry Operator.

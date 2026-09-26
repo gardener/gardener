@@ -41,7 +41,8 @@ func (p *perses) datasources() []client.Object {
 
 	if p.values.VictoriaLogsEnabled && !p.values.OnlyDeployDatasourcesAndDashboards {
 		datasources = append(datasources,
-			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsPort), false),
+			// TODO(teodordichev): switch to HTTPS once the perses-operator upstream issue is resolved.
+			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsHttpPort), false),
 		)
 	}
 
