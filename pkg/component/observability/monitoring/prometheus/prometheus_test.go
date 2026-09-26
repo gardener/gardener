@@ -116,6 +116,7 @@ honor_labels: true`
 		additionalConfigMap                 *corev1.ConfigMap
 		secretAdditionalScrapeConfigs       *corev1.Secret
 		secretAdditionalAlertmanagerConfigs *corev1.Secret
+		secretAdditionalAlertRelabelConfigs *corev1.Secret
 		secretRemoteWriteBasicAuth          *corev1.Secret
 		podDisruptionBudget                 *policyv1.PodDisruptionBudget
 
@@ -627,6 +628,18 @@ honor_labels: true`
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		secretAdditionalAlertRelabelConfigs = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "prometheus-" + name + "-additional-alert-relabel-configs",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "prometheus",
+					"role": "monitoring",
+					"name": name,
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
 		secretRemoteWriteBasicAuth = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "prometheus-" + name + "-remote-write-basic-auth",
@@ -1128,15 +1141,42 @@ tls_config:
 					})
 				})
 
-				When("additional alert relabel configs are provided", func() {
+				When("additional alert relabel configs secret is provided", func() {
 					BeforeEach(func() {
-						values.AdditionalAlertRelabelConfigs = []monitoringv1.RelabelConfig{{
-							SourceLabels: []monitoringv1.LabelName{"project", "name"},
-							Regex:        "(.+);(.+)",
-							Action:       "replace",
-							Replacement:  new("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
-							TargetLabel:  "shoot_dashboard_url",
-						}}
+						values.Alerting.AdditionalAlertRelabelConfigsSecret = &corev1.Secret{
+							Data: map[string][]byte{"config.yaml": []byte("- action: drop")},
+						}
+					})
+
+					It("should deploy the secret and reference its key in the Prometheus resource", func() {
+						prometheusObj := prometheusFor([]alertmanager{{name: alertmanagerName}}, false)
+						prometheusObj.Spec.AdditionalAlertRelabelConfigs = &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertRelabelConfigs.Name},
+							Key:                  "config.yaml",
+						}
+
+						secretAdditionalAlertRelabelConfigs.Data = map[string][]byte{"config.yaml": []byte("- action: drop")}
+
+						prometheusRule.Namespace = namespace
+						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
+						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
+
+						Expect(managedResource).To(consistOf(
+							serviceAccount,
+							service,
+							clusterRoleBinding,
+							prometheusObj,
+							vpa,
+							prometheusRule,
+							scrapeConfig,
+							serviceMonitor,
+							podMonitor,
+							secretAdditionalScrapeConfigs,
+							additionalConfigMap,
+							secretAdditionalAlertRelabelConfigs,
+						))
 					})
 				})
 			})

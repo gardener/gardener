@@ -314,6 +314,9 @@ const (
 	GardenRoleGlobalShootRemoteWriteMonitoring = "global-shoot-remote-write-monitoring"
 	// GardenRoleAlerting is the value of GardenRole key indicating type 'alerting'.
 	GardenRoleAlerting = "alerting"
+	// GardenRoleAdditionalAlertRelabelConfigs is the value of the GardenRole key indicating type 'alert-relabel-config'.
+	// It refers to a secret containing additional alert relabel configurations.
+	GardenRoleAdditionalAlertRelabelConfigs = "additional-alert-relabel-configs"
 	// GardenRoleControlPlaneWildcardCert is the value of the GardenRole key indicating type 'controlplane-cert'.
 	// It refers to a wildcard TLS certificate which can be used for seed services exposed under the corresponding domain.
 	GardenRoleControlPlaneWildcardCert = "controlplane-cert"

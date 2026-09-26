@@ -501,6 +501,29 @@ func (r *Reconciler) getGlobalObservabilitySecret(ctx context.Context) (*corev1.
 	return nil, nil
 }
 
+func (r *Reconciler) getAdditionalAlertRelabelConfigSecret(ctx context.Context) (*corev1.Secret, error) {
+	secretList := &corev1.SecretList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, secretList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleAdditionalAlertRelabelConfigs,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to list additional alert relabel config secrets: %w", err)
+	}
+
+	if len(secretList.Items) > 1 {
+		var secretNames []string
+		for _, s := range secretList.Items {
+			secretNames = append(secretNames, s.Name)
+		}
+		return nil, fmt.Errorf("there can be at most one additional alert relabel config secret but found multiple: %s", strings.Join(secretNames, ", "))
+	}
+
+	if len(secretList.Items) > 0 {
+		return &secretList.Items[0], nil
+	}
+
+	return nil, nil
+}
+
 func (r *Reconciler) generateGlobalObservabilityIngressPassword(ctx context.Context, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
 	var (
 		secretName      = "global-" + v1beta1constants.SecretNameObservabilityIngress

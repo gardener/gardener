@@ -72,16 +72,28 @@ func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
-// SetAdditionalAlertRelabelConfigs mocks base method.
-func (m *MockInterface) SetAdditionalAlertRelabelConfigs(arg0 []v1.RelabelConfig) {
+// SetAdditionalAlertRelabelConfigsSecret mocks base method.
+func (m *MockInterface) SetAdditionalAlertRelabelConfigsSecret(arg0 *v10.Secret) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetAdditionalAlertRelabelConfigs", arg0)
+	m.ctrl.Call(m, "SetAdditionalAlertRelabelConfigsSecret", arg0)
 }
 
-// SetAdditionalAlertRelabelConfigs indicates an expected call of SetAdditionalAlertRelabelConfigs.
-func (mr *MockInterfaceMockRecorder) SetAdditionalAlertRelabelConfigs(arg0 any) *gomock.Call {
+// SetAdditionalAlertRelabelConfigsSecret indicates an expected call of SetAdditionalAlertRelabelConfigsSecret.
+func (mr *MockInterfaceMockRecorder) SetAdditionalAlertRelabelConfigsSecret(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAdditionalAlertRelabelConfigs", reflect.TypeOf((*MockInterface)(nil).SetAdditionalAlertRelabelConfigs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAdditionalAlertRelabelConfigsSecret", reflect.TypeOf((*MockInterface)(nil).SetAdditionalAlertRelabelConfigsSecret), arg0)
+}
+
+// SetAlertRelabelConfigs mocks base method.
+func (m *MockInterface) SetAlertRelabelConfigs(arg0 []v1.RelabelConfig) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAlertRelabelConfigs", arg0)
+}
+
+// SetAlertRelabelConfigs indicates an expected call of SetAlertRelabelConfigs.
+func (mr *MockInterfaceMockRecorder) SetAlertRelabelConfigs(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAlertRelabelConfigs", reflect.TypeOf((*MockInterface)(nil).SetAlertRelabelConfigs), arg0)
 }
 
 // SetCentralPrometheusRules mocks base method.

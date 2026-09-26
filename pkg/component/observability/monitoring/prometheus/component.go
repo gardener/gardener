@@ -74,8 +74,10 @@ type Interface interface {
 	SetCentralPrometheusRules([]*monitoringv1.PrometheusRule)
 	// SetNamespaceUID sets the namespace UID.
 	SetNamespaceUID(name types.UID)
-	// SetAdditionalAlertRelabelConfigs sets the additional alert relabel configs.
-	SetAdditionalAlertRelabelConfigs([]monitoringv1.RelabelConfig)
+	// SetAlertRelabelConfigs sets the additional alert relabel configs.
+	SetAlertRelabelConfigs([]monitoringv1.RelabelConfig)
+	// SetAdditionalAlertRelabelConfigsSecret sets the secret containing additional alert relabel configurations.
+	SetAdditionalAlertRelabelConfigsSecret(*corev1.Secret)
 }
 
 // Values contains configuration values for the prometheus resources.
@@ -126,8 +128,6 @@ type Values struct {
 	// TargetCluster contains configuration in case Prometheus scrapes metrics from another kube-apiserver (e.g.,
 	// virtual garden, or shoot cluster) or other components running in this cluster.
 	TargetCluster *TargetClusterValues
-	// AdditionalAlertRelabelConfigs contains additional alert relabel configurations.
-	AdditionalAlertRelabelConfigs []monitoringv1.RelabelConfig
 	// RestrictToNamespace controls whether the Prometheus instance should only scrape its targets in its own namespace.
 	RestrictToNamespace bool
 	// ResourceRequests defines the initial resource requests
@@ -158,6 +158,10 @@ type AlertingValues struct {
 	Alertmanagers []*Alertmanager
 	// AdditionalAlertmanager contains the data of the 'alerting' secret (url, credentials, etc.).
 	AdditionalAlertmanager map[string][]byte
+	// AlertRelabelConfigs contains alert relabel configurations.
+	AlertRelabelConfigs []monitoringv1.RelabelConfig
+	// AdditionalAlertRelabelConfigsSecret is a secret containing additional alert relabel configurations.
+	AdditionalAlertRelabelConfigsSecret *corev1.Secret
 }
 
 // Alertmanager contains the name and namespace of an alertmanager to which alerts should be sent.
@@ -287,6 +291,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		gardenRoleBinding,
 		p.secretAdditionalScrapeConfigs(),
 		p.secretAdditionalAlertmanagerConfigs(),
+		p.secretAdditionalAlertRelabelConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
 		p.prometheus(cortexConfigMap),
@@ -380,8 +385,16 @@ func (p *prometheus) name() string {
 	return "prometheus-" + p.values.Name
 }
 
-func (p *prometheus) SetAdditionalAlertRelabelConfigs(configs []monitoringv1.RelabelConfig) {
-	p.values.AdditionalAlertRelabelConfigs = configs
+func (p *prometheus) SetAlertRelabelConfigs(configs []monitoringv1.RelabelConfig) {
+	if p.values.Alerting != nil {
+		p.values.Alerting.AlertRelabelConfigs = configs
+	}
+}
+
+func (p *prometheus) SetAdditionalAlertRelabelConfigsSecret(secret *corev1.Secret) {
+	if p.values.Alerting != nil {
+		p.values.Alerting.AdditionalAlertRelabelConfigsSecret = secret
+	}
 }
 
 func (p *prometheus) addCentralConfigsToRegistry(registry *managedresources.Registry) error {

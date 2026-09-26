@@ -5,6 +5,9 @@
 package prometheus
 
 import (
+	"maps"
+	"slices"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -133,7 +136,7 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 						Regex:        `true`,
 						Action:       "drop",
 					}},
-					p.values.AdditionalAlertRelabelConfigs...,
+					p.values.Alerting.AlertRelabelConfigs...,
 				),
 			})
 		}
@@ -142,6 +145,21 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 			obj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixAdditionalAlertmanagerConfigs},
 				Key:                  dataKeyAdditionalAlertmanagerConfigs,
+			}
+		}
+
+		if p.values.Alerting.AdditionalAlertRelabelConfigsSecret != nil {
+			firstKey := func(m map[string][]byte) string {
+				sorted := slices.Sorted(maps.Keys(m))
+				if len(sorted) > 0 {
+					return sorted[0]
+				}
+				return ""
+			}
+
+			obj.Spec.AdditionalAlertRelabelConfigs = &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: p.name() + secretNameSuffixAdditionalAlertRelabelConfigs},
+				Key:                  firstKey(p.values.Alerting.AdditionalAlertRelabelConfigsSecret.Data),
 			}
 		}
 	}
