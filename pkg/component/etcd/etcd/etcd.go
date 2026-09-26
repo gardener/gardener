@@ -730,7 +730,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						// etcd DB size alerts
 						{
 							Alert: "KubeEtcd3" + role + "DbSizeLimitApproaching",
-							Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} > bool 7516193000) + (etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} <= bool 8589935000) == 2`), // between 7GB and 8GB
+							Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} / on (pod) group_left etcd_server_quota_backend_bytes{job="` + serviceMonitorJobNameEtcd + `"}) > 0.8`), // above 80% of the configured etcd quota
+							For:   new(monitoringv1.Duration("15m")),
 							Labels: map[string]string{
 								"service":    "etcd",
 								"severity":   "warning",
@@ -738,13 +739,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								"visibility": "all",
 							},
 							Annotations: map[string]string{
-								"summary":     "Etcd3 " + e.values.Role + " DB size is approaching its current practical limit.",
-								"description": "Etcd3 " + e.values.Role + " DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.",
+								"summary":     "Etcd3 " + e.values.Role + " DB size is approaching its configured quota.",
+								"description": "Etcd3 " + e.values.Role + ` DB size has reached {{ with query (printf "(etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"} / on (pod) group_left etcd_server_quota_backend_bytes{pod=\"%s\"}) * 100" $labels.pod $labels.pod) }}{{ . | first | value | printf "%.0f" }}{{ end }}% of its configured etcd quota. DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}, quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}. Etcd quota might need to be increased.`,
 							},
 						},
 						{
 							Alert: "KubeEtcd3" + role + "DbSizeLimitCrossed",
-							Expr:  intstr.FromString(`etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} > 8589935000`), // above 8GB
+							Expr:  intstr.FromString(`(etcd_mvcc_db_total_size_in_bytes{job="` + serviceMonitorJobNameEtcd + `"} / on (pod) group_left etcd_server_quota_backend_bytes{job="` + serviceMonitorJobNameEtcd + `"}) > 0.95`), // above 95% of the configured etcd quota
+							For:   new(monitoringv1.Duration("5m")),
 							Labels: map[string]string{
 								"service":    "etcd",
 								"severity":   "critical",
@@ -752,8 +754,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								"visibility": "all",
 							},
 							Annotations: map[string]string{
-								"summary":     "Etcd3 " + e.values.Role + " DB size has crossed its current practical limit.",
-								"description": "Etcd3 " + e.values.Role + " DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.",
+								"summary":     "Etcd3 " + e.values.Role + " DB size has crossed its configured quota.",
+								"description": "Etcd3 " + e.values.Role + ` DB size has reached {{ with query (printf "(etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"} / on (pod) group_left etcd_server_quota_backend_bytes{pod=\"%s\"}) * 100" $labels.pod $labels.pod) }}{{ . | first | value | printf "%.0f" }}{{ end }}% of its configured etcd quota. DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}, quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}. Etcd quota must be increased to allow updates.`,
 							},
 						},
 						{
