@@ -576,6 +576,64 @@ var _ = Describe("Predicate", func() {
 		})
 	})
 
+	Describe("#CreationSucceeded", func() {
+		var lastOperation *gardencorev1beta1.LastOperation
+
+		BeforeEach(func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+		})
+
+		It("should return false because old last operation is nil", func() {
+			Expect(CreationSucceeded(nil, lastOperation)).To(BeFalse())
+		})
+
+		It("should return false because new last operation is nil", func() {
+			Expect(CreationSucceeded(lastOperation, nil)).To(BeFalse())
+		})
+
+		It("should return false because old last operation type is not 'Create'", func() {
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			oldLastOperation := lastOperation.DeepCopy()
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			Expect(CreationSucceeded(oldLastOperation, lastOperation)).To(BeFalse())
+		})
+
+		It("should return false because old last operation state is not 'Processing'", func() {
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeCreate
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			oldLastOperation := lastOperation.DeepCopy()
+			Expect(CreationSucceeded(oldLastOperation, lastOperation)).To(BeFalse())
+		})
+
+		It("should return false because new last operation type is not 'Create'", func() {
+			oldLastOperation := &gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeCreate,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			Expect(CreationSucceeded(oldLastOperation, lastOperation)).To(BeFalse())
+		})
+
+		It("should return false because new last operation state is not 'Succeeded'", func() {
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeCreate
+			lastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			oldLastOperation := lastOperation.DeepCopy()
+			Expect(CreationSucceeded(oldLastOperation, lastOperation)).To(BeFalse())
+		})
+
+		It("should return true when Create operation transitions from Processing to Succeeded", func() {
+			oldLastOperation := &gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeCreate,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeCreate
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			Expect(CreationSucceeded(oldLastOperation, lastOperation)).To(BeTrue())
+		})
+	})
+
 	Describe("#HasType", func() {
 		var (
 			object       client.Object

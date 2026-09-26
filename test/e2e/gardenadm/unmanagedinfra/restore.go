@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,7 +24,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -107,23 +105,6 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 					g.Expect(condition).NotTo(BeNil(), "condition %q should be present", conditionType)
 					g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue), "condition %q should be True", conditionType)
 				}
-			}).Should(Succeed())
-
-			// Restarting the gardenlet Pods forces a shoot-state controller reconciliation that creates the ShootState.
-			// TODO(DobromirNPeev): Check how to eliminate the workaround.
-
-			By("Roll out the gardenlet Deployment to trigger ShootState creation")
-			gardenletDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNamespace, Name: "gardenlet"}}
-			Eventually(ctx, func(g Gomega) {
-				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).To(Succeed())
-				patch := client.MergeFrom(gardenletDeployment.DeepCopy())
-				metav1.SetMetaDataAnnotation(&gardenletDeployment.Spec.Template.ObjectMeta, "kubectl.kubernetes.io/restartedAt", time.Now().Format(time.RFC3339))
-				g.Expect(shootClientSet.Client().Patch(ctx, gardenletDeployment, patch)).To(Succeed())
-			}).Should(Succeed())
-			Eventually(ctx, func(g Gomega) {
-				done, err := kubernetesutils.HasDeploymentRolloutCompleted(ctx, shootClientSet.Client(), controlPlaneNamespace, "gardenlet")
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(done).To(BeTrue())
 			}).Should(Succeed())
 
 			By("Wait until the ShootState is created")
