@@ -219,7 +219,7 @@ var domainMigrationPhases = sets.New(
 )
 
 func priorClusterDomain(shoot *gardencorev1beta1.Shoot, priorAddressName, currentAddressName string, currentDomain *string) *string {
-	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) ||
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || currentDomain == nil ||
 		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
 		return nil
 	}
@@ -233,7 +233,7 @@ func priorClusterDomain(shoot *gardencorev1beta1.Shoot, priorAddressName, curren
 	// domain. Afterwards the prior address above takes over. The comparison also separates a plain CA rotation, where
 	// both domains are equal, from a CA rotation which migrates the domain.
 	appliedDomain := domainFromAdvertisedAddress(shoot, currentAddressName)
-	if appliedDomain == nil || currentDomain == nil || *appliedDomain == *currentDomain {
+	if appliedDomain == nil || *appliedDomain == *currentDomain {
 		return nil
 	}
 

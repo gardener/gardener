@@ -540,6 +540,63 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#DeployOrDestroyExternalDNSRecord", func() {
+		Context("domain migration in progress", func() {
+			createExternalDNSRecord := func(name string) {
+				Expect(c.Create(ctx, &extensionsv1alpha1.DNSRecord{
+					ObjectMeta: metav1.ObjectMeta{Name: shootName + "-external", Namespace: controlPlaneNamespace},
+					Spec: extensionsv1alpha1.DNSRecordSpec{
+						Name:       name,
+						RecordType: extensionsv1alpha1.DNSRecordTypeA,
+						Values:     []string{address},
+					},
+				})).To(Succeed())
+			}
+
+			JustBeforeEach(func() {
+				b.Shoot.PriorExternalClusterDomain = new(priorExternalDomain)
+				b.Shoot.PriorExternalDomain = &gardenerutils.Domain{Domain: priorExternalDomain, Provider: priorExternalProvider}
+			})
+
+			It("should hand over the record of the old domain before it deploys the record of the new domain", func() {
+				createExternalDNSRecord("api." + priorExternalDomain)
+
+				gomock.InOrder(
+					externalDNSRecord.EXPECT().Migrate(ctx),
+					externalDNSRecord.EXPECT().WaitMigrate(ctx),
+					externalDNSRecord.EXPECT().Destroy(ctx),
+					externalDNSRecord.EXPECT().WaitCleanup(ctx),
+					externalDNSRecord.EXPECT().Deploy(ctx),
+					externalDNSRecord.EXPECT().Wait(ctx),
+				)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should only deploy if the record already has the new domain", func() {
+				createExternalDNSRecord("api." + externalDomain)
+
+				externalDNSRecord.EXPECT().Deploy(ctx)
+				externalDNSRecord.EXPECT().Wait(ctx)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should only deploy if there is no record yet", func() {
+				externalDNSRecord.EXPECT().Deploy(ctx)
+				externalDNSRecord.EXPECT().Wait(ctx)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should fail if the migration of the old record fails", func() {
+				createExternalDNSRecord("api." + priorExternalDomain)
+
+				externalDNSRecord.EXPECT().Migrate(ctx).Return(testErr)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(MatchError(testErr))
+			})
+		})
+
 		Context("deploy", func() {
 			It("should call Deploy and Wait and succeed if they succeeded", func() {
 				externalDNSRecord.EXPECT().Deploy(ctx)
