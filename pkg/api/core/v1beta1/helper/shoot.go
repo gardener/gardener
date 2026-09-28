@@ -667,6 +667,27 @@ func GetLiveMigrationRole(shoot *gardencorev1beta1.Shoot, seedName string) LiveM
 	}
 }
 
+// GetLiveMigrationConditions returns the conditions tracking the progress of a live control plane migration, or nil if
+// no live migration is in progress.
+func GetLiveMigrationConditions(shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.Condition {
+	if shoot.Status.LiveMigration == nil {
+		return nil
+	}
+	return shoot.Status.LiveMigration.Conditions
+}
+
+// GetLiveMigrationCondition returns the live migration condition of the given type, or nil if it is not present.
+func GetLiveMigrationCondition(shoot *gardencorev1beta1.Shoot, conditionType gardencorev1beta1.ConditionType) *gardencorev1beta1.Condition {
+	return GetCondition(GetLiveMigrationConditions(shoot), conditionType)
+}
+
+// IsLiveMigrationConditionTrue returns true if the live migration condition of the given type is present and its status
+// is True.
+func IsLiveMigrationConditionTrue(shoot *gardencorev1beta1.Shoot, conditionType gardencorev1beta1.ConditionType) bool {
+	condition := GetLiveMigrationCondition(shoot, conditionType)
+	return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+}
+
 // LastInitiationTimeForWorkerPool returns the last initiation time for the worker pool when found in the given list of
 // pending workers rollouts. If the worker pool is not found in the list, the global last initiation time is returned.
 func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []gardencorev1beta1.PendingWorkersRollout, globalLastInitiationTime *metav1.Time) *metav1.Time {
