@@ -153,6 +153,10 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 						URL:  "https://foo.bar.external:9443",
 					},
 					{
+						Name: "prior-external",
+						URL:  "https://foo.bar.prior-external:9443",
+					},
+					{
 						Name: "wildcard-tls-seed-bound",
 						URL:  "https://foo.bar.seed.specific.but.with.wildcard.tls:9443",
 					},
