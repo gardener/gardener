@@ -500,6 +500,10 @@ func (b *Botanist) ReconcileDNSRecordsTaskGroup() flow.TaskGroup {
 				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployDNSRecordExternal)
 			},
 		})
+		_ = g.Add(flow.Task{
+			Name: "Handle prior external domain DNS record",
+			Fn:   b.HandlePriorExternalDNSRecord,
+		})
 	)
 
 	return g
@@ -1240,6 +1244,11 @@ func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 		_ = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record if hibernated",
 			Fn:           b.DestroyExternalDNSRecord,
+			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying prior external domain DNS record if hibernated",
+			Fn:           b.DestroyPriorExternalDNSRecord,
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
