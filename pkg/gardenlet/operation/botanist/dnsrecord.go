@@ -7,8 +7,11 @@ package botanist
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -156,13 +159,36 @@ func (b *Botanist) DeployOrDestroyInternalDNSRecord(ctx context.Context) error {
 
 // deployExternalDNSRecord deploys or restores the external DNSRecord and waits for the operation to complete.
 func (b *Botanist) deployExternalDNSRecord(ctx context.Context) error {
+	if b.NeedsPriorExternalDNS() {
+		if err := b.handOverExternalDNSRecord(ctx); err != nil {
+			return err
+		}
+	}
+
 	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.ExternalDNSRecord); err != nil {
 		return err
 	}
 	return b.Shoot.Components.Extensions.ExternalDNSRecord.Wait(ctx)
 }
 
-// deployPriorExternalDNSRecord deploys or restores the prior external DNSRecord and waits for the operation to complete.
+func (b *Botanist) handOverExternalDNSRecord(ctx context.Context) error {
+	dnsRecord := &extensionsv1alpha1.DNSRecord{}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName}, dnsRecord); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	if dnsRecord.Spec.Name == v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain) {
+		return nil
+	}
+
+	// spec.name of a DNSRecord is immutable. The record of the old domain is migrated, which removes its finalizers but
+	// keeps the DNS entry for the prior external record. Then it is deleted and recreated for the new domain.
+	if err := b.MigrateExternalDNSRecord(ctx); err != nil {
+		return err
+	}
+	return b.DestroyExternalDNSRecord(ctx)
+}
+
 func (b *Botanist) deployPriorExternalDNSRecord(ctx context.Context) error {
 	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.PriorExternalDNSRecord); err != nil {
 		return err
