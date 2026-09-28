@@ -39,8 +39,9 @@ func PrepareBinary() {
 }
 
 // NewCommand creates a new exec.Cmd for gardenadm.
-func NewCommand(args ...string) *exec.Cmd { // #nosec G204 -- Used for e2e tests only.
+func NewCommand(extraEnv []string, args ...string) *exec.Cmd { // #nosec G204 -- Used for e2e tests only.
 	cmd := exec.Command(binaryPath, append([]string{"--log-level=debug"}, args...)...)
+	cmd.Env = append(cmd.Env, extraEnv...)
 	cmd.Env = append(cmd.Env,
 		clientcmd.RecommendedConfigPathEnvVar+"=../../../dev-setup/kubeconfigs/runtime/kubeconfig",
 		imagevector.OverrideEnv+"=../../../dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml",
@@ -74,7 +75,7 @@ func Wait(ctx context.Context, session *gexec.Session) *gexec.Session {
 
 // Run runs gardenadm with the given arguments and returns the gexec.Session.
 func Run(args ...string) *gexec.Session {
-	return RunCommand(NewCommand(args...))
+	return RunCommand(NewCommand(nil, args...))
 }
 
 // RunAndWait runs gardenadm with the given arguments and waits for the session to finish.
@@ -82,11 +83,19 @@ func RunAndWait(ctx context.Context, args ...string) *gexec.Session {
 	return Wait(ctx, Run(args...))
 }
 
-// RunInMachine runs gardenadm in the given machine (sorted lexicographically) with the given arguments and returns the
-// gbytes.Buffers.
+// RunInMachine runs the command in the given machine (sorted lexicographically) and returns the gbytes.Buffers.
 func RunInMachine(ctx context.Context, technicalID string, ordinal int, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
-	stdOutBuffer, stdErrBuffer := gbytes.NewBuffer(), gbytes.NewBuffer()
 	podName := machinePodName(ctx, technicalID, ordinal)
+	return runOnPod(ctx, technicalID, podName, cmd...)
+}
+
+// RunInNode runs the command in the machine pod of the specified node and returns the gbytes.Buffers.
+func RunInNode(ctx context.Context, technicalID string, nodeName string, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
+	return runOnPod(ctx, technicalID, nodeName, cmd...)
+}
+
+func runOnPod(ctx context.Context, technicalID string, podName string, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
+	stdOutBuffer, stdErrBuffer := gbytes.NewBuffer(), gbytes.NewBuffer()
 	err := RuntimeClient.PodExecutor().ExecuteWithStreams(
 		ctx,
 		infrastructure.NamespaceName(technicalID),
