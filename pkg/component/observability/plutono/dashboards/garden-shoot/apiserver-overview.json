@@ -159,120 +159,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Shows the request latency of each verb for the API server.",
-      "editable": false,
-      "error": false,
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 0,
-      "fillGradient": 0,
-      "grid": {
-        "threshold1Color": "rgba(216, 200, 27, 0.27)",
-        "threshold2Color": "rgba(234, 112, 112, 0.22)"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "hiddenSeries": false,
-      "id": 7,
-      "isNew": false,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "hideEmpty": false,
-        "hideZero": false,
-        "max": true,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "avg",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.50",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": false,
-          "expr": "max by(verb, quantile) (shoot:apiserver_latency_seconds:quantile{job=~\"$job\",pod=~\"$pod\", verb=~\"$verb\",quantile=~\"$quantile\",verb!~\"WATCH|CONNECT\",subresource!~\"log|portforward|exec|proxy|attach\"})",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "{{verb}}",
-          "refId": "A",
-          "step": 30
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Request Latency",
-      "tooltip": {
-        "msResolution": false,
-        "shared": false,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:709",
-          "decimals": null,
-          "format": "s",
-          "label": "latency (s)",
-          "logBase": 1,
-          "min": "0",
-          "show": true
-        },
-        {
-          "$$hashKey": "object:710",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
       "description": "5xx error rate and 429 throttle rate as a percentage of total requests. 5xx indicates a server-side failure; 429 indicates intentional load shedding by APF. Streaming subresources are excluded from both.",
       "fieldConfig": {
         "defaults": {
@@ -384,6 +270,120 @@
           "format": "short",
           "logBase": 1,
           "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Shows the request latency of each verb for the API server.",
+      "editable": false,
+      "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "grid": {
+        "threshold1Color": "rgba(216, 200, 27, 0.27)",
+        "threshold2Color": "rgba(234, 112, 112, 0.22)"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "hiddenSeries": false,
+      "id": 7,
+      "isNew": false,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.50",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "max by(verb, quantile) (shoot:apiserver_latency_seconds:quantile{job=~\"$job\",pod=~\"$pod\", verb=~\"$verb\",quantile=~\"$quantile\",verb!~\"WATCH|CONNECT\",subresource!~\"log|portforward|exec|proxy|attach\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{verb}}",
+          "refId": "A",
+          "step": 30
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Request Latency",
+      "tooltip": {
+        "msResolution": false,
+        "shared": false,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:709",
+          "decimals": null,
+          "format": "s",
+          "label": "latency (s)",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:710",
+          "format": "short",
+          "logBase": 1,
+          "show": true
         }
       ],
       "yaxis": {
@@ -660,7 +660,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 18
       },
@@ -774,9 +774,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 26
+        "w": 12,
+        "x": 12,
+        "y": 18
       },
       "hiddenSeries": false,
       "id": 47,
@@ -887,9 +887,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 34
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 48,
@@ -1000,9 +1000,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 42
+        "w": 12,
+        "x": 12,
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 99,
@@ -1114,9 +1114,9 @@
       },
       "gridPos": {
         "h": 10,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 50
+        "y": 34
       },
       "hiddenSeries": false,
       "id": 45,
@@ -1227,9 +1227,9 @@
       },
       "gridPos": {
         "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 60
+        "w": 12,
+        "x": 12,
+        "y": 34
       },
       "hiddenSeries": false,
       "id": 100,
@@ -1325,7 +1325,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 44
       },
       "id": 115,
       "panels": [],
@@ -1352,7 +1352,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 71
+        "y": 45
       },
       "hiddenSeries": false,
       "id": 110,
@@ -1452,7 +1452,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 71
+        "y": 45
       },
       "hiddenSeries": false,
       "id": 111,
@@ -1559,9 +1559,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 79
+        "y": 53
       },
       "hiddenSeries": false,
       "id": 122,
@@ -1657,7 +1657,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 87
+        "y": 61
       },
       "id": 73,
       "panels": [],
@@ -1680,7 +1680,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 88
+        "y": 62
       },
       "hiddenSeries": false,
       "id": 70,
@@ -1787,7 +1787,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 88
+        "y": 62
       },
       "hiddenSeries": false,
       "id": 71,
@@ -1894,7 +1894,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 94
+        "y": 68
       },
       "hiddenSeries": false,
       "id": 74,
@@ -1993,7 +1993,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 94
+        "y": 68
       },
       "hiddenSeries": false,
       "id": 75,
@@ -2083,7 +2083,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 100
+        "y": 74
       },
       "id": 121,
       "panels": [],
@@ -2106,7 +2106,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 101
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 63,
@@ -2215,7 +2215,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 101
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 98,
@@ -2309,7 +2309,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 109
+        "y": 83
       },
       "id": 116,
       "panels": [],
@@ -2336,7 +2336,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 110
+        "y": 84
       },
       "hiddenSeries": false,
       "id": 108,
@@ -2446,7 +2446,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 110
+        "y": 84
       },
       "hiddenSeries": false,
       "id": 109,
@@ -2544,9 +2544,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 118
+        "y": 92
       },
       "hiddenSeries": false,
       "id": 124,
@@ -2650,8 +2650,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 126
+        "x": 12,
+        "y": 92
       },
       "hiddenSeries": false,
       "id": 67,
@@ -2750,8 +2750,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 126
+        "x": 0,
+        "y": 100
       },
       "hiddenSeries": false,
       "id": 68,
@@ -2845,9 +2845,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 134
+        "w": 12,
+        "x": 12,
+        "y": 100
       },
       "hiddenSeries": false,
       "id": 65,
@@ -2938,7 +2938,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 142
+        "y": 108
       },
       "id": 117,
       "panels": [],
@@ -2963,9 +2963,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
-        "y": 143
+        "y": 109
       },
       "hiddenSeries": false,
       "id": 112,
@@ -3067,10 +3067,10 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 151
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 109
       },
       "hiddenSeries": false,
       "id": 82,
@@ -3180,7 +3180,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 157
+        "y": 117
       },
       "hiddenSeries": false,
       "id": 80,
@@ -3276,7 +3276,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 157
+        "y": 117
       },
       "hiddenSeries": false,
       "id": 81,
@@ -3376,7 +3376,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 163
+        "y": 123
       },
       "hiddenSeries": false,
       "id": 77,
@@ -3475,7 +3475,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 163
+        "y": 123
       },
       "hiddenSeries": false,
       "id": 78,
@@ -3565,7 +3565,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 177
+        "y": 129
       },
       "id": 91,
       "panels": [],
@@ -3588,7 +3588,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 178
+        "y": 130
       },
       "hiddenSeries": false,
       "id": 88,
@@ -3683,7 +3683,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 178
+        "y": 130
       },
       "hiddenSeries": false,
       "id": 89,
@@ -3769,7 +3769,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 183
+        "y": 135
       },
       "id": 97,
       "panels": [],
@@ -3792,7 +3792,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 184
+        "y": 136
       },
       "hiddenSeries": false,
       "id": 93,
@@ -3887,7 +3887,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 184
+        "y": 136
       },
       "hiddenSeries": false,
       "id": 95,
@@ -3977,7 +3977,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 189
+        "y": 141
       },
       "id": 61,
       "panels": [],
@@ -4002,7 +4002,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 190
+        "y": 142
       },
       "hiddenSeries": false,
       "id": 55,
@@ -4105,7 +4105,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 190
+        "y": 142
       },
       "hiddenSeries": false,
       "id": 76,
@@ -4205,7 +4205,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 198
+        "y": 150
       },
       "hiddenSeries": false,
       "id": 57,
@@ -4312,7 +4312,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 198
+        "y": 150
       },
       "hiddenSeries": false,
       "id": 59,
@@ -4413,7 +4413,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 205
+        "y": 157
       },
       "hiddenSeries": false,
       "id": 83,
@@ -4515,7 +4515,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 205
+        "y": 157
       },
       "hiddenSeries": false,
       "id": 86,
