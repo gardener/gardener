@@ -40,6 +40,10 @@ import (
 )
 
 func testCredentialRotation(tc *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string, inPlaceUpdate bool) {
+	testCredentialRotationWithDomainMigration(tc, shootVerifiers, utilsverifiers, startRotationAnnotation, completeRotationAnnotation, inPlaceUpdate, "")
+}
+
+func testCredentialRotationWithDomainMigration(tc *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string, inPlaceUpdate bool, newDomain string) {
 	// the verifier interface requires that we pass a context to some of the verifier functions
 	// this is not needed anymore for refactored tests as these use the SpecContext supplied by the "It" statement
 	// Also we cannot pass a nil as the context argument as this makes the linter unhappy :(
@@ -59,9 +63,12 @@ func testCredentialRotation(tc *ShootContext, shootVerifiers, utilsverifiers rot
 	}
 
 	if startRotationAnnotation != "" {
-		ItShouldAnnotateShoot(tc, map[string]string{
-			v1beta1constants.GardenerOperation: startRotationAnnotation,
-		})
+		startAnnotations := map[string]string{v1beta1constants.GardenerOperation: startRotationAnnotation}
+		if newDomain != "" {
+			ItShouldAnnotateShootAndChangeDomain(tc, startAnnotations, newDomain)
+		} else {
+			ItShouldAnnotateShoot(tc, startAnnotations)
+		}
 
 		It(fmt.Sprintf("Should not have operation annotation after requesting %s", startRotationAnnotation), func(ctx SpecContext) {
 			EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Shoot)
@@ -316,7 +323,11 @@ func testManualWorkersRollout(tc *ShootContext) {
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		test := func(tc *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools bool) {
+		// migrationDomain is the default domain the shoot is migrated to during the credentials rotation. The local
+		// setup provides it in addition to the default domain a shoot gets on creation.
+		const migrationDomain = "migration.local.gardener.cloud"
+
+		test := func(tc *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools, migrateDomain bool) {
 			tc.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 				Resources: []string{"configmaps", "shirts.stable.example.com"},
 			}
@@ -437,7 +448,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(tc)
 			}
 
-			if !withoutWorkersRollout {
+			if migrateDomain {
+				newDomain := fmt.Sprintf("%s.%s.%s", tc.Shoot.Name, strings.TrimPrefix(tc.Shoot.Namespace, "garden-"), migrationDomain)
+				shootVerifiers = append(shootVerifiers, &rotation.ExternalDomainVerifier{ShootContext: tc, NewDomain: newDomain})
+
+				testCredentialRotationWithDomainMigration(tc, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, withInPlaceUpdatePools, newDomain)
+			} else if !withoutWorkersRollout {
 				// test rotation for every rotation type
 				testCredentialRotation(tc, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, withInPlaceUpdatePools)
 			} else {
@@ -484,7 +500,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker1, worker2)
 
-				test(NewShootContext(shoot), false, false, true)
+				test(NewShootContext(shoot), false, false, true, false)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, PriorityLonger, func() {
@@ -504,14 +520,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				// assertions of the shoot status
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker(shoot.Spec.Provider.Workers[0].Name+"-nr", nil))
 
-				test(NewShootContext(shoot), true, true, true)
+				test(NewShootContext(shoot), true, true, true, false)
 			})
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
 			shoot := DefaultWorkerlessShoot("e2e-rotate")
 
-			test(NewShootContext(shoot), false, false, false)
+			test(NewShootContext(shoot), false, false, false, true)
 		})
 	})
 })

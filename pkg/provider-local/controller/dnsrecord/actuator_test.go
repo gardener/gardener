@@ -216,35 +216,7 @@ var _ = Describe("Actuator", func() {
 	})
 
 	Describe("Migrate", func() {
-		It("should delete for non-self-hosted shoots", func(ctx SpecContext) {
-			Expect(actuator.Migrate(ctx, log, dnsRecord, cluster)).To(Succeed())
-
-			Expect(dnsClient.messages).To(HaveLen(1))
-			msg := dnsClient.messages[0]
-
-			// Zone section
-			Expect(msg.Question).To(HaveLen(1))
-			Expect(msg.Question[0].Name).To(Equal("local.gardener.cloud."))
-
-			// Ns section contains the resource records to update
-			Expect(msg.Ns).To(HaveExactElements(
-				// First RR: RemoveRRset (class ANY)
-				PointTo(MatchAllFields(Fields{
-					"Hdr": MatchFields(IgnoreExtras, Fields{
-						"Name":   Equal("api.something.local.gardener.cloud."),
-						"Class":  BeEquivalentTo(dns.ClassANY),
-						"Rrtype": Equal(dns.TypeA),
-						"Ttl":    BeEquivalentTo(0),
-					}),
-				})),
-			))
-		})
-
-		It("should not delete for self-hosted shoots", func(ctx SpecContext) {
-			cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
-				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
-			}}
-
+		It("should keep the DNS record", func(ctx SpecContext) {
 			Expect(actuator.Migrate(ctx, log, dnsRecord, cluster)).To(Succeed())
 			Expect(dnsClient.messages).To(BeEmpty())
 		})
