@@ -828,8 +828,26 @@ var _ = Describe("dns", func() {
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
-				It("should accept a changed custom domain", func() {
+				It("should reject a changed custom domain if the shoot has no primary DNS provider", func() {
 					shoot.Spec.DNS.Domain = new("my-own.domain.com")
+
+					attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					err := admissionHandler.Validate(ctx, attrs, nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("spec.dns.domain"),
+							"Detail": ContainSubstring("the domain must be a default domain of the seed, or the shoot must have a primary DNS provider"),
+						})),
+					))
+				})
+
+				It("should accept a changed custom domain if the shoot has a primary DNS provider", func() {
+					shoot.Spec.DNS.Domain = new("my-own.domain.com")
+					shoot.Spec.DNS.Providers = []core.DNSProvider{{Type: new(defaultDomainProvider), Primary: new(true)}}
+					oldShoot.Spec.DNS.Providers = shoot.Spec.DNS.Providers
 
 					attrs := admission.NewAttributesRecord(shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 

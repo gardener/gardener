@@ -491,6 +491,10 @@ func (b *Botanist) ReconcileDNSRecordsTaskGroup() flow.TaskGroup {
 				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployDNSRecordInternal)
 			},
 		})
+		handlePriorExternalDNSRecord = g.Add(flow.Task{
+			Name: "Handle prior external domain DNS record",
+			Fn:   b.HandlePriorExternalDNSRecord,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",
 			Fn: func(ctx context.Context) error {
@@ -499,10 +503,7 @@ func (b *Botanist) ReconcileDNSRecordsTaskGroup() flow.TaskGroup {
 				}
 				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskDeployDNSRecordExternal)
 			},
-		})
-		_ = g.Add(flow.Task{
-			Name: "Handle prior external domain DNS record",
-			Fn:   b.HandlePriorExternalDNSRecord,
+			Dependencies: flow.NewTaskIDs(handlePriorExternalDNSRecord),
 		})
 	)
 

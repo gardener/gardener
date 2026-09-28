@@ -571,6 +571,24 @@ var _ = Describe("shoot", func() {
 				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
 			})
 
+			It("should be nil if the builder removes the shoot DNS, even if a prior external address exists", func() {
+				shootObject.Status.AdvertisedAddresses = append(shootObject.Status.AdvertisedAddresses,
+					advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal, "old.example.com"),
+				)
+
+				s, err := NewBuilder().
+					WithShootObject(shootObject).
+					WithCloudProfileObject(nil).
+					WithoutShootCredentials().
+					WithoutShootDNS().
+					WithDefaultDomains([]*gardener.Domain{{Domain: "example.com"}}).
+					Build(ctx, seedClientSet, c)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(s.PriorExternalClusterDomain).To(BeNil())
+				Expect(s.PriorExternalDomain).To(BeNil())
+			})
+
 			DescribeTable("should be nil outside of the migration phases",
 				func(phase gardencorev1beta1.CredentialsRotationPhase) {
 					withCARotationPhase(phase)
