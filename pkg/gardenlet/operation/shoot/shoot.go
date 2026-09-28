@@ -306,6 +306,18 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	}
 	shoot.ExternalDomain = externalDomain
 
+	if shoot.PriorExternalClusterDomain != nil {
+		// The prior domain can live in another zone, or it can use other credentials than the new domain.
+		priorShootObject := shootObject.DeepCopy()
+		priorShootObject.Spec.DNS.Domain = shoot.PriorExternalClusterDomain
+
+		priorExternalDomain, err := gardenerutils.ConstructExternalDomain(ctx, gardenReader, priorShootObject, shoot.Credentials, b.defaultDomains)
+		if err != nil {
+			return nil, err
+		}
+		shoot.PriorExternalDomain = priorExternalDomain
+	}
+
 	// Store the Kubernetes version in the format <major>.<minor> on the Shoot object.
 	kubernetesVersion, err := semver.NewVersion(shootObject.Spec.Kubernetes.Version)
 	if err != nil {
@@ -531,6 +543,7 @@ func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWa
 	return []component.DeployMigrateWaiter{
 		s.Components.Extensions.IngressDNSRecord,
 		s.Components.Extensions.ExternalDNSRecord,
+		s.Components.Extensions.PriorExternalDNSRecord,
 		s.Components.Extensions.InternalDNSRecord,
 	}
 }
