@@ -257,6 +257,28 @@ func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldAnnotateShootAndChangeDomain sets the given annotations and the given external domain within the same
+// request. A domain change is only accepted together with the start of a certificate authorities rotation.
+func ItShouldAnnotateShootAndChangeDomain(s *ShootContext, annotations map[string]string, domain string) {
+	GinkgoHelper()
+
+	It("Annotate Shoot and change its domain", func(ctx SpecContext) {
+		patch := client.MergeFrom(s.Shoot.DeepCopy())
+
+		for annotationKey, annotationValue := range annotations {
+			s.Log.Info("Setting annotation", "annotation", annotationKey, "value", annotationValue)
+			metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, annotationKey, annotationValue)
+		}
+
+		s.Log.Info("Setting external domain", "domain", domain)
+		s.Shoot.Spec.DNS.Domain = &domain
+
+		Eventually(ctx, func() error {
+			return s.GardenClient.Patch(ctx, s.Shoot, patch)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
 // ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
 func ItShouldFindAllMachinePodsBefore(s *ShootContext, clientFn func() client.Client) sets.Set[string] {
 	GinkgoHelper()

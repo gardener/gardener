@@ -77,6 +77,13 @@ spec:
               namespace: garden
             type: local
             domain: external.local.gardener.cloud
+          - credentialsRef:
+              apiVersion: v1
+              kind: Secret
+              name: default-domain-migration-local-gardener-cloud
+              namespace: garden
+            type: local
+            domain: migration.local.gardener.cloud
         extensions:
         - type: local-ext-seed
         ingress:

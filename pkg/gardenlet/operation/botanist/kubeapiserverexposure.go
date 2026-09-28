@@ -194,6 +194,10 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				values.Hosts = append(values.Hosts, v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
 			}
 
+			if b.Shoot.PriorExternalClusterDomain != nil {
+				values.Hosts = append(values.Hosts, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorExternalClusterDomain))
+			}
+
 			return values
 		},
 	)

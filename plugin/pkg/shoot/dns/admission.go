@@ -389,6 +389,11 @@ func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.Ob
 
 			allErrs = append(allErrs, errs...)
 		}
+
+		if isShootDomainChanged(oldShoot, shoot) && !helper.ShootUsesUnmanagedDNS(shoot) &&
+			!isDefaultDomain(*shoot.Spec.DNS.Domain, defaultDomains) && helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers) == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dns", "domain"), *shoot.Spec.DNS.Domain, "the domain must be a default domain of the seed, or the shoot must have a primary DNS provider"))
+		}
 	}
 
 	if len(allErrs) > 0 {
