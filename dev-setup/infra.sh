@@ -163,8 +163,8 @@ EOF
       # This uses the login keychain (no sudo, current user only). The CA is constrained by nameConstraints to only
       # sign for registry.local.gardener.cloud and localhost, so trusting it here carries negligible risk.
       if [[ "$(uname -s)" == "Darwin" ]]; then
-        if ! security find-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db >/dev/null 2>&1; then
-          echo "> Adding registry CA to macOS login keychain (current user only); you may be prompted for your login password... (run 'make local-registry-cleanup-ca' to undo)"
+        if ! security verify-cert -c "$ca_crt" -p ssl -q >/dev/null 2>&1; then
+          echo "> Adding registry CA to macOS login keychain (current user only); you may be prompted for your login password... (run 'make cleanup-local-registry-ca' to undo)"
           security add-trusted-cert -d -r trustRoot \
             -k ~/Library/Keychains/login.keychain-db "$ca_crt"
         fi
@@ -173,7 +173,7 @@ EOF
       # localhost, so trusting it system-wide carries negligible risk.
       elif [[ "$(uname -s)" == "Linux" ]]; then
         if [[ -n "$SUDO" ]]; then
-          echo "> Installing the registry CA into the system trust store may prompt for your sudo password... (run 'make local-registry-cleanup-ca' to undo)"
+          echo "> Installing the registry CA into the system trust store may prompt for your sudo password... (run 'make cleanup-local-registry-ca' to undo)"
         fi
         if command -v update-ca-certificates >/dev/null 2>&1; then
           # Debian/Ubuntu
