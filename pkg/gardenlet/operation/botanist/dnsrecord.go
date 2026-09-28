@@ -52,6 +52,43 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	)
 }
 
+// DefaultPriorExternalDNSRecord creates the default deployer for the DNSRecord resource of the prior external domain.
+func (b *Botanist) DefaultPriorExternalDNSRecord() extensionsdnsrecord.Interface {
+	values := &extensionsdnsrecord.Values{
+		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorExternalName,
+		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorExternalName,
+		Namespace:         b.Shoot.ControlPlaneNamespace,
+		TTL:               b.dnsRecordTTLSeconds(),
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.Shoot.IsRestorePhase(),
+		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
+		Labels: map[string]string{
+			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordPriorExternal,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		},
+	}
+
+	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
+
+	if b.NeedsPriorExternalDNS() {
+		values.Type = b.Shoot.PriorExternalDomain.Provider
+		if b.Shoot.PriorExternalDomain.Zone != "" {
+			values.Zone = &b.Shoot.PriorExternalDomain.Zone
+		}
+		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.PriorExternalDomain.Credentials, b.Shoot.GetInfo())
+		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorExternalClusterDomain)
+	}
+
+	return extensionsdnsrecord.New(
+		b.Logger,
+		b.SeedClientSet.Client(),
+		values,
+		extensionsdnsrecord.DefaultInterval,
+		extensionsdnsrecord.DefaultSevereThreshold,
+		extensionsdnsrecord.DefaultTimeout,
+		credentialsDeployer,
+	)
+}
+
 // DefaultInternalDNSRecord creates the default deployer for the internal DNSRecord resource.
 func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
@@ -100,6 +137,15 @@ func (b *Botanist) DeployOrDestroyExternalDNSRecord(ctx context.Context) error {
 	return b.DestroyExternalDNSRecord(ctx)
 }
 
+// HandlePriorExternalDNSRecord deploys, restores, or destroys the prior external DNSRecord and waits for the
+// operation to complete.
+func (b *Botanist) HandlePriorExternalDNSRecord(ctx context.Context) error {
+	if b.NeedsPriorExternalDNS() {
+		return b.deployPriorExternalDNSRecord(ctx)
+	}
+	return b.DestroyPriorExternalDNSRecord(ctx)
+}
+
 // DeployOrDestroyInternalDNSRecord deploys, restores, or destroys the internal DNSRecord and waits for the operation to complete.
 func (b *Botanist) DeployOrDestroyInternalDNSRecord(ctx context.Context) error {
 	if b.NeedsInternalDNS() {
@@ -114,6 +160,14 @@ func (b *Botanist) deployExternalDNSRecord(ctx context.Context) error {
 		return err
 	}
 	return b.Shoot.Components.Extensions.ExternalDNSRecord.Wait(ctx)
+}
+
+// deployPriorExternalDNSRecord deploys or restores the prior external DNSRecord and waits for the operation to complete.
+func (b *Botanist) deployPriorExternalDNSRecord(ctx context.Context) error {
+	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.PriorExternalDNSRecord); err != nil {
+		return err
+	}
+	return b.Shoot.Components.Extensions.PriorExternalDNSRecord.Wait(ctx)
 }
 
 // deployInternalDNSRecord deploys or restores the internal DNSRecord and waits for the operation to complete.
@@ -132,6 +186,14 @@ func (b *Botanist) DestroyExternalDNSRecord(ctx context.Context) error {
 	return b.Shoot.Components.Extensions.ExternalDNSRecord.WaitCleanup(ctx)
 }
 
+// DestroyPriorExternalDNSRecord destroys the prior external DNSRecord and waits for the operation to complete.
+func (b *Botanist) DestroyPriorExternalDNSRecord(ctx context.Context) error {
+	if err := b.Shoot.Components.Extensions.PriorExternalDNSRecord.Destroy(ctx); err != nil {
+		return err
+	}
+	return b.Shoot.Components.Extensions.PriorExternalDNSRecord.WaitCleanup(ctx)
+}
+
 // DestroyInternalDNSRecord destroys the internal DNSRecord and waits for the operation to complete.
 func (b *Botanist) DestroyInternalDNSRecord(ctx context.Context) error {
 	if err := b.Shoot.Components.Extensions.InternalDNSRecord.Destroy(ctx); err != nil {
@@ -146,6 +208,14 @@ func (b *Botanist) MigrateExternalDNSRecord(ctx context.Context) error {
 		return err
 	}
 	return b.Shoot.Components.Extensions.ExternalDNSRecord.WaitMigrate(ctx)
+}
+
+// MigratePriorExternalDNSRecord migrates the prior external DNSRecord and waits for the operation to complete.
+func (b *Botanist) MigratePriorExternalDNSRecord(ctx context.Context) error {
+	if err := b.Shoot.Components.Extensions.PriorExternalDNSRecord.Migrate(ctx); err != nil {
+		return err
+	}
+	return b.Shoot.Components.Extensions.PriorExternalDNSRecord.WaitMigrate(ctx)
 }
 
 // MigrateInternalDNSRecord migrates the internal DNSRecord and waits for the operation to complete.
