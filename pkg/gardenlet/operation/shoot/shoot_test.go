@@ -273,6 +273,18 @@ var _ = Describe("shoot", func() {
 
 				Expect(s.ComputeOutOfClusterAPIServerAddress(false)).To(Equal("api." + externalDomain))
 			})
+
+			It("should return the new external domain while a domain migration is running", func() {
+				externalDomain := "foo"
+				priorExternalDomain := "prior-foo"
+				s := &Shoot{
+					ExternalClusterDomain:      &externalDomain,
+					PriorExternalClusterDomain: &priorExternalDomain,
+				}
+				s.SetInfo(&gardencorev1beta1.Shoot{})
+
+				Expect(s.ComputeOutOfClusterAPIServerAddress(false)).To(Equal("api." + externalDomain))
+			})
 		})
 
 		Describe("#IsSelfHosted", func() {
