@@ -82,13 +82,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	liveMigrationRole := v1beta1helper.LiveMigrationRoleNone
+	if r.Config.SeedConfig != nil {
+		liveMigrationRole = v1beta1helper.GetLiveMigrationRole(shoot, r.Config.SeedConfig.Name)
+	}
+
 	if responsibleSeedName := gardenerutils.GetResponsibleSeedName(shoot.Spec.SeedName, shoot.Status.SeedName); !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) && responsibleSeedName != r.Config.SeedConfig.Name {
-		log.Info("Skipping because Shoot is not managed by this gardenlet", "seedName", responsibleSeedName)
-		return reconcile.Result{}, nil
+		if liveMigrationRole != v1beta1helper.LiveMigrationRoleDestination {
+			log.Info("Skipping because Shoot is not managed by this gardenlet", "seedName", responsibleSeedName)
+			return reconcile.Result{}, nil
+		}
 	}
 
 	if shoot.DeletionTimestamp != nil {
 		return r.deleteShoot(ctx, log, shoot)
+	}
+
+	if liveMigrationRole != v1beta1helper.LiveMigrationRoleNone {
+		return r.liveMigrateShoot(ctx, log, shoot, liveMigrationRole)
 	}
 
 	if v1beta1helper.ShouldPrepareShootForMigration(shoot) {
@@ -193,6 +204,27 @@ func (r *Reconciler) migrateShoot(ctx context.Context, log logr.Logger, shoot *g
 	}
 
 	return r.finalizeShootMigration(ctx, shoot, o)
+}
+
+func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, role v1beta1helper.LiveMigrationRole) (reconcile.Result, error) {
+	log = log.WithValues("operation", "live-migrate", "liveMigrationRole", role)
+
+	o, result, err := r.prepareOperation(ctx, log, shoot)
+	if err != nil || o == nil {
+		return result, err
+	}
+
+	if err := r.updateShootStatusOperationStart(ctx, shoot, shoot.Status.TechnicalID, gardencorev1beta1.LastOperationTypeLiveMigrate); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to update shoot status to live migrate: %w", err)
+	}
+
+	if flowErr := r.runLiveMigrateShootFlow(ctx, o, role); flowErr != nil {
+		updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeLiveMigrate, false, flowErr.LastErrors...)
+		return reconcile.Result{}, errorsutils.WithSuppressed(fmt.Errorf("%s", flowErr.Description), updateErr)
+	}
+
+	log.Info("Live control plane migration completed")
+	return reconcile.Result{}, r.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeLiveMigrate)
 }
 
 func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (reconcile.Result, error) {
@@ -568,6 +600,10 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		description = "Preparation of Shoot cluster for migration initialized."
 		operationTypeSwitched = false
 
+	case gardencorev1beta1.LastOperationTypeLiveMigrate:
+		description = "Live migration of Shoot control plane initialized."
+		operationTypeSwitched = false
+
 	case gardencorev1beta1.LastOperationTypeDelete:
 		description = "Deletion of Shoot cluster in progress."
 		operationTypeSwitched = shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete
@@ -586,6 +622,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 
 	if !equality.Semantic.DeepEqual(shoot.Status.SeedName, shoot.Spec.SeedName) &&
 		operationType != gardencorev1beta1.LastOperationTypeMigrate &&
+		operationType != gardencorev1beta1.LastOperationTypeLiveMigrate &&
 		operationType != gardencorev1beta1.LastOperationTypeDelete {
 		shoot.Status.SeedName = shoot.Spec.SeedName
 	}
@@ -803,6 +840,10 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	case gardencorev1beta1.LastOperationTypeMigrate:
 		description = "Shoot cluster has been successfully prepared for migration."
+		setConditionsToProgressing = false
+
+	case gardencorev1beta1.LastOperationTypeLiveMigrate:
+		description = "Shoot control plane has been successfully live-migrated."
 		setConditionsToProgressing = false
 
 	case gardencorev1beta1.LastOperationTypeRestore:
