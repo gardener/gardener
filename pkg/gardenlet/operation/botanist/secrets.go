@@ -45,6 +45,11 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		if err := b.restoreSecretsFromShootState(ctx); err != nil {
 			return err
 		}
+	} else if b.Seed != nil && v1beta1helper.GetLiveMigrationRole(b.Shoot.GetInfo(), b.Seed.GetInfo().Name) ==
+		v1beta1helper.LiveMigrationRoleDestination {
+		if err := b.restoreSecretsFromShootStateForLiveMigration(ctx); err != nil {
+			return err
+		}
 	}
 
 	taskFns := []flow.TaskFn{
@@ -102,9 +107,25 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 }
 
 func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
+	return b.restoreSecretsFromGardenerResourceData(ctx, b.Shoot.GetShootState().Spec.Gardener)
+}
+
+func (b *Botanist) restoreSecretsFromShootStateForLiveMigration(ctx context.Context) error {
+	shootState := &gardencorev1beta1.ShootState{}
+	if err := b.GardenClient.Get(ctx, client.ObjectKey{
+		Name:      b.Shoot.GetInfo().Name,
+		Namespace: b.Shoot.GetInfo().Namespace,
+	}, shootState); err != nil {
+		return fmt.Errorf("failed to fetch ShootState for live migration secret restoration: %w", err)
+	}
+
+	return b.restoreSecretsFromGardenerResourceData(ctx, shootState.Spec.Gardener)
+}
+
+func (b *Botanist) restoreSecretsFromGardenerResourceData(ctx context.Context, gardenerResourceData []gardencorev1beta1.GardenerResourceData) error {
 	var fns []flow.TaskFn
 
-	for _, v := range b.Shoot.GetShootState().Spec.Gardener {
+	for _, v := range gardenerResourceData {
 		entry := v
 
 		if entry.Type != v1beta1constants.DataTypeSecret {
@@ -112,13 +133,11 @@ func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			objectMeta := metav1.ObjectMeta{
+			return restoreSecretFromPersistedData(ctx, b.SeedClientSet.Client(), metav1.ObjectMeta{
 				Name:      entry.Name,
 				Namespace: b.Shoot.ControlPlaneNamespace,
 				Labels:    entry.Labels,
-			}
-
-			return restoreSecretFromPersistedData(ctx, b.SeedClientSet.Client(), objectMeta, entry.Data.Raw)
+			}, entry.Data.Raw)
 		})
 	}
 
