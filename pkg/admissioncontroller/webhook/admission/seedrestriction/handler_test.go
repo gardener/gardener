@@ -847,7 +847,7 @@ var _ = Describe("handler", func() {
 							}))
 						})
 
-						DescribeTable("should forbid the request because a the shoot owning the source BackupEntry is not in restore phase",
+						DescribeTable("should forbid the request because the shoot owning the source BackupEntry is not in restore or live-migrate phase",
 							func(lastOperation *gardencorev1beta1.LastOperation) {
 								shoot := &gardencorev1beta1.Shoot{
 									ObjectMeta: metav1.ObjectMeta{
@@ -866,7 +866,7 @@ var _ = Describe("handler", func() {
 										Allowed: false,
 										Result: &metav1.Status{
 											Code:    int32(http.StatusForbidden),
-											Message: fmt.Sprintf("creation of source BackupEntry is only allowed during shoot Restore operation (shoot: %s)", shootName),
+											Message: fmt.Sprintf("creation of source BackupEntry is only allowed during shoot Restore or LiveMigrate operation (shoot: %s)", shootName),
 										},
 									},
 								}))
@@ -876,6 +876,9 @@ var _ = Describe("handler", func() {
 							Entry("lastOperation is reconcile", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile}),
 							Entry("lastOperation is delete", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeDelete}),
 							Entry("lastOperation is migrate", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeMigrate}),
+							Entry("lastOperation is restore but not processing", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore, State: gardencorev1beta1.LastOperationStateSucceeded}),
+							Entry("lastOperation is live-migrate but not processing", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeLiveMigrate, State: gardencorev1beta1.LastOperationStateSucceeded}),
+							Entry("lastOperation is live-migrate with error state", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeLiveMigrate, State: gardencorev1beta1.LastOperationStateError}),
 						)
 
 						It("should forbid the request because a BackupEntry for the shoot does not exist", func() {
@@ -933,6 +936,28 @@ var _ = Describe("handler", func() {
 								},
 							}
 
+							Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should allow creation of source BackupEntry if a matching BackupEntry exists and shoot is in live-migrate phase", func() {
+							shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+								Type:  gardencorev1beta1.LastOperationTypeLiveMigrate,
+								State: gardencorev1beta1.LastOperationStateProcessing,
+							}
+							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+							backupEntry := &gardencorev1beta1.BackupEntry{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      shootBackupEntryName,
+									Namespace: namespace,
+								},
+								Spec: gardencorev1beta1.BackupEntrySpec{
+									BucketName: bucketName,
+									SeedName:   &seedName,
+								},
+							}
 							Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
