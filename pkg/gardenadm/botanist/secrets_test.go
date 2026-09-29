@@ -6,6 +6,7 @@ package botanist_test
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -191,6 +193,32 @@ var _ = Describe("Secrets", func() {
 			Expect(string(fileBytes)).To(ContainSubstring("kube-apiserver-server"))
 			Expect(string(fileBytes)).NotTo(ContainSubstring("other"))
 			Expect(string(fileBytes)).NotTo(ContainSubstring("empty-data"))
+		})
+
+		It("should marshal secrets in SecretState format so the restore path can read them back", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ca-cluster",
+					Namespace: "kube-system",
+				},
+				Type: corev1.SecretTypeTLS,
+				Data: map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
+			}
+			Expect(fakeSeedClient.Create(ctx, secret)).To(Succeed())
+
+			Expect(b.PersistBootstrapSecrets(ctx, configDir)).To(Succeed())
+
+			fileBytes, err := b.FS.ReadFile(filepath.Join(configDir, "bootstrap-shootstate.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+
+			shootState := &gardencorev1beta1.ShootState{}
+			Expect(kubernetes.GardenCodec.UniversalDeserializer().Decode(fileBytes, nil, shootState)).Error().NotTo(HaveOccurred())
+			Expect(shootState.Spec.Gardener).To(HaveLen(1))
+
+			var secretState shootstate.SecretState
+			Expect(json.Unmarshal(shootState.Spec.Gardener[0].Data.Raw, &secretState)).To(Succeed())
+			Expect(secretState.Data).To(Equal(map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")}))
+			Expect(secretState.Type).To(Equal(corev1.SecretTypeTLS))
 		})
 	})
 
