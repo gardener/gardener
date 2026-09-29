@@ -122,7 +122,7 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 					},
 				},
 				Kubernetes: operatorv1alpha1.Kubernetes{
-					Version: "1.36.0",
+					Version: "1.37.0",
 				},
 				Maintenance: operatorv1alpha1.Maintenance{
 					TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
