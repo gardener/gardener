@@ -393,7 +393,7 @@
     },
     {
       "datasource": null,
-      "description": "Total number of kube-apiserver container restarts since the pod started.",
+      "description": "Number of kube-apiserver container restarts in the selected time range.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -444,7 +444,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(kube_pod_container_status_restarts_total{job=~\"$job\",pod=~\"$pod\",container=\"kube-apiserver\"})",
+          "expr": "sum(changes(kube_pod_container_status_restarts_total{job=~\"$job\",pod=~\"$pod\",container=\"kube-apiserver\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -561,7 +561,7 @@
     },
     {
       "datasource": null,
-      "description": "Total number of OOM kill events for the kube-apiserver container since the pod started.",
+      "description": "Number of OOM kill events for the kube-apiserver container in the selected time range.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -612,7 +612,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(container_oom_events_total{job=~\"$job\",pod=~\"$pod\",container=\"kube-apiserver\"})",
+          "expr": "sum(changes(container_oom_events_total{job=~\"$job\",pod=~\"$pod\",container=\"kube-apiserver\"}[$__range]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
