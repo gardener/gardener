@@ -18,7 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/nodeagent"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // IsPodNetworkAvailable checks if the control plane Node has the pod network configured.
@@ -98,23 +97,4 @@ func netIPNetSliceToStringSlice(in []net.IPNet) []string {
 		out = append(out, ip.String())
 	}
 	return out
-}
-
-// LookupIP is an alias for net.LookupIP that can be overridden in tests.
-var LookupIP = net.LookupIP
-
-// MachineIP returns the IP address of the current machine. It prefers addresses matching the primary IP family
-// (the first entry in .spec.networking.ipFamilies), falling back to any available address.
-// Similar to https://github.com/kubernetes/kubernetes/blob/ec9f0d55360f74337f9ef40879434a063821ff5b/pkg/kubelet/nodestatus/setters.go#L162-L178
-func (b *GardenadmBotanist) MachineIP() (net.IP, error) {
-	addrs, err := LookupIP(b.HostName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup IPs for hostname %s: %w", b.HostName, err)
-	}
-
-	if ip := utils.IPv4OrIPv6(b.Shoot.PreferIPv6(), addrs...); ip != nil {
-		return ip, nil
-	}
-
-	return nil, fmt.Errorf("no IP address found for node")
 }

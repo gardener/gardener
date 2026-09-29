@@ -108,11 +108,6 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed to instantiate a new secrets manager: %w", err)
 	}
 
-	machineIP, err := b.MachineIP()
-	if err != nil {
-		return fmt.Errorf("failed determining the machine IP address")
-	}
-
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.ShootClientSet.Client(), b.HostName)
 	if err != nil {
 		return fmt.Errorf("failed retrieving node for hostname %s: %w", b.HostName, err)
