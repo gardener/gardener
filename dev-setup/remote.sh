@@ -105,6 +105,10 @@ case "$command" in
     ensure-config-file "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/credentials-project-remote/credentialsbindings.yaml
     ensure-config-file "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/etcd-backup/secret.yaml
     ensure-config-file "$SCRIPT_DIR"/gardenlet/overlays/remote/gardenlet.yaml
+    # base/kustomization.yaml lists secret-registry-ca.yaml as a resource; infra.sh generates it (the local
+    # registry CA) for local kind scenarios, but the remote flow never runs infra.sh. Just ensure the file
+    # exists so the kustomize build succeeds - an empty file is ignored by kustomize.
+    touch "$SCRIPT_DIR/gardenlet/base/secret-registry-ca.yaml"
     # Kustomize does not support conditional logic, so we create all files and only check the content of the relevant
     # ones based on the workload identity support. The other files are just touched.
     # All objects could coexist in the cluster, so it is possible to switch between workload identity and secret based credentials.
