@@ -253,7 +253,6 @@ func computeAPIServerETCDEncryptionConfig(
 	error,
 ) {
 	config := apiserver.ETCDEncryptionConfig{
-		RotationPhase:         etcdEncryptionKeyRotationPhase,
 		EncryptWithCurrentKey: true,
 		ResourcesToEncrypt:    resourcesToEncrypt,
 		EncryptedResources:    encryptedResources,
