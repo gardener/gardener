@@ -80,4 +80,11 @@ const (
 	// NamespacedCloudProfileParentRefName is the field selector path for finding
 	// the parent CloudProfile of a core.gardener.cloud/v1beta1 NamespacedCloudProfile.
 	NamespacedCloudProfileParentRefName = "spec.parent.name"
+
+	// SecretBindingSecretRefName is the field selector path for finding
+	// the Secret name of a core.gardener.cloud/v1beta1 SecretBinding.
+	SecretBindingSecretRefName = "spec.secretRef.name"
+	// SecretBindingSecretRefNamespace is the field selector path for finding
+	// the Secret namespace of a core.gardener.cloud/v1beta1 SecretBinding.
+	SecretBindingSecretRefNamespace = "spec.secretRef.namespace"
 )

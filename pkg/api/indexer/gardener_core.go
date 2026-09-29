@@ -329,3 +329,37 @@ func AddNamespacedCloudProfileParentRefName(ctx context.Context, indexer client.
 	}
 	return nil
 }
+
+// SecretBindingSecretRefNameIndexerFunc extracts the .spec.secretRef.name field of a SecretBinding.
+func SecretBindingSecretRefNameIndexerFunc(obj client.Object) []string {
+	secretBinding, ok := obj.(*gardencorev1beta1.SecretBinding)
+	if !ok {
+		return []string{""}
+	}
+	return []string{secretBinding.SecretRef.Name}
+}
+
+// SecretBindingSecretRefNamespaceIndexerFunc extracts the .spec.secretRef.namespace field of a SecretBinding.
+func SecretBindingSecretRefNamespaceIndexerFunc(obj client.Object) []string {
+	secretBinding, ok := obj.(*gardencorev1beta1.SecretBinding)
+	if !ok {
+		return []string{""}
+	}
+	return []string{secretBinding.SecretRef.Namespace}
+}
+
+// AddSecretBindingSecretRefName adds an index for core.SecretBindingSecretRefName to the given indexer.
+func AddSecretBindingSecretRefName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.SecretBinding{}, core.SecretBindingSecretRefName, SecretBindingSecretRefNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to SecretBinding Informer: %w", core.SecretBindingSecretRefName, err)
+	}
+	return nil
+}
+
+// AddSecretBindingSecretRefNamespace adds an index for core.SecretBindingSecretRefNamespace to the given indexer.
+func AddSecretBindingSecretRefNamespace(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.SecretBinding{}, core.SecretBindingSecretRefNamespace, SecretBindingSecretRefNamespaceIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to SecretBinding Informer: %w", core.SecretBindingSecretRefNamespace, err)
+	}
+	return nil
+}

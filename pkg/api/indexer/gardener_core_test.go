@@ -311,4 +311,32 @@ var _ = Describe("Core", func() {
 		Entry("no NamespacedCloudProfile", &corev1.Secret{}, ConsistOf("")),
 		Entry("NamespacedCloudProfile w/ parent", &gardencorev1beta1.NamespacedCloudProfile{Spec: gardencorev1beta1.NamespacedCloudProfileSpec{Parent: gardencorev1beta1.CloudProfileReference{Name: "parent-profile"}}}, ConsistOf("parent-profile")),
 	)
+
+	DescribeTable("#AddSecretBindingSecretRefName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddSecretBindingSecretRefName(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.SecretBinding{}))
+			Expect(indexer.field).To(Equal("spec.secretRef.name"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no SecretBinding", &corev1.Secret{}, ConsistOf("")),
+		Entry("SecretBinding w/ secretRef", &gardencorev1beta1.SecretBinding{SecretRef: corev1.SecretReference{Name: "secret", Namespace: "ns"}}, ConsistOf("secret")),
+	)
+
+	DescribeTable("#AddSecretBindingSecretRefNamespace",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddSecretBindingSecretRefNamespace(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.SecretBinding{}))
+			Expect(indexer.field).To(Equal("spec.secretRef.namespace"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no SecretBinding", &corev1.Secret{}, ConsistOf("")),
+		Entry("SecretBinding w/ secretRef", &gardencorev1beta1.SecretBinding{SecretRef: corev1.SecretReference{Name: "secret", Namespace: "ns"}}, ConsistOf("ns")),
+	)
 })
