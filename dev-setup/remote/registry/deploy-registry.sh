@@ -33,9 +33,11 @@ virtual_garden_kubeconfig=${3:-}
 if kubectl --kubeconfig "$kubeconfig" get secrets -n registry registry-password; then
   echo "Container registry password found in seed cluster"
   password=$(kubectl --kubeconfig "$kubeconfig" get secrets -n registry registry-password -o yaml | yq -e .data.password | base64 -d)
+  password_changed=false
 else
   echo "Generating new password for container registry $registry"
   password=$(openssl rand -base64 20)
+  password_changed=true
 fi
 
 mkdir -p "$SCRIPT_DIR"/htpasswd
@@ -45,7 +47,12 @@ echo "Creating basic auth secret for registry"
 kubectl --kubeconfig "$kubeconfig" --server-side=true apply -f "$SCRIPT_DIR"/load-balancer/base/namespace.yaml
 kubectl create secret generic -n registry registry-htpasswd --from-file="$SCRIPT_DIR"/htpasswd/auth --dry-run=client -o yaml | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
-kubectl rollout restart statefulsets -n registry -l app=registry --kubeconfig "$kubeconfig"
+# Only restart the registry when the password actually changed - it reads htpasswd at startup. Restarting on
+# every rerun (when the password is reused) severs in-flight image pushes with "unexpected EOF". A re-hashed
+# htpasswd for the same password still authenticates against the running pod's in-memory hash, so skip it.
+if [[ "$password_changed" == "true" ]]; then
+  kubectl rollout restart statefulsets -n registry -l app=registry --kubeconfig "$kubeconfig"
+fi
 kubectl --kubeconfig "$kubeconfig" apply -f - << EOF
 apiVersion: v1
 kind: Secret
