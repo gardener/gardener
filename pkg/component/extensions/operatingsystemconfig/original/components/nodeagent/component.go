@@ -91,7 +91,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		})
 	}
 
-	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, additionalTokenSyncConfigs, ctx.IsControlPlanePool))
+	files, err := Files(ComponentConfig(ctx.Key, ctx.KubernetesVersion, ctx.APIServerURL, additionalTokenSyncConfigs, ctx.IsControlPlanePool, ctx.PreferIPv6))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed generating files: %w", err)
 	}
@@ -153,6 +153,7 @@ func ComponentConfig(
 	apiServerURL string,
 	additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig,
 	isControlPlanePool bool,
+	preferIPv6 bool,
 ) *nodeagentconfigv1alpha1.NodeAgentConfiguration {
 	config := &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 		APIServer: nodeagentconfigv1alpha1.APIServer{
@@ -163,6 +164,7 @@ func ComponentConfig(
 			OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
+				PreferIPv6:        &preferIPv6,
 			},
 			Token: nodeagentconfigv1alpha1.TokenControllerConfig{
 				SyncConfigs: additionalTokenSyncConfigs[:],
