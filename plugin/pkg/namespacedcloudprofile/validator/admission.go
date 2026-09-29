@@ -12,6 +12,7 @@ import (
 	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
@@ -19,6 +20,7 @@ import (
 
 	gardencoreapi "github.com/gardener/gardener/pkg/api"
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/api/core/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -55,7 +57,9 @@ type ValidateNamespacedCloudProfile struct {
 	*admission.Handler
 
 	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
-	readyFunc          admission.ReadyFunc
+
+	shootLister gardencorev1beta1listers.ShootLister
+	readyFunc   admission.ReadyFunc
 }
 
 var (
@@ -79,15 +83,22 @@ func (v *ValidateNamespacedCloudProfile) AssignReadyFunc(f admission.ReadyFunc) 
 // SetCoreInformerFactory gets Lister from SharedInformerFactory.
 func (v *ValidateNamespacedCloudProfile) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
+	shootInformer := f.Core().V1beta1().Shoots()
+
 	v.cloudProfileLister = cloudProfileInformer.Lister()
+	v.shootLister = shootInformer.Lister()
 
 	readyFuncs = append(readyFuncs, cloudProfileInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateNamespacedCloudProfile) ValidateInitialization() error {
 	if v.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
+	}
+	if v.shootLister == nil {
+		return errors.New("missing shoot lister")
 	}
 	return nil
 }
@@ -150,6 +161,22 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 		return apierrors.NewBadRequest("parent CloudProfile could not be found")
 	}
 
+	shoots, err := v.shootLister.Shoots(namespacedCloudProfile.Namespace).List(labels.Everything())
+	if err != nil {
+		return apierrors.NewBadRequest("shoots can not be listed")
+	}
+
+	var referencedShoots []*gardencorev1beta1.Shoot
+
+	for _, s := range shoots {
+		if s != nil &&
+			s.Spec.CloudProfile != nil &&
+			s.Spec.CloudProfile.Kind == namespacedCloudProfile.Kind &&
+			s.Spec.CloudProfile.Name == namespacedCloudProfile.Name {
+			referencedShoots = append(referencedShoots, s)
+		}
+	}
+
 	if err := v.simulateTransformationToParentSpecFormat(namespacedCloudProfile, parentCloudProfile, oldNamespacedCloudProfile); err != nil {
 		return err
 	}
@@ -158,6 +185,7 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 		parentCloudProfile:        parentCloudProfile,
 		namespacedCloudProfile:    namespacedCloudProfile,
 		oldNamespacedCloudProfile: oldNamespacedCloudProfile,
+		referencedShoots:          referencedShoots,
 	}
 
 	if err := validationContext.validateKubernetesVersionOverrides(a); err != nil {
@@ -166,8 +194,42 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 	if err := validationContext.validateMachineImageOverrides(ctx, a); err != nil {
 		return err
 	}
-	if err := validationContext.validateSimulatedCloudProfileStatusMergeResult(); err != nil {
+	mergedStatus, err := validationContext.validateSimulatedCloudProfileStatusMergeResult()
+	if err != nil {
 		return err
+	}
+	if err := validationContext.validateMergeResultForReferencingShoots(mergedStatus); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateMergeResultForReferencingShoots(mergedStatus *gardencorev1beta1.NamespacedCloudProfileStatus) error {
+	for _, shoot := range c.referencedShoots {
+		for _, version := range mergedStatus.CloudProfileSpec.Kubernetes.Versions {
+			if !gardencorev1beta1helper.VersionIsUnavailable(version) {
+				continue
+			}
+
+			if version.Version == shoot.Spec.Kubernetes.Version {
+				return fmt.Errorf(
+					"kubernetes version %q currently used by shoot %q would become unavailable",
+					version.Version,
+					shoot.Name,
+				)
+			}
+
+			for _, w := range shoot.Spec.Provider.Workers {
+				if w.Kubernetes == nil || w.Kubernetes.Version == nil {
+					continue
+				}
+
+				if *w.Kubernetes.Version == version.Version {
+					return fmt.Errorf("kubernetes version %q currently used by worker-pool %q of shoot %q would become unavailable", version.Version, w.Name, shoot.Name)
+				}
+			}
+		}
 	}
 
 	return nil
@@ -198,9 +260,11 @@ func (v *ValidateNamespacedCloudProfile) simulateTransformationToParentSpecForma
 }
 
 type validationContext struct {
-	parentCloudProfile        *gardencorev1beta1.CloudProfile
+	parentCloudProfile *gardencorev1beta1.CloudProfile
+
 	namespacedCloudProfile    *gardencore.NamespacedCloudProfile
 	oldNamespacedCloudProfile *gardencore.NamespacedCloudProfile
+	referencedShoots          []*gardencorev1beta1.Shoot
 }
 
 func (c *validationContext) validateKubernetesVersionOverrides(attr admission.Attributes) error {
@@ -264,6 +328,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 			var imageAlreadyExistsInNamespacedCloudProfile bool
 			if oldVersionsSpec != nil {
 				var currentImage gardencore.MachineImage
+
 				currentImage, imageAlreadyExistsInNamespacedCloudProfile = oldVersionsSpec.GetImage(image.Name)
 
 				if imageAlreadyExistsInNamespacedCloudProfile && ptr.Deref(image.UpdateStrategy, "") != ptr.Deref(currentImage.UpdateStrategy, "") {
@@ -366,21 +431,21 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	return allErrs
 }
 
-func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult() error {
+func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult() (*gardencorev1beta1.NamespacedCloudProfileStatus, error) {
 	namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
 	if err := gardencoreapi.Scheme.Convert(c.namespacedCloudProfile, namespacedCloudProfile, nil); err != nil {
-		return err
+		return nil, err
 	}
-	errs := ValidateSimulatedNamespacedCloudProfileStatus(c.parentCloudProfile, namespacedCloudProfile)
+	resultStatus, errs := ValidateSimulatedNamespacedCloudProfileStatus(c.parentCloudProfile, namespacedCloudProfile)
 	if len(errs) > 0 {
-		return fmt.Errorf("error while validating merged NamespacedCloudProfile: %+v", errs)
+		return nil, fmt.Errorf("error while validating merged NamespacedCloudProfile: %+v", errs)
 	}
-	return nil
+	return resultStatus, nil
 }
 
 // ValidateSimulatedNamespacedCloudProfileStatus merges the parent CloudProfile and the created or updated NamespacedCloudProfile
 // to generate and validate the NamespacedCloudProfile status.
-func ValidateSimulatedNamespacedCloudProfileStatus(originalParentCloudProfile *gardencorev1beta1.CloudProfile, originalNamespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) field.ErrorList {
+func ValidateSimulatedNamespacedCloudProfileStatus(originalParentCloudProfile *gardencorev1beta1.CloudProfile, originalNamespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) (*gardencorev1beta1.NamespacedCloudProfileStatus, field.ErrorList) {
 	parentCloudProfile := originalParentCloudProfile.DeepCopy()
 	namespacedCloudProfile := originalNamespacedCloudProfile.DeepCopy()
 
@@ -388,12 +453,12 @@ func ValidateSimulatedNamespacedCloudProfileStatus(originalParentCloudProfile *g
 
 	coreNamespacedCloudProfile := &gardencore.NamespacedCloudProfile{}
 	if err := gardencoreapi.Scheme.Convert(namespacedCloudProfile, coreNamespacedCloudProfile, nil); err != nil {
-		return field.ErrorList{{
+		return nil, field.ErrorList{{
 			Type:     field.ErrorTypeInternal,
 			Field:    "",
 			BadValue: nil,
 			Detail:   "could not convert NamespacedCloudProfile from type core.gardener.cloud/v1beta1 to the internal core type",
 		}}
 	}
-	return validation.ValidateNamespacedCloudProfileStatus(&coreNamespacedCloudProfile.Status.CloudProfileSpec, field.NewPath("status.cloudProfileSpec"))
+	return &namespacedCloudProfile.Status, validation.ValidateNamespacedCloudProfileStatus(&coreNamespacedCloudProfile.Status.CloudProfileSpec, field.NewPath("status.cloudProfileSpec"))
 }
