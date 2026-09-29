@@ -851,9 +851,9 @@ func (b *Botanist) ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, skipRead
 			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !kubeProxyEnabled,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Waiting until kube-proxy system component is ready",
+			Name: "Waiting until kube-proxy for the control plane worker pool is ready",
 			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.SystemComponents.KubeProxy.Wait(ctx)
+				return b.Shoot.Components.SystemComponents.KubeProxy.WaitForControlPlanePool(ctx)
 			},
 			SkipIf:       !b.Shoot.IsSelfHosted() || b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !kubeProxyEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployKubeProxy),
