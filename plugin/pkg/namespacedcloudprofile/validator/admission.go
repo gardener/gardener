@@ -20,10 +20,11 @@ import (
 
 	gardencoreapi "github.com/gardener/gardener/pkg/api"
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/api/core/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -171,7 +172,7 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 	for _, s := range shoots {
 		if s != nil &&
 			s.Spec.CloudProfile != nil &&
-			s.Spec.CloudProfile.Kind == namespacedCloudProfile.Kind &&
+			s.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindNamespacedCloudProfile &&
 			s.Spec.CloudProfile.Name == namespacedCloudProfile.Name {
 			referencedShoots = append(referencedShoots, s)
 		}
@@ -206,28 +207,64 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 }
 
 func (c *validationContext) validateMergeResultForReferencingShoots(mergedStatus *gardencorev1beta1.NamespacedCloudProfileStatus) error {
-	for _, shoot := range c.referencedShoots {
-		for _, version := range mergedStatus.CloudProfileSpec.Kubernetes.Versions {
-			if !gardencorev1beta1helper.VersionIsUnavailable(version) {
+	unavailableKubernetesVersions := sets.New[string]()
+	unavailableMachineImageVersions := sets.New[string]()
+
+	machineImageIdentifier := func(name, version string) string {
+		return fmt.Sprintf("%s@%s", name, version)
+	}
+
+	for _, version := range mergedStatus.CloudProfileSpec.Kubernetes.Versions {
+		if v1beta1helper.VersionIsUnavailable(version) {
+			unavailableKubernetesVersions.Insert(version.Version)
+		}
+	}
+
+	for _, image := range mergedStatus.CloudProfileSpec.MachineImages {
+		for _, version := range image.Versions {
+			if !v1beta1helper.VersionIsUnavailable(version.ExpirableVersion) {
 				continue
 			}
 
-			if version.Version == shoot.Spec.Kubernetes.Version {
+			unavailableMachineImageVersions.Insert(machineImageIdentifier(image.Name, version.Version))
+		}
+	}
+
+	for _, shoot := range c.referencedShoots {
+		if unavailableKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
+			return fmt.Errorf(
+				"kubernetes version %q currently used by shoot %q would become unavailable",
+				shoot.Spec.Kubernetes.Version,
+				shoot.Name,
+			)
+		}
+
+		for _, worker := range shoot.Spec.Provider.Workers {
+			kubernetes := worker.Kubernetes
+			if kubernetes != nil &&
+				kubernetes.Version != nil &&
+				unavailableKubernetesVersions.Has(*kubernetes.Version) {
 				return fmt.Errorf(
-					"kubernetes version %q currently used by shoot %q would become unavailable",
-					version.Version,
+					"kubernetes version %q currently used by worker-pool %q of shoot %q would become unavailable",
+					*kubernetes.Version,
+					worker.Name,
 					shoot.Name,
 				)
 			}
 
-			for _, w := range shoot.Spec.Provider.Workers {
-				if w.Kubernetes == nil || w.Kubernetes.Version == nil {
-					continue
-				}
+			image := worker.Machine.Image
+			if image == nil || image.Version == nil {
+				continue
+			}
 
-				if *w.Kubernetes.Version == version.Version {
-					return fmt.Errorf("kubernetes version %q currently used by worker-pool %q of shoot %q would become unavailable", version.Version, w.Name, shoot.Name)
-				}
+			imageIdentifier := machineImageIdentifier(image.Name, *image.Version)
+			if unavailableMachineImageVersions.Has(imageIdentifier) {
+				return fmt.Errorf(
+					"machine image %q currently used by worker-pool %q of shoot %q would become unavailable",
+					imageIdentifier,
+					worker.Name,
+					shoot.Name,
+				)
 			}
 		}
 	}
