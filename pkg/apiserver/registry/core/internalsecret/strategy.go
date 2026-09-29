@@ -53,7 +53,7 @@ func (strategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 func (strategy) Canonicalize(_ runtime.Object) {
 }
 
-func (strategy) AllowCreateOnUpdate() bool {
+func (strategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -76,7 +76,7 @@ func (strategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []strin
 	return nil
 }
 
-func (strategy) AllowUnconditionalUpdate() bool {
+func (strategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return true
 }
 

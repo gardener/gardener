@@ -7,10 +7,10 @@ package test
 import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/recorder"
 )
 
 // FakeManager fakes a manager.Manager.
@@ -19,7 +19,7 @@ type FakeManager struct {
 
 	Client        client.Client
 	Cache         cache.Cache
-	EventRecorder events.EventRecorder
+	EventRecorder recorder.EventRecorder
 	APIReader     client.Reader
 	Scheme        *runtime.Scheme
 	Logger        logr.Logger
@@ -38,7 +38,7 @@ func (f FakeManager) GetCache() cache.Cache {
 }
 
 // GetEventRecorder returns the eventRecorder of the FakeManager.
-func (f FakeManager) GetEventRecorder(_ string) events.EventRecorder {
+func (f FakeManager) GetEventRecorder(_ string) recorder.EventRecorder {
 	return f.EventRecorder
 }
 

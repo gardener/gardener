@@ -22,11 +22,39 @@ import (
 )
 
 // NamespacedCloudProfileInformer provides access to a shared informer and lister for
-// NamespacedCloudProfiles.
+// NamespacedCloudProfiles. Prefer using the type-safe variant (see [TypedNamespacedCloudProfileInformer]).
 type NamespacedCloudProfileInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.NamespacedCloudProfileLister
 }
+
+// TypedNamespacedCloudProfileInformer provides access to a shared informer and lister for
+// NamespacedCloudProfiles, including the type-safe TypedInformer variant.
+// It is a superset of NamespacedCloudProfileInformer.
+type TypedNamespacedCloudProfileInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() NamespacedCloudProfileIndexInformer
+	Lister() corev1beta1.NamespacedCloudProfileLister
+}
+
+// NamespacedCloudProfileIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type NamespacedCloudProfileIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.NamespacedCloudProfile]
+
+// NamespacedCloudProfileHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for NamespacedCloudProfile.
+type NamespacedCloudProfileHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.NamespacedCloudProfile]
+
+// NamespacedCloudProfileDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for NamespacedCloudProfile.
+type NamespacedCloudProfileDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.NamespacedCloudProfile]
+
+// NamespacedCloudProfileFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for NamespacedCloudProfile.
+type NamespacedCloudProfileFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.NamespacedCloudProfile]
+
+// NamespacedCloudProfileIndexers is a specialization of [cache.TypedIndexers] for NamespacedCloudProfile.
+type NamespacedCloudProfileIndexers = cache.TypedIndexers[*apiscorev1beta1.NamespacedCloudProfile]
+
+// DeletedNamespacedCloudProfile is a specialization of [cache.DeletedObject] for NamespacedCloudProfile.
+type DeletedNamespacedCloudProfile = cache.DeletedObject[*apiscorev1beta1.NamespacedCloudProfile]
 
 type namespacedCloudProfileInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -37,25 +65,49 @@ type namespacedCloudProfileInformer struct {
 // NewNamespacedCloudProfileInformer constructs a new informer for NamespacedCloudProfile type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedNamespacedCloudProfileInformer]).
 func NewNamespacedCloudProfileInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewNamespacedCloudProfileInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedNamespacedCloudProfileInformer constructs a new informer for NamespacedCloudProfile type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedNamespacedCloudProfileInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers NamespacedCloudProfileIndexers) NamespacedCloudProfileIndexInformer {
+	return NewTypedNamespacedCloudProfileInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredNamespacedCloudProfileInformer constructs a new informer for NamespacedCloudProfile type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredNamespacedCloudProfileInformer]).
 func NewFilteredNamespacedCloudProfileInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewNamespacedCloudProfileInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedNamespacedCloudProfileInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredNamespacedCloudProfileInformer constructs a new informer for NamespacedCloudProfile type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredNamespacedCloudProfileInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers NamespacedCloudProfileIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) NamespacedCloudProfileIndexInformer {
+	return NewTypedNamespacedCloudProfileInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewNamespacedCloudProfileInformerWithOptions constructs a new informer for NamespacedCloudProfile type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedNamespacedCloudProfileInformerWithOptions]).
 func NewNamespacedCloudProfileInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedNamespacedCloudProfileInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedNamespacedCloudProfileInformerWithOptions constructs a new informer for NamespacedCloudProfile type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedNamespacedCloudProfileInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) NamespacedCloudProfileIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "namespacedcloudprofiles"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.NamespacedCloudProfile](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -88,17 +140,57 @@ func NewNamespacedCloudProfileInformerWithOptions(client versioned.Interface, na
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *namespacedCloudProfileInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewNamespacedCloudProfileInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedNamespacedCloudProfileInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *namespacedCloudProfileInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.NamespacedCloudProfile{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *namespacedCloudProfileInformer) TypedInformer() NamespacedCloudProfileIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.NamespacedCloudProfile](f.factory.InformerFor(&apiscorev1beta1.NamespacedCloudProfile{}, f.defaultInformer))
 }
 
 func (f *namespacedCloudProfileInformer) Lister() corev1beta1.NamespacedCloudProfileLister {
 	return corev1beta1.NewNamespacedCloudProfileLister(f.Informer().GetIndexer())
+}
+
+// ToTypedNamespacedCloudProfileInformer converts an untyped informer into a TypedNamespacedCloudProfileInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *NamespacedCloudProfile. If that is not the case, calling type-safe methods of the returned
+// TypedNamespacedCloudProfileInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedNamespacedCloudProfileInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedNamespacedCloudProfileInformer(informer NamespacedCloudProfileInformer) TypedNamespacedCloudProfileInformer {
+	if informer, ok := informer.(TypedNamespacedCloudProfileInformer); ok {
+		return informer
+	}
+	return &namespacedCloudProfileTypedInformerAdapter{informer}
+}
+
+type namespacedCloudProfileTypedInformerAdapter struct {
+	NamespacedCloudProfileInformer
+}
+
+func (a *namespacedCloudProfileTypedInformerAdapter) TypedInformer() NamespacedCloudProfileIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.NamespacedCloudProfile](a.Informer())
+}
+
+// ToNamespacedCloudProfileIndexInformer converts an untyped informer into a NamespacedCloudProfileIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *NamespacedCloudProfile. If that is not the case, calling type-safe methods of the returned
+// NamespacedCloudProfileIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a NamespacedCloudProfileIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToNamespacedCloudProfileIndexInformer(informer cache.SharedIndexInformer) NamespacedCloudProfileIndexInformer {
+	if informer, ok := informer.(NamespacedCloudProfileIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.NamespacedCloudProfile](informer)
 }

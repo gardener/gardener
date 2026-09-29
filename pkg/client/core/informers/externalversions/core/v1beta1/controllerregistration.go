@@ -22,11 +22,39 @@ import (
 )
 
 // ControllerRegistrationInformer provides access to a shared informer and lister for
-// ControllerRegistrations.
+// ControllerRegistrations. Prefer using the type-safe variant (see [TypedControllerRegistrationInformer]).
 type ControllerRegistrationInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() corev1beta1.ControllerRegistrationLister
 }
+
+// TypedControllerRegistrationInformer provides access to a shared informer and lister for
+// ControllerRegistrations, including the type-safe TypedInformer variant.
+// It is a superset of ControllerRegistrationInformer.
+type TypedControllerRegistrationInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() ControllerRegistrationIndexInformer
+	Lister() corev1beta1.ControllerRegistrationLister
+}
+
+// ControllerRegistrationIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type ControllerRegistrationIndexInformer cache.TypedSharedIndexInformer[*apiscorev1beta1.ControllerRegistration]
+
+// ControllerRegistrationHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for ControllerRegistration.
+type ControllerRegistrationHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscorev1beta1.ControllerRegistration]
+
+// ControllerRegistrationDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for ControllerRegistration.
+type ControllerRegistrationDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscorev1beta1.ControllerRegistration]
+
+// ControllerRegistrationFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for ControllerRegistration.
+type ControllerRegistrationFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscorev1beta1.ControllerRegistration]
+
+// ControllerRegistrationIndexers is a specialization of [cache.TypedIndexers] for ControllerRegistration.
+type ControllerRegistrationIndexers = cache.TypedIndexers[*apiscorev1beta1.ControllerRegistration]
+
+// DeletedControllerRegistration is a specialization of [cache.DeletedObject] for ControllerRegistration.
+type DeletedControllerRegistration = cache.DeletedObject[*apiscorev1beta1.ControllerRegistration]
 
 type controllerRegistrationInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -36,25 +64,49 @@ type controllerRegistrationInformer struct {
 // NewControllerRegistrationInformer constructs a new informer for ControllerRegistration type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedControllerRegistrationInformer]).
 func NewControllerRegistrationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewControllerRegistrationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedControllerRegistrationInformer constructs a new informer for ControllerRegistration type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedControllerRegistrationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ControllerRegistrationIndexers) ControllerRegistrationIndexInformer {
+	return NewTypedControllerRegistrationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredControllerRegistrationInformer constructs a new informer for ControllerRegistration type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredControllerRegistrationInformer]).
 func NewFilteredControllerRegistrationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewControllerRegistrationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedControllerRegistrationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredControllerRegistrationInformer constructs a new informer for ControllerRegistration type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredControllerRegistrationInformer(client versioned.Interface, resyncPeriod time.Duration, indexers ControllerRegistrationIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) ControllerRegistrationIndexInformer {
+	return NewTypedControllerRegistrationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewControllerRegistrationInformerWithOptions constructs a new informer for ControllerRegistration type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedControllerRegistrationInformerWithOptions]).
 func NewControllerRegistrationInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedControllerRegistrationInformerWithOptions(client, options)
+}
+
+// NewTypedControllerRegistrationInformerWithOptions constructs a new informer for ControllerRegistration type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedControllerRegistrationInformerWithOptions(client versioned.Interface, options internalinterfaces.InformerOptions) ControllerRegistrationIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "controllerregistrations"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerRegistration](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -87,17 +139,57 @@ func NewControllerRegistrationInformerWithOptions(client versioned.Interface, op
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *controllerRegistrationInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewControllerRegistrationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedControllerRegistrationInformerWithOptions(client, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *controllerRegistrationInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscorev1beta1.ControllerRegistration{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *controllerRegistrationInformer) TypedInformer() ControllerRegistrationIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerRegistration](f.factory.InformerFor(&apiscorev1beta1.ControllerRegistration{}, f.defaultInformer))
 }
 
 func (f *controllerRegistrationInformer) Lister() corev1beta1.ControllerRegistrationLister {
 	return corev1beta1.NewControllerRegistrationLister(f.Informer().GetIndexer())
+}
+
+// ToTypedControllerRegistrationInformer converts an untyped informer into a TypedControllerRegistrationInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ControllerRegistration. If that is not the case, calling type-safe methods of the returned
+// TypedControllerRegistrationInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedControllerRegistrationInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedControllerRegistrationInformer(informer ControllerRegistrationInformer) TypedControllerRegistrationInformer {
+	if informer, ok := informer.(TypedControllerRegistrationInformer); ok {
+		return informer
+	}
+	return &controllerRegistrationTypedInformerAdapter{informer}
+}
+
+type controllerRegistrationTypedInformerAdapter struct {
+	ControllerRegistrationInformer
+}
+
+func (a *controllerRegistrationTypedInformerAdapter) TypedInformer() ControllerRegistrationIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerRegistration](a.Informer())
+}
+
+// ToControllerRegistrationIndexInformer converts an untyped informer into a ControllerRegistrationIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *ControllerRegistration. If that is not the case, calling type-safe methods of the returned
+// ControllerRegistrationIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a ControllerRegistrationIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToControllerRegistrationIndexInformer(informer cache.SharedIndexInformer) ControllerRegistrationIndexInformer {
+	if informer, ok := informer.(ControllerRegistrationIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscorev1beta1.ControllerRegistration](informer)
 }

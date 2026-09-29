@@ -73,7 +73,7 @@ func (controllerInstallationStrategy) Validate(_ context.Context, obj runtime.Ob
 func (controllerInstallationStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (controllerInstallationStrategy) AllowCreateOnUpdate() bool {
+func (controllerInstallationStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -83,7 +83,7 @@ func (controllerInstallationStrategy) ValidateUpdate(_ context.Context, newObj, 
 	return validation.ValidateControllerInstallationUpdate(newControllerInstallation, oldControllerInstallation)
 }
 
-func (controllerInstallationStrategy) AllowUnconditionalUpdate() bool {
+func (controllerInstallationStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

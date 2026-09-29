@@ -275,8 +275,6 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
-            - third_party/kube-state-metrics/pkg/customresourcestate
-            - third_party/kube-state-metrics/pkg/metric
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -538,7 +536,6 @@ build:
             - pkg/utils/version
             - pkg/utils/workloadidentity
             - pkg/webhook/authorizer
-            - third_party/component-helpers/scheduling/corev1/nodeaffinity
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -824,8 +821,6 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
-            - third_party/kube-state-metrics/pkg/customresourcestate
-            - third_party/kube-state-metrics/pkg/metric
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

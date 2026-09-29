@@ -63,7 +63,7 @@ func (workloadIdentityStrategy) Validate(_ context.Context, obj runtime.Object) 
 func (workloadIdentityStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (workloadIdentityStrategy) AllowCreateOnUpdate() bool {
+func (workloadIdentityStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -73,7 +73,7 @@ func (workloadIdentityStrategy) ValidateUpdate(_ context.Context, newObj, oldObj
 	return validation.ValidateWorkloadIdentityUpdate(newWorkloadIdentity, oldWorkloadIdentity)
 }
 
-func (workloadIdentityStrategy) AllowUnconditionalUpdate() bool {
+func (workloadIdentityStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

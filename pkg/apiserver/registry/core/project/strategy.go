@@ -81,11 +81,11 @@ func (projectStrategy) Canonicalize(obj runtime.Object) {
 	}
 }
 
-func (projectStrategy) AllowCreateOnUpdate() bool {
+func (projectStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
-func (projectStrategy) AllowUnconditionalUpdate() bool {
+func (projectStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return true
 }
 

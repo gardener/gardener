@@ -34,9 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	v1helper "k8s.io/component-helpers/scheduling/corev1"
+	"k8s.io/component-helpers/scheduling/corev1/nodeaffinity"
 	"k8s.io/klog/v2"
-
-	"github.com/gardener/gardener/third_party/component-helpers/scheduling/corev1/nodeaffinity"
 )
 
 // NodeShouldRunDaemonPod checks a set of preconditions against a (node,daemonset) and returns a

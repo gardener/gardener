@@ -66,7 +66,7 @@ func (shootStateStrategy) Validate(_ context.Context, obj runtime.Object) field.
 func (shootStateStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (shootStateStrategy) AllowCreateOnUpdate() bool {
+func (shootStateStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -76,7 +76,7 @@ func (shootStateStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runti
 	return validation.ValidateShootStateUpdate(newShootState, oldShootState)
 }
 
-func (shootStateStrategy) AllowUnconditionalUpdate() bool {
+func (shootStateStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

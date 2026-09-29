@@ -82,7 +82,7 @@ func (backupBucketStrategy) Validate(_ context.Context, obj runtime.Object) fiel
 func (backupBucketStrategy) Canonicalize(_ runtime.Object) {
 }
 
-func (backupBucketStrategy) AllowCreateOnUpdate() bool {
+func (backupBucketStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
@@ -91,7 +91,7 @@ func (backupBucketStrategy) ValidateUpdate(_ context.Context, newObj, oldObj run
 	return validation.ValidateBackupBucketUpdate(newBackupBucket, oldBackupBucket)
 }
 
-func (backupBucketStrategy) AllowUnconditionalUpdate() bool {
+func (backupBucketStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

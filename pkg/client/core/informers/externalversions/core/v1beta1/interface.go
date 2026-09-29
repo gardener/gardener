@@ -13,35 +13,35 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// BackupBuckets returns a BackupBucketInformer.
-	BackupBuckets() BackupBucketInformer
+	BackupBuckets() TypedBackupBucketInformer
 	// BackupEntries returns a BackupEntryInformer.
-	BackupEntries() BackupEntryInformer
+	BackupEntries() TypedBackupEntryInformer
 	// CloudProfiles returns a CloudProfileInformer.
-	CloudProfiles() CloudProfileInformer
+	CloudProfiles() TypedCloudProfileInformer
 	// ControllerDeployments returns a ControllerDeploymentInformer.
-	ControllerDeployments() ControllerDeploymentInformer
+	ControllerDeployments() TypedControllerDeploymentInformer
 	// ControllerInstallations returns a ControllerInstallationInformer.
-	ControllerInstallations() ControllerInstallationInformer
+	ControllerInstallations() TypedControllerInstallationInformer
 	// ControllerRegistrations returns a ControllerRegistrationInformer.
-	ControllerRegistrations() ControllerRegistrationInformer
+	ControllerRegistrations() TypedControllerRegistrationInformer
 	// ExposureClasses returns a ExposureClassInformer.
-	ExposureClasses() ExposureClassInformer
+	ExposureClasses() TypedExposureClassInformer
 	// InternalSecrets returns a InternalSecretInformer.
-	InternalSecrets() InternalSecretInformer
+	InternalSecrets() TypedInternalSecretInformer
 	// NamespacedCloudProfiles returns a NamespacedCloudProfileInformer.
-	NamespacedCloudProfiles() NamespacedCloudProfileInformer
+	NamespacedCloudProfiles() TypedNamespacedCloudProfileInformer
 	// Projects returns a ProjectInformer.
-	Projects() ProjectInformer
+	Projects() TypedProjectInformer
 	// Quotas returns a QuotaInformer.
-	Quotas() QuotaInformer
+	Quotas() TypedQuotaInformer
 	// SecretBindings returns a SecretBindingInformer.
-	SecretBindings() SecretBindingInformer
+	SecretBindings() TypedSecretBindingInformer
 	// Seeds returns a SeedInformer.
-	Seeds() SeedInformer
+	Seeds() TypedSeedInformer
 	// Shoots returns a ShootInformer.
-	Shoots() ShootInformer
+	Shoots() TypedShootInformer
 	// ShootStates returns a ShootStateInformer.
-	ShootStates() ShootStateInformer
+	ShootStates() TypedShootStateInformer
 }
 
 type version struct {
@@ -55,77 +55,77 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// BackupBuckets returns a BackupBucketInformer.
-func (v *version) BackupBuckets() BackupBucketInformer {
+// BackupBuckets returns a TypedBackupBucketInformer.
+func (v *version) BackupBuckets() TypedBackupBucketInformer {
 	return &backupBucketInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// BackupEntries returns a BackupEntryInformer.
-func (v *version) BackupEntries() BackupEntryInformer {
+// BackupEntries returns a TypedBackupEntryInformer.
+func (v *version) BackupEntries() TypedBackupEntryInformer {
 	return &backupEntryInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// CloudProfiles returns a CloudProfileInformer.
-func (v *version) CloudProfiles() CloudProfileInformer {
+// CloudProfiles returns a TypedCloudProfileInformer.
+func (v *version) CloudProfiles() TypedCloudProfileInformer {
 	return &cloudProfileInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// ControllerDeployments returns a ControllerDeploymentInformer.
-func (v *version) ControllerDeployments() ControllerDeploymentInformer {
+// ControllerDeployments returns a TypedControllerDeploymentInformer.
+func (v *version) ControllerDeployments() TypedControllerDeploymentInformer {
 	return &controllerDeploymentInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// ControllerInstallations returns a ControllerInstallationInformer.
-func (v *version) ControllerInstallations() ControllerInstallationInformer {
+// ControllerInstallations returns a TypedControllerInstallationInformer.
+func (v *version) ControllerInstallations() TypedControllerInstallationInformer {
 	return &controllerInstallationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// ControllerRegistrations returns a ControllerRegistrationInformer.
-func (v *version) ControllerRegistrations() ControllerRegistrationInformer {
+// ControllerRegistrations returns a TypedControllerRegistrationInformer.
+func (v *version) ControllerRegistrations() TypedControllerRegistrationInformer {
 	return &controllerRegistrationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// ExposureClasses returns a ExposureClassInformer.
-func (v *version) ExposureClasses() ExposureClassInformer {
+// ExposureClasses returns a TypedExposureClassInformer.
+func (v *version) ExposureClasses() TypedExposureClassInformer {
 	return &exposureClassInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// InternalSecrets returns a InternalSecretInformer.
-func (v *version) InternalSecrets() InternalSecretInformer {
+// InternalSecrets returns a TypedInternalSecretInformer.
+func (v *version) InternalSecrets() TypedInternalSecretInformer {
 	return &internalSecretInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// NamespacedCloudProfiles returns a NamespacedCloudProfileInformer.
-func (v *version) NamespacedCloudProfiles() NamespacedCloudProfileInformer {
+// NamespacedCloudProfiles returns a TypedNamespacedCloudProfileInformer.
+func (v *version) NamespacedCloudProfiles() TypedNamespacedCloudProfileInformer {
 	return &namespacedCloudProfileInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Projects returns a ProjectInformer.
-func (v *version) Projects() ProjectInformer {
+// Projects returns a TypedProjectInformer.
+func (v *version) Projects() TypedProjectInformer {
 	return &projectInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// Quotas returns a QuotaInformer.
-func (v *version) Quotas() QuotaInformer {
+// Quotas returns a TypedQuotaInformer.
+func (v *version) Quotas() TypedQuotaInformer {
 	return &quotaInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// SecretBindings returns a SecretBindingInformer.
-func (v *version) SecretBindings() SecretBindingInformer {
+// SecretBindings returns a TypedSecretBindingInformer.
+func (v *version) SecretBindings() TypedSecretBindingInformer {
 	return &secretBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Seeds returns a SeedInformer.
-func (v *version) Seeds() SeedInformer {
+// Seeds returns a TypedSeedInformer.
+func (v *version) Seeds() TypedSeedInformer {
 	return &seedInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// Shoots returns a ShootInformer.
-func (v *version) Shoots() ShootInformer {
+// Shoots returns a TypedShootInformer.
+func (v *version) Shoots() TypedShootInformer {
 	return &shootInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// ShootStates returns a ShootStateInformer.
-func (v *version) ShootStates() ShootStateInformer {
+// ShootStates returns a TypedShootStateInformer.
+func (v *version) ShootStates() TypedShootStateInformer {
 	return &shootStateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

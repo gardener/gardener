@@ -63,13 +63,13 @@ func (ExposureClassStrategy) Canonicalize(_ runtime.Object) {
 }
 
 // AllowCreateOnUpdate indicates if the object can be created via a PUT operation.
-func (ExposureClassStrategy) AllowCreateOnUpdate() bool {
+func (ExposureClassStrategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
 // AllowUnconditionalUpdate indicates if the object can be updated
 // independently of the resource version.
-func (ExposureClassStrategy) AllowUnconditionalUpdate() bool {
+func (ExposureClassStrategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 

@@ -102,14 +102,14 @@ func (Strategy) Canonicalize(_ runtime.Object) {
 }
 
 // AllowCreateOnUpdate returns true if the object can be created by a PUT.
-func (Strategy) AllowCreateOnUpdate() bool {
+func (Strategy) AllowCreateOnUpdate(_ context.Context) bool {
 	return false
 }
 
 // AllowUnconditionalUpdate returns true if the object can be updated
 // unconditionally (irrespective of the latest resource version), when
 // there is no resource version specified in the object.
-func (Strategy) AllowUnconditionalUpdate() bool {
+func (Strategy) AllowUnconditionalUpdate(_ context.Context) bool {
 	return false
 }
 
