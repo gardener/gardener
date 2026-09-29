@@ -100,6 +100,7 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 			PreferIPv6:        new(b.Shoot.PreferIPv6()),
 		},
+		Clock:                 b.Clock,
 		ConfigDir:             nodeagentconfigv1alpha1.BaseDir,
 		CancelContext:         cancelFunc,
 		Recorder:              &events.FakeRecorder{},

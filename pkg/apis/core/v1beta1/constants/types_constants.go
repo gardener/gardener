@@ -9,13 +9,14 @@ import (
 )
 
 const (
-	// SecretManagerIdentityControllerManager is the identity for the secret manager used inside controller-manager.
-	SecretManagerIdentityControllerManager = "controller-manager" // #nosec G101 -- No credential.
 	// SecretManagerIdentityGardenlet is the identity for the secret manager used inside gardenlet.
 	SecretManagerIdentityGardenlet = "gardenlet" // #nosec G101 -- No credential.
 	// SecretManagerIdentitySelfHostedShoot is the identity for the secret manager used inside gardenadm or the shoot
 	// gardenlet.
 	SecretManagerIdentitySelfHostedShoot = "self-hosted-shoot" // #nosec G101 -- No credential.
+	// SecretManagerIdentityPrefixNodeAgent is the identity prefix for the secret manager used inside
+	// gardener-node-agents.
+	SecretManagerIdentityPrefixNodeAgent = "node-agent-" // #nosec G101 -- No credential.
 
 	// SecretNameCACluster is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of a shoot cluster.

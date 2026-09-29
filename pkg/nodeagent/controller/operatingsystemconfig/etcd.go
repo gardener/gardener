@@ -5,6 +5,7 @@
 package operatingsystemconfig
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -12,13 +13,47 @@ import (
 
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+func (r *Reconciler) generateNodeSpecificETCDCertificates(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	machineIP, err := r.machineIP()
+	if err != nil {
+		return err
+	}
+
+	etcdRoleToTLSSecretsMap := make(etcdRoleToTLSSecrets, 2)
+
+	for _, role := range []string{v1beta1constants.ETCDRoleMain, v1beta1constants.ETCDRoleEvents} {
+		var (
+			etcdName = etcd.Name(role)
+			dnsNames = etcd.ClientServiceDNSNames(etcdName, metav1.NamespaceSystem, true)
+			tls      = etcdTLSSecrets{}
+		)
+
+		tls.server, err = etcd.GenerateServerCertificate(ctx, secretsManager, role, dnsNames, machineIP)
+		if err != nil {
+			return fmt.Errorf("failed to generate server secret for %s: %w", etcdName, err)
+		}
+
+		tls.peer, err = etcd.GeneratePeerCertificate(ctx, secretsManager, role, dnsNames, machineIP)
+		if err != nil {
+			return fmt.Errorf("failed to generate peer secret for %s: %w", etcdName, err)
+		}
+
+		etcdRoleToTLSSecretsMap[role] = tls
+	}
+
+	return etcdRoleToTLSSecretsMap.writeToDisk(r.FS)
+}
 
 // LookupIP is an alias for net.LookupIP that can be overridden in tests.
 var LookupIP = net.LookupIP

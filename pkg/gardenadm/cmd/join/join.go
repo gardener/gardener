@@ -14,14 +14,12 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -29,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -95,19 +92,6 @@ func run(ctx context.Context, opts *Options) error {
 	}
 	b.Shoot.SetInfo(cluster.Shoot)
 
-	b.SecretsManager, err = secretsmanager.New(
-		ctx,
-		b.Logger.WithName("secretsmanager"),
-		clock.RealClock{},
-		b.ShootClientSet.Client(),
-		v1beta1constants.SecretManagerIdentitySelfHostedShoot,
-		secretsmanager.WithNamespaces(b.Shoot.ControlPlaneNamespace, v1beta1constants.GardenNamespace),
-		secretsmanager.WithoutAutomaticSecretRenewal(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to instantiate a new secrets manager: %w", err)
-	}
-
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.ShootClientSet.Client(), b.HostName)
 	if err != nil {
 		return fmt.Errorf("failed retrieving node for hostname %s: %w", b.HostName, err)
@@ -118,7 +102,6 @@ func run(ctx context.Context, opts *Options) error {
 		g                       = flow.NewGraph("join")
 		reporter                = flow.NewCommandLineProgressReporter(opts.ErrOut)
 		gardenerNodeAgentSecret *corev1.Secret
-		etcdRoleToTLSSecretsMap = make(etcdRoleToTLSSecrets, 2)
 
 		ensureNoActiveShootReconciliation = g.Add(flow.Task{
 			Name: "Ensuring shoot is not concurrently reconciled by gardenlet when joining control plane node",
@@ -156,46 +139,10 @@ func run(ctx context.Context, opts *Options) error {
 				return err
 			},
 		})
-
-		generateETCDCertificates = g.Add(flow.Task{
-			Name: "Generating ETCD certificates",
-			Fn: func(ctx context.Context) error {
-				for _, role := range []string{v1beta1constants.ETCDRoleMain, v1beta1constants.ETCDRoleEvents} {
-					var (
-						etcdName = etcd.Name(role)
-						dnsNames = etcd.ClientServiceDNSNames(etcdName, b.Shoot.ControlPlaneNamespace, true)
-						tls      = etcdTLSSecrets{}
-					)
-
-					tls.server, err = etcd.GenerateServerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP)
-					if err != nil {
-						return fmt.Errorf("failed to generate server secret for %s: %w", etcdName, err)
-					}
-
-					tls.peer, err = etcd.GeneratePeerCertificate(ctx, b.SecretsManager, role, dnsNames, machineIP)
-					if err != nil {
-						return fmt.Errorf("failed to generate peer secret for %s: %w", etcdName, err)
-					}
-
-					etcdRoleToTLSSecretsMap[role] = tls
-				}
-				return nil
-			},
-			SkipIf: !opts.ControlPlane,
-		})
-		writeETCDFilesToDisk = g.Add(flow.Task{
-			Name: "Writing ETCD files to disk",
-			Fn: func(_ context.Context) error {
-				return etcdRoleToTLSSecretsMap.writeToDisk(b.FS)
-			},
-			SkipIf:       !opts.ControlPlane,
-			Dependencies: flow.NewTaskIDs(generateETCDCertificates),
-		})
 		syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
 			determineGardenerNodeAgentSecretName,
 			ensureNoActiveShootReconciliation,
 			determineZone,
-			writeETCDFilesToDisk,
 		)
 
 		generateGardenerNodeInitConfig = g.Add(flow.Task{
