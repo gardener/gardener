@@ -85,6 +85,11 @@ func VersionIsActive(version gardencorev1beta1.ExpirableVersion) bool {
 	return curr != gardencorev1beta1.ClassificationExpired && curr != gardencorev1beta1.ClassificationUnavailable
 }
 
+// VersionIsUnavailable reports whether the given version is unavailable.
+func VersionIsUnavailable(version gardencorev1beta1.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationUnavailable
+}
+
 // VersionIsSupported reports whether the given version is supported.
 func VersionIsSupported(version gardencorev1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationSupported
