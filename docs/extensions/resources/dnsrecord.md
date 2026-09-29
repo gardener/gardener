@@ -146,7 +146,6 @@ The following table contains information about the provider extension version th
 | provider-gcp                                 | `v1.18.0`|
 | provider-openstack                           | `v1.21.0`|
 | provider-vsphere                             |    N/A   |
-| provider-equinix-metal                       |    N/A   |
 | provider-kubevirt                            |    N/A   |
 | provider-openshift                           |    N/A   |
 
@@ -162,7 +161,6 @@ The following table contains information about the provider extension version th
 | provider-gcp           | N/A       |
 | provider-openstack     | N/A       |
 | provider-vsphere       | N/A       |
-| provider-equinix-metal | N/A       |
 | provider-kubevirt      | N/A       |
 | provider-openshift     | N/A       |
 | provider-local         | `v1.63.0` |
