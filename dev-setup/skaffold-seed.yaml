@@ -34,6 +34,7 @@ profiles:
         flags:
           apply:
             - --server-side
+            - --force-conflicts
   - name: single-node
     patches:
       - op: add
