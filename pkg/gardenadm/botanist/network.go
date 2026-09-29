@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/nodeagent"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // IsPodNetworkAvailable checks if the control plane Node has the pod network configured.
@@ -106,27 +107,13 @@ var LookupIP = net.LookupIP
 // (the first entry in .spec.networking.ipFamilies), falling back to any available address.
 // Similar to https://github.com/kubernetes/kubernetes/blob/ec9f0d55360f74337f9ef40879434a063821ff5b/pkg/kubelet/nodestatus/setters.go#L162-L178
 func (b *GardenadmBotanist) MachineIP() (net.IP, error) {
-	var (
-		preferIPv6 = b.Shoot.PreferIPv6()
-		fallback   net.IP
-	)
-
 	addrs, err := LookupIP(b.HostName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup IPs for hostname %s: %w", b.HostName, err)
 	}
 
-	for _, addr := range addrs {
-		if isIPv6 := addr.To4() == nil; isIPv6 == preferIPv6 {
-			return addr, nil
-		}
-		if fallback == nil {
-			fallback = addr
-		}
-	}
-
-	if fallback != nil {
-		return fallback, nil
+	if ip := utils.IPv4OrIPv6(b.Shoot.PreferIPv6(), addrs...); ip != nil {
+		return ip, nil
 	}
 
 	return nil, fmt.Errorf("no IP address found for node")
