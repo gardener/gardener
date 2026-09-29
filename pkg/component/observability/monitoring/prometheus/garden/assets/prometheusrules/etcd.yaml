@@ -106,43 +106,50 @@ spec:
             apiserver_storage_objects
         )
 
-    - alert: EtcdDbSizeLimitApproaching
+    - record: etcd:db_size_percent
       expr: |
-        ( etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}
-          > bool 6442450944
+        (
+          etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}
+          / on (pod) group_left
+          etcd_server_quota_backend_bytes{job="virtual-garden-etcd"}
         )
-        +
-        ( etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}
-          <= bool 8589900000
-        )
-        == 2 # between 6GB and 8GB
+        * 100
+
+    - alert: EtcdDbSizeLimitApproaching
+      expr: etcd:db_size_percent > 80
+      for: 15m
       labels:
         severity: warning
         topology: garden
         service: VirtualGardenEtcd
       annotations:
         summary: >-
-          Virtual garden etcd {{$labels.role}} DB size is approaching its current
-          practical limit in landscape {{$externalLabels.landscape}}. Current DB size: {{ $value }}.
+          Virtual garden etcd {{$labels.role}} DB size is approaching its configured
+          quota in landscape {{$externalLabels.landscape}}. Current usage: {{ printf "%.0f%%" $value }}.
         description: >-
-          Virtual garden etcd {{$labels.role}} DB size is approaching its current
-          practical limit of 8GB. Current DB size: {{ $value }}. Etcd quota might need to be increased.
+          Virtual garden etcd {{$labels.role}} DB size has reached {{ printf "%.0f%%" $value }}
+          of its configured etcd quota in landscape {{$externalLabels.landscape}}.
+          DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }},
+          quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}.
+          Etcd quota might need to be increased.
 
     - alert: EtcdDbSizeLimitCrossed
-      expr: |
-        etcd_mvcc_db_total_size_in_bytes{job="virtual-garden-etcd"}
-        > 8589900000 # above 8GB
+      expr: etcd:db_size_percent > 95
+      for: 5m
       labels:
         severity: critical
         topology: garden
         service: VirtualGardenEtcd
       annotations:
         summary: >-
-          Virtual garden etcd {{$labels.role}} DB size has crossed its current
-          practical limit in landscape {{$externalLabels.landscape}}. Current DB size: {{ $value }}.
+          Virtual garden etcd {{$labels.role}} DB size has crossed its configured
+          quota in landscape {{$externalLabels.landscape}}. Current usage: {{ printf "%.0f%%" $value }}.
         description: >-
-          Virtual garden etcd {{$labels.role}} DB size has crossed its current
-          practical limit of 8GB. Current DB size: {{ $value }}. Etcd quota must be increased to allow updates.
+          Virtual garden etcd {{$labels.role}} DB size has reached {{ printf "%.0f%%" $value }}
+          of its configured etcd quota in landscape {{$externalLabels.landscape}}.
+          DB size: {{ with query (printf "etcd_mvcc_db_total_size_in_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }},
+          quota: {{ with query (printf "etcd_server_quota_backend_bytes{pod=\"%s\"}" $labels.pod) }}{{ . | first | value | humanize1024 }}B{{ end }}.
+          Etcd quota must be increased to allow updates.
 
     - alert: EtcdDeltaBackupFailed
       expr: |
