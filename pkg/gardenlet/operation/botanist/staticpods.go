@@ -40,6 +40,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // PathKubeconfig is the path to a file on the control plane node containing an admin kubeconfig.
@@ -249,6 +250,7 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 	if err != nil {
 		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
+	files = b.appendEtcdCAsToFiles(files)
 
 	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
 		return nil, "", fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
@@ -318,6 +320,40 @@ func (b *Botanist) appendDynamicAdminKubeconfigToFiles(files []extensionsv1alpha
 		Permissions: new(uint32(0600)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(rawKubeconfig)}},
 	}), nil
+}
+
+func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []extensionsv1alpha1.File {
+	filesForCA := func(data map[string][]byte, path string) []extensionsv1alpha1.File {
+		return []extensionsv1alpha1.File{
+			{
+				Path:        path + secretsutils.DataKeyCertificateCA,
+				Permissions: new(uint32(0600)),
+				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(data[secretsutils.DataKeyCertificateCA])}},
+			},
+			{
+				Path:        path + secretsutils.DataKeyPrivateKeyCA,
+				Permissions: new(uint32(0600)),
+				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(data[secretsutils.DataKeyPrivateKeyCA])}},
+			},
+		}
+	}
+
+	for _, ca := range []struct {
+		name     string
+		basePath string
+	}{
+		{name: v1beta1constants.SecretNameCAETCD, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCD},
+		{name: v1beta1constants.SecretNameCAETCDPeer, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer},
+	} {
+		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
+			files = append(files, filesForCA(secret.Data, ca.basePath+v1beta1constants.OperatingSystemConfigFolderCurrent)...)
+		}
+		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
+			files = append(files, filesForCA(secret.Data, ca.basePath+v1beta1constants.OperatingSystemConfigFolderOld)...)
+		}
+	}
+
+	return files
 }
 
 type staticPod struct {

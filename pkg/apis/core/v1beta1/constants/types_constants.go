@@ -830,6 +830,14 @@ const (
 	// OperatingSystemConfigFilePathControlPlaneNodesEndpoints is a constant for a path to a file containing the
 	// endpoints of the control plane nodes in self-hosted shoot clusters.
 	OperatingSystemConfigFilePathControlPlaneNodesEndpoints = "/var/lib/etcd/control-plane-nodes-endpoints"
+	// OperatingSystemConfigFilePathCAETCD is a constant for a path to a folder containing the ETCD CA.
+	OperatingSystemConfigFilePathCAETCD = "/var/lib/etcd/ca"
+	// OperatingSystemConfigFilePathCAETCDPeer is a constant for a path to a folder containing the ETCD peer CA.
+	OperatingSystemConfigFilePathCAETCDPeer = "/var/lib/etcd/ca-peer"
+	// OperatingSystemConfigFolderCurrent is a constant for a path to a folder containing the current CA.
+	OperatingSystemConfigFolderCurrent = "/current/"
+	// OperatingSystemConfigFolderOld is a constant for a path to a folder containing the old CA.
+	OperatingSystemConfigFolderOld = "/old/"
 
 	// FluentBitConfigMapKubernetesFilter is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
 	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"

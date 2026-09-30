@@ -234,7 +234,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		log.Info("Generating node-specific ETCD certificates if needed")
-		if err := r.generateNodeSpecificETCDCertificates(ctx, secretsManager); err != nil {
+		if err := r.generateNodeSpecificETCDCertificates(ctx, secretsManager, osc); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed generating node-specific ETCD certificates: %w", err)
 		}
 	}
