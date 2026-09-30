@@ -208,7 +208,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 				Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 			}, SpecTimeout(time.Minute))
 
-			gardenadm.ItShouldConnectSuccessfully(&gardenClientSet, shoot, RunInMachine)
+			gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, RunInMachine)
 			gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, RunInMachine, RunInNode)
 		})
 
