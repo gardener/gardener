@@ -346,5 +346,3 @@ func itShouldSeeJoinedNodeAndCheckHealth(shootClientSet func() kubernetes.Interf
 		}).Should(Succeed())
 	}, SpecTimeout(2*time.Minute))
 }
-
-// WIP

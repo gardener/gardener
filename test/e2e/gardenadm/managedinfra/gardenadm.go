@@ -382,11 +382,9 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		}, SpecTimeout(time.Minute))
 
 		It("should generate a bootstrap token and connect the self-hosted shoot to Gardener", func(ctx SpecContext) {
-			session := RunCommand(NewCommand([]string{
-				"KUBECONFIG=" + gardenadm.GardenClusterKubeconfigPathOnHost,
-			}, "token", "create", "--print-connect-command",
-				"--shoot-namespace", shootNamespace,
-				"--shoot-name", shootName,
+			session := RunCommand(NewCommand(
+				[]string{"KUBECONFIG=" + gardenadm.GardenClusterKubeconfigPathOnHost},
+				"token", "create", "--print-connect-command", "--shoot-namespace", shootNamespace, "--shoot-name", shootName,
 			))
 			Wait(ctx, session)
 			connectCommand := strings.Split(strings.ReplaceAll(string(session.Out.Contents()), `"`, ``), " ")
@@ -405,5 +403,4 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		gardenadm.ItShouldConnectSuccessfully(&gardenClientSet, shoot, runInMachine)
 		gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, runInMachine, runInNode)
 	})
-
 })
