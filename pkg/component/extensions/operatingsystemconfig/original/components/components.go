@@ -49,4 +49,5 @@ type Context struct {
 	PreferIPv6                              bool
 	Taints                                  []corev1.Taint
 	SyncControlPlaneAuthTokens              bool
+	IsControlPlanePool                      bool
 }

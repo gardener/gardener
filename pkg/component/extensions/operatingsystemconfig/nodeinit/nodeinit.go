@@ -108,7 +108,7 @@ func Config(
 	// itself). Hence, the files for gardener-node-agent (component configuration and kubeconfig) must be present on the
 	// machine so that it can start successfully.
 	config = config.DeepCopy()
-	config.Bootstrap, err = getBootstrapConfiguration(worker)
+	config.Bootstrap, err = getBootstrapConfiguration(config.Bootstrap, worker)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed computing bootstrap configuration: %w", err)
 	}

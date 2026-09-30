@@ -44,7 +44,7 @@ var _ = Describe("Component", func() {
 		It("should return the expected units and files", func() {
 			key := "key"
 
-			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, nil))
+			expectedFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, nil, false))
 			Expect(err).NotTo(HaveOccurred())
 			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
 				Path:        nodeagentconfigv1alpha1.ClusterCAFilePath,
@@ -136,7 +136,27 @@ WantedBy=multi-user.target`),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			expectedConfigFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, expectedTokenConfigs))
+			expectedConfigFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, expectedTokenConfigs, false))
+			Expect(err).NotTo(HaveOccurred())
+			for _, expected := range expectedConfigFiles {
+				Expect(files).To(ContainElement(expected), "Expected file to be included: "+expected.Path)
+			}
+		})
+
+		It("should set bootstrap.controlPlaneNodesEndpoints.enabled when IsControlPlanePool is true", func() {
+			key := "key"
+
+			_, files, err := component.Config(components.Context{
+				Key:                key,
+				KubernetesVersion:  kubernetesVersion,
+				APIServerURL:       apiServerURL,
+				CABundle:           string(caBundle),
+				IsControlPlanePool: true,
+				Images:             map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: new("gardener-node-agent"), Tag: new("v1")}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedConfigFiles, err := Files(ComponentConfig(key, kubernetesVersion, apiServerURL, nil, true))
 			Expect(err).NotTo(HaveOccurred())
 			for _, expected := range expectedConfigFiles {
 				Expect(files).To(ContainElement(expected), "Expected file to be included: "+expected.Path)
@@ -164,11 +184,38 @@ WantedBy=multi-user.target`))
 	})
 
 	Describe("#ComponentConfig", func() {
-		It("should return the expected result", func() {
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
+		It("should return the expected result for a non-control-plane pool", func() {
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, additionalTokenSyncConfigs, false)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentconfigv1alpha1.APIServer{
 					Server: apiServerURL,
 					CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
+				},
+				Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
+					OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
+						SecretName:        oscSecretName,
+						KubernetesVersion: kubernetesVersion,
+					},
+					Token: nodeagentconfigv1alpha1.TokenControllerConfig{
+						SyncConfigs: []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
+							{
+								SecretName: "gardener-valitail",
+								Path:       "/var/lib/valitail/auth-token",
+							},
+						},
+						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
+					},
+				},
+			}))
+		})
+
+		It("should set bootstrap.controlPlaneNodesEndpoints.enabled for a control plane pool", func() {
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, additionalTokenSyncConfigs, true)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
+				APIServer: nodeagentconfigv1alpha1.APIServer{
+					Server: apiServerURL,
+					CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
+				},
+				Bootstrap: &nodeagentconfigv1alpha1.BootstrapConfiguration{
+					ControlPlaneNodesEndpoints: &nodeagentconfigv1alpha1.ControlPlaneNodesEndpoints{Enabled: true},
 				},
 				Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
 					OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
@@ -191,7 +238,7 @@ WantedBy=multi-user.target`))
 
 	Describe("#Files", func() {
 		It("should return the expected files", func() {
-			config := ComponentConfig(oscSecretName, nil, apiServerURL, additionalTokenSyncConfigs)
+			config := ComponentConfig(oscSecretName, nil, apiServerURL, additionalTokenSyncConfigs, false)
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),

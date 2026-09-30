@@ -46,6 +46,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 			KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
 			MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
 			NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
+			PreferIPv6:          b.Shoot.PreferIPv6(),
 		},
 		worker.DefaultInterval,
 		worker.DefaultSevereThreshold,
@@ -107,7 +108,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 // It returns an error if no matching nodes are found.
 func (b *Botanist) ListControlPlaneNodes(ctx context.Context) ([]corev1.Node, error) {
 	nodeList := &corev1.NodeList{}
-	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelNodeRoleControlPlane: ""}); err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
 	if len(nodeList.Items) == 0 {

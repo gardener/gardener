@@ -77,7 +77,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 		)
 
 		It("should create the secret containing and OperatingSystemConfig for gardener-node-init", func() {
-			Expect(b.PrepareGardenerNodeInitConfiguration(ctx, secretName, controlPlaneAddress, caBundle, bootstrapToken)).To(Succeed())
+			Expect(b.PrepareGardenerNodeInitConfiguration(ctx, secretName, controlPlaneAddress, caBundle, bootstrapToken, false)).To(Succeed())
 
 			secretList := &corev1.SecretList{}
 			Expect(fakeClient.List(ctx, secretList, client.InNamespace("kube-system"))).To(Succeed())

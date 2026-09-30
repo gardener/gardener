@@ -125,8 +125,8 @@ func (b *GardenadmBotanist) ensureGardenerNodeAgentDirectories() error {
 
 // PrepareGardenerNodeInitConfiguration creates a Secret containing an OperatingSystemConfig with the gardener-node-init
 // unit.
-func (b *GardenadmBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Context, secretName, controlPlaneAddress string, caBundle []byte, bootstrapToken string) error {
-	osc, err := b.generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken, caBundle)
+func (b *GardenadmBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Context, secretName, controlPlaneAddress string, caBundle []byte, bootstrapToken string, isControlPlaneNode bool) error {
+	osc, err := b.generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken, caBundle, isControlPlaneNode)
 	if err != nil {
 		return fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)
 	}
@@ -134,7 +134,7 @@ func (b *GardenadmBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Con
 	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, osc, secretName, "")
 }
 
-func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken string, caBundle []byte) (*extensionsv1alpha1.OperatingSystemConfig, error) {
+func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken string, caBundle []byte, isControlPlaneNode bool) (*extensionsv1alpha1.OperatingSystemConfig, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerNodeAgent)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenerNodeAgent, err)
@@ -144,7 +144,7 @@ func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secret
 	units, files, err := nodeinit.Config(
 		gardencorev1beta1.Worker{},
 		image.String(),
-		nodeagentcomponent.ComponentConfig(secretName, b.Shoot.KubernetesVersion, controlPlaneAddress, nil),
+		nodeagentcomponent.ComponentConfig(secretName, b.Shoot.KubernetesVersion, controlPlaneAddress, nil, isControlPlaneNode),
 		caBundle,
 		b.RegistryCABundle != nil,
 	)

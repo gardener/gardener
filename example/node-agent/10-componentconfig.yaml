@@ -21,6 +21,8 @@ apiServer:
   caFile: /path/to/ca/file
 #bootstrap:
 #  kubeletDataVolumeSize: 50Gi
+#  controlPlaneNodesEndpoints:
+#    enabled: false
 controllers:
   operatingSystemConfig:
     secretName: name-of-osc-secret

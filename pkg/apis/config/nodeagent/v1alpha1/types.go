@@ -108,6 +108,16 @@ type BootstrapConfiguration struct {
 	// /var/lib on the worker.
 	// +optional
 	KubeletDataVolumeSize *int64 `json:"kubeletDataVolumeSize,omitempty"`
+	// ControlPlaneNodesEndpoints contains configuration for the control plane nodes endpoints bootstrapper.
+	// +optional
+	ControlPlaneNodesEndpoints *ControlPlaneNodesEndpoints `json:"controlPlaneNodesEndpoints,omitempty"`
+}
+
+// ControlPlaneNodesEndpoints contains configuration for the control plane nodes endpoints bootstrapper.
+type ControlPlaneNodesEndpoints struct {
+	// Enabled specifies whether the bootstrapper is enabled. This should only be true for control plane nodes in
+	// self-hosted shoots.
+	Enabled bool `json:"enabled"`
 }
 
 // ControllerConfiguration defines the configuration of the controllers.
