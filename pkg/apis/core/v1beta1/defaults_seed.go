@@ -20,9 +20,6 @@ func SetDefaults_SeedSpec(obj *SeedSpec) {
 	if obj.Settings == nil {
 		obj.Settings = &SeedSettings{}
 	}
-	if obj.Spec.Backup != nil && obj.Spec.Backup.BucketName == nil {
-		obj.Spec.Backup.BucketName = ptr.To(string(obj.GetUID()))
-	}
 	setDefaults_SeedNetworks(&obj.Networks)
 	setDefaults_SeedSettings(obj.Settings)
 }
