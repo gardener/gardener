@@ -36,6 +36,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/admissioncontroller"
 	"github.com/gardener/gardener/pkg/logger"
@@ -921,6 +922,7 @@ func clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func validatingWebhookConfiguration(namespace string, caBundle []byte, testValues Values) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	var (
 		failurePolicyFail     = admissionregistrationv1.Fail
+		failurePolicyIgnore   = admissionregistrationv1.Ignore
 		sideEffectsNone       = admissionregistrationv1.SideEffectClassNone
 		matchPolicyEquivalent = admissionregistrationv1.Equivalent
 	)
@@ -1157,6 +1159,82 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/update-restriction"),
+					CABundle: caBundle,
+				},
+				SideEffects: &sideEffectsNone,
+			},
+			{
+				Name:                    "finalizer-restriction.gardener.cloud",
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				TimeoutSeconds:          new(int32(10)),
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{corev1.GroupName},
+							APIVersions: []string{"*"},
+							Resources:   []string{"secrets", "configmaps"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{"*"},
+							Resources:   []string{"shoots", "shoots/finalizers", "secretbindings", "quotas", "namespacedcloudprofiles"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{securityv1alpha1.GroupName},
+							APIVersions: []string{"*"},
+							Resources:   []string{"credentialsbindings", "workloadidentities"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{operationsv1alpha1.GroupName},
+							APIVersions: []string{"*"},
+							Resources:   []string{"bastions"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{
+							admissionregistrationv1.Create,
+							admissionregistrationv1.Update,
+						},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{rbacv1.GroupName},
+							APIVersions: []string{"*"},
+							Resources:   []string{"roles", "rolebindings"},
+						},
+					},
+				},
+				MatchConditions: []admissionregistrationv1.MatchCondition{
+					{
+						Name: "request-might-change-finalizers",
+						Expression: "(object != null && has(object.metadata.finalizers) && object.metadata.finalizers.size() > 0) || " +
+							"(oldObject != null && has(oldObject.metadata.finalizers) && oldObject.metadata.finalizers.size() > 0)",
+					},
+				},
+				FailurePolicy: &failurePolicyIgnore,
+				MatchPolicy:   &matchPolicyEquivalent,
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/finalizer-restriction"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
