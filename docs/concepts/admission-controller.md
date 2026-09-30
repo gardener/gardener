@@ -141,6 +141,11 @@ In addition, the following service accounts are allowed to perform certain opera
 - `system:serviceaccount:kube-system:generic-garbage-collector` is allowed to `DELETE` restricted resources.
 - `system:serviceaccount:kube-system:gardener-internal` is allowed to `UPDATE` restricted resources.
 
+### FinalizerRestriction
+
+This handler restricts manual addition and removal of the finalizers `gardener` and `gardener.cloud/reference-protection` by regular user accounts for all objects where the lifecycle is managed by Gardener.
+Manually removing finalizers to delete resources can bring a cluster into a broken state that is hard to recover from.
+
 ## Authorization Webhook Handlers
 
 This section describes the authorization webhook handlers that are currently served.
