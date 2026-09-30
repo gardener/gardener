@@ -222,9 +222,9 @@ get_self_hosted_shoot_certs() {
     fi
   }
 
-  remote_kubectl -n kube-system get secret -l name=ca -o jsonpath='{..data.ca\.crt}' | base64 -d >"$cluster_ca_cert"
-  remote_kubectl -n kube-system get secret -l name=ca-client -o jsonpath='{..data.ca\.crt}' | base64 -d >"$client_ca_cert"
-  remote_kubectl -n kube-system get secret -l name=ca-client -o jsonpath='{..data.ca\.key}' | base64 -d >"$client_ca_key"
+  remote_kubectl -n kube-system get secret -l name=ca        -o jsonpath='{..data.ca\.crt}' | base64 -d > "$cluster_ca_cert"
+  remote_kubectl -n kube-system get secret -l name=ca-client -o jsonpath='{..data.ca\.crt}' | base64 -d > "$client_ca_cert"
+  remote_kubectl -n kube-system get secret -l name=ca-client -o jsonpath='{..data.ca\.key}' | base64 -d > "$client_ca_key"
 
   echo "${tmp_dir}:${shoot_name}.${shoot_namespace}.external.local.gardener.cloud"
 }

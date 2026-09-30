@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Contributors to the Gardener project
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package gardenadm
 
 import (
@@ -47,7 +51,7 @@ var (
 	GardenClusterKubeconfigPathOnHost = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
 )
 
-// // ItShouldCreateShootClient ensures that a client for the self-hosted shoot API server is created.
+// ItShouldCreateShootClient ensures that a client for the self-hosted shoot API server is created.
 func ItShouldCreateShootClient(shootClientSet *kubernetes.Interface) {
 	GinkgoHelper()
 	It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
@@ -89,7 +93,7 @@ func ItShouldConnectSuccessfully(
 		gardenKomega    Komega
 	)
 
-	It("should initialize the garden client set and Komega", func(ctx SpecContext) {
+	It("should initialize the garden client set and Komega", func() {
 		gardenClientSet = *gardenClientSetPtr
 		gardenKomega = New(gardenClientSet.Client())
 	})

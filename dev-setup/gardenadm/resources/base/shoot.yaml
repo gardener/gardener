@@ -56,6 +56,7 @@ spec:
       # These are usually defaulted by the resourcereservation admission plugin.
       # When unset, this triggers a node-roll on the first reconcile after gardenadm connect.
       # Since the control-plane nodes are currently not HA, this is not possible at the moment.
+      # TODO(maboehm): Find a better solution that does not require hardcoding these values.
       kubeReserved:
         pid: 20k
         memory: 1Gi
