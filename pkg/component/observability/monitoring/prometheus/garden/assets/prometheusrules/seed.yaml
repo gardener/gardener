@@ -22,7 +22,7 @@ spec:
 
     - alert: PersistentVolumeSizeMismatch
       expr: round((seed:persistentvolume:inconsistent_size > 0.05) * 10000) / 100
-      for: 5m
+      for: 15m
       labels:
         severity: warning
         topology: garden
