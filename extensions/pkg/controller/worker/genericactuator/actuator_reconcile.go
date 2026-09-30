@@ -100,7 +100,19 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Wait until all generated machine deployments are healthy/available.
-	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, log, cluster, worker, existingMachineDeployments, existingMachineClassNames, wantedMachineDeployments); err != nil {
+	waitErr := a.waitUntilWantedMachineDeploymentsAvailable(ctx, log, cluster, worker, existingMachineDeployments, existingMachineClassNames, wantedMachineDeployments)
+
+	// Update the worker status with the worker pool hash for in-place update worker pools.
+	// This runs regardless of the wait result above, so that in-place update worker pools which already completed
+	// their update get their hash (and thus their pending status) cleared independently of unrelated pools which
+	// might keep the wait from succeeding (e.g. a stuck rolling update). For each in-place update worker pool we
+	// check that all its machine deployments are fully updated before writing the hash.
+	// The worker controller is triggered when a machine is updated, so this can also happen in a later reconciliation.
+	if err := a.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster); err != nil {
+		return fmt.Errorf("failed to update the worker status with the worker pool hash for in-place update worker pools: %w", err)
+	}
+
+	if waitErr != nil {
 		// check if the machine-controller-manager is stuck
 		isStuck, msg, err2 := a.IsMachineControllerStuck(ctx, worker)
 		if err2 != nil {
@@ -122,20 +134,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 			log.Info("Successfully deleted stuck machine-controller-manager pod", "reason", msg)
 		}
 
-		newError := fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err)
+		newError := fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", waitErr)
 		if a.errorCodeCheckFunc != nil {
-			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
+			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(waitErr)...)
 		}
 		return newError
-	}
-
-	// Update the worker status with the worker pool hash for in-place update worker pools.
-	// If we had reached this point, we can safely say that AutoInPlaceUpdate worker pools have been updated.
-	// Hence we can update their hash in the status.
-	// But for ManualInPlaceUpdate worker pools, we need to check if all the machine deployments for the worker pool are updated.
-	// The worker controller is triggered when a machine is updated, so this can also happen later.
-	if err := a.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster); err != nil {
-		return fmt.Errorf("failed to update the worker status with the worker pool hash for in-place update worker pools: %w", err)
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
@@ -573,31 +576,32 @@ func (a *genericActuator) updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx cont
 
 		currentWorkerPools.Insert(pool.Name)
 
-		if v1beta1helper.IsUpdateStrategyManualInPlace(pool.UpdateStrategy) {
-			// Check if all the machine deployments for the worker pool are updated.
-			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
-			if err := a.seedClient.List(ctx,
-				machineDeploymentList,
-				client.InNamespace(worker.Namespace),
-				client.MatchingLabels{
-					v1beta1constants.LabelWorkerPool: pool.Name,
-				},
-			); err != nil {
-				return fmt.Errorf("failed to list machine deployments for worker pool %q: %w", pool.Name, err)
-			}
+		// Only write the hash once all machine deployments of the worker pool are fully updated.
+		// For ManualInPlaceUpdate pools the machines are updated by the user over time; for AutoInPlaceUpdate pools
+		// this guards against writing the hash prematurely when an unrelated pool kept the availability wait from
+		// succeeding (see updateWorkerStatusInPlaceUpdateWorkerPoolHash caller).
+		machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+		if err := a.seedClient.List(ctx,
+			machineDeploymentList,
+			client.InNamespace(worker.Namespace),
+			client.MatchingLabels{
+				v1beta1constants.LabelWorkerPool: pool.Name,
+			},
+		); err != nil {
+			return fmt.Errorf("failed to list machine deployments for worker pool %q: %w", pool.Name, err)
+		}
 
-			// Skip the worker pool if there are machine deployments which are not updated.
-			outdatedMachineDeploymentsPresent := false
-			for _, mcd := range machineDeploymentList.Items {
-				if mcd.Status.UpdatedReplicas < mcd.Status.Replicas {
-					outdatedMachineDeploymentsPresent = true
-					break
-				}
+		// Skip the worker pool if there are machine deployments which are not updated.
+		outdatedMachineDeploymentsPresent := false
+		for _, mcd := range machineDeploymentList.Items {
+			if mcd.Status.UpdatedReplicas < mcd.Status.Replicas {
+				outdatedMachineDeploymentsPresent = true
+				break
 			}
+		}
 
-			if outdatedMachineDeploymentsPresent {
-				continue
-			}
+		if outdatedMachineDeploymentsPresent {
+			continue
 		}
 
 		workerPoolHash, err := gardenerutils.CalculateWorkerPoolHashForInPlaceUpdate(
