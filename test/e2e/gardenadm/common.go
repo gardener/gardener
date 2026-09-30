@@ -38,6 +38,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2egardener "github.com/gardener/gardener/test/e2e/gardener"
+	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 const (
@@ -81,8 +82,8 @@ func initClientSet(ctx context.Context, clientSet *kubernetes.Interface, kubecon
 	}).Should(Succeed())
 }
 
-// ItShouldConnectSuccessfully verifies that the gardenadm connect command was successful.
-func ItShouldConnectSuccessfully(
+// ItShouldVerifyAfterConnect verifies that the gardenadm connect command was successful.
+func ItShouldVerifyAfterConnect(
 	gardenClientSetPtr *kubernetes.Interface,
 	shoot *gardencorev1beta1.Shoot,
 	runInMachine func(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffer, *gbytes.Buffer, error),
@@ -202,27 +203,8 @@ func ItShouldBeReconciledByGardenlet(
 			Eventually(ctx, func(g Gomega) bool {
 				g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
 				g.Expect(s.Shoot.Status.Gardener.Name).To(ContainSubstring("gardenlet"))
-				// TODO(rfranzke): Uncomment this code and remove the manual checks once the Shoot controller
-				//  has progressed and the .status.conditions properly reflect healthiness.
-				//
-				// completed, _ := shootoperation.ReconciliationSuccessful(s.Shoot)
-				// return completed
-
-				if s.Shoot.Generation != s.Shoot.Status.ObservedGeneration {
-					return false
-				}
-				if len(s.Shoot.Status.Conditions) == 0 && s.Shoot.Status.LastOperation == nil {
-					return false
-				}
-				if shoot.Status.LastOperation != nil {
-					switch shoot.Status.LastOperation.Type {
-					case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationTypeRestore:
-						if shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-							return false
-						}
-					}
-				}
-				return true
+				completed, _ := shootoperation.ReconciliationSuccessful(s.Shoot)
+				return completed
 			}).WithPolling(30 * time.Second).Should(BeTrue())
 
 			By("Verifying ShootTaskUpdateGardenerNodeAgentSecretName task annotation has been removed")

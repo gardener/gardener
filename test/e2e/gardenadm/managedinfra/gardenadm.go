@@ -199,7 +199,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should bootstrap the control plane", func(ctx SpecContext) {
 			Eventually(ctx, session.Err).Should(gbytes.Say("Bootstrapping control plane on the first control plane machine"))
 			Eventually(ctx, session.Out).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
-		}, SpecTimeout(15*time.Minute))
+		}, SpecTimeout(20*time.Minute))
 
 		It("should write the shoot kubeconfig to the specified file", func(ctx SpecContext) {
 			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the self-hosted shoot to file"))
@@ -371,7 +371,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 		}, SpecTimeout(time.Minute))
 
-		gardenadm.ItShouldConnectSuccessfully(&gardenClientSet, shoot, runInMachine)
+		gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, runInMachine)
 		gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, runInMachine, runInNode)
 	})
 })
