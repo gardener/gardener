@@ -332,6 +332,10 @@ The `Gardenlet` controller reconciles a `Gardenlet` resource with the same name 
 This is used to implement self-upgrades of `gardenlet` based on information pulled from the garden cluster.
 For a general overview, see [this document](../deployment/deploy_gardenlet.md).
 
+> [!NOTE]
+> Self-upgrades are only supported for unmanaged seeds and self-hosted shoots.
+> Managed seeds are already upgraded by their parent gardenlet via the `ManagedSeed` controller, so creating a `Gardenlet` resource for a managed seed is not permitted and will be rejected by the admission controller.
+
 On `Gardenlet` reconciliation, the controller deploys the `gardenlet` within its own cluster which after downloading the Helm chart specified in `.spec.deployment.helm.ociRepository` and rendering it with the provided values/configuration.
 
 On `Gardenlet` deletion, nothing happens: The `gardenlet` does not terminate itself - deleting a `Gardenlet` object effectively means that self-upgrades are stopped.
