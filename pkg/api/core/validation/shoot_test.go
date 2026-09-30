@@ -2303,6 +2303,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
 
 					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile, State: core.LastOperationStateSucceeded}
+					shoot.Spec.Addons = nil
 
 					newShoot = prepareShootForUpdate(shoot)
 					newShoot.Spec.DNS.Domain = new("another-domain.com")
@@ -2364,6 +2365,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.dns.domain"),
 						"Detail": Equal("changing the domain is not supported for self-hosted shoots"),
+					}))))
+				})
+
+				It("should forbid updating the dns domain while the nginx-ingress addon is enabled", func() {
+					metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+					shoot.Spec.Addons = &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}
+					newShoot.Spec.Addons = shoot.Spec.Addons.DeepCopy()
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.dns.domain"),
+						"Detail": Equal("changing the domain is not supported while the nginx-ingress addon is enabled"),
 					}))))
 				})
 
