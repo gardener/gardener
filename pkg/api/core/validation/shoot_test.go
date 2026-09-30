@@ -10048,6 +10048,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(BeEmpty())
 			})
 
+			It("should allow unset systemComponents on control plane worker pool", func() {
+				workers[0].SystemComponents = nil
+
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(BeEmpty())
+			})
+
 			It("should forbid disallowing systemComponents on the control plane worker pool", func() {
 				workers[0].SystemComponents = &core.WorkerSystemComponents{Allow: false}
 
