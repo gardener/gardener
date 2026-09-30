@@ -130,6 +130,9 @@ func (h *Handler) fetchProviderTypesFromCredentialsBindings(ctx context.Context,
 
 	providerTypes := sets.New[string]()
 	for _, credentialsBinding := range credentialsBindingList.Items {
+		// The API version must be checked explicitly because it is not indexed.
+		// Indexing it is unnecessary, as the same API version is usually used for all kinds
+		// and would therefore provide no meaningful performance benefit.
 		if credentialsBinding.CredentialsRef.APIVersion == apiVersion {
 			providerTypes.Insert(credentialsBinding.Provider.Type)
 		}
