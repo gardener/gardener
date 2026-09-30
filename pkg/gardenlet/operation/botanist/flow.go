@@ -462,7 +462,7 @@ func (b *Botanist) ReconcileDNSRecordsTaskGroup() flow.TaskGroup {
 		})
 		handlePriorExternalDNSRecord = g.Add(flow.Task{
 			Name: "Handle prior external domain DNS record",
-			Fn:   b.HandlePriorExternalDNSRecord,
+			Fn:   b.DeployOrDestroyPriorExternalDNSRecord,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",

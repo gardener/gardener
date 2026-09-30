@@ -722,12 +722,12 @@ var _ = Describe("dnsrecord", func() {
 			It("should call Deploy and Wait and succeed if they succeeded", func() {
 				priorExternalDNSRecord.EXPECT().Deploy(ctx)
 				priorExternalDNSRecord.EXPECT().Wait(ctx)
-				Expect(b.HandlePriorExternalDNSRecord(ctx)).To(Succeed())
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(Succeed())
 			})
 
 			It("should call Deploy and fail if it failed", func() {
 				priorExternalDNSRecord.EXPECT().Deploy(ctx).Return(testErr)
-				Expect(b.HandlePriorExternalDNSRecord(ctx)).To(MatchError(testErr))
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(MatchError(testErr))
 			})
 		})
 
@@ -735,12 +735,12 @@ var _ = Describe("dnsrecord", func() {
 			It("should call Destroy and WaitCleanup and succeed if they succeeded", func() {
 				priorExternalDNSRecord.EXPECT().Destroy(ctx)
 				priorExternalDNSRecord.EXPECT().WaitCleanup(ctx)
-				Expect(b.HandlePriorExternalDNSRecord(ctx)).To(Succeed())
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(Succeed())
 			})
 
 			It("should call Destroy and fail if it failed", func() {
 				priorExternalDNSRecord.EXPECT().Destroy(ctx).Return(testErr)
-				Expect(b.HandlePriorExternalDNSRecord(ctx)).To(MatchError(testErr))
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(MatchError(testErr))
 			})
 		})
 	})

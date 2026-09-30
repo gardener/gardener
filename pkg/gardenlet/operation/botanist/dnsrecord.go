@@ -140,9 +140,9 @@ func (b *Botanist) DeployOrDestroyExternalDNSRecord(ctx context.Context) error {
 	return b.DestroyExternalDNSRecord(ctx)
 }
 
-// HandlePriorExternalDNSRecord deploys, restores, or destroys the prior external DNSRecord and waits for the
+// DeployOrDestroyPriorExternalDNSRecord deploys, restores, or destroys the prior external DNSRecord and waits for the
 // operation to complete.
-func (b *Botanist) HandlePriorExternalDNSRecord(ctx context.Context) error {
+func (b *Botanist) DeployOrDestroyPriorExternalDNSRecord(ctx context.Context) error {
 	if b.NeedsPriorExternalDNS() {
 		return b.deployPriorExternalDNSRecord(ctx)
 	}
