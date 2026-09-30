@@ -18,5 +18,6 @@ func RegisterFeatureGates() {
 		features.LiveControlPlaneMigration,
 		features.VersionClassificationLifecycle,
 		features.DisableNginxIngressInShoot,
+		features.MutableShootDomains,
 	)))
 }
