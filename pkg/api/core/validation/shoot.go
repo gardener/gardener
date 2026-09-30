@@ -449,7 +449,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
 	}
 
-	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, newObjectMeta.Annotations, helper.IsShootSelfHosted(newSpec.Provider.Workers), fldPath.Child("dns"))...)
+	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, newObjectMeta.Annotations, helper.IsShootSelfHosted(newSpec.Provider.Workers), helper.NginxIngressEnabled(newSpec.Addons), fldPath.Child("dns"))...)
 	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
@@ -859,7 +859,7 @@ func domainChangeRequested(annotations map[string]string) bool {
 	return slices.ContainsFunc(v1beta1helper.GetShootGardenerOperations(annotations), domainChangeOperations.Has)
 }
 
-func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, annotations map[string]string, isSelfHosted bool, fldPath *field.Path) field.ErrorList {
+func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, annotations map[string]string, isSelfHosted, nginxIngressEnabled bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if oldDNS != nil && newDNS == nil {
@@ -868,7 +868,7 @@ func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, annotatio
 
 	if newDNS != nil && oldDNS != nil {
 		if oldDNS.Domain != nil && ptr.Deref(newDNS.Domain, "") != ptr.Deref(oldDNS.Domain, "") {
-			allErrs = append(allErrs, validateDomainChange(newDNS, oldDNS, annotations, isSelfHosted, fldPath)...)
+			allErrs = append(allErrs, validateDomainChange(newDNS, oldDNS, annotations, isSelfHosted, nginxIngressEnabled, fldPath)...)
 		}
 
 		if seedGotAssigned {
@@ -894,7 +894,7 @@ func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, annotatio
 	return allErrs
 }
 
-func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]string, isSelfHosted bool, fldPath *field.Path) field.ErrorList {
+func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]string, isSelfHosted, nginxIngressEnabled bool, fldPath *field.Path) field.ErrorList {
 	domainPath := fldPath.Child("domain")
 
 	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
@@ -909,6 +909,11 @@ func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]strin
 	// TODO(ftl): Remove this check once the selfhostedshootexposure controller patches all external DNSRecords.
 	case isSelfHosted:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported for self-hosted shoots"))
+	// The nginx-ingress addon has its own DNSRecord. The name of this record is derived from the domain, and the name of a
+	// DNSRecord is immutable. The domain migration has no handover for this record. Thus refuse a domain change while
+	// the addon is enabled. If not, the reconciliation of the Shoot fails.
+	case nginxIngressEnabled:
+		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported while the nginx-ingress addon is enabled"))
 	case !domainChangeRequested(annotations):
 		allErrs = append(allErrs, field.Forbidden(domainPath, fmt.Sprintf("changing the domain is only allowed if the %s annotation requests one of the operations %v in the same request", v1beta1constants.GardenerOperation, sets.List(domainChangeOperations))))
 	}
