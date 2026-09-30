@@ -49,6 +49,7 @@ func InjectDefaultSettings(
 		"--livez-grace-period=1m",
 		"--profiling=false",
 		"--shutdown-delay-duration=15s",
+		"--shutdown-watch-termination-grace-period=10s",
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 		"--tls-cipher-suites="+strings.Join(kubernetesutils.TLSCipherSuites, ","),

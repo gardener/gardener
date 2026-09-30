@@ -133,8 +133,9 @@ static_resources:
                 port_value: {{ .proxySeedServerPort }}
     upstream_connection_options:
       tcp_keepalive:
-        keepalive_time: 7200
-        keepalive_interval: 55
+        keepalive_time: {{ .tcpKeepaliveTime }}
+        keepalive_interval: {{ .tcpKeepaliveInterval }}
+        keepalive_probes: {{ .tcpKeepaliveProbes }}
   - name: uds_admin
     connect_timeout: 0.25s
     type: STATIC

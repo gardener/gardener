@@ -494,8 +494,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					ConnectionPool: &istioapinetworkingv1alpha3.ConnectionPoolSettings{
 						Tcp: &istioapinetworkingv1alpha3.ConnectionPoolSettings_TCPSettings{
 							TcpKeepalive: &istioapinetworkingv1alpha3.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-								Time:     &durationpb.Duration{Seconds: 7200},
-								Interval: &durationpb.Duration{Seconds: 75},
+								Time:     &durationpb.Duration{Seconds: 60},
+								Interval: &durationpb.Duration{Seconds: 30},
+								Probes:   5,
 							},
 							MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
 						},

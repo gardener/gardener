@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -214,6 +215,9 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 		"proxySeedServerHost":            a.values.ProxySeedServerHost,
 		"proxySeedServerPort":            vpnseedserver.HTTPProxyGatewayPort,
 		"gardenerDestinationHeaderValue": gardenerDestinationHeaderValue,
+		"tcpKeepaliveTime":               istio.TCPKeepaliveTime,
+		"tcpKeepaliveInterval":           istio.TCPKeepaliveInterval,
+		"tcpKeepaliveProbes":             istio.TCPKeepaliveProbes,
 	}); err != nil {
 		return nil, err
 	}

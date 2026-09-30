@@ -271,7 +271,7 @@ var _ = Describe("APIServerProxy", func() {
 
 		Context("IPv4", func() {
 			It("should deploy the managed resource successfully", func() {
-				testFunc("ea6c7299") // hash of envoy config with V4_ONLY DNS + port 8443
+				testFunc("7b2788a9") // hash of envoy config with V4_ONLY DNS + port 8443
 			})
 		})
 
@@ -282,7 +282,7 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("b608555c") // hash of envoy config with V6_ONLY DNS + port 8443
+				testFunc("eb0179fd") // hash of envoy config with V6_ONLY DNS + port 8443
 			})
 		})
 
@@ -293,7 +293,7 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				testFunc("7ff2f6b1") // hash of envoy config with IstioTLSTermination + port 8443
+				testFunc("6c83ef76") // hash of envoy config with IstioTLSTermination + port 8443
 			})
 		})
 	})
@@ -558,8 +558,9 @@ static_resources:
                 port_value: 8443
     upstream_connection_options:
       tcp_keepalive:
-        keepalive_time: 7200
-        keepalive_interval: 55
+        keepalive_time: 60
+        keepalive_interval: 30
+        keepalive_probes: 5
   - name: uds_admin
     connect_timeout: 0.25s
     type: STATIC

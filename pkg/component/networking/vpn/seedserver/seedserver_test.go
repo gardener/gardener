@@ -439,11 +439,12 @@ var _ = Describe("VpnSeedServer", func() {
 								MaxConnections: 5000,
 								TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
 									Interval: &durationpb.Duration{
-										Seconds: 75,
+										Seconds: 30,
 									},
 									Time: &durationpb.Duration{
-										Seconds: 7200,
+										Seconds: 60,
 									},
+									Probes: 5,
 								},
 							},
 						},
