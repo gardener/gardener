@@ -138,6 +138,15 @@ const (
 	// owner: @pujitha24
 	// alpha: v1.152.0
 	StrictAuditPolicyValidation featuregate.Feature = "StrictAuditPolicyValidation"
+
+	// MutableShootDomains allows changing a Shoot's external domain (`spec.dns.domain`) and makes the Seed's internal
+	// domain mutable and optional (`spec.dns.internalDomains`, `spec.dns.internalDomainEnabled`), as described in
+	// GEP-0066. The domains are migrated without downtime as part of the two-phase CA rotation. While disabled, the
+	// domains stay immutable, no `prior-*` entries are added to `Shoot.status.advertisedAddresses`, and no
+	// domain migration constraint is added to `Shoot.status.constraints`.
+	// owner: @ftl
+	// alpha: v1.153.0
+	MutableShootDomains featuregate.Feature = "MutableShootDomains"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -183,6 +192,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
 	RemoveHTTPProxyLegacyPort:      {Default: true, PreRelease: featuregate.Beta},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
+	MutableShootDomains:            {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
