@@ -6,6 +6,7 @@ package gardener_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -480,6 +481,434 @@ var _ = Describe("CloudProfile", func() {
 				err := gardenerutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 				Expect(err).To(HaveOccurred())
 			})
+
+			It("should fail if the CloudProfile is updated to another CloudProfile", func() {
+				unrelatedCloudProfile := cloudProfile.DeepCopy()
+				unrelatedCloudProfile.Name = "someOtherCloudProfile"
+
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(unrelatedCloudProfile)).To(Succeed())
+
+				newShoot := shoot.DeepCopy()
+				shoot.Spec.CloudProfileName = &cloudProfileName
+				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: unrelatedCloudProfile.Name,
+				}
+				err := gardenerutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+				Expect(err).To(HaveOccurred())
+			})
+
+			Context("when changing to a profile with lifecycle classifications", func() {
+				var newShoot *core.Shoot
+
+				supportedVersion := func(version string) gardencorev1beta1.ExpirableVersion {
+					return gardencorev1beta1.ExpirableVersion{
+						Version: version,
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+						},
+					}
+				}
+
+				unavailableVersion := func(version string) gardencorev1beta1.ExpirableVersion {
+					future := metav1.NewTime(time.Now().Add(time.Hour))
+
+					return gardencorev1beta1.ExpirableVersion{
+						Version: version,
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{
+								Classification: gardencorev1beta1.ClassificationSupported,
+								StartTime:      &future,
+							},
+						},
+					}
+				}
+
+				expiredVersion := func(version string) gardencorev1beta1.ExpirableVersion {
+					past := metav1.NewTime(time.Now().Add(-time.Hour))
+
+					return gardencorev1beta1.ExpirableVersion{
+						Version: version,
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{
+								Classification: gardencorev1beta1.ClassificationExpired,
+								StartTime:      &past,
+							},
+						},
+					}
+				}
+
+				BeforeEach(func() {
+					shoot.Name = "shooty-mc-shoot"
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: cloudProfileName,
+					}
+
+					newShoot = shoot.DeepCopy()
+					newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfileName,
+					}
+				})
+
+				It("should fail if the newly referenced cloud profile marks the Kubernetes version currently used by the Shoot as unavailable", func() {
+					shoot.Spec.Kubernetes.Version = "1.31.0"
+					newShoot.Spec.Kubernetes.Version = "1.31.0"
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						unavailableVersion("1.31.0"),
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+					err := gardenerutils.ValidateCloudProfileChanges(
+						cloudProfileLister,
+						namespacedCloudProfileLister,
+						newShoot,
+						shoot,
+					)
+
+					Expect(err).To(MatchError(ContainSubstring(
+						`newly referenced cloud profile marks kubernetes version "1.31.0" currently in use by shoot "shooty-mc-shoot" as unavailable`,
+					)))
+				})
+
+				It("should fail if the newly referenced cloud profile marks a Kubernetes version currently used by a worker as unavailable", func() {
+					workerVersion := "1.31.0"
+
+					shoot.Spec.Kubernetes.Version = "1.32.0"
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "worker-1",
+							Kubernetes: &core.WorkerKubernetes{
+								Version: &workerVersion,
+							},
+							Machine: core.Machine{
+								Type: "machine-1",
+							},
+						},
+					}
+
+					newShoot = shoot.DeepCopy()
+					newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfileName,
+					}
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.32.0"),
+						supportedVersion("1.31.0"),
+					}
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.32.0"),
+						unavailableVersion("1.31.0"),
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+					err := gardenerutils.ValidateCloudProfileChanges(
+						cloudProfileLister,
+						namespacedCloudProfileLister,
+						newShoot,
+						shoot,
+					)
+
+					Expect(err).To(MatchError(ContainSubstring(
+						`newly referenced cloud profile marks kubernetes version "1.31.0" currently in use by worker "worker-1" as unavailable`,
+					)))
+				})
+
+				It("should allow changing the cloud profile if the Kubernetes version currently used by the Shoot is expired", func() {
+					shoot.Spec.Kubernetes.Version = "1.31.0"
+					newShoot.Spec.Kubernetes.Version = "1.31.0"
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						expiredVersion("1.31.0"),
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+					err := gardenerutils.ValidateCloudProfileChanges(
+						cloudProfileLister,
+						namespacedCloudProfileLister,
+						newShoot,
+						shoot,
+					)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should allow changing the cloud profile if the Kubernetes version currently used by a worker is expired", func() {
+					workerVersion := "1.31.0"
+
+					shoot.Spec.Kubernetes.Version = "1.32.0"
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "worker-1",
+							Kubernetes: &core.WorkerKubernetes{
+								Version: &workerVersion,
+							},
+							Machine: core.Machine{
+								Type: "machine-1",
+							},
+						},
+					}
+
+					newShoot = shoot.DeepCopy()
+					newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfileName,
+					}
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.32.0"),
+						supportedVersion("1.31.0"),
+					}
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.32.0"),
+						expiredVersion("1.31.0"),
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+					err := gardenerutils.ValidateCloudProfileChanges(
+						cloudProfileLister,
+						namespacedCloudProfileLister,
+						newShoot,
+						shoot,
+					)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should fail if the newly referenced cloud profile marks a machine image version currently used by a worker as unavailable", func() {
+					shoot.Spec.Kubernetes.Version = "1.31.0"
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "worker-1",
+							Machine: core.Machine{
+								Type: "machine-1",
+								Image: &core.ShootMachineImage{
+									Name:    "ubuntu",
+									Version: "1.0.0",
+								},
+							},
+						},
+					}
+
+					newShoot = shoot.DeepCopy()
+					newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfileName,
+					}
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "ubuntu",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: supportedVersion("1.0.0")},
+							},
+						},
+					}
+
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "ubuntu",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: unavailableVersion("1.0.0")},
+							},
+						},
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+					err := gardenerutils.ValidateCloudProfileChanges(
+						cloudProfileLister,
+						namespacedCloudProfileLister,
+						newShoot,
+						shoot,
+					)
+
+					Expect(err).To(MatchError(ContainSubstring(
+						`newly referenced cloud profile marks the machine image version "ubuntu@1.0.0" currently in use by worker "worker-1" as unavailable`,
+					)))
+				})
+
+				It("should allow changing the cloud profile if the machine image version currently used by a worker is expired", func() {
+					shoot.Spec.Kubernetes.Version = "1.31.0"
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "worker-1",
+							Machine: core.Machine{
+								Type: "machine-1",
+								Image: &core.ShootMachineImage{
+									Name:    "ubuntu",
+									Version: "1.0.0",
+								},
+							},
+						},
+					}
+
+					newShoot = shoot.DeepCopy()
+					newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfileName,
+					}
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "ubuntu",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: supportedVersion("1.0.0")},
+							},
+						},
+					}
+
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "ubuntu",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: expiredVersion("1.0.0")},
+							},
+						},
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+					err := gardenerutils.ValidateCloudProfileChanges(
+						cloudProfileLister,
+						namespacedCloudProfileLister,
+						newShoot,
+						shoot,
+					)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should allow changing the cloud profile if an unavailable machine image has the same version but a different image name", func() {
+					shoot.Spec.Kubernetes.Version = "1.31.0"
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "worker-1",
+							Machine: core.Machine{
+								Type: "machine-1",
+								Image: &core.ShootMachineImage{
+									Name:    "cherry",
+									Version: "1.0.0",
+								},
+							},
+						},
+					}
+
+					newShoot = shoot.DeepCopy()
+					newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfileName,
+					}
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+					cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "cherry",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: supportedVersion("1.0.0")},
+							},
+						},
+					}
+
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						supportedVersion("1.31.0"),
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = []gardencorev1beta1.MachineType{
+						{Name: "machine-1"},
+					}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "roma",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: unavailableVersion("1.0.0")},
+							},
+						},
+						{
+							Name: "cherry",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: supportedVersion("1.0.0")},
+							},
+						},
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+					err := gardenerutils.ValidateCloudProfileChanges(
+						cloudProfileLister,
+						namespacedCloudProfileLister,
+						newShoot,
+						shoot,
+					)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
 		})
 
 		Describe("#BuildCoreCloudProfileReference", func() {

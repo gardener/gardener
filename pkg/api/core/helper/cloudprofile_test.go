@@ -130,6 +130,7 @@ var _ = Describe("CloudProfile Helper", func() {
 				}
 				Expect(CurrentLifecycleClassification(version)).To(Equal(core.ClassificationUnavailable))
 				Expect(VersionIsActive(version)).To(BeFalse())
+				Expect(VersionIsUnavailable(version)).To(BeTrue())
 			})
 
 			It("should return preview when the version is in the preview stage", func() {

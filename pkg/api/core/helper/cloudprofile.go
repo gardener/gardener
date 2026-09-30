@@ -86,6 +86,11 @@ func VersionIsActive(version core.ExpirableVersion) bool {
 	return curr != core.ClassificationExpired && curr != core.ClassificationUnavailable
 }
 
+// VersionIsUnavailable reports whether the given version is unavailable.
+func VersionIsUnavailable(version core.ExpirableVersion) bool {
+	return CurrentLifecycleClassification(version) == core.ClassificationUnavailable
+}
+
 // VersionIsSupported reports whether the given version is supported.
 func VersionIsSupported(version core.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == core.ClassificationSupported
