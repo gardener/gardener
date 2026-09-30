@@ -40,6 +40,13 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 		},
 		Dependencies: flow.NewTaskIDs(finalizeGNAManagedResource),
 	})
+	deleteGardenerResourceManagers := g.Add(flow.Task{
+		Name: "Deleting stale gardener-resource-managers",
+		Fn: func(ctx context.Context) error {
+			return b.DeleteGardenerResourceManagers(ctx, (*clientSet).Client())
+		},
+		Dependencies: flow.NewTaskIDs(finalizeGNAManagedResource),
+	})
 	_ = g.Add(flow.Task{
 		Name: "Deleting prior control plane Node",
 		Fn: func(ctx context.Context) error {
@@ -51,6 +58,7 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 		Fn: func(ctx context.Context) error {
 			return b.ForceDeletePriorNodePods(ctx, (*clientSet).Client(), priorNodeName)
 		},
+		Dependencies: flow.NewTaskIDs(deleteGardenerResourceManagers),
 	})
 	_ = g.Add(flow.Task{
 		Name: "Deleting stale etcd member Leases",
@@ -63,6 +71,7 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 		Fn: func(ctx context.Context) error {
 			return b.DeleteNodeAgentCertificateSigningRequests(ctx, (*clientSet).Client())
 		},
+		Dependencies: flow.NewTaskIDs(deleteGardenerResourceManagers),
 	})
 
 	return g
