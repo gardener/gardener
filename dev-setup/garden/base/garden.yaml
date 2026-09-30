@@ -63,6 +63,7 @@ spec:
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
           AllowlistSeedReferences: true
+          MutableShootDomains: true
       gardenerDashboard:
         domain:
           name: dashboard.local.gardener.cloud

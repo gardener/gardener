@@ -12,6 +12,7 @@ spec:
     kind: GardenletConfiguration
     featureGates:
       DefaultSeccompProfile: true
+      MutableShootDomains: true
       VPNBondingModeRoundRobin: true
       PrometheusHealthChecks: true
       VictoriaLogsBackend: true
