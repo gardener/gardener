@@ -429,10 +429,24 @@ type SignedByCAOptions struct {
 	// the old CA by default, however one might want to use the current CA instead. Similarly, client certificates are
 	// signed with the current CA by default, however one might want to use the old CA instead.
 	CAClass *secretClass
-	// LoadMissingCAFromClusterCtx enables loading a missing signing CA from the cluster when it is not found in the
-	// internal store, and specifies the context.Context to use for the LIST call. This is useful when generating
-	// certificates signed by CAs that were not created by this secrets manager instance.
-	LoadMissingCAFromClusterCtx context.Context
+	// LoadMissingCAFromClusterCtx enables loading a missing signing CA from the cluster or from raw data when it is not
+	// found in the internal store. This is useful when generating certificates signed by CAs that were not created by
+	// this secrets manager instance.
+	LoadMissingCA *loadMissingCAOptions
+}
+
+type loadMissingCAOptions struct {
+	fromCluster *loadMissingCAFromClusterOptions
+	fromRaw     *loadMissingCAFromRawOptions
+}
+
+type loadMissingCAFromClusterOptions struct {
+	ctx context.Context
+}
+
+type loadMissingCAFromRawOptions struct {
+	currentCert, currentKey []byte
+	oldCert, oldKey         []byte
 }
 
 // ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
@@ -464,10 +478,20 @@ func (f signedByCAOptionFunc) ApplyToOptions(o *SignedByCAOptions) {
 	f(o)
 }
 
-// LoadMissingCAFromCluster sets the LoadMissingCAFromClusterCtx field to 'ctx' in the SignedByCAOptions.
+// LoadMissingCAFromCluster sets the LoadMissingCA field to 'loadMissingCAOptions' in the SignedByCAOptions.
 func LoadMissingCAFromCluster(ctx context.Context) SignedByCAOption {
 	return signedByCAOptionFunc(func(o *SignedByCAOptions) {
-		o.LoadMissingCAFromClusterCtx = ctx
+		o.LoadMissingCA = &loadMissingCAOptions{fromCluster: &loadMissingCAFromClusterOptions{ctx: ctx}}
+	})
+}
+
+// LoadMissingCAFromRaw sets the LoadMissingCA field to 'loadMissingCAFromRawOptions' in the SignedByCAOptions.
+func LoadMissingCAFromRaw(currentCert, currentKey, oldCert, oldKey []byte) SignedByCAOption {
+	return signedByCAOptionFunc(func(o *SignedByCAOptions) {
+		o.LoadMissingCA = &loadMissingCAOptions{fromRaw: &loadMissingCAFromRawOptions{
+			currentCert: currentCert, currentKey: currentKey,
+			oldCert: oldCert, oldKey: oldKey,
+		}}
 	})
 }
 
@@ -491,14 +515,24 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 
 		secrets, found := mgr.getFromStore(name)
 		if !found {
-			if signedByCAOptions.LoadMissingCAFromClusterCtx == nil {
+			if signedByCAOptions.LoadMissingCA == nil {
 				return fmt.Errorf("secrets for name %q not found in internal store", name)
 			}
 
-			mgr.logger.Info("Signing CA secret not found in internal store, trying to load it from cluster", "signingCASecretName", name)
-			if err := loadCASecretsFromClusterIntoStore(signedByCAOptions.LoadMissingCAFromClusterCtx, mgr, name); err != nil {
-				return fmt.Errorf("failed to load missing CA secret from cluster: %w", err)
+			if signedByCAOptions.LoadMissingCA.fromCluster != nil {
+				mgr.logger.Info("Signing CA secret not found in internal store, trying to load it from cluster", "signingCASecretName", name)
+				if err := loadCASecretsFromClusterIntoStore(signedByCAOptions.LoadMissingCA.fromCluster.ctx, mgr, name); err != nil {
+					return fmt.Errorf("failed to load missing CA secret from cluster: %w", err)
+				}
 			}
+
+			if signedByCAOptions.LoadMissingCA.fromRaw != nil {
+				mgr.logger.Info("Signing CA secret not found in internal store, trying to load it from raw data", "signingCASecretName", name)
+				if err := loadCASecretsFromRawIntoStore(mgr, name, signedByCAOptions.LoadMissingCA.fromRaw); err != nil {
+					return fmt.Errorf("failed to load missing CA secret from raw data: %w", err)
+				}
+			}
+
 			secrets, _ = mgr.getFromStore(name)
 		}
 
@@ -548,6 +582,27 @@ func loadCASecretsFromClusterIntoStore(ctx context.Context, mgr *manager, name s
 	if len(secretList.Items) > 1 {
 		if err := mgr.addToStore(name, &secretList.Items[len(secretList.Items)-2], old); err != nil {
 			return fmt.Errorf("failed to load old secret for name %q from cluster into internal store: %w", name, err)
+		}
+	}
+
+	return nil
+}
+
+func loadCASecretsFromRawIntoStore(mgr *manager, name string, rawCerts *loadMissingCAFromRawOptions) error {
+	dummyCASecret := func(certRaw, keyRaw []byte) *corev1.Secret {
+		return &corev1.Secret{Data: map[string][]byte{
+			secretsutils.DataKeyCertificateCA: certRaw,
+			secretsutils.DataKeyPrivateKeyCA:  keyRaw,
+		}}
+	}
+
+	if err := mgr.addToStore(name, dummyCASecret(rawCerts.currentCert, rawCerts.currentKey), current); err != nil {
+		return fmt.Errorf("failed to load current dummy secret for name %q from cluster into internal store: %w", name, err)
+	}
+
+	if len(rawCerts.oldCert) > 0 && len(rawCerts.oldKey) > 0 {
+		if err := mgr.addToStore(name, dummyCASecret(rawCerts.oldCert, rawCerts.oldKey), old); err != nil {
+			return fmt.Errorf("failed to load old dummy secret for name %q from cluster into internal store: %w", name, err)
 		}
 	}
 
