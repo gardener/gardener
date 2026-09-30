@@ -41,13 +41,13 @@ func PrepareBinary() {
 // NewCommand creates a new exec.Cmd for gardenadm.
 func NewCommand(extraEnv []string, args ...string) *exec.Cmd { // #nosec G204 -- Used for e2e tests only.
 	cmd := exec.Command(binaryPath, append([]string{"--log-level=debug"}, args...)...)
-	cmd.Env = append(cmd.Env, extraEnv...)
 	cmd.Env = append(cmd.Env,
 		clientcmd.RecommendedConfigPathEnvVar+"=../../../dev-setup/kubeconfigs/runtime/kubeconfig",
 		imagevector.OverrideEnv+"=../../../dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml",
 		imagevector.ComponentOverrideEnv+"=../../../dev-setup/gardenadm/resources/imagevector-overwrite-components.yaml",
 		imagevector.OverrideChartsEnv+"=../../../dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml",
 	)
+	cmd.Env = append(cmd.Env, extraEnv...)
 	return cmd
 }
 
@@ -69,7 +69,9 @@ func RunCommand(cmd *exec.Cmd) *gexec.Session {
 func Wait(ctx context.Context, session *gexec.Session) *gexec.Session {
 	GinkgoHelper()
 
-	Eventually(ctx, session).Should(gexec.Exit(0))
+	Eventually(ctx, session).Should(gexec.Exit(0), func() string {
+		return fmt.Sprintf("session output:\n%s\nsession error:\n%s", session.Out.Contents(), session.Err.Contents())
+	})
 	return session
 }
 
