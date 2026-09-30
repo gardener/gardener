@@ -44,6 +44,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | BackupEntryForGarden           | `true`  | `Beta`  | `1.147` |         |
 | RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.148` |         |
 | StrictAuditPolicyValidation    | `false` | `Alpha` | `1.152` |         |
+| MutableShootDomains            | `false` | `Alpha` | `1.153` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -296,3 +297,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | BackupEntryForGarden           | `gardener-operator`                                 | Enables deploying a `BackupEntry` extension object in the garden controller alongside the `BackupBucket` when etcd backup is configured, aligning the garden with the same extension contract that shoot clusters use for backup credential management.                                                                                                                                                                                                                                                                                                  |
 | RemoveHTTPProxyLegacyPort      | `gardenlet`                                         | Disables the unused legacy `tls-tunnel` port (8132) - and its supporting Gateway and EnvoyFilter resources - on the `istio-ingressgateway` Services. Operators can choose to remove the legacy HTTP proxy port as soon as all shoots have switched to the unified `http-proxy` port (8443), i.e. report the `UsesUnifiedHTTPProxyPort` constraint with status `True`. |
 | StrictAuditPolicyValidation    | `gardener-admission-controller`, `gardener-operator` | Rejects a Shoot's or Garden's referenced audit policy ConfigMap if it contains unknown or misspelled fields, instead of silently dropping them. |
+| MutableShootDomains            | `gardener-apiserver`, `gardenlet`                   | Allows changing a `Shoot`'s external domain (`spec.dns.domain`) and makes the `Seed`'s internal domain mutable and optional (`spec.dns.internalDomains`, `spec.dns.internalDomainEnabled`). The domains are migrated without downtime as part of the two-phase CA rotation, see [GEP-0066](https://github.com/gardener/enhancements/tree/main/geps/0066-make-shoot-domains-mutable). `gardener-apiserver` gates the validation (a domain change requires a simultaneous `rotate-ca-start`), `gardenlet` gates the domain migration. |
