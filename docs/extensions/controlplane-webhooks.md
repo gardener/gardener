@@ -40,7 +40,7 @@ This section specifies the contract that Gardener and webhooks should adhere to 
 
 > **Note:** The contract described below may not necessarily be what Gardener does currently (as of May 2019). Rather, it reflects the target state after changes for [Gardener extensibility](overview.md) have been introduced.
 
-### kube-apiserver
+### kube-apiserver 
 
 To deploy the kube-apiserver, Gardener **shall** create a deployment and a service both named `kube-apiserver` in the Shoot namespace (`virtual-garden-kube-apiserver` in the `garden` namespace for the virtual garden). They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
