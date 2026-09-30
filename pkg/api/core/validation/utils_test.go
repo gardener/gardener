@@ -845,7 +845,7 @@ var _ = Describe("Utils tests", func() {
 			Entry("pass with dashes and dots", "a.qualified-name", false),
 		)
 
-		DescribeTable("should not allow invalid volume type names",
+		DescribeTable("should validate volume type names",
 			func(name string, shouldFail bool) {
 				spec := specTemplate.DeepCopy()
 				spec.VolumeTypes[0].Name = name
@@ -859,7 +859,7 @@ var _ = Describe("Utils tests", func() {
 								"Type":     Equal(field.ErrorTypeInvalid),
 								"Field":    Equal("spec.volumeTypes[0].name"),
 								"BadValue": Equal(name),
-								"Detail":   ContainSubstring("volume type name must be a qualified name"),
+								"Detail":   ContainSubstring("volume type name must match the regex"),
 							})),
 						))
 				} else {
@@ -867,10 +867,41 @@ var _ = Describe("Utils tests", func() {
 				}
 			},
 			Entry("forbid emoji characters", "🪴", true),
-			Entry("forbid whitespaces", "special image", true),
-			Entry("forbid slashes", "nested/image", true),
+			Entry("forbid whitespaces", "special volume type", true),
+			Entry("forbid slashes", "nested/volume-type", true),
+			Entry("forbid colons", "volume:type", true),
+			Entry("pass with leading and trailing underscores", "__DEFAULT__", false),
+			Entry("pass with upper and lower case letters and digits", "Premium_LRS2", false),
 			Entry("pass with dashes and dots", "a.qualified-name", false),
+			Entry("pass with leading dash", "-volume", false),
 		)
+
+		It("should forbid an empty volume type name", func() {
+			spec := specTemplate.DeepCopy()
+			spec.VolumeTypes[0].Name = ""
+
+			Expect(ValidateCloudProfileSpec(spec, field.NewPath("spec"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.volumeTypes[0].name"),
+				})),
+			))
+		})
+
+		It("should forbid duplicate volume type names that are not qualified names", func() {
+			spec := specTemplate.DeepCopy()
+			spec.VolumeTypes = []core.VolumeType{
+				{Name: "__DEFAULT__", Class: "standard"},
+				{Name: "__DEFAULT__", Class: "standard"},
+			}
+
+			Expect(ValidateCloudProfileSpec(spec, field.NewPath("spec"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.volumeTypes[1].name"),
+				})),
+			))
+		})
 
 		DescribeTable("should not allow invalid volume type class",
 			func(name string, shouldFail bool) {
