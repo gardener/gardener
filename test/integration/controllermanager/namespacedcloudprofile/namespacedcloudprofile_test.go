@@ -133,11 +133,8 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 				Versions: []gardencorev1beta1.ExpirableVersion{
 					{Version: "1.3.0"},
 					{
-						Version: "1.2.3",
-						Lifecycle: []gardencorev1beta1.LifecycleStage{
-							{Classification: gardencorev1beta1.ClassificationSupported},
-							{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &expirationDateFuture},
-						},
+						Version:        "1.2.3",
+						ExpirationDate: &expirationDateFuture,
 					},
 				},
 			},
@@ -152,11 +149,8 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 						},
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-								Version: "4.5.6",
-								Lifecycle: []gardencorev1beta1.LifecycleStage{
-									{Classification: gardencorev1beta1.ClassificationSupported},
-									{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &expirationDateFuture},
-								},
+								Version:        "4.5.6",
+								ExpirationDate: &expirationDateFuture,
 							},
 							CRI:           []gardencorev1beta1.CRI{{Name: "containerd"}},
 							Architectures: []string{"amd64"},
@@ -385,11 +379,8 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(
 					gardencorev1beta1.ExpirableVersion{
-						Version: "1.2.3",
-						Lifecycle: []gardencorev1beta1.LifecycleStage{
-							{Classification: gardencorev1beta1.ClassificationSupported},
-							{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &expirationDateFuture},
-						},
+						Version:        "1.2.3",
+						ExpirationDate: &expirationDateFuture,
 					},
 					gardencorev1beta1.ExpirableVersion{Version: "1.3.0"},
 					gardencorev1beta1.ExpirableVersion{Version: "1.4.0"},
@@ -588,7 +579,297 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			}).Should(Succeed())
 		})
 
-		It("should merge lifecycle classifications when the first override stage has no start time", func() {
+		It("should override only the expired lifecycle stage when the parent uses lifecycle and the override uses an expiration date", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+
+			var (
+				now                = fakeClock.Now()
+				deprecatedStart    = &metav1.Time{Time: now.Add(12 * time.Hour)}
+				parentExpiration   = &metav1.Time{Time: now.Add(24 * time.Hour)}
+				overrideExpiration = &metav1.Time{Time: now.Add(48 * time.Hour)}
+			)
+
+			By("Update parent CloudProfile spec with lifecycle classifications")
+			Eventually(func() error {
+				if err := testClient.Get(ctx, client.ObjectKeyFromObject(parentCloudProfile), parentCloudProfile); err != nil {
+					return err
+				}
+
+				parentCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.3.0"},
+					{
+						Version: "1.2.3",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{
+								Classification: gardencorev1beta1.ClassificationDeprecated,
+								StartTime:      deprecatedStart,
+							},
+							{
+								Classification: gardencorev1beta1.ClassificationExpired,
+								StartTime:      parentExpiration,
+							},
+						},
+					},
+				}
+
+				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{
+						Name: "some-image",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+									Version: "4.5.6",
+									Lifecycle: []gardencorev1beta1.LifecycleStage{
+										{Classification: gardencorev1beta1.ClassificationSupported},
+										{
+											Classification: gardencorev1beta1.ClassificationDeprecated,
+											StartTime:      deprecatedStart,
+										},
+										{
+											Classification: gardencorev1beta1.ClassificationExpired,
+											StartTime:      parentExpiration,
+										},
+									},
+								},
+								CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavors,
+							},
+						},
+					},
+				}
+
+				return testClient.Update(ctx, parentCloudProfile)
+			}).Should(Succeed())
+
+			By("Update NamespacedCloudProfile with legacy expiration date overrides")
+			Eventually(func() error {
+				if err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile); err != nil {
+					return err
+				}
+
+				namespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{
+					Versions: []gardencorev1beta1.ExpirableVersion{
+						{
+							Version:        "1.2.3",
+							ExpirationDate: overrideExpiration,
+						},
+					},
+				}
+
+				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{
+						Name: "some-image",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+									Version:        "4.5.6",
+									ExpirationDate: overrideExpiration,
+								},
+							},
+						},
+					},
+				}
+
+				return testClient.Update(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
+
+			By("Ensure only the expired lifecycle stage was overridden")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+
+				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElement(
+					gardencorev1beta1.ExpirableVersion{
+						Version: "1.2.3",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{
+								Classification: gardencorev1beta1.ClassificationDeprecated,
+								StartTime:      deprecatedStart,
+							},
+							{
+								Classification: gardencorev1beta1.ClassificationExpired,
+								StartTime:      overrideExpiration,
+							},
+						},
+					},
+				))
+
+				var machineImage *gardencorev1beta1.MachineImage
+				for i := range namespacedCloudProfile.Status.CloudProfileSpec.MachineImages {
+					if namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[i].Name == "some-image" {
+						machineImage = &namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[i]
+						break
+					}
+				}
+
+				g.Expect(machineImage).ToNot(BeNil())
+				if machineImage == nil {
+					return
+				}
+
+				g.Expect(machineImage.Versions).To(ContainElement(gardencorev1beta1.MachineImageVersion{
+					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+						Version: "4.5.6",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{
+								Classification: gardencorev1beta1.ClassificationDeprecated,
+								StartTime:      deprecatedStart,
+							},
+							{
+								Classification: gardencorev1beta1.ClassificationExpired,
+								StartTime:      overrideExpiration,
+							},
+						},
+					},
+					CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
+					Architectures:     []string{"amd64"},
+					CapabilityFlavors: imageFlavors,
+				}))
+			}).Should(Succeed())
+		})
+
+		It("should replace legacy classification fields when the override defines a lifecycle", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+
+			var (
+				now              = fakeClock.Now()
+				parentExpiration = &metav1.Time{Time: now.Add(24 * time.Hour)}
+				deprecatedStart  = &metav1.Time{Time: now.Add(48 * time.Hour)}
+				deprecated       = gardencorev1beta1.ClassificationDeprecated
+			)
+
+			By("Update parent CloudProfile spec with legacy classification fields")
+			Eventually(func() error {
+				if err := testClient.Get(ctx, client.ObjectKeyFromObject(parentCloudProfile), parentCloudProfile); err != nil {
+					return err
+				}
+
+				parentCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.3.0"},
+					{
+						Version:        "1.2.3",
+						Classification: &deprecated,
+						ExpirationDate: parentExpiration,
+					},
+				}
+
+				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{
+						Name: "some-image",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+									Version:        "4.5.6",
+									Classification: &deprecated,
+									ExpirationDate: parentExpiration,
+								},
+								CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
+								Architectures:     []string{"amd64"},
+								CapabilityFlavors: imageFlavors,
+							},
+						},
+					},
+				}
+
+				return testClient.Update(ctx, parentCloudProfile)
+			}).Should(Succeed())
+
+			By("Update NamespacedCloudProfile with lifecycle overrides")
+			Eventually(func() error {
+				if err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile); err != nil {
+					return err
+				}
+
+				namespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{
+					Versions: []gardencorev1beta1.ExpirableVersion{
+						{
+							Version: "1.2.3",
+							Lifecycle: []gardencorev1beta1.LifecycleStage{
+								{Classification: gardencorev1beta1.ClassificationSupported},
+								{
+									Classification: gardencorev1beta1.ClassificationDeprecated,
+									StartTime:      deprecatedStart,
+								},
+							},
+						},
+					},
+				}
+
+				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{
+						Name: "some-image",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{
+								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+									Version: "4.5.6",
+									Lifecycle: []gardencorev1beta1.LifecycleStage{
+										{Classification: gardencorev1beta1.ClassificationSupported},
+										{
+											Classification: gardencorev1beta1.ClassificationDeprecated,
+											StartTime:      deprecatedStart,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				return testClient.Update(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
+
+			By("Ensure the lifecycle completely replaced the legacy classification fields")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+
+				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElement(
+					gardencorev1beta1.ExpirableVersion{
+						Version: "1.2.3",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{
+								Classification: gardencorev1beta1.ClassificationDeprecated,
+								StartTime:      deprecatedStart,
+							},
+						},
+					},
+				))
+
+				var machineImage *gardencorev1beta1.MachineImage
+				for i := range namespacedCloudProfile.Status.CloudProfileSpec.MachineImages {
+					if namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[i].Name == "some-image" {
+						machineImage = &namespacedCloudProfile.Status.CloudProfileSpec.MachineImages[i]
+						break
+					}
+				}
+
+				g.Expect(machineImage).ToNot(BeNil())
+				if machineImage == nil {
+					return
+				}
+
+				g.Expect(machineImage.Versions).To(ContainElement(gardencorev1beta1.MachineImageVersion{
+					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+						Version: "4.5.6",
+						Lifecycle: []gardencorev1beta1.LifecycleStage{
+							{Classification: gardencorev1beta1.ClassificationSupported},
+							{
+								Classification: gardencorev1beta1.ClassificationDeprecated,
+								StartTime:      deprecatedStart,
+							},
+						},
+					},
+					CRI:               []gardencorev1beta1.CRI{{Name: "containerd"}},
+					Architectures:     []string{"amd64"},
+					CapabilityFlavors: imageFlavors,
+				}))
+			}).Should(Succeed())
+		})
+
+		It("should replace the parent lifecycle when the override defines a lifecycle", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 
 			var (
@@ -694,10 +975,6 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 							{
 								Classification: gardencorev1beta1.ClassificationPreview,
 							},
-							{
-								Classification: gardencorev1beta1.ClassificationSupported,
-								StartTime:      future,
-							},
 						},
 					},
 				))
@@ -721,10 +998,6 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 						Lifecycle: []gardencorev1beta1.LifecycleStage{
 							{
 								Classification: gardencorev1beta1.ClassificationPreview,
-							},
-							{
-								Classification: gardencorev1beta1.ClassificationSupported,
-								StartTime:      future,
 							},
 						},
 					},
