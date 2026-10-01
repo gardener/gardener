@@ -1581,25 +1581,8 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.NewPodScaleUpDelay, fldPath.Child("newPodScaleUpDelay"))...)
 
-	if maxEmptyBulkDelete := autoScaler.MaxEmptyBulkDelete; maxEmptyBulkDelete != nil {
-		if versionutils.ConstraintK8sGreaterEqual133.CheckVersion(kubernetesVersion) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("maxEmptyBulkDelete"), "for Kubernetes versions >= 1.33, maxEmptyBulkDelete field is no longer supported, use maxScaleDownParallelism instead"))
-		}
-		if *maxEmptyBulkDelete < 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxEmptyBulkDelete"), *maxEmptyBulkDelete, "can not be negative"))
-		}
-	}
-
 	if autoScaler.MaxScaleDownParallelism != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.MaxScaleDownParallelism), fldPath.Child("maxScaleDownParallelism"))...)
-	}
-
-	if autoScaler.MaxScaleDownParallelism != nil && autoScaler.MaxEmptyBulkDelete != nil && *autoScaler.MaxScaleDownParallelism != *autoScaler.MaxEmptyBulkDelete {
-		allErrs = append(allErrs, field.Invalid(
-			fldPath.Child("maxEmptyBulkDelete"),
-			*autoScaler.MaxEmptyBulkDelete,
-			fmt.Sprintf("must equal maxScaleDownParallelism %d", *autoScaler.MaxScaleDownParallelism),
-		))
 	}
 
 	if autoScaler.MaxDrainParallelism != nil {
@@ -1980,15 +1963,6 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 			}
 		}
 
-		// TODO(plkokanov): Remove this check after support for Kubernetes 1.32 is dropped.
-		if podEvictionTimeout := kcm.PodEvictionTimeout; podEvictionTimeout != nil {
-			if versionutils.ConstraintK8sGreaterEqual133.CheckVersion(kubernetesVersion) {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("podEvictionTimeout"), "for Kubernetes versions >= 1.33, podEvictionTimeout field is no longer supported"))
-			} else if podEvictionTimeout.Duration <= 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionTimeout"), podEvictionTimeout.Duration, "podEvictionTimeout must be larger than 0"))
-			}
-		}
-
 		if nodeMonitorGracePeriod := kcm.NodeMonitorGracePeriod; nodeMonitorGracePeriod != nil && nodeMonitorGracePeriod.Duration <= 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeMonitorGracePeriod"), nodeMonitorGracePeriod.Duration, "nodeMonitorGracePeriod must be larger than 0"))
 		}
@@ -2021,10 +1995,6 @@ func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 		}
 		if kcm.HorizontalPodAutoscalerConfig != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("horizontalPodAutoscaler"), workerlessErrorMsg))
-		}
-		// TODO(plkokanov): Remove this check after support for Kubernetes 1.32 is dropped.
-		if kcm.PodEvictionTimeout != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("podEvictionTimeout"), workerlessErrorMsg))
 		}
 		if kcm.NodeMonitorGracePeriod != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodeMonitorGracePeriod"), workerlessErrorMsg))

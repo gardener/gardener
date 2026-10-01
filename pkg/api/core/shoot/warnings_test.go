@@ -242,21 +242,6 @@ var _ = Describe("Warnings", func() {
 			)
 		})
 
-		It("should return a warning when podEvictionTimeout is set", func() {
-			shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{
-				PodEvictionTimeout: &metav1.Duration{Duration: 2 * time.Minute},
-			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13 and is forbidden to be set starting from Kubernetes 1.33. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")))
-		})
-
-		It("should warn when maxEmptyBulkDelete is set for shoots using kubernetes < v1.33", func() {
-			shoot.Spec.Kubernetes.Version = "1.32.4"
-			shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
-				MaxEmptyBulkDelete: new(int32(5)),
-			}
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal("you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. The value is not used and will be set to nil. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")))
-		})
-
 		It("should warn when rotate-etcd-encryption-key-start operation annotation is set", func() {
 			shoot.Annotations = map[string]string{
 				"gardener.cloud/operation": "rotate-etcd-encryption-key-start",

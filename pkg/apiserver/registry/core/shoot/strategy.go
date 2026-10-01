@@ -255,9 +255,6 @@ func (s shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Err
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
-	if shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
-		shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete = nil
-	}
 	// Field was previously defaulted to false.
 	// We can safely set it to nil when user had explicitly set it to false,
 	// as we treat nil as false in the codebase.
