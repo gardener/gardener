@@ -17,7 +17,7 @@ var _ = Describe("#bootstrapCluster", func() {
 
 	BeforeEach(func() {
 		fakeDiscoveryClient = &fakediscovery.FakeDiscovery{Fake: &testing.Fake{}}
-		fakeDiscoveryClient.FakedServerVersion = &version.Info{GitVersion: "1.32.4"}
+		fakeDiscoveryClient.FakedServerVersion = &version.Info{GitVersion: "1.33.4"}
 	})
 
 	It("should return an error because the garden version cannot be parsed", func() {
@@ -26,8 +26,8 @@ var _ = Describe("#bootstrapCluster", func() {
 	})
 
 	It("should return an error because the garden version is too low", func() {
-		fakeDiscoveryClient.FakedServerVersion.GitVersion = "1.31.5"
-		Expect(bootstrapCluster(fakeDiscoveryClient)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.32")))
+		fakeDiscoveryClient.FakedServerVersion.GitVersion = "1.32.5"
+		Expect(bootstrapCluster(fakeDiscoveryClient)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.33")))
 	})
 
 	It("should succeed when garden version meets the minimum requirement", func() {

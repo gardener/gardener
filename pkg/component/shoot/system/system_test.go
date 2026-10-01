@@ -48,7 +48,7 @@ var _ = Describe("ShootSystem", func() {
 		shootName         = "bar"
 		region            = "test-region"
 		providerType      = "test-provider"
-		kubernetesVersion = "1.31.1"
+		kubernetesVersion = "1.33.1"
 		maintenanceBegin  = "123456+0100"
 		maintenanceEnd    = "134502+0100"
 		uid               = apitypes.UID("1234")
@@ -451,61 +451,46 @@ var _ = Describe("ShootSystem", func() {
 					networkPolicyToDNS,
 					networkPolicyToKubelet,
 					networkPolicyToPublicNetworks,
-				))
-
-				Expect(managedResource).NotTo(contain(
 					networkPolicyDenyAll,
 				))
 			})
 
-			Context("k8s >= 1.33", func() {
+			Context("self-hosted", func() {
 				BeforeEach(func() {
-					values.KubernetesVersion = semver.MustParse("1.33.0")
+					values.IsSelfHosted = true
 				})
 
-				It("should successfully deploy all deny-all", func() {
+				It("should deploy allow-from-control-plane-components using node network CIDRs", func() {
+					networkPolicyAllowFromSeed := &networkingv1.NetworkPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gardener.cloud--allow-from-control-plane-components",
+							Namespace: "kube-system",
+							Annotations: map[string]string{
+								"gardener.cloud/description": "Allows Ingress from the control plane to pods labeled with 'networking.gardener.cloud/from-control-plane=allowed'.",
+							},
+						},
+						Spec: networkingv1.NetworkPolicySpec{
+							PodSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"networking.gardener.cloud/from-control-plane": "allowed",
+								},
+							},
+							Ingress: []networkingv1.NetworkPolicyIngressRule{{
+								From: []networkingv1.NetworkPolicyPeer{
+									{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[0].String()}},
+									{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[1].String()}},
+								},
+							}},
+							PolicyTypes: []networkingv1.PolicyType{
+								networkingv1.PolicyTypeIngress,
+							},
+						},
+					}
+
 					Expect(managedResource).To(contain(
 						networkPolicyDenyAll,
+						networkPolicyAllowFromSeed,
 					))
-				})
-
-				Context("self-hosted", func() {
-					BeforeEach(func() {
-						values.IsSelfHosted = true
-					})
-
-					It("should deploy allow-from-control-plane-components using node network CIDRs", func() {
-						networkPolicyAllowFromSeed := &networkingv1.NetworkPolicy{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gardener.cloud--allow-from-control-plane-components",
-								Namespace: "kube-system",
-								Annotations: map[string]string{
-									"gardener.cloud/description": "Allows Ingress from the control plane to pods labeled with 'networking.gardener.cloud/from-control-plane=allowed'.",
-								},
-							},
-							Spec: networkingv1.NetworkPolicySpec{
-								PodSelector: metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"networking.gardener.cloud/from-control-plane": "allowed",
-									},
-								},
-								Ingress: []networkingv1.NetworkPolicyIngressRule{{
-									From: []networkingv1.NetworkPolicyPeer{
-										{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[0].String()}},
-										{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[1].String()}},
-									},
-								}},
-								PolicyTypes: []networkingv1.PolicyType{
-									networkingv1.PolicyTypeIngress,
-								},
-							},
-						}
-
-						Expect(managedResource).To(contain(
-							networkPolicyDenyAll,
-							networkPolicyAllowFromSeed,
-						))
-					})
 				})
 			})
 		})

@@ -268,12 +268,6 @@ var _ = Describe("Warnings", func() {
 		)
 
 		Context("spec.cloudProfileName", func() {
-			It("should not return a warning when cloudProfileName is set and the Kubernetes version is < v1.33", func() {
-				shoot.Spec.Kubernetes.Version = "1.32.3"
-				shoot.Spec.CloudProfileName = new("local-profile")
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
-			})
-
 			It("should return a warning when cloudProfileName is set and the Kubernetes version is >= v1.33", func() {
 				shoot.Spec.Kubernetes.Version = "1.33.1"
 				shoot.Spec.CloudProfileName = new("local-profile")
