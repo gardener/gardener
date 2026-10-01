@@ -1070,11 +1070,6 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
-	if in.MaxEmptyBulkDelete != nil {
-		in, out := &in.MaxEmptyBulkDelete, &out.MaxEmptyBulkDelete
-		*out = new(int32)
-		**out = **in
-	}
 	if in.IgnoreDaemonsetsUtilization != nil {
 		in, out := &in.IgnoreDaemonsetsUtilization, &out.IgnoreDaemonsetsUtilization
 		*out = new(bool)
@@ -2831,11 +2826,6 @@ func (in *KubeControllerManagerConfig) DeepCopyInto(out *KubeControllerManagerCo
 	if in.NodeCIDRMaskSize != nil {
 		in, out := &in.NodeCIDRMaskSize, &out.NodeCIDRMaskSize
 		*out = new(int32)
-		**out = **in
-	}
-	if in.PodEvictionTimeout != nil {
-		in, out := &in.PodEvictionTimeout, &out.PodEvictionTimeout
-		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.NodeMonitorGracePeriod != nil {
