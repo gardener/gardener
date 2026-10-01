@@ -1128,6 +1128,121 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "Latency distribution (p50/p90/p99) of unary gRPC requests over time. Use it to correlate latency spikes with disk sync duration, request rate or traffic. The percentile spread shows whether a spike is tail-only (p99 rises, p50 flat) or a distribution-wide shift. Only populated for the main etcd (requires extensive metrics); empty for events.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "hiddenSeries": false,
+      "id": 58,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.32",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{role=~\"etcd-$role\", grpc_type=\"unary\"}[$__rate_interval])) by (le))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "p99",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.90, sum(rate(grpc_server_handling_seconds_bucket{role=~\"etcd-$role\", grpc_type=\"unary\"}[$__rate_interval])) by (le))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "p90",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.50, sum(rate(grpc_server_handling_seconds_bucket{role=~\"etcd-$role\", grpc_type=\"unary\"}[$__rate_interval])) by (le))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "p50",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "gRPC Request Latency",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -1140,7 +1255,7 @@
       "gridPos": {
         "h": 7,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 32
       },
       "hiddenSeries": false,
@@ -1253,8 +1368,8 @@
       "gridPos": {
         "h": 7,
         "w": 12,
-        "x": 12,
-        "y": 32
+        "x": 0,
+        "y": 39
       },
       "hiddenSeries": false,
       "id": 33,
@@ -1353,7 +1468,7 @@
       "gridPos": {
         "h": 7,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 39
       },
       "hiddenSeries": false,
@@ -1452,8 +1567,8 @@
       "gridPos": {
         "h": 7,
         "w": 12,
-        "x": 12,
-        "y": 39
+        "x": 0,
+        "y": 46
       },
       "hiddenSeries": false,
       "id": 36,
@@ -1547,7 +1662,7 @@
       "gridPos": {
         "h": 7,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 46
       },
       "hiddenSeries": false,
