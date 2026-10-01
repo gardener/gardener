@@ -70,7 +70,7 @@ spec:
                       - name: Connection
                         string_match:
                           safe_regex:
-                            regex: '{{ .ConnectionUpgradeRegex }}'
+                            regex: '{{ if not .ConnectionUpgradeRegex }}{{ fail "ConnectionUpgradeRegex is required" }}{{ end }}{{ .ConnectionUpgradeRegex }}'
                       - name: Upgrade
                         present_match: true
                     route:
