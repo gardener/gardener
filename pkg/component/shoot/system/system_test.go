@@ -48,7 +48,7 @@ var _ = Describe("ShootSystem", func() {
 		shootName         = "bar"
 		region            = "test-region"
 		providerType      = "test-provider"
-		kubernetesVersion = "1.31.1"
+		kubernetesVersion = "1.33.1"
 		maintenanceBegin  = "123456+0100"
 		maintenanceEnd    = "134502+0100"
 		uid               = apitypes.UID("1234")
@@ -451,23 +451,8 @@ var _ = Describe("ShootSystem", func() {
 					networkPolicyToDNS,
 					networkPolicyToKubelet,
 					networkPolicyToPublicNetworks,
-				))
-
-				Expect(managedResource).NotTo(contain(
 					networkPolicyDenyAll,
 				))
-			})
-
-			Context("k8s >= 1.33", func() {
-				BeforeEach(func() {
-					values.KubernetesVersion = semver.MustParse("1.33.0")
-				})
-
-				It("should successfully deploy all deny-all", func() {
-					Expect(managedResource).To(contain(
-						networkPolicyDenyAll,
-					))
-				})
 			})
 		})
 
