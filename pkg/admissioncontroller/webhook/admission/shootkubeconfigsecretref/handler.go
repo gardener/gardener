@@ -32,12 +32,17 @@ func (h *Handler) ValidateCreate(_ context.Context, _ runtime.Object) (admission
 }
 
 // ValidateUpdate validates that the kubeconfig is not removed from kubeconfig secrets referenced in Shoot resources.
-func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
+func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	var shoots []string
 
-	secret, ok := newObj.(*corev1.Secret)
+	newSecret, ok := newObj.(*corev1.Secret)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", newObj))
+	}
+
+	oldSecret, ok := oldObj.(*corev1.Secret)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", oldObj))
 	}
 
 	req, err := admission.RequestFromContext(ctx)
@@ -45,12 +50,19 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 		return nil, apierrors.NewInternalError(err)
 	}
 
-	if kubeConfig, ok := secret.Data[kubernetes.KubeConfig]; ok && len(kubeConfig) > 0 {
-		h.Logger.Info("Secret has data `kubeconfig`, no need to check further", "name", secret.Name)
+	// If the new secret still has a non-empty kubeconfig, nothing is removed and there is no need to check further.
+	if kubeConfig, ok := newSecret.Data[kubernetes.KubeConfig]; ok && len(kubeConfig) > 0 {
+		h.Logger.Info("Secret has data `kubeconfig`, no need to check further", "name", newSecret.Name)
 		return nil, nil
 	}
 
-	// lookup if secret is referenced by any shoot in the same namespace
+	// If the old secret did not have a non-empty kubeconfig either, nothing is being removed and there is no need to
+	// proceed further.
+	if oldKubeConfig, ok := oldSecret.Data[kubernetes.KubeConfig]; !ok || len(oldKubeConfig) == 0 {
+		return nil, nil
+	}
+
+	// Check if secret is referenced by any shoot in the same namespace.
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := h.Client.List(ctx, shootList, client.InNamespace(req.Namespace)); err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("unable to list shoot in namespace: %v", req.Namespace))

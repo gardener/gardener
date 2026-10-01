@@ -33,6 +33,7 @@ var _ = Describe("Handler", func() {
 		handler *Handler
 
 		secret         *corev1.Secret
+		oldSecret      *corev1.Secret
 		shoot          *gardencorev1beta1.Shoot
 		secretName     = "test-kubeconfig"
 		shootName      = "fake-shoot-name"
@@ -52,6 +53,8 @@ var _ = Describe("Handler", func() {
 				Namespace: shootNamespace,
 			},
 		}
+
+		oldSecret = secret.DeepCopy()
 
 		shoot = &gardencorev1beta1.Shoot{
 			TypeMeta: metav1.TypeMeta{
@@ -77,7 +80,19 @@ var _ = Describe("Handler", func() {
 	})
 
 	It("should pass because no shoot references secret", func() {
-		warning, err = handler.ValidateUpdate(ctx, nil, secret)
+		warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+		Expect(warning).To(BeNil())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should pass because the old secret did not contain a kubeconfig either", func() {
+		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
+			Name:                 "plugin-1",
+			KubeconfigSecretName: new(secret.Name),
+		}}
+		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+		warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 		Expect(warning).To(BeNil())
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -93,7 +108,8 @@ var _ = Describe("Handler", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeClient.Create(ctx, shoot1)).To(Succeed())
 
-			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
 		})
@@ -105,8 +121,9 @@ var _ = Describe("Handler", func() {
 			}}
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data)")}
 			secret.Data = map[string][]byte{"kubeconfig": {}}
-			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
 		})
@@ -119,7 +136,7 @@ var _ = Describe("Handler", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			secret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
-			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(Succeed())
 		})
@@ -135,7 +152,8 @@ var _ = Describe("Handler", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeClient.Create(ctx, shoot1)).To(Succeed())
 
-			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
 		})
@@ -146,8 +164,9 @@ var _ = Describe("Handler", func() {
 			}
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
 			secret.Data = map[string][]byte{"kubeconfig": {}}
-			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
 		})
@@ -159,7 +178,7 @@ var _ = Describe("Handler", func() {
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 			secret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
-			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(Succeed())
 		})
