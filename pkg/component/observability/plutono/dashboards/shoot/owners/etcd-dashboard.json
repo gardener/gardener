@@ -368,6 +368,118 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "Rate of key-value mutations at the MVCC storage layer. Unlike the gRPC request rate, this counts the actual puts/deletes committed to the DB - a single Kubernetes Txn RPC may contain multiple puts. Drives DB growth, compaction frequency and WAL load.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "hiddenSeries": false,
+      "id": 52,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.32",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(etcd_mvcc_put_total{role=~\"etcd-$role\"}[$__rate_interval]))",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Put",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(rate(etcd_mvcc_delete_total{role=~\"etcd-$role\"}[$__rate_interval]))",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Delete",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(rate(etcd_mvcc_txn_total{role=~\"etcd-$role\"}[$__rate_interval]))",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Txn",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "MVCC Operation Rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -379,7 +491,7 @@
       "gridPos": {
         "h": 7,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 8
       },
       "hiddenSeries": false,
@@ -485,8 +597,8 @@
       "gridPos": {
         "h": 7,
         "w": 12,
-        "x": 12,
-        "y": 8
+        "x": 0,
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 16,
@@ -579,7 +691,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 22
       },
       "id": 55,
       "panels": [],
@@ -606,7 +718,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 16
+        "y": 23
       },
       "hiddenSeries": false,
       "id": 8,
@@ -710,7 +822,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 31
       },
       "id": 56,
       "panels": [],
@@ -736,7 +848,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 32
       },
       "hiddenSeries": false,
       "id": 10,
@@ -849,7 +961,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 32
       },
       "hiddenSeries": false,
       "id": 33,
@@ -949,7 +1061,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 39
       },
       "hiddenSeries": false,
       "id": 34,
@@ -1048,7 +1160,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 39
       },
       "hiddenSeries": false,
       "id": 36,
@@ -1143,7 +1255,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 46
       },
       "hiddenSeries": false,
       "id": 37,
@@ -1229,7 +1341,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 53
       },
       "id": 57,
       "panels": [],
@@ -1254,7 +1366,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 47
+        "y": 54
       },
       "hiddenSeries": false,
       "id": 12,
