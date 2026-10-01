@@ -187,13 +187,23 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
 		fldBackup := fldPath.Child("etcd", "main", "backup")
 		if newVirtualCluster.ETCD.Main.Backup != nil {
-			if !gardenerutils.CheckIfBackupChangeIsConfirmed(newGarden.Annotations) {
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName, fldBackup.Child("bucketName"))...)
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.Region, newVirtualCluster.ETCD.Main.Backup.Region, fldBackup.Child("region"))...)
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.Provider, newVirtualCluster.ETCD.Main.Backup.Provider, fldBackup.Child("provider"))...)
+			if gardenerutils.CheckIfBackupChangeIsConfirmed(newGarden.Annotations) {
+				bucketNameChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName)
+				providerChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.Provider, newVirtualCluster.ETCD.Main.Backup.Provider)
+				regionChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.Region, newVirtualCluster.ETCD.Main.Backup.Region)
+				if (regionChanged || providerChanged) && !bucketNameChanged {
+					if newVirtualCluster.ETCD.Main.Backup.BucketName == nil {
+						allErrs = append(allErrs, field.Forbidden(fldBackup, "changing backup provider or region without adding a new bucketName is not allowed"))
+					} else {
+						allErrs = append(allErrs, field.Forbidden(fldBackup, "changing backup provider or region without changing the bucketName is not allowed"))
+					}
+				}
+			} else {
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup.BucketName, oldVirtualCluster.ETCD.Main.Backup.BucketName, fldBackup.Child("bucketName"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup.Provider, oldVirtualCluster.ETCD.Main.Backup.Provider, fldBackup.Child("provider"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup.Region, oldVirtualCluster.ETCD.Main.Backup.Region, fldBackup.Child("region"))...)
 			}
-		}
-		if newVirtualCluster.ETCD.Main.Backup == nil {
+		} else {
 			allErrs = append(allErrs, field.Forbidden(fldBackup, "backup must not be deactivated if it was set before"))
 		}
 	}
