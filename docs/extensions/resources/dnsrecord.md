@@ -30,6 +30,16 @@ The kubeconfig handed out to end-users does contain this *external domain name*,
 As not every end-user has an own domain, it is possible for Gardener administrators to configure so-called *default domains*.
 If configured, shoots that do not specify a domain explicitly get an *external domain name* based on a default domain (unless explicitly stated that this shoot should not get an external domain name (`.spec.dns.provider=unmanaged`)).
 
+When the external domain of a shoot is changed (see [Changing the External Domain](../../usage/shoot-operations/shoot_credentials_rotation.md#changing-the-external-domain)), Gardener keeps a DNS record for the old domain until the CA rotation is completed.
+As `.spec.name` of a `DNSRecord` is immutable, the `<shoot>-external` record is handed over:
+
+1. Gardener creates a `DNSRecord` `<shoot>-prior-external` (label `role: prior-external`) for the old domain and waits until it is ready.
+2. Gardener migrates the `<shoot>-external` record, deletes it, and creates it again for the new domain.
+3. When the CA rotation is completed, Gardener deletes the `<shoot>-prior-external` record.
+
+Step 2 relies on the `migrate` operation keeping the DNS record at the DNS provider, as it is required for all extensions (see [Control Plane Migration](../migration.md)).
+Otherwise, the old domain stops resolving while the shoot is still reachable under both domains.
+
 ### Ingress Domain Name (Deprecated)
 
 Gardener allows to deploy a `nginx-ingress-controller` into a shoot cluster (deprecated).
