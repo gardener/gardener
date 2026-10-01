@@ -68,7 +68,7 @@ KIND_VERSION ?= v0.33.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 KUBECTL_VERSION ?= v1.37.0
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize\/(?<version>.*)$
-KUSTOMIZE_VERSION ?= v5.8.1
+KUSTOMIZE_VERSION ?= v5.8.2
 # renovate: datasource=github-releases depName=prometheus/prometheus
 PROMTOOL_VERSION ?= 3.14.0
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
