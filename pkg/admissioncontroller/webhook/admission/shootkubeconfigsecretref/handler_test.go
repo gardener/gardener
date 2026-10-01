@@ -146,6 +146,33 @@ var _ = Describe("Handler", func() {
 			Expect(warning).To(BeNil())
 			Expect(err).To(Succeed())
 		})
+
+		It("should fail because a shoot references the secret amongst multiple admission plugin secrets", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+				{Name: "plugin-1", KubeconfigSecretName: new("other-secret-1")},
+				{Name: "plugin-2", KubeconfigSecretName: new(secret.Name)},
+				{Name: "plugin-3", KubeconfigSecretName: new("other-secret-2")},
+			}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
+		})
+
+		It("should pass because the shoot only references other secrets via admission plugins", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+				{Name: "plugin-1", KubeconfigSecretName: new("other-secret-1")},
+				{Name: "plugin-2", KubeconfigSecretName: new("other-secret-2")},
+			}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Context("structured authorization kubeconfig secrets", func() {
@@ -187,6 +214,89 @@ var _ = Describe("Handler", func() {
 			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
 			Expect(warning).To(BeNil())
 			Expect(err).To(Succeed())
+		})
+
+		It("should fail because a shoot references the secret amongst multiple structured authorization secrets", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{
+					{AuthorizerName: "webhook-1", SecretName: "other-secret-1"},
+					{AuthorizerName: "webhook-2", SecretName: secret.Name},
+					{AuthorizerName: "webhook-3", SecretName: "other-secret-2"},
+				},
+			}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
+		})
+
+		It("should pass because the shoot only references other secrets via structured authorization", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{
+					{AuthorizerName: "webhook-1", SecretName: "other-secret-1"},
+					{AuthorizerName: "webhook-2", SecretName: "other-secret-2"},
+				},
+			}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("secret referenced via both admission plugins and structured authorization", func() {
+		It("should report a shoot only once when it references the secret via both paths", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
+				Name:                 "plugin-1",
+				KubeconfigSecretName: new(secret.Name),
+			}}
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{AuthorizerName: "webhook-1", SecretName: secret.Name}},
+			}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
+		})
+
+		It("should report shoots referencing the secret via different paths, sorted and deduplicated", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
+				Name:                 "plugin-1",
+				KubeconfigSecretName: new(secret.Name),
+			}}
+
+			shootViaAuthz := shoot.DeepCopy()
+			shootViaAuthz.Name = "authz-shoot"
+			shootViaAuthz.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{Name: "PodNodeSelector"}}
+			shootViaAuthz.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{AuthorizerName: "webhook-1", SecretName: secret.Name}},
+			}
+
+			shootViaBoth := shoot.DeepCopy()
+			shootViaBoth.Name = "both-shoot"
+			shootViaBoth.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{AuthorizerName: "webhook-1", SecretName: secret.Name}},
+			}
+
+			unrelatedShoot := shoot.DeepCopy()
+			unrelatedShoot.Name = "unrelated-shoot"
+			unrelatedShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{Name: "plugin-1", KubeconfigSecretName: new("other-secret")}}
+
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootViaAuthz)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootViaBoth)).To(Succeed())
+			Expect(fakeClient.Create(ctx, unrelatedShoot)).To(Succeed())
+
+			oldSecret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, oldSecret, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [authz-shoot, both-shoot, fake-shoot-name]")))
 		})
 	})
 
