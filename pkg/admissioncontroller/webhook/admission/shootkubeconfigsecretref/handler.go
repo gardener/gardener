@@ -13,9 +13,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -33,8 +35,6 @@ func (h *Handler) ValidateCreate(_ context.Context, _ runtime.Object) (admission
 
 // ValidateUpdate validates that the kubeconfig is not removed from kubeconfig secrets referenced in Shoot resources.
 func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	var shoots []string
-
 	newSecret, ok := newObj.(*corev1.Secret)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", newObj))
@@ -62,25 +62,14 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 		return nil, nil
 	}
 
-	// Check if secret is referenced by any shoot in the same namespace.
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := h.Client.List(ctx, shootList, client.InNamespace(req.Namespace)); err != nil {
-		return nil, apierrors.NewInternalError(fmt.Errorf("unable to list shoot in namespace: %v", req.Namespace))
+	// Check if the secret is referenced by any shoot in the same namespace via field-selector-backed indexes.
+	shoots, err := h.referencingShootNames(ctx, req.Namespace, req.Name)
+	if err != nil {
+		return nil, apierrors.NewInternalError(err)
 	}
 
-	for _, shoot := range shootList.Items {
-		if shoot.Spec.Kubernetes.KubeAPIServer == nil {
-			continue
-		}
-
-		if isReferencedInAdmissionPlugins(req.Name, shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) ||
-			isReferencedInStructuredAuthorization(req.Name, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization) {
-			shoots = append(shoots, shoot.Name)
-		}
-	}
-
-	if len(shoots) > 0 {
-		return nil, apierrors.NewForbidden(corev1.Resource("Secret"), req.Name, fmt.Errorf("data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [%v]", strings.Join(shoots, ", ")))
+	if shoots.Len() > 0 {
+		return nil, apierrors.NewForbidden(corev1.Resource("Secret"), req.Name, fmt.Errorf("data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [%v]", strings.Join(sets.List(shoots), ", ")))
 	}
 
 	return nil, nil
@@ -91,25 +80,24 @@ func (h *Handler) ValidateDelete(_ context.Context, _ runtime.Object) (admission
 	return nil, nil
 }
 
-func isReferencedInAdmissionPlugins(secretName string, admissionPlugins []gardencorev1beta1.AdmissionPlugin) bool {
-	for _, plugin := range admissionPlugins {
-		if plugin.KubeconfigSecretName != nil && *plugin.KubeconfigSecretName == secretName {
-			return true
+// referencingShootNames returns the names of the shoots in the given namespace that reference the secret with the
+// given name either via an admission plugin kubeconfig or via a structured authorization kubeconfig.
+func (h *Handler) referencingShootNames(ctx context.Context, namespace, secretName string) (sets.Set[string], error) {
+	shoots := sets.New[string]()
+
+	for _, field := range []string{
+		gardencore.ShootAdmissionPluginKubeconfigSecretName,
+		gardencore.ShootStructuredAuthorizationKubeconfigSecretName,
+	} {
+		shootList := &gardencorev1beta1.ShootList{}
+		if err := h.Client.List(ctx, shootList, client.InNamespace(namespace), client.MatchingFields{field: secretName}); err != nil {
+			return nil, fmt.Errorf("unable to list shoots in namespace %q: %w", namespace, err)
+		}
+
+		for _, shoot := range shootList.Items {
+			shoots.Insert(shoot.Name)
 		}
 	}
-	return false
-}
 
-func isReferencedInStructuredAuthorization(secretName string, structuredAuthorization *gardencorev1beta1.StructuredAuthorization) bool {
-	if structuredAuthorization == nil {
-		return false
-	}
-
-	for _, kubeconfig := range structuredAuthorization.Kubeconfigs {
-		if kubeconfig.SecretName == secretName {
-			return true
-		}
-	}
-
-	return false
+	return shoots, nil
 }

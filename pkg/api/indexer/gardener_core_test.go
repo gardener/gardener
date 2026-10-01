@@ -339,4 +339,61 @@ var _ = Describe("Core", func() {
 		Entry("no SecretBinding", &corev1.Secret{}, ConsistOf("")),
 		Entry("SecretBinding w/ secretRef", &gardencorev1beta1.SecretBinding{SecretRef: corev1.SecretReference{Name: "secret", Namespace: "ns"}}, ConsistOf("ns")),
 	)
+
+	DescribeTable("#AddShootAdmissionPluginKubeconfigSecretName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddShootAdmissionPluginKubeconfigSecretName(context.Background(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.Shoot{}))
+			Expect(indexer.field).To(Equal("spec.kubernetes.kubeAPIServer.admissionPlugins.kubeconfigSecretName"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no Shoot", &corev1.Secret{}, BeEmpty()),
+		Entry("Shoot w/o kubeAPIServer", &gardencorev1beta1.Shoot{}, BeEmpty()),
+		Entry("Shoot w/o admission plugin kubeconfig references",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+				AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{{Name: "PodNodeSelector"}},
+			}}}},
+			BeEmpty(),
+		),
+		Entry("Shoot w/ admission plugin kubeconfig references",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+				AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+					{Name: "plugin-1", KubeconfigSecretName: new("secret-1")},
+					{Name: "plugin-2"},
+					{Name: "plugin-3", KubeconfigSecretName: new("secret-2")},
+				},
+			}}}},
+			ConsistOf("secret-1", "secret-2"),
+		),
+	)
+
+	DescribeTable("#AddShootStructuredAuthorizationKubeconfigSecretName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddShootStructuredAuthorizationKubeconfigSecretName(context.Background(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&gardencorev1beta1.Shoot{}))
+			Expect(indexer.field).To(Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs.secretName"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no Shoot", &corev1.Secret{}, BeEmpty()),
+		Entry("Shoot w/o kubeAPIServer", &gardencorev1beta1.Shoot{}, BeEmpty()),
+		Entry("Shoot w/o structured authorization",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{}}}},
+			BeEmpty(),
+		),
+		Entry("Shoot w/ structured authorization kubeconfig references",
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+				StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{
+					{AuthorizerName: "webhook-1", SecretName: "secret-1"},
+					{AuthorizerName: "webhook-2", SecretName: "secret-2"},
+				}},
+			}}}},
+			ConsistOf("secret-1", "secret-2"),
+		),
+	)
 })

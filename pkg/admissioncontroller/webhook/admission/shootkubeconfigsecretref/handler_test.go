@@ -18,6 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -42,8 +44,12 @@ var _ = Describe("Handler", func() {
 
 	BeforeEach(func() {
 		log = logr.Discard()
-		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Name: secretName}})
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Name: secretName, Namespace: shootNamespace}})
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.Shoot{}, gardencore.ShootAdmissionPluginKubeconfigSecretName, indexer.ShootAdmissionPluginKubeconfigSecretNameIndexerFunc).
+			WithIndex(&gardencorev1beta1.Shoot{}, gardencore.ShootStructuredAuthorizationKubeconfigSecretName, indexer.ShootStructuredAuthorizationKubeconfigSecretNameIndexerFunc).
+			Build()
 
 		handler = &Handler{Logger: log, Client: fakeClient}
 
