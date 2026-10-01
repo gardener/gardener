@@ -6,6 +6,7 @@ package instances
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
 	"slices"
@@ -75,13 +76,18 @@ func (p *Provider) InstanceMetadata(ctx context.Context, node *corev1.Node) (*cl
 
 	klog.V(4).InfoS("Found machine pod for node", "node", node.Name, "pod", client.ObjectKeyFromObject(pod))
 
+	addresses, err := nodeAddresses(node, pod)
+	if err != nil {
+		return nil, err
+	}
+
 	return &cloudprovider.InstanceMetadata{
 		// The provider ID must match what machine-controller-manager-provider-local reports for the machine, which is
 		// the machine pod name. Both the machine's and the node's provider ID must be equal for cluster-autoscaler
 		// to find the node group of a node.
 		ProviderID:    pod.Name,
 		InstanceType:  pod.Labels[machineproviderv1alpha1.LabelInstanceType],
-		NodeAddresses: nodeAddresses(node, pod),
+		NodeAddresses: addresses,
 		Zone:          pod.Labels[machineproviderv1alpha1.LabelZone],
 		Region:        pod.Labels[machineproviderv1alpha1.LabelRegion],
 	}, nil
@@ -94,11 +100,11 @@ func (p *Provider) getMachinePod(ctx context.Context, node *corev1.Node) (*corev
 		return nil, fmt.Errorf("runtime cluster is not configured")
 	}
 
-	// The machine provider uses the pod name as node name and provider ID, so we can look up the machine pod directly by
-	// the node name (or the provider ID if set, both are equal).
-	name := node.Name
-	if node.Spec.ProviderID != "" {
-		name = node.Spec.ProviderID
+	// Look up the machine pod using the providerID if already set. Fallback to the node name otherwise, e.g. for
+	// initially populating the providerID. The machine provider uses the pod name as node name and provider ID.
+	name := node.Spec.ProviderID
+	if name == "" {
+		name = node.Name
 	}
 
 	pod := &corev1.Pod{}
@@ -131,31 +137,42 @@ func isShutdown(pod *corev1.Pod) bool {
 // ordered such that the IP family of the node's current primary internal IP comes first. This preserves the IP family
 // preference of the kubelet (e.g., configured via --node-ip="::" for IPv6-preferred shoots), because the order of the
 // pod IPs is determined by the primary IP family of the runtime cluster, which may differ from the shoot's.
-func nodeAddresses(node *corev1.Node, pod *corev1.Pod) []corev1.NodeAddress {
-	var (
-		preferIPv6 bool
-		ips        = make([]netip.Addr, 0, len(pod.Status.PodIPs))
-	)
+func nodeAddresses(node *corev1.Node, pod *corev1.Pod) ([]corev1.NodeAddress, error) {
+	// check if the node's current primary internal IP is IPv6
+	var preferIPv6 bool
 
 	for _, address := range node.Status.Addresses {
 		if address.Type != corev1.NodeInternalIP {
 			continue
 		}
-		if ip, err := netip.ParseAddr(address.Address); err == nil {
-			preferIPv6 = ip.Is6()
+		ip, err := netip.ParseAddr(address.Address)
+		if err != nil {
+			return nil, fmt.Errorf("invalid node internal IP %q: %w", address.Address, err)
 		}
+		preferIPv6 = ip.Is6()
 		break
 	}
+
+	// collect all pod IPs
+	var (
+		ips       = make([]netip.Addr, 0, len(pod.Status.PodIPs))
+		allErrors error
+	)
 
 	for _, podIP := range pod.Status.PodIPs {
 		ip, err := netip.ParseAddr(podIP.IP)
 		if err != nil {
-			klog.ErrorS(err, "Ignoring invalid pod IP", "pod", client.ObjectKeyFromObject(pod), "ip", podIP.IP)
+			allErrors = errors.Join(allErrors, fmt.Errorf("invalid pod IP %q: %w", podIP, err))
 			continue
 		}
 		ips = append(ips, ip)
 	}
 
+	if allErrors != nil {
+		return nil, allErrors
+	}
+
+	// preserve the IP family preference of the kubelet
 	slices.SortStableFunc(ips, func(a, b netip.Addr) int {
 		if a.Is6() == b.Is6() {
 			return 0
@@ -166,6 +183,7 @@ func nodeAddresses(node *corev1.Node, pod *corev1.Pod) []corev1.NodeAddress {
 		return 1
 	})
 
+	// return the pod IPs as node internal IPs + the pod name as node hostname
 	addresses := make([]corev1.NodeAddress, 0, len(ips)+1)
 	for _, ip := range ips {
 		addresses = append(addresses, corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip.String()})
@@ -173,8 +191,8 @@ func nodeAddresses(node *corev1.Node, pod *corev1.Pod) []corev1.NodeAddress {
 	if len(addresses) == 0 {
 		// Without any IPs, we must not report the hostname only, otherwise the node controller would drop the internal
 		// IPs determined by the kubelet.
-		return nil
+		return nil, nil
 	}
 
-	return append(addresses, corev1.NodeAddress{Type: corev1.NodeHostName, Address: pod.Name})
+	return append(addresses, corev1.NodeAddress{Type: corev1.NodeHostName, Address: pod.Name}), nil
 }

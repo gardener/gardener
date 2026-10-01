@@ -213,7 +213,7 @@ Since there is no real concept of zones, regions, or instance types in the local
 The well-known `topology.kubernetes.io/*` label keys cannot be used for this purpose, because the `kube-apiserver` overwrites them with the labels of the kind node the machine pod is scheduled to.
 The node lifecycle controller deletes `Node` objects whose machine pod no longer exists.
 
-The node controllers are disabled when `cloud-controller-manager-local` runs for the kind cluster itself or for self-hosted shoots with unmanaged infrastructure (where nodes are kind containers).
+The node controller is disabled when `cloud-controller-manager-local` runs for the kind cluster itself or for self-hosted shoots with unmanaged infrastructure (where nodes are docker containers).
 
 ### machine-controller-manager-provider-local
 

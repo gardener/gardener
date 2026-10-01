@@ -187,5 +187,26 @@ var _ = Describe("Provider", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(metadata.NodeAddresses).To(BeEmpty())
 		})
+
+		It("should fail if the node's primary internal IP is invalid", func(ctx SpecContext) {
+			node.Status.Addresses = []corev1.NodeAddress{
+				{Type: corev1.NodeHostName, Address: node.Name},
+				{Type: corev1.NodeInternalIP, Address: "f00:bar::"},
+			}
+			Expect(fakeClient.Create(ctx, pod)).To(Succeed())
+
+			metadata, err := provider.InstanceMetadata(ctx, node)
+			Expect(err).To(MatchError(ContainSubstring("invalid node internal IP")))
+			Expect(metadata).To(BeNil())
+		})
+
+		It("should fail if the machine pod has invalid IPs", func(ctx SpecContext) {
+			pod.Status.PodIPs = []corev1.PodIP{{IP: "f00:bar::"}}
+			Expect(fakeClient.Create(ctx, pod)).To(Succeed())
+
+			metadata, err := provider.InstanceMetadata(ctx, node)
+			Expect(err).To(MatchError(ContainSubstring("invalid pod IP")))
+			Expect(metadata).To(BeNil())
+		})
 	})
 })
