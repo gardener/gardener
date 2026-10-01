@@ -868,7 +868,7 @@ func CheckNodeAgentLeases(nodeList []*corev1.Node, leaseList *coordinationv1.Lea
 		}
 
 		if lease.Spec.RenewTime.Add(time.Second * time.Duration(*lease.Spec.LeaseDurationSeconds)).Before(clock.Now()) {
-			return fmt.Errorf("gardener-node-agent stopped running on node %q", node.Name)
+			return fmt.Errorf("gardener-node-agent lease has expired for node %q (kube-system/%s)", node.Name, gardenerutils.NodeAgentLeaseName(node.Name))
 		}
 	}
 
