@@ -26,6 +26,9 @@ additional endpoints from the shoot control-plane namespace may be advertised,
 e.g. observability-related components such as `plutono`, `vali`, `prometheus`,
 etc.
 
+While the external domain of the shoot is migrated (see [Changing the External Domain](../usage/shoot-operations/shoot_credentials_rotation.md#changing-the-external-domain)), the list additionally contains a `prior-external` endpoint with the old external domain, directly after the `external` endpoint.
+It is only present while the CA rotation is in the phases `Preparing` to `Prepared`, and it is not used for the `kubeconfig`s handed out by Gardener.
+
 > [!NOTE]
 > As of now, only `Ingress` and `VirtualService` resources support to be advertised using this label.
 > In the future, support for `Gateway` resources will be added as well.
