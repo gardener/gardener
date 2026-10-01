@@ -747,9 +747,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"ttl",
 		)
 
-		if versionutils.ConstraintK8sGreaterEqual133.Check(k.values.TargetVersion) {
-			controllersToDisable.Insert("device-taint-eviction-controller")
-		}
+		controllersToDisable.Insert("device-taint-eviction-controller")
 
 		if versionutils.ConstraintK8sGreaterEqual134.Check(k.values.TargetVersion) {
 			controllersToDisable.Insert("podcertificaterequest-cleaner-controller")
