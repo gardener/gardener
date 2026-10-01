@@ -3442,7 +3442,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Domain is the external available domain of the Shoot cluster. This domain will be written into the<br />kubeconfig that is handed out to end-users. This field is immutable.</p>
+<p>Domain is the external available domain of the Shoot cluster. This domain will be written into the<br />kubeconfig that is handed out to end-users. This field is immutable, unless the MutableShootDomains feature gate<br />is enabled. Then it can be changed together with the start of a certificate authorities rotation.</p>
 </td>
 </tr>
 <tr>

@@ -11,6 +11,7 @@
   - [Certificate Authorities](#certificate-authorities)
     - [Triggering Worker Node Rollout Individually](#triggering-worker-node-rollout-individually)
     - [Worker Node with ManualInPlaceUpdate Update Strategy](#worker-node-with-manualinplaceupdate-update-strategy)
+    - [Changing the External Domain](#changing-the-external-domain)
   - [Observability Password(s) For Plutono and Prometheus](#observability-passwords-for-plutono-and-prometheus)
   - [SSH Key Pair for Worker Nodes](#ssh-key-pair-for-worker-nodes)
   - [ETCD Encryption Key](#etcd-encryption-key)
@@ -220,6 +221,46 @@ In case of manual in-place update, shoot CA rotation phase will be at `Preparing
 You can check which worker pools still need to be updated by reading `.status.inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate`.
 Once this list is empty, the `phase` transitions to `Prepared`.
 After this rotation will be completed as usual (see above).
+
+#### Changing the External Domain
+
+> [!NOTE]
+> This is an alpha feature. It requires the `MutableShootDomains` feature gate in `gardener-apiserver` and `gardenlet`, see [GEP-0066](https://github.com/gardener/enhancements/tree/main/geps/0066-make-shoot-domains-mutable).
+
+The external domain of a `Shoot` (`.spec.dns.domain`) can be changed as part of a CA rotation.
+A CA rotation requires all API clients to be updated anyway, so the domain migration uses the same phases to move the clients to the new domain without downtime.
+
+To start the migration, change `.spec.dns.domain` and set the operation annotation in the **same** request:
+
+```bash
+kubectl -n <shoot-namespace> patch shoot <shoot-name> --type=merge \
+  -p '{"metadata":{"annotations":{"gardener.cloud/operation":"rotate-ca-start"}},"spec":{"dns":{"domain":"<new-domain>"}}}'
+```
+
+Besides `rotate-ca-start`, the operations `rotate-ca-start-without-workers-rollout`, `rotate-credentials-start`, and `rotate-credentials-start-without-workers-rollout` are accepted as well.
+A domain change without one of these operations is rejected.
+
+While the CA rotation is in the phases `Preparing` (or `PreparingWithoutWorkersRollout` and `WaitingForWorkersRollout`) and `Prepared`, the `Shoot` is reachable under both the old and the new domain:
+
+- DNS records exist for both domains.
+- The server certificate of the `kube-apiserver` is valid for both domains.
+- `.status.advertisedAddresses` contains the new domain as `external` and the old domain as `prior-external`.
+- `kubeconfig`s issued in this phase (e.g., via the `shoots/adminkubeconfig` subresource) contain the new domain.
+
+Update all API clients to the new domain together with the new CA bundle (see above).
+When you complete the rotation with `rotate-ca-complete`, the old domain is removed: its DNS record is deleted, and it is dropped from the server certificate and from `.status.advertisedAddresses`.
+API clients that still use the old domain stop working.
+
+The internal domain of the `Shoot` and all components using it (e.g., the `kubelet`s and the default `ServiceAccount` token issuer) are not affected by the domain change.
+
+The following restrictions apply:
+
+- The new domain must either follow the scheme `<shoot-name>.<project-name>.<default-domain>` of one of the `Seed`'s default domains, or the `Shoot` must use a primary DNS provider.
+- `.spec.dns.providers` cannot be changed in the same request.
+- The domain cannot be removed.
+- The domain cannot be changed while a CA rotation is already in progress.
+- The domain of self-hosted `Shoot`s cannot be changed yet.
+- The domain cannot be changed while the deprecated nginx-ingress addon is enabled.
 
 ### Observability Password(s) For Plutono and Prometheus
 
