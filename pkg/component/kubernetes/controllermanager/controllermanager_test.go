@@ -81,13 +81,11 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		nodeCIDRMask           int32 = 24
-		podEvictionTimeout           = metav1.Duration{Duration: 3 * time.Minute}
 		nodeMonitorGracePeriod       = metav1.Duration{Duration: 3 * time.Minute}
 		kcmConfig                    = gardencorev1beta1.KubeControllerManagerConfig{
 			KubernetesConfig:              gardencorev1beta1.KubernetesConfig{},
 			HorizontalPodAutoscalerConfig: &hpaConfig,
 			NodeCIDRMaskSize:              &nodeCIDRMask,
-			PodEvictionTimeout:            &podEvictionTimeout,
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
 		}
 		clusterSigningDuration = new(time.Hour)
@@ -514,7 +512,6 @@ namespace: kube-system
 		configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
 		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: new(int32(26))}
 		configWithNodeCIDRMaskSizeIPv6   = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSizeIPv6: new(int32(80))}
-		configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
 		configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 	)
 
@@ -674,7 +671,6 @@ namespace: kube-system
 			Entry("with feature flags", configWithFeatureFlags, false, runtimeKubernetesVersion),
 			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, runtimeKubernetesVersion),
 			Entry("with NodeCIDRMaskSizeIPv6", configWithNodeCIDRMaskSizeIPv6, false, runtimeKubernetesVersion),
-			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, runtimeKubernetesVersion),
 			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, runtimeKubernetesVersion),
 		)
 
@@ -712,7 +708,6 @@ namespace: kube-system
 			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, controllerWorkers, version),
 			Entry("with feature flags", configWithFeatureFlags, false, controllerWorkers, version),
 			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, false, controllerWorkers, version),
-			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, false, controllerWorkers, version),
 			Entry("with NodeMonitorGracePeriod", configWithNodeMonitorGracePeriod, false, controllerWorkers, version),
 			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, false, controllerWorkersWithDisabledControllers, version),
 		)
@@ -1079,9 +1074,7 @@ func commandForKubernetesVersion(
 			"-attachdetach",
 		)
 
-		if versionutils.ConstraintK8sGreaterEqual133.Check(version) {
-			controllers = append(controllers, "-device-taint-eviction-controller")
-		}
+		controllers = append(controllers, "-device-taint-eviction-controller")
 
 		if versionutils.ConstraintK8sGreaterEqual134.Check(version) {
 			controllers = append(controllers, "-podcertificaterequest-cleaner-controller")

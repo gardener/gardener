@@ -412,11 +412,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.NewPodScaleUpDelay = &metav1.Duration{Duration: 0}
 	}
 	if obj.MaxScaleDownParallelism == nil {
-		if obj.MaxEmptyBulkDelete != nil {
-			obj.MaxScaleDownParallelism = obj.MaxEmptyBulkDelete
-		} else {
-			obj.MaxScaleDownParallelism = new(int32(10))
-		}
+		obj.MaxScaleDownParallelism = new(int32(10))
 	}
 	if obj.MaxDrainParallelism == nil {
 		obj.MaxDrainParallelism = new(int32(1))
