@@ -165,11 +165,6 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
     tag: "v1.33.1"
     targetVersion: "1.33.x"
-  - name: cluster-autoscaler
-    sourceRepository: github.com/gardener/autoscaler
-    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
-    tag: "v1.32.3"
-    targetVersion: "1.32.x"
   - name: vpn-server
     sourceRepository: github.com/gardener/vpn2
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server

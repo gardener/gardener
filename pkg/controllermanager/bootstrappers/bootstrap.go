@@ -38,7 +38,7 @@ func (b *Bootstrapper) Start(_ context.Context) error {
 }
 
 func bootstrapCluster(discoveryClient discovery.DiscoveryInterface) error {
-	const minKubernetesVersion = "1.32"
+	const minKubernetesVersion = "1.33"
 
 	serverVersion, err := discoveryClient.ServerVersion()
 	if err != nil {
