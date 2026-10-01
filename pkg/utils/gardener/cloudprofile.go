@@ -274,11 +274,10 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 		newShoot.Spec.CloudProfile.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 	}
 
-	// As long as shoot k8s version < v1.33: fill cloudProfileName from cloudProfile if provided and kind is CloudProfile.
 	// For backwards compatibility (esp. Dashboard), the cloudProfileName field is synced here with the referenced CloudProfile.
 	cloudProfileName := ptr.Deref(newShoot.Spec.CloudProfileName, "")
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile &&
-		(shootK8sVersion == nil || version.ConstraintK8sLess133.Check(shootK8sVersion) || cloudProfileName != "" && cloudProfileName != newShoot.Spec.CloudProfile.Name) {
+		(shootK8sVersion == nil || cloudProfileName != "" && cloudProfileName != newShoot.Spec.CloudProfile.Name) {
 		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
 	}
 
