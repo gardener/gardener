@@ -196,3 +196,46 @@ func (b *GardenadmBotanist) DeleteGardenerResourceManagers(ctx context.Context, 
 
 	return nil
 }
+
+// DeleteExtensionWorkloads deletes the extension controller workloads (Deployments, ReplicaSets and Pods) restored from
+// the etcd snapshot in every extension namespace (identified by the gardener.cloud/role=extension label). These are
+// orphaned mid-restore: finalizeManagedResources removes the extension ManagedResources, but with the
+// gardener-resource-manager (ManagedResource controller) torn down nothing cascades that deletion to the underlying
+// Deployments. Their Pods were bound to surviving worker Nodes in the prior cluster, where the restored apiserver's Node
+// authorizer graph has no edge for them, so the worker kubelets can never finish terminating them.
+//
+// The Deployments and ReplicaSets are deleted with Orphan propagation, and the Pods are then force-deleted directly.
+// This tears the chain down without relying on the kube-controller-manager garbage collector (which may not be running
+// mid-restore) and, by removing the ReplicaSets explicitly, prevents them from respawning Pods in between. We do not
+// wait for the Pods to be gone: dropping the Pod API objects immediately is what unblocks the fresh extension
+// Deployments' Recreate strategy, which otherwise refuses to create the new control-plane Pod while an old Pod exists.
+func (b *GardenadmBotanist) DeleteExtensionWorkloads(ctx context.Context, realClient client.Client) error {
+	namespaceList := &corev1.NamespaceList{}
+	if err := realClient.List(ctx, namespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}); err != nil {
+		return fmt.Errorf("failed listing extension namespaces: %w", err)
+	}
+
+	orphan := client.PropagationPolicy(metav1.DeletePropagationOrphan)
+	forceDelete := &client.DeleteAllOfOptions{DeleteOptions: client.DeleteOptions{GracePeriodSeconds: new(int64(0)), PropagationPolicy: new(metav1.DeletePropagationBackground)}}
+
+	for _, namespace := range namespaceList.Items {
+		inNamespace := client.InNamespace(namespace.Name)
+
+		b.Logger.Info("Deleting extension Deployments", "namespace", namespace.Name)
+		if err := realClient.DeleteAllOf(ctx, &appsv1.Deployment{}, inNamespace, orphan); err != nil {
+			return fmt.Errorf("failed deleting extension Deployments in namespace %s: %w", namespace.Name, err)
+		}
+
+		b.Logger.Info("Deleting extension ReplicaSets", "namespace", namespace.Name)
+		if err := realClient.DeleteAllOf(ctx, &appsv1.ReplicaSet{}, inNamespace, orphan); err != nil {
+			return fmt.Errorf("failed deleting extension ReplicaSets in namespace %s: %w", namespace.Name, err)
+		}
+
+		b.Logger.Info("Force deleting extension Pods", "namespace", namespace.Name)
+		if err := realClient.DeleteAllOf(ctx, &corev1.Pod{}, inNamespace, forceDelete); err != nil {
+			return fmt.Errorf("failed force deleting extension Pods in namespace %s: %w", namespace.Name, err)
+		}
+	}
+
+	return nil
+}
