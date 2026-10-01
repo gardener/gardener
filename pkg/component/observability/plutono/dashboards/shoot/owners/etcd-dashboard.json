@@ -27,6 +27,543 @@
         "x": 0,
         "y": 0
       },
+      "id": 41,
+      "panels": [],
+      "title": "Quick Health Assessment",
+      "type": "row"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Minimum across all etcd members. A value of 0 means at least one member has no leader \u2014 the cluster may not be quorate.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "index": 0,
+                  "text": "No leader"
+                },
+                "1": {
+                  "index": 1,
+                  "text": "Has leader"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 1
+      },
+      "id": 42,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "min(etcd_server_has_leader{role=~\"etcd-$role\"})",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Leader",
+      "type": "stat"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Number of leader changes in the last hour. Frequent elections indicate Raft instability, typically caused by disk or network latency.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 4
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 1
+      },
+      "id": 43,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "changes(etcd_server_leader_changes_seen_total{role=~\"etcd-$role\"}[1h])",
+          "interval": "",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Leader Changes / 1h",
+      "type": "stat"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Current rate of incoming unary gRPC requests (reads + writes). Informational load context for interpreting the error rate and latency panels.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 1
+      },
+      "id": 44,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(grpc_server_started_total{role=~\"etcd-$role\", grpc_type=\"unary\"}[$__rate_interval]))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "RPC Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Percentage of unary gRPC requests that failed with a server-side error code. Only infrastructure-failure codes are counted (Unknown, ResourceExhausted, Unavailable, etc.) \u2014 application-level codes such as NotFound are excluded.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 1
+      },
+      "id": 45,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "100 * sum(rate(grpc_server_handled_total{role=~\"etcd-$role\", grpc_type=\"unary\", grpc_code=~\"Unknown|FailedPrecondition|ResourceExhausted|Internal|Unavailable|DataLoss|DeadlineExceeded\"}[$__rate_interval]))\n/ sum(rate(grpc_server_started_total{role=~\"etcd-$role\", grpc_type=\"unary\"}[$__rate_interval]))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "RPC Error %",
+      "type": "stat"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "99th percentile end-to-end latency of unary gRPC requests as seen by the server \u2014 the client-visible latency signal for the D in RED. Only populated for the main etcd (requires extensive metrics); empty for events.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.15
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 1
+      },
+      "id": 46,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{role=~\"etcd-$role\", grpc_type=\"unary\"}[$__rate_interval])) by (le))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "gRPC p99 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Current DB size as a percentage of the configured etcd quota. At 100%, etcd stops accepting writes. Drill down to the DB Size panel for historical context.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 1
+      },
+      "id": 47,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "100 * max(etcd_mvcc_db_total_size_in_bytes{role=~\"etcd-$role\"}) / max(etcd_server_quota_backend_bytes{role=~\"etcd-$role\"})",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "DB Quota %",
+      "type": "stat"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "99th percentile WAL fsync latency. High values indicate disk I/O saturation and directly cause elevated write latency. Drill down to the Disk Sync Duration panel for historical context.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.25
+              },
+              {
+                "color": "red",
+                "value": 0.5
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 1
+      },
+      "id": 48,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"etcd-$role\"}[$__rate_interval])) by (le))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "WAL Fsync p99",
+      "type": "stat"
+    },
+    {
+      "datasource": "prometheus",
+      "description": "Percentage of the in-use etcd DB currently resident in the page cache via mmap (worst pod). A drop below 100% means the kernel is evicting mapped pages, causing elevated read IOPS. Drill down to the Memory / Page Cache section for details.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 1
+      },
+      "id": 49,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.5.32",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "min(\n  sum by (pod) (container_memory_mapped_file{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n  / sum by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n) * 100",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "DB Page Cache %",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
       "id": 54,
       "panels": [],
       "title": "Requests & Traffic",
@@ -50,7 +587,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 1
+        "y": 6
       },
       "hiddenSeries": false,
       "id": 4,
@@ -166,7 +703,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 1
+        "y": 6
       },
       "hiddenSeries": false,
       "id": 6,
@@ -283,7 +820,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 1
+        "y": 6
       },
       "hiddenSeries": false,
       "id": 51,
@@ -379,7 +916,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 13
       },
       "hiddenSeries": false,
       "id": 52,
@@ -491,7 +1028,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 13
       },
       "hiddenSeries": false,
       "id": 53,
@@ -588,7 +1125,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 15
+        "y": 20
       },
       "hiddenSeries": false,
       "id": 14,
@@ -694,7 +1231,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 15
+        "y": 20
       },
       "hiddenSeries": false,
       "id": 16,
@@ -787,7 +1324,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 27
       },
       "id": 55,
       "panels": [],
@@ -814,7 +1351,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 23
+        "y": 28
       },
       "hiddenSeries": false,
       "id": 8,
@@ -928,7 +1465,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 23
+        "y": 28
       },
       "hiddenSeries": false,
       "id": 39,
@@ -1023,7 +1560,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 23
+        "y": 28
       },
       "hiddenSeries": false,
       "id": 40,
@@ -1115,7 +1652,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 36
       },
       "id": 56,
       "panels": [],
@@ -1139,7 +1676,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 37
       },
       "hiddenSeries": false,
       "id": 58,
@@ -1256,7 +1793,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 37
       },
       "hiddenSeries": false,
       "id": 10,
@@ -1369,7 +1906,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 33,
@@ -1469,7 +2006,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 34,
@@ -1568,7 +2105,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 51
       },
       "hiddenSeries": false,
       "id": 36,
@@ -1663,7 +2200,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 51
       },
       "hiddenSeries": false,
       "id": 37,
@@ -1749,7 +2286,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 58
       },
       "id": 57,
       "panels": [],
@@ -1774,7 +2311,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 12,
