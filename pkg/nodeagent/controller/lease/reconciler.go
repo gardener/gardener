@@ -17,6 +17,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -44,7 +45,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, lease, func() error {
+	op, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.Client, lease, func() error {
 		if err := controllerutil.SetControllerReference(node, lease, r.Client.Scheme()); err != nil {
 			log.Error(err, "Unable to set controller reference for Lease", "lease", client.ObjectKeyFromObject(lease))
 		}
