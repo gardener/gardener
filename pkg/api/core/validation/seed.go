@@ -57,7 +57,8 @@ func ValidateSeedUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateSeedOperationUpdate(newSeed.Annotations[v1beta1constants.GardenerOperation], oldSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
-	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, newSeed.Annotations, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, validateSeedBackupUpdate(newSeed.Spec.Backup, oldSeed.Spec.Backup, field.NewPath("spec"), newSeed.Annotations)...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
 
 	return allErrs
@@ -78,7 +79,8 @@ func ValidateSeedTemplate(seedTemplate *core.SeedTemplate, fldPath *field.Path) 
 func ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *core.SeedTemplate, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, nil, fldPath.Child("spec"))...)
+	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, fldPath.Child("spec"))...)
+	allErrs = append(allErrs, validateSeedBackupUpdate(newSeedTemplate.Spec.Backup, oldSeedTemplate.Spec.Backup, fldPath.Child("spec"), newSeedTemplate.Annotations)...)
 
 	return allErrs
 }
@@ -292,6 +294,34 @@ func validateSeedBackup(seedBackup *core.Backup, seedProviderType string, fldPat
 	return allErrs
 }
 
+func validateSeedBackupUpdate(newSeedBackup, oldSeedBackup *core.Backup, fldPath *field.Path, newSeedAnnotations map[string]string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if oldSeedBackup != nil {
+		if newSeedBackup != nil {
+			if gardenerutils.CheckIfBackupChangeIsConfirmed(newSeedAnnotations) {
+				bucketNameChanged := !apiequality.Semantic.DeepEqual(oldSeedBackup.BucketName, newSeedBackup.BucketName)
+				providerChanged := !apiequality.Semantic.DeepEqual(oldSeedBackup.Provider, newSeedBackup.Provider)
+				regionChanged := !apiequality.Semantic.DeepEqual(oldSeedBackup.Region, newSeedBackup.Region)
+				if (regionChanged || providerChanged) && !bucketNameChanged {
+					if newSeedBackup.BucketName == nil {
+						allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup"), "changing backup provider or region without adding a new bucketName is not allowed"))
+					} else {
+						allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup"), "changing backup provider or region without changing the bucketName is not allowed"))
+					}
+				}
+			} else {
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedBackup.BucketName, oldSeedBackup.BucketName, fldPath.Child("backup", "bucketName"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedBackup.Provider, oldSeedBackup.Provider, fldPath.Child("backup", "provider"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedBackup.Region, oldSeedBackup.Region, fldPath.Child("backup", "region"))...)
+			}
+		} else {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedBackup, oldSeedBackup, fldPath.Child("backup"))...)
+		}
+	}
+	return allErrs
+}
+
 func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -393,25 +423,13 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 }
 
 // ValidateSeedSpecUpdate validates the specification updates of a Seed object.
-func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, newSeedAnnotations map[string]string, fldPath *field.Path) field.ErrorList {
+func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateSeedNetworksUpdate(newSeedSpec.Networks, oldSeedSpec.Networks, fldPath.Child("networks"))...)
 
 	if oldSeedSpec.Ingress != nil && newSeedSpec.Ingress != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, oldSeedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
-	}
-
-	if oldSeedSpec.Backup != nil {
-		if newSeedSpec.Backup != nil {
-			if !gardenerutils.CheckIfBackupChangeIsConfirmed(newSeedAnnotations) {
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.BucketName, oldSeedSpec.Backup.BucketName, fldPath.Child("backup", "bucketName"))...)
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Provider, oldSeedSpec.Backup.Provider, fldPath.Child("backup", "provider"))...)
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Region, oldSeedSpec.Backup.Region, fldPath.Child("backup", "region"))...)
-			}
-		} else {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup, oldSeedSpec.Backup, fldPath.Child("backup"))...)
-		}
 	}
 
 	// TODO(dimityrmirchev): Remove this check once the dns.defaults become required
