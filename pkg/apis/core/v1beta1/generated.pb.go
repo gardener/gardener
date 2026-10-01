@@ -2393,11 +2393,6 @@ func (m *ClusterAutoscaler) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x68
 	}
-	if m.MaxEmptyBulkDelete != nil {
-		i = encodeVarintGenerated(dAtA, i, uint64(*m.MaxEmptyBulkDelete))
-		i--
-		dAtA[i] = 0x60
-	}
 	if m.NewPodScaleUpDelay != nil {
 		{
 			size, err := m.NewPodScaleUpDelay.MarshalToSizedBuffer(dAtA[:i])
@@ -5637,18 +5632,6 @@ func (m *KubeControllerManagerConfig) MarshalToSizedBuffer(dAtA []byte) (int, er
 		}
 		i--
 		dAtA[i] = 0x2a
-	}
-	if m.PodEvictionTimeout != nil {
-		{
-			size, err := m.PodEvictionTimeout.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
 	}
 	if m.NodeCIDRMaskSize != nil {
 		i = encodeVarintGenerated(dAtA, i, uint64(*m.NodeCIDRMaskSize))
@@ -14399,9 +14382,6 @@ func (m *ClusterAutoscaler) Size() (n int) {
 		l = m.NewPodScaleUpDelay.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
-	if m.MaxEmptyBulkDelete != nil {
-		n += 1 + sovGenerated(uint64(*m.MaxEmptyBulkDelete))
-	}
 	if m.IgnoreDaemonsetsUtilization != nil {
 		n += 2
 	}
@@ -15631,10 +15611,6 @@ func (m *KubeControllerManagerConfig) Size() (n int) {
 	}
 	if m.NodeCIDRMaskSize != nil {
 		n += 1 + sovGenerated(uint64(*m.NodeCIDRMaskSize))
-	}
-	if m.PodEvictionTimeout != nil {
-		l = m.PodEvictionTimeout.Size()
-		n += 1 + l + sovGenerated(uint64(l))
 	}
 	if m.NodeMonitorGracePeriod != nil {
 		l = m.NodeMonitorGracePeriod.Size()
@@ -19112,7 +19088,6 @@ func (this *ClusterAutoscaler) String() string {
 		`MaxGracefulTerminationSeconds:` + valueToStringGenerated(this.MaxGracefulTerminationSeconds) + `,`,
 		`IgnoreTaints:` + fmt.Sprintf("%v", this.IgnoreTaints) + `,`,
 		`NewPodScaleUpDelay:` + strings.Replace(fmt.Sprintf("%v", this.NewPodScaleUpDelay), "Duration", "v11.Duration", 1) + `,`,
-		`MaxEmptyBulkDelete:` + valueToStringGenerated(this.MaxEmptyBulkDelete) + `,`,
 		`IgnoreDaemonsetsUtilization:` + valueToStringGenerated(this.IgnoreDaemonsetsUtilization) + `,`,
 		`Verbosity:` + valueToStringGenerated(this.Verbosity) + `,`,
 		`StartupTaints:` + fmt.Sprintf("%v", this.StartupTaints) + `,`,
@@ -19967,7 +19942,6 @@ func (this *KubeControllerManagerConfig) String() string {
 		`KubernetesConfig:` + strings.Replace(strings.Replace(this.KubernetesConfig.String(), "KubernetesConfig", "KubernetesConfig", 1), `&`, ``, 1) + `,`,
 		`HorizontalPodAutoscalerConfig:` + strings.Replace(this.HorizontalPodAutoscalerConfig.String(), "HorizontalPodAutoscalerConfig", "HorizontalPodAutoscalerConfig", 1) + `,`,
 		`NodeCIDRMaskSize:` + valueToStringGenerated(this.NodeCIDRMaskSize) + `,`,
-		`PodEvictionTimeout:` + strings.Replace(fmt.Sprintf("%v", this.PodEvictionTimeout), "Duration", "v11.Duration", 1) + `,`,
 		`NodeMonitorGracePeriod:` + strings.Replace(fmt.Sprintf("%v", this.NodeMonitorGracePeriod), "Duration", "v11.Duration", 1) + `,`,
 		`NodeCIDRMaskSizeIPv6:` + valueToStringGenerated(this.NodeCIDRMaskSizeIPv6) + `,`,
 		`}`,
@@ -27452,26 +27426,6 @@ func (m *ClusterAutoscaler) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 12:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MaxEmptyBulkDelete", wireType)
-			}
-			var v int32
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.MaxEmptyBulkDelete = &v
 		case 13:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field IgnoreDaemonsetsUtilization", wireType)
@@ -37004,42 +36958,6 @@ func (m *KubeControllerManagerConfig) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.NodeCIDRMaskSize = &v
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PodEvictionTimeout", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.PodEvictionTimeout == nil {
-				m.PodEvictionTimeout = &v11.Duration{}
-			}
-			if err := m.PodEvictionTimeout.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field NodeMonitorGracePeriod", wireType)
