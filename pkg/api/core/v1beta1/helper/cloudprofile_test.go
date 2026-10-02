@@ -24,6 +24,48 @@ var _ = Describe("CloudProfile Helper", func() {
 		now                     = time.Now()
 	)
 
+	Describe("CalculateCloudProfileStatus", func() {
+		It("returns empty status when the spec has no versions", func() {
+			Expect(CalculateCloudProfileStatus(&gardencorev1beta1.CloudProfileSpec{})).To(Equal(gardencorev1beta1.CloudProfileStatus{}))
+		})
+
+		It("classifies Kubernetes and machine image versions from their lifecycles", func() {
+			past := metav1.NewTime(time.Now().Add(-time.Hour))
+			future := metav1.NewTime(time.Now().Add(time.Hour))
+			spec := &gardencorev1beta1.CloudProfileSpec{
+				Kubernetes: gardencorev1beta1.KubernetesSettings{
+					Versions: []gardencorev1beta1.ExpirableVersion{
+						{Version: "1.30.0", Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationPreview, StartTime: &past}}},
+						{Version: "1.31.0", Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported, StartTime: &future}}},
+					},
+				},
+				MachineImages: []gardencorev1beta1.MachineImage{
+					{
+						Name: "image-a",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0", Classification: new(gardencorev1beta1.ClassificationDeprecated)}},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0", Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported, StartTime: &future}}}},
+						},
+					},
+				},
+			}
+
+			Expect(CalculateCloudProfileStatus(spec)).To(Equal(gardencorev1beta1.CloudProfileStatus{
+				Kubernetes: &gardencorev1beta1.KubernetesStatus{Versions: []gardencorev1beta1.ExpirableVersionStatus{
+					{Version: "1.30.0", Classification: gardencorev1beta1.ClassificationPreview},
+					{Version: "1.31.0", Classification: gardencorev1beta1.ClassificationUnavailable},
+				}},
+				MachineImages: []gardencorev1beta1.MachineImageStatus{{
+					Name: "image-a",
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{Version: "1.0", Classification: gardencorev1beta1.ClassificationDeprecated},
+						{Version: "2.0", Classification: gardencorev1beta1.ClassificationUnavailable},
+					},
+				}},
+			}))
+		})
+	})
+
 	Context("CurrentLifecycleClassification", func() {
 		var now = time.Now()
 
