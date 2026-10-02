@@ -74,6 +74,44 @@ func CurrentLifecycleClassification(version gardencorev1beta1.ExpirableVersion) 
 	return currentClassification
 }
 
+// CalculateCloudProfileStatus calculates the current version classifications from a CloudProfileSpec.
+func CalculateCloudProfileStatus(spec *gardencorev1beta1.CloudProfileSpec) gardencorev1beta1.CloudProfileStatus {
+	status := gardencorev1beta1.CloudProfileStatus{}
+
+	if versions := spec.Kubernetes.Versions; len(versions) > 0 {
+		status.Kubernetes = &gardencorev1beta1.KubernetesStatus{
+			Versions: make([]gardencorev1beta1.ExpirableVersionStatus, 0, len(versions)),
+		}
+		for _, version := range versions {
+			status.Kubernetes.Versions = append(status.Kubernetes.Versions, gardencorev1beta1.ExpirableVersionStatus{
+				Version:        version.Version,
+				Classification: CurrentLifecycleClassification(version),
+			})
+		}
+	}
+
+	if len(spec.MachineImages) > 0 {
+		status.MachineImages = make([]gardencorev1beta1.MachineImageStatus, 0, len(spec.MachineImages))
+		for _, image := range spec.MachineImages {
+			imageStatus := gardencorev1beta1.MachineImageStatus{
+				Name:     image.Name,
+				Versions: make([]gardencorev1beta1.ExpirableVersionStatus, 0, len(image.Versions)),
+			}
+
+			for _, version := range image.Versions {
+				imageStatus.Versions = append(imageStatus.Versions, gardencorev1beta1.ExpirableVersionStatus{
+					Version:        version.Version,
+					Classification: CurrentLifecycleClassification(version.ExpirableVersion),
+				})
+			}
+
+			status.MachineImages = append(status.MachineImages, imageStatus)
+		}
+	}
+
+	return status
+}
+
 // VersionIsExpired reports whether the given version is expired.
 func VersionIsExpired(version gardencorev1beta1.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == gardencorev1beta1.ClassificationExpired
