@@ -338,12 +338,14 @@ linters:
       # optionalfields: Spec/Status and other struct fields on top-level API objects have established non-pointer
       # conventions in Kubernetes APIs. Similarly, scalar fields (int64, string) with incomplete validation
       # are intentionally kept as value types. Converting these to pointers would be API-breaking.
+      # This is a temporary, repo-wide suppression; the flagged fields will be evaluated individually in #12756.
       - linters:
           - kubeapilinter
-        text: 'optionalfields: field .* has a valid zero value'
+        text: 'optionalfields: field \S+ has a valid zero value \(.*\).* should be a pointer'
       # optionalfields: These optional fields are intentionally pointers even though their validation makes
       # the zero value invalid (e.g. Enum constraints, MinLength). The pointer allows callers to detect
       # whether the field was explicitly set. Removing the pointer would break downstream callers.
+      # This is a temporary, repo-wide suppression; the flagged fields will be evaluated individually in #12756.
       - linters:
           - kubeapilinter
         text: 'optionalfields: field .* does not allow the zero value\. The field does not need to be a pointer\.'
