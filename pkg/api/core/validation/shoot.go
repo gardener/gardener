@@ -2951,6 +2951,19 @@ func ValidateWorkerControlPlane(controlPlane *core.WorkerControlPlane, shootName
 		}
 	}
 
+	if lbServices := controlPlane.LoadBalancerServices; lbServices != nil {
+		lbServicesPath := fldPath.Child("loadBalancerServices")
+		allErrs = append(allErrs, apivalidation.ValidateAnnotations(lbServices.Annotations, lbServicesPath.Child("annotations"))...)
+
+		if class := lbServices.Class; class != nil {
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateQualifiedName(*class, lbServicesPath.Child("class"))...)
+		}
+
+		if policy := lbServices.ExternalTrafficPolicy; policy != nil && !availableShootExternalTrafficPolicies.Has(string(*policy)) {
+			allErrs = append(allErrs, field.NotSupported(lbServicesPath.Child("externalTrafficPolicy"), *policy, sets.List(availableShootExternalTrafficPolicies)))
+		}
+	}
+
 	return allErrs
 }
 
