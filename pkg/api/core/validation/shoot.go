@@ -61,7 +61,7 @@ var (
 	availableKubernetesDashboardAuthenticationModes = sets.New(
 		core.KubernetesDashboardAuthModeToken,
 	)
-	availableNginxIngressExternalTrafficPolicies = sets.New(
+	availableShootExternalTrafficPolicies = sets.New(
 		string(corev1.ServiceExternalTrafficPolicyCluster),
 		string(corev1.ServiceExternalTrafficPolicyLocal),
 	)
@@ -701,8 +701,8 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 		}
 
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
-			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableNginxIngressExternalTrafficPolicies)))
+			if !availableShootExternalTrafficPolicies.Has(string(*policy)) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableShootExternalTrafficPolicies)))
 			}
 		}
 	}
