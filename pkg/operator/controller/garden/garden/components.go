@@ -45,7 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	pvcautoscaler "github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
@@ -258,7 +258,7 @@ func (r *Reconciler) instantiateComponents(
 	c.extensions = r.newExtensions(log, garden, extensionList)
 
 	// etcd backup entry
-	if helper.GetETCDMainBackup(garden) != nil && features.DefaultFeatureGate.Enabled(features.BackupEntryForGarden) {
+	if helper.GetETCDMainBackup(garden) != nil {
 		c.etcdMainBackupEntry = r.newEtcdMainBackupEntry(log, garden)
 	}
 
