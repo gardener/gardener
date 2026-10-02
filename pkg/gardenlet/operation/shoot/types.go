@@ -40,6 +40,7 @@ import (
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
@@ -145,6 +146,7 @@ type ControlPlane struct {
 	EtcdPeerExposure         component.DeployWaiter
 	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
 	EventLogger              component.Deployer
+	Istio                    istio.Interface
 	IstioBasicAuthServer     component.DeployWaiter
 	KubeAPIServerService     component.DeployWaiter
 	KubeAPIServerSNI         component.DeployWaiter
