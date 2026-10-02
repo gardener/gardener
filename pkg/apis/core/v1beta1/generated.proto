@@ -2433,6 +2433,10 @@ message NamespacedCloudProfileStatus {
   // ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
   // +optional
   optional int64 observedGeneration = 2;
+
+  // CloudProfileStatus contains the current classifications of the versions in CloudProfileSpec.
+  // +optional
+  optional CloudProfileStatus cloudProfileStatus = 3;
 }
 
 // Networking defines networking parameters for the shoot cluster.

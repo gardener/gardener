@@ -5788,6 +5788,7 @@ func autoConvert_v1beta1_NamespacedCloudProfileStatus_To_core_NamespacedCloudPro
 		return err
 	}
 	out.ObservedGeneration = in.ObservedGeneration
+	out.CloudProfileStatus = (*core.CloudProfileStatus)(unsafe.Pointer(in.CloudProfileStatus))
 	return nil
 }
 
@@ -5801,6 +5802,7 @@ func autoConvert_core_NamespacedCloudProfileStatus_To_v1beta1_NamespacedCloudPro
 		return err
 	}
 	out.ObservedGeneration = in.ObservedGeneration
+	out.CloudProfileStatus = (*CloudProfileStatus)(unsafe.Pointer(in.CloudProfileStatus))
 	return nil
 }
 

@@ -7069,11 +7069,17 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref common.Refere
 							Format:      "int64",
 						},
 					},
+					"cloudProfileStatus": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CloudProfileStatus contains the current classifications of the versions in CloudProfileSpec.",
+							Ref:         ref(v1beta1.CloudProfileStatus{}.OpenAPIModelName()),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.CloudProfileSpec{}.OpenAPIModelName()},
+			v1beta1.CloudProfileSpec{}.OpenAPIModelName(), v1beta1.CloudProfileStatus{}.OpenAPIModelName()},
 	}
 }
 

@@ -8182,6 +8182,18 @@ func (m *NamespacedCloudProfileStatus) MarshalToSizedBuffer(dAtA []byte) (int, e
 	_ = i
 	var l int
 	_ = l
+	if m.CloudProfileStatus != nil {
+		{
+			size, err := m.CloudProfileStatus.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
 	i = encodeVarintGenerated(dAtA, i, uint64(m.ObservedGeneration))
 	i--
 	dAtA[i] = 0x10
@@ -16551,6 +16563,10 @@ func (m *NamespacedCloudProfileStatus) Size() (n int) {
 	l = m.CloudProfileSpec.Size()
 	n += 1 + l + sovGenerated(uint64(l))
 	n += 1 + sovGenerated(uint64(m.ObservedGeneration))
+	if m.CloudProfileStatus != nil {
+		l = m.CloudProfileStatus.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -20543,6 +20559,7 @@ func (this *NamespacedCloudProfileStatus) String() string {
 	s := strings.Join([]string{`&NamespacedCloudProfileStatus{`,
 		`CloudProfileSpec:` + strings.Replace(strings.Replace(this.CloudProfileSpec.String(), "CloudProfileSpec", "CloudProfileSpec", 1), `&`, ``, 1) + `,`,
 		`ObservedGeneration:` + fmt.Sprintf("%v", this.ObservedGeneration) + `,`,
+		`CloudProfileStatus:` + strings.Replace(this.CloudProfileStatus.String(), "CloudProfileStatus", "CloudProfileStatus", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -44254,6 +44271,42 @@ func (m *NamespacedCloudProfileStatus) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CloudProfileStatus", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CloudProfileStatus == nil {
+				m.CloudProfileStatus = &CloudProfileStatus{}
+			}
+			if err := m.CloudProfileStatus.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

@@ -4167,6 +4167,11 @@ func (in *NamespacedCloudProfileSpec) DeepCopy() *NamespacedCloudProfileSpec {
 func (in *NamespacedCloudProfileStatus) DeepCopyInto(out *NamespacedCloudProfileStatus) {
 	*out = *in
 	in.CloudProfileSpec.DeepCopyInto(&out.CloudProfileSpec)
+	if in.CloudProfileStatus != nil {
+		in, out := &in.CloudProfileStatus, &out.CloudProfileStatus
+		*out = new(CloudProfileStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
