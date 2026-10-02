@@ -712,6 +712,29 @@ message ControlPlaneAutoscaling {
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> minAllowed = 1;
 }
 
+// ControlPlaneLoadBalancerServices controls certain settings for the load balancer service of the istio ingress gateway.
+message ControlPlaneLoadBalancerServices {
+  // Annotations is a map of annotations that will be injected/merged into the load balancer service object.
+  // +optional
+  map<string, string> annotations = 1;
+
+  // ExternalTrafficPolicy describes how nodes distribute service traffic they
+  // receive on one of the service's "externally-facing" addresses.
+  // Defaults to "Cluster".
+  // +optional
+  optional string externalTrafficPolicy = 2;
+
+  // ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+  // Defaults to nil, which is equivalent to not allowing ProxyProtocol.
+  // +optional
+  optional LoadBalancerServicesProxyProtocol proxyProtocol = 3;
+
+  // Class configures the Service.spec.loadBalancerClass field for the load balancer service.
+  // Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
+  // +optional
+  optional string class = 4;
+}
+
 // ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
   // Standard object metadata.
@@ -4117,6 +4140,10 @@ message WorkerControlPlane {
   // Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
   // +optional
   optional Exposure exposure = 2;
+
+  // LoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.
+  // +optional
+  optional ControlPlaneLoadBalancerServices loadBalancerServices = 3;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
