@@ -357,8 +357,12 @@ func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podL
 				return err
 			}
 
+			if len(podList.Items) == 0 {
+				return fmt.Errorf("no pods found in %s with labels %s", namespace, podLabels)
+			}
+
 			for _, pod := range podList.Items {
-				if health.IsPodReady(&pod) {
+				if !health.IsPodReady(&pod) {
 					return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
 				}
 			}
