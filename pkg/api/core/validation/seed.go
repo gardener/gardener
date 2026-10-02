@@ -280,7 +280,7 @@ func validateSeedBackup(seedBackup *core.Backup, seedProviderType string, fldPat
 	}
 
 	if seedProviderType != seedBackup.Provider && (seedBackup.Region == nil || len(*seedBackup.Region) == 0) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("region"), "", "region must be specified for if backup provider is different from seed provider used in `spec.provider.type`"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("region"), "", "region must be specified if backup provider is different from seed provider used in `spec.provider.type`"))
 	}
 
 	if seedBackup.CredentialsRef == nil {
