@@ -79,6 +79,9 @@ type NamespacedCloudProfileStatus struct {
 	// ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
+	// CloudProfileStatus contains the current classifications of the versions in CloudProfileSpec.
+	// +optional
+	CloudProfileStatus *CloudProfileStatus `json:"cloudProfileStatus,omitempty" protobuf:"bytes,3,opt,name=cloudProfileStatus"`
 }
 
 // CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
