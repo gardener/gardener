@@ -1920,7 +1920,7 @@ string
 
 
 <p>
-(<em>Appears on:</em><a href="#cloudprofile">CloudProfile</a>)
+(<em>Appears on:</em><a href="#cloudprofile">CloudProfile</a>, <a href="#namespacedcloudprofilestatus">NamespacedCloudProfileStatus</a>)
 </p>
 
 <p>
@@ -8743,6 +8743,18 @@ integer
 <td>
 <em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfileStatus</code></br>
+<em>
+<a href="#cloudprofilestatus">CloudProfileStatus</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CloudProfileStatus contains the current classifications of the versions in CloudProfileSpec.</p>
 </td>
 </tr>
 
