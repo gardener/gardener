@@ -129,6 +129,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 			namespacedCloudProfile.Finalizers = []string{gardencorev1beta1.GardenerName}
 			namespacedCloudProfile.Status.CloudProfileSpec = cloudProfile.Spec
+			namespacedCloudProfile.Status.CloudProfileStatus = &gardencorev1beta1.CloudProfileStatus{}
 			namespacedCloudProfile.Status.ObservedGeneration = namespacedCloudProfile.Generation
 
 			fakeClient = fakeclient.NewClientBuilder().
@@ -169,6 +170,58 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(statusPatchCalls).To(BeZero())
+		})
+
+		It("should calculate status from lifecycle overrides in the merged spec", func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+			past := metav1.NewTime(now.Add(-time.Hour))
+			future := metav1.NewTime(now.Add(time.Hour))
+
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{
+				Version:   "1.30.0",
+				Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported}},
+			}}
+			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{{
+				Name: "image-a",
+				Versions: []gardencorev1beta1.MachineImageVersion{{
+					ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0", Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported}}},
+				}},
+			}}
+			cloudProfile.Status = gardencorev1beta1.CloudProfileStatus{
+				Kubernetes: &gardencorev1beta1.KubernetesStatus{Versions: []gardencorev1beta1.ExpirableVersionStatus{{Version: "1.30.0", Classification: gardencorev1beta1.ClassificationSupported}}},
+				MachineImages: []gardencorev1beta1.MachineImageStatus{{
+					Name:     "image-a",
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{{Version: "1.0", Classification: gardencorev1beta1.ClassificationSupported}},
+				}},
+			}
+			namespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{Versions: []gardencorev1beta1.ExpirableVersion{{
+				Version:   "1.30.0",
+				Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &past}},
+			}}}
+			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{{
+				Name: "image-a",
+				Versions: []gardencorev1beta1.MachineImageVersion{{
+					ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0", Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationPreview, StartTime: &future}}},
+				}},
+			}}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileStatus).To(Equal(&gardencorev1beta1.CloudProfileStatus{
+				Kubernetes: &gardencorev1beta1.KubernetesStatus{Versions: []gardencorev1beta1.ExpirableVersionStatus{{Version: "1.30.0", Classification: gardencorev1beta1.ClassificationDeprecated}}},
+				MachineImages: []gardencorev1beta1.MachineImageStatus{{
+					Name:     "image-a",
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{{Version: "1.0", Classification: gardencorev1beta1.ClassificationUnavailable}},
+				}},
+			}))
+			Expect(updated.Status.CloudProfileStatus).NotTo(Equal(&cloudProfile.Status))
 		})
 
 		It("should apply the CloudProfile providerConfig to the NamespacedCloudProfile status on spec change", func() {

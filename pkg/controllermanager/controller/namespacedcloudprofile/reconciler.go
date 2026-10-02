@@ -120,6 +120,8 @@ func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedC
 	old := namespacedCloudProfile.DeepCopy()
 
 	MergeCloudProfiles(namespacedCloudProfile, parentCloudProfile)
+	status := v1beta1helper.CalculateCloudProfileStatus(&namespacedCloudProfile.Status.CloudProfileSpec)
+	namespacedCloudProfile.Status.CloudProfileStatus = &status
 	namespacedCloudProfile.Status.ObservedGeneration = namespacedCloudProfile.Generation
 
 	if equality.Semantic.DeepEqual(old.Status, namespacedCloudProfile.Status) {

@@ -119,43 +119,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, cloudProfile *
 // patchCloudProfileStatusVersions generate the cloudProfile status from the given cloudProfile spec.
 func (r *Reconciler) patchCloudProfileStatusVersions(ctx context.Context, cloudProfile *gardencorev1beta1.CloudProfile) error {
 	cloudProfileBefore := cloudProfile.DeepCopy()
-	cloudProfile.Status.Kubernetes = nil
-	cloudProfile.Status.MachineImages = nil
-
-	// Kubernetes versions
-	k8sVersions := cloudProfile.Spec.Kubernetes.Versions
-	if len(k8sVersions) > 0 {
-		cloudProfile.Status.Kubernetes = &gardencorev1beta1.KubernetesStatus{
-			Versions: make([]gardencorev1beta1.ExpirableVersionStatus, 0, len(k8sVersions)),
-		}
-		for _, v := range k8sVersions {
-			cloudProfile.Status.Kubernetes.Versions = append(cloudProfile.Status.Kubernetes.Versions, gardencorev1beta1.ExpirableVersionStatus{
-				Version:        v.Version,
-				Classification: v1beta1helper.CurrentLifecycleClassification(v),
-			})
-		}
-	}
-
-	// Machine images
-	machineImages := cloudProfile.Spec.MachineImages
-	if len(machineImages) > 0 {
-		cloudProfile.Status.MachineImages = make([]gardencorev1beta1.MachineImageStatus, 0, len(machineImages))
-		for _, image := range machineImages {
-			imageStatus := gardencorev1beta1.MachineImageStatus{
-				Name:     image.Name,
-				Versions: make([]gardencorev1beta1.ExpirableVersionStatus, 0, len(image.Versions)),
-			}
-
-			for _, v := range image.Versions {
-				imageStatus.Versions = append(imageStatus.Versions, gardencorev1beta1.ExpirableVersionStatus{
-					Version:        v.Version,
-					Classification: v1beta1helper.CurrentLifecycleClassification(v.ExpirableVersion),
-				})
-			}
-
-			cloudProfile.Status.MachineImages = append(cloudProfile.Status.MachineImages, imageStatus)
-		}
-	}
+	cloudProfile.Status = v1beta1helper.CalculateCloudProfileStatus(&cloudProfile.Spec)
 	if equality.Semantic.DeepEqual(cloudProfileBefore, cloudProfile) {
 		return nil
 	}
