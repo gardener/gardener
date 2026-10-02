@@ -1,6 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
+resources:
+- secret-registry-ca.yaml
+
 generatorOptions:
   disableNameSuffixHash: true
 

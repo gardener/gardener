@@ -205,7 +205,7 @@ EOF
 
       local dest
       for dest in \
-        "$(dirname "$0")/gardenlet/base/secret-registry-ca.yaml" \
+        "$(dirname "$0")/gardenlet/components/kubeconfigs/seed-local/secret-registry-ca.yaml" \
         "$(dirname "$0")/extensions/provider-local/components/extension/secret-registry-ca.yaml"; do
         cat > "$dest" <<EOF
 apiVersion: v1

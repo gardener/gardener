@@ -14,6 +14,11 @@ patches:
         path: /spec/config/seedConfig/spec/backup
       - op: remove
         path: /spec/config/seedConfig/spec/extensions
+      # The remote dev-setup registry is served with a publicly-trusted certificate, so gardenlet does not
+      # need a custom CA bundle to pull its helm chart. Drop the caBundleSecretRef that base/patch-helm-ref.yaml
+      # sets for the local-kind registry (whose self-signed CA secret is only generated for local scenarios).
+      - op: remove
+        path: /spec/deployment/helm/ociRepository/caBundleSecretRef
     target:
       group: seedmanagement.gardener.cloud
       kind: Gardenlet
