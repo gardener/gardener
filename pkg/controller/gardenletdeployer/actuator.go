@@ -35,7 +35,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -505,32 +504,6 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 			return fmt.Errorf("the configured backup secret does not exist: %w", err)
 		}
 		return err
-	}
-
-	const (
-		secretStatusLabelKey   = "secret.backup.gardener.cloud/status"
-		secretStatusLabelValue = "previously-managed"
-	)
-
-	// If backup secret was copied at an earlier stage, remove the ownerReference as the controller is no longer responsible for it
-	// TODO(dimityrmirchev): Remove this logic when the DoNotCopyBackupCredentials feature gate is removed, i.e. after v1.134 has been released.
-	if metav1.IsControlledBy(backupSecret, obj) {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
-		}
-
-		if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, a.GardenClient, secret, func() error {
-			secret.OwnerReferences = slices.DeleteFunc(secret.OwnerReferences, func(ref metav1.OwnerReference) bool {
-				return ref.Name == obj.GetName() && ref.UID == obj.GetUID()
-			})
-
-			// Label such secrets as it would be easier for operators to clean them up afterwards
-			metav1.SetMetaDataLabel(&secret.ObjectMeta, secretStatusLabelKey, secretStatusLabelValue)
-
-			return nil
-		}); err != nil {
-			return err
-		}
 	}
 
 	// Inject backup-secret hash into the pod annotations
