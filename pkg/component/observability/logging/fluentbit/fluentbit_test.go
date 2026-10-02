@@ -302,7 +302,6 @@ var _ = Describe("Fluent Bit", func() {
 				component = New(c, namespace, Values{
 					Image:              image,
 					InitContainerImage: image,
-					ValiEnabled:        true,
 					PriorityClassName:  priorityClassName,
 					IsGardenCluster:    true,
 				})
@@ -351,7 +350,7 @@ var _ = Describe("Fluent Bit", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 				manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(manifests).To(HaveLen(12))
+				Expect(manifests).To(HaveLen(11))
 				Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(new(true)))
 				Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
@@ -364,7 +363,6 @@ var _ = Describe("Fluent Bit", func() {
 				test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "02-add-tag-to-record", "")
 				test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "zz-modify-severity", "")
 				test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "containerd-parser", "")
-				test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "systemd", "")
 
 				componenttest.PrometheusRule(prometheusRule, "testdata/garden-fluent-bit.prometheusrule.test.yaml")
 			})
