@@ -18,8 +18,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -293,7 +293,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{gardencorev1beta1.GroupName},
 							APIVersions: []string{"*"},
-							Resources:   []string{"shoots", "shoots/finalizers", "secretbindings", "quotas", "namespacedcloudprofiles"},
+							Resources:   []string{"shoots", "secretbindings", "quotas", "namespacedcloudprofiles"},
 						},
 					},
 					{
