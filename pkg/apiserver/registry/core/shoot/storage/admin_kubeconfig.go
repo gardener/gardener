@@ -46,12 +46,13 @@ func NewAdminKubeconfigREST(
 		newObjectFunc: func() runtime.Object {
 			return &authenticationv1alpha1.AdminKubeconfigRequest{}
 		},
-		userGroupsFunc: getAdminUserGroups,
+		userGroupsFunc: GetAdminUserGroups,
 		userNamePrefix: "gardener.cloud:admin:",
 	}
 }
 
-func getAdminUserGroups(ctx context.Context, u user.Info, subjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface) ([]string, error) {
+// GetAdminUserGroups returns "gardener.cloud:system:admins" if the user has permissions to list secrets, otherwise returns "gardener.cloud:project:admins".
+func GetAdminUserGroups(ctx context.Context, u user.Info, subjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface) ([]string, error) {
 	subjectAccessReview := &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
