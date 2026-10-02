@@ -215,6 +215,11 @@ func (in ControlPlaneAutoscaling) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ControlPlaneLoadBalancerServices) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ControlPlaneLoadBalancerServices"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in ControllerDeployment) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ControllerDeployment"
 }

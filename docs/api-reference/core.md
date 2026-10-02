@@ -2623,6 +2623,80 @@ ControlPlaneAutoscaling contains auto-scaling configuration options for control-
 </p>
 
 
+<h3 id="controlplaneloadbalancerservices">ControlPlaneLoadBalancerServices
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#workercontrolplane">WorkerControlPlane</a>)
+</p>
+
+<p>
+ControlPlaneLoadBalancerServices controls certain settings for the load balancer service of the istio ingress gateway.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>annotations</code></br>
+<em>
+object (keys:string, values:string)
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Annotations is a map of annotations that will be injected/merged into the load balancer service object.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>externalTrafficPolicy</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceexternaltrafficpolicy-v1-core">ServiceExternalTrafficPolicy</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExternalTrafficPolicy describes how nodes distribute service traffic they<br />receive on one of the service's "externally-facing" addresses.<br />Defaults to "Cluster".</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>proxyProtocol</code></br>
+<em>
+<a href="#loadbalancerservicesproxyprotocol">LoadBalancerServicesProxyProtocol</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.<br />Defaults to nil, which is equivalent to not allowing ProxyProtocol.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>class</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Class configures the Service.spec.loadBalancerClass field for the load balancer service.<br />Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="controllerdeployment">ControllerDeployment
 </h3>
 
@@ -7289,7 +7363,7 @@ LiveMigration contains information about an ongoing live migration of the Shoot 
 
 
 <p>
-(<em>Appears on:</em><a href="#seedsettingloadbalancerservices">SeedSettingLoadBalancerServices</a>, <a href="#seedsettingloadbalancerserviceszones">SeedSettingLoadBalancerServicesZones</a>)
+(<em>Appears on:</em><a href="#controlplaneloadbalancerservices">ControlPlaneLoadBalancerServices</a>, <a href="#seedsettingloadbalancerservices">SeedSettingLoadBalancerServices</a>, <a href="#seedsettingloadbalancerserviceszones">SeedSettingLoadBalancerServicesZones</a>)
 </p>
 
 <p>
@@ -14364,6 +14438,18 @@ WorkerControlPlane specifies that the shoot cluster control plane components sho
 <td>
 <em>(Optional)</em>
 <p>Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>loadBalancerServices</code></br>
+<em>
+<a href="#controlplaneloadbalancerservices">ControlPlaneLoadBalancerServices</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.</p>
 </td>
 </tr>
 
