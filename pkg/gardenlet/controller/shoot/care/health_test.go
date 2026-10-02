@@ -1406,7 +1406,7 @@ var _ = Describe("health check", func() {
 		},
 			Entry("should return nil if there is a matching lease for node", validLease, BeNil()),
 			Entry("should return Error that node agent is not running if no matching lease could be found for node", unrelatedLease, MatchError(ContainSubstring("not running"))),
-			Entry("should return Error that node agent stopped running if the lease for the node is not valid anymore", expiredLease, MatchError(ContainSubstring("stopped running"))),
+			Entry("should return Error that node agent lease has expired if the lease for the node is not valid anymore", expiredLease, MatchError(ContainSubstring("lease has expired for node"))),
 		)
 	})
 
