@@ -377,7 +377,7 @@ var _ = Describe("Actuator", func() {
 			if configName != "" {
 				vp.EXPECT().GetConfigChartValues(ctx, cp, cluster).Return(configChartValues, nil)
 			}
-			checksums := matchChecksums(ctx, fakeClient, staticChecksums)
+			checksums := matchChecksums(ctx, fakeClient, staticChecksums, []string{caNameControlPlane, "cloud-controller-manager"})
 			vp.EXPECT().GetControlPlaneChartValues(ctx, cp, cluster, gomock.Any(), checksums, false).Return(controlPlaneChartValues, nil)
 			vp.EXPECT().GetControlPlaneShootChartValues(ctx, cp, cluster, gomock.Any(), checksums).Return(controlPlaneShootChartValues, nil)
 			if withShootCRDsChart {
@@ -643,15 +643,16 @@ func expectSecretsManagedBySecretsManager(ctx context.Context, c client.Reader, 
 // for the generated CA and cloud-controller-manager certificates against the checksum of the actually deployed secret
 // data. This avoids hardcoding the certificate checksums, which are not guaranteed to be stable across Go toolchain
 // versions. The matcher is evaluated at call time, i.e. after the secrets manager has deployed the secrets.
-func matchChecksums(ctx context.Context, c client.Reader, staticChecksums map[string]string) gomock.Matcher {
-	return &checksumsMatcher{ctx: ctx, client: c, staticChecksums: staticChecksums}
+func matchChecksums(ctx context.Context, c client.Reader, staticChecksums map[string]string, additionalSecrets []string) gomock.Matcher {
+	return &checksumsMatcher{ctx: ctx, client: c, staticChecksums: staticChecksums, additionalSecrets: additionalSecrets}
 }
 
 type checksumsMatcher struct {
-	ctx             context.Context
-	client          client.Reader
-	staticChecksums map[string]string
-	expected        map[string]string
+	ctx               context.Context
+	client            client.Reader
+	staticChecksums   map[string]string
+	expected          map[string]string
+	additionalSecrets []string
 }
 
 func (m *checksumsMatcher) Matches(x any) bool {
@@ -663,7 +664,7 @@ func (m *checksumsMatcher) Matches(x any) bool {
 	// Build the expected checksums: the static entries as-is, plus the checksums of the generated CA and
 	// cloud-controller-manager secrets computed from the data that the secrets manager actually deployed.
 	m.expected = maps.Clone(m.staticChecksums)
-	for _, name := range []string{caNameControlPlane, "cloud-controller-manager"} {
+	for _, name := range m.additionalSecrets {
 		secretList := &corev1.SecretList{}
 		if err := m.client.List(m.ctx, secretList, client.MatchingLabels{secretsmanager.LabelKeyName: name}); err != nil {
 			return false
