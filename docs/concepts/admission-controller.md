@@ -143,7 +143,7 @@ In addition, the following service accounts are allowed to perform certain opera
 
 ### FinalizerRestriction
 
-This handler restricts manual addition and removal of the finalizers `gardener` and `gardener.cloud/reference-protection` by regular user accounts for all objects where the lifecycle is managed by Gardener.
+This handler restricts addition and removal of gardener finalizers (`gardener` , `gardener.cloud/reference-protection`) by regular user accounts for all gardener managed and related objects.
 Manually removing finalizers to delete resources can bring a cluster into a broken state that is hard to recover from.
 
 ## Authorization Webhook Handlers
