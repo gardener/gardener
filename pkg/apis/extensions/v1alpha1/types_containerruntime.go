@@ -39,7 +39,7 @@ type ContainerRuntime struct {
 	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ContainerRuntimeSpec `json:"spec"`
 	// +optional
-	Status ContainerRuntimeStatus `json:"status"`
+	Status ContainerRuntimeStatus `json:"status,omitempty"`
 }
 
 // GetExtensionSpec implements Object.
