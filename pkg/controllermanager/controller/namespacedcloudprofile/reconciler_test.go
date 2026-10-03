@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -28,7 +29,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	namespacedcloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -40,7 +43,9 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		fakeClient client.Client
 		reconciler reconcile.Reconciler
 
-		fakeErr error
+		fakeErr   error
+		fakeClock *testclock.FakeClock
+		now       time.Time
 
 		namespaceName              string
 		cloudProfileName           string
@@ -56,6 +61,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		ctx = context.Background()
 
 		fakeErr = errors.New("fake err")
+		fakeClock = testclock.NewFakeClock(time.Now().Truncate(time.Second))
+		now = fakeClock.Now()
 
 		namespaceName = "test-namespace"
 		cloudProfileName = "test-cloudprofile"
@@ -88,9 +95,9 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 			).
 			Build()
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
-		newExpiryDate = metav1.NewTime(time.Now().Truncate(time.Second))
+		newExpiryDate = metav1.NewTime(now.Truncate(time.Second))
 	})
 
 	It("should return nil because object not found", func() {
@@ -108,7 +115,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}).
 			Build()
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -116,6 +123,54 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 	})
 
 	Context("merge status", func() {
+
+		It("should not patch the status when it did not change", func() {
+			var statusPatchCalls int
+
+			namespacedCloudProfile.Finalizers = []string{gardencorev1beta1.GardenerName}
+			namespacedCloudProfile.Status.CloudProfileSpec = cloudProfile.Spec
+			namespacedCloudProfile.Status.ObservedGeneration = namespacedCloudProfile.Generation
+
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithStatusSubresource(&gardencorev1beta1.NamespacedCloudProfile{}).
+				WithObjects(
+					cloudProfile.DeepCopy(),
+					namespacedCloudProfile.DeepCopy(),
+				).
+				WithInterceptorFuncs(interceptor.Funcs{
+					SubResourcePatch: func(
+						_ context.Context,
+						_ client.Client,
+						_ string,
+						_ client.Object,
+						_ client.Patch,
+						_ ...client.SubResourcePatchOption,
+					) error {
+						statusPatchCalls++
+						return nil
+					},
+				}).
+				Build()
+
+			reconciler = &namespacedcloudprofilecontroller.Reconciler{
+				Client:   fakeClient,
+				Clock:    fakeClock,
+				Recorder: &events.FakeRecorder{},
+			}
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: namespaceName,
+					Name:      namespacedCloudProfileName,
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(statusPatchCalls).To(BeZero())
+		})
+
 		It("should apply the CloudProfile providerConfig to the NamespacedCloudProfile status on spec change", func() {
 			cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"key":"value"}`)}
 
@@ -190,6 +245,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 	Context("merge Kubernetes versions", func() {
 		BeforeEach(func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			cloudProfile.Spec.Kubernetes = gardencorev1beta1.KubernetesSettings{
 				Versions: []gardencorev1beta1.ExpirableVersion{
 					{Version: "1.0.0"},
@@ -217,7 +273,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{{Version: "1.0.0"}}))
 		})
 
-		It("should merge Kubernetes versions correctly", func() {
+		It("should add legacy ExpirationDate set in NamespacedCloudProfile", func() {
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{Version: "1.0.0", ExpirationDate: &newExpiryDate},
 			}
@@ -231,12 +287,156 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 			updated := &gardencorev1beta1.NamespacedCloudProfile{}
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
-			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{
-					"Version":        Equal("1.0.0"),
-					"ExpirationDate": Equal(&newExpiryDate),
-				}),
-			))
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{
+				{Version: "1.0.0", ExpirationDate: &newExpiryDate},
+			}))
+		})
+
+		It("should fully replace the parent lifecycle when the override lifecycle has no expired stage", func() {
+			parentExpirationDate := metav1.NewTime(newExpiryDate.Add(time.Hour))
+			namespacedCloudProfileLifecycleDate := metav1.NewTime(newExpiryDate.Add(2 * time.Hour))
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationPreview},
+						{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &parentExpirationDate},
+					},
+				},
+			}
+			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &namespacedCloudProfileLifecycleDate},
+					},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result.RequeueAfter).To(BeNumerically("~", 2*time.Hour, time.Second))
+			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &namespacedCloudProfileLifecycleDate},
+					},
+				},
+			}))
+		})
+
+		It("should apply NamespacedCloudProfile ExpirationDates to matching Kubernetes versions", func() {
+			firstExpiryDate := metav1.NewTime(now.Add(24 * time.Hour).Truncate(time.Second))
+			cloudProfileExpiryDate := metav1.NewTime(firstExpiryDate.Add(24 * time.Hour))
+			newLaterExpiryDate := metav1.NewTime(firstExpiryDate.Add(48 * time.Hour))
+
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{Version: "1.0.0", ExpirationDate: &cloudProfileExpiryDate},
+				{Version: "2.0.0"},
+				{Version: "3.0.0"},
+			}
+			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{Version: "1.0.0", ExpirationDate: &firstExpiryDate},
+				{Version: "2.0.0", ExpirationDate: &newLaterExpiryDate},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result.RequeueAfter).To(BeNumerically("~", time.Until(firstExpiryDate.Time), time.Second))
+			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(ConsistOf([]gardencorev1beta1.ExpirableVersion{
+				{Version: "1.0.0", ExpirationDate: &firstExpiryDate},
+				{Version: "2.0.0", ExpirationDate: &newLaterExpiryDate},
+				{Version: "3.0.0"},
+			}))
+		})
+
+		It("should reconcile lifecycle classifications and requeue due to upcoming stage without initial start time", func() {
+			future := metav1.NewTime(newExpiryDate.Add(24 * time.Hour))
+			moreFuture := metav1.NewTime(newExpiryDate.Add(48 * time.Hour))
+
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{
+							Classification: gardencorev1beta1.ClassificationPreview,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationSupported,
+							StartTime:      &future,
+						},
+						{
+							Classification: gardencorev1beta1.ClassificationDeprecated,
+							StartTime:      &moreFuture,
+						},
+					},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+			Expect(result.RequeueAfter).To(BeNumerically("~", 24*time.Hour, time.Second))
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationPreview},
+						{Classification: gardencorev1beta1.ClassificationSupported, StartTime: &future},
+						{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &moreFuture},
+					},
+				},
+			}))
+		})
+
+		It("should reconcile lifecycle classifications but not requeue without upcoming stage and initial start time", func() {
+			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{
+							Classification: gardencorev1beta1.ClassificationPreview,
+						},
+					},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.Kubernetes.Versions).To(Equal([]gardencorev1beta1.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationPreview},
+					},
+				},
+			}))
 		})
 
 		It("should set observedGeneration correctly", func() {
@@ -306,7 +506,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}).
 					Build()
-				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 				ncp := namespacedCloudProfile.DeepCopy()
 				ncp.Finalizers = []string{finalizerName}
@@ -339,7 +539,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}).
 					Build()
-				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 				Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
@@ -427,15 +627,14 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			))
 		})
 
-		It("should merge MachineImages correctly", func() {
-			newExpiryDate := metav1.NewTime(time.Now().Truncate(time.Second))
+		It("should merge MachineImages correctly and migrate an additional ExpirationDate", func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+			newExpiryDate := metav1.NewTime(now.Truncate(time.Second))
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "test-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
-						// override existing version with new expiration date
 						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &newExpiryDate}},
-						// add new version
 						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}},
 					},
 				},
@@ -452,12 +651,20 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
 			Expect(updated.Status.CloudProfileSpec.MachineImages).To(HaveLen(1))
 			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Name).To(Equal("test-image"))
-			versions := updated.Status.CloudProfileSpec.MachineImages[0].Versions
-			Expect(versions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-				"ExpirableVersion": Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &newExpiryDate, Classification: nil, Lifecycle: nil}),
-			}), MatchFields(IgnoreExtras, Fields{
-				"ExpirableVersion": Equal(gardencorev1beta1.ExpirableVersion{Version: "1.1.2", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
-			})))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"ExpirableVersion": Equal(gardencorev1beta1.ExpirableVersion{
+						Version:        "1.0.0",
+						ExpirationDate: &newExpiryDate,
+					}),
+					"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
+					"Architectures":            ConsistOf("amd64"),
+					"KubeletVersionConstraint": Equal(new("==1.30.0")),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"ExpirableVersion": Equal(gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}),
+				}),
+			))
 		})
 
 		It("should merge MachineImages with overridden updateStrategy correctly", func() {
@@ -481,6 +688,46 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(updated.Status.CloudProfileSpec.MachineImages[0].UpdateStrategy).To(Equal(new(gardencorev1beta1.UpdateStrategyMinor)))
 			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
 				"ExpirableVersion":         Equal(gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: nil, Classification: nil, Lifecycle: nil}),
+				"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
+				"Architectures":            ConsistOf("amd64"),
+				"KubeletVersionConstraint": Equal(new("==1.30.0")),
+			})))
+		})
+
+		It("should fully replace a MachineImage version's lifecycle with a NamespacedCloudProfile override", func() {
+			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+			newExpiryDate := metav1.NewTime(now.Truncate(time.Second))
+			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+				{
+					Name: "test-image",
+					Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.0.0",
+							Lifecycle: []gardencorev1beta1.LifecycleStage{
+								{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &newExpiryDate},
+							},
+						}},
+					},
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, cloudProfile.DeepCopy())).To(Succeed())
+			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).ToNot(HaveOccurred())
+
+			updated := &gardencorev1beta1.NamespacedCloudProfile{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
+			Expect(updated.Status.CloudProfileSpec.MachineImages).To(HaveLen(1))
+			Expect(updated.Status.CloudProfileSpec.MachineImages[0].Versions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
+				"ExpirableVersion": Equal(gardencorev1beta1.ExpirableVersion{
+					Version: "1.0.0",
+					Lifecycle: []gardencorev1beta1.LifecycleStage{
+						{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &newExpiryDate},
+					},
+				}),
 				"CRI":                      Equal([]gardencorev1beta1.CRI{{Name: "containerd", ContainerRuntimes: nil}}),
 				"Architectures":            ConsistOf("amd64"),
 				"KubeletVersionConstraint": Equal(new("==1.30.0")),
@@ -592,7 +839,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					core.NamespacedCloudProfileParentRefName,
 					indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 				).Build()
-			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
+			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
 
 			namespaceName = "garden-test"
 
@@ -824,7 +1071,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				})
 
 				It("should add new elements and apply overrides consistently while keeping the existing elements ordered", func() {
-					expirationDate := metav1.NewTime(time.Now().Add(time.Hour))
+					DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+					expirationDate := metav1.NewTime(now.Add(time.Hour))
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
@@ -1168,4 +1416,140 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			})
 		})
 	})
+})
+
+var _ = Describe("ApplyExpirableVersionOverrides", func() {
+	now := metav1.NewTime(time.Now().Truncate(time.Second))
+	later := metav1.NewTime(now.Add(time.Hour))
+	evenLater := metav1.NewTime(now.Add(2 * time.Hour))
+
+	DescribeTable("merges a parent ExpirableVersion with a NamespacedCloudProfile override",
+		func(base, override, expected gardencorev1beta1.ExpirableVersion) {
+			baseBefore := *base.DeepCopy()
+			overrideBefore := *override.DeepCopy()
+
+			result := namespacedcloudprofilecontroller.ApplyExpirableVersionOverrides(base, override)
+
+			Expect(result).To(Equal(expected))
+			Expect(base).To(Equal(baseBefore), "should not mutate the input parameters")
+			Expect(override).To(Equal(overrideBefore), "should not mutate the input parameters")
+		},
+
+		// legacy base / legacy override: preserve existing behavior, only add or replace the expiration date.
+		Entry("legacy/legacy: adds an expiration date to a bare version",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &now},
+		),
+		Entry("legacy/legacy: preserves the parent classification while replacing the expiration date",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview), ExpirationDate: &now},
+		),
+		Entry("legacy/legacy: ignores an override classification without an expiration date",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview), ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationDeprecated)},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview), ExpirationDate: &now},
+		),
+
+		// lifecycle base / legacy override: add or replace only the expired stage, preserve all other stages.
+		Entry("lifecycle/legacy: appends an expired stage to a lifecycle with none",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+		),
+		Entry("lifecycle/legacy: replaces only the expired stage's start time",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &later},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &evenLater},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &evenLater},
+			}},
+		),
+
+		// legacy base / lifecycle override: the override lifecycle is authoritative and replaces the legacy classification fields.
+		Entry("legacy/lifecycle: replaces a bare version with the override lifecycle",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+		),
+		Entry("legacy/lifecycle: clears the parent classification for the override lifecycle",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview)},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+		),
+		Entry("legacy/lifecycle: replaces classification and expiration even without an expired stage in the override",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview), ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationDeprecated},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationDeprecated},
+			}},
+		),
+
+		// lifecycle base / lifecycle override: the override lifecycle is authoritative and replaces the base lifecycle.
+		Entry("lifecycle/lifecycle: drops parent stages not present in the override",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationSupported, StartTime: &now},
+				{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &later},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &evenLater},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &evenLater},
+			}},
+		),
+		Entry("lifecycle/lifecycle: adopts a stage introduced by the override",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &later},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &later},
+			}},
+		),
+
+		// no override set: the parent version is inherited unchanged, regardless of its shape.
+		Entry("no override: a legacy versions expiration unchanged",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview), ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Classification: new(gardencorev1beta1.ClassificationPreview), ExpirationDate: &now},
+		),
+		Entry("no override: a lifecycle version stays unchanged",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+		),
+	)
 })
