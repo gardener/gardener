@@ -9,18 +9,18 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 )
 
 // FindImageFromCloudProfile takes a cloud profile config and image details to find the appropriate
 // image based on compatibility with the requested capabilities. If capabilities are specified,
 // it performs capability matching to find the most suitable image.
 func FindImageFromCloudProfile(
-	cloudProfileConfig *local.CloudProfileConfig,
+	cloudProfileConfig *localv1alpha1.CloudProfileConfig,
 	name, version string,
 	machineCapabilities v1beta1.Capabilities,
 	capabilityDefinitions []v1beta1.CapabilityDefinition,
-) (*local.MachineImageFlavor, error) {
+) (*localv1alpha1.MachineImageFlavor, error) {
 	if cloudProfileConfig == nil {
 		return nil, fmt.Errorf("cloud profile config is nil")
 	}
@@ -38,11 +38,11 @@ func FindImageFromCloudProfile(
 }
 
 func findMachineImageFlavor(
-	machineImages []local.MachineImages,
+	machineImages []localv1alpha1.MachineImages,
 	imageName, imageVersion string,
 	machineCapabilities v1beta1.Capabilities,
 	capabilityDefinitions []v1beta1.CapabilityDefinition,
-) (*local.MachineImageFlavor, error) {
+) (*localv1alpha1.MachineImageFlavor, error) {
 	for _, machineImage := range machineImages {
 		if machineImage.Name != imageName {
 			continue
@@ -55,7 +55,7 @@ func findMachineImageFlavor(
 
 			// If no capabilityDefinitions are specified, return the (legacy) image field as no capabilityFlavors are used.
 			if len(capabilityDefinitions) == 0 {
-				return &local.MachineImageFlavor{
+				return &localv1alpha1.MachineImageFlavor{
 					Image:        version.Image,
 					Capabilities: v1beta1.Capabilities{},
 				}, nil

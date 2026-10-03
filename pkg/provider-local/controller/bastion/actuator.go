@@ -27,7 +27,7 @@ import (
 	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"

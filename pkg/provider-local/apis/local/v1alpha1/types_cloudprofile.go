@@ -52,6 +52,11 @@ type MachineImageFlavor struct {
 	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }
 
+// GetCapabilities returns the Capabilities of a MachineImageFlavor
+func (cs MachineImageFlavor) GetCapabilities() gardencorev1beta1.Capabilities {
+	return cs.Capabilities
+}
+
 // LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
 type LoadBalancer struct {
 	// Image is the envoy container image used for starting load balancer containers.

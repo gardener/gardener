@@ -380,7 +380,6 @@ provider_local_groups() {
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
-    --extra-peer-dir github.com/gardener/gardener/pkg/provider-local/apis/local \
     --extra-peer-dir github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1 \
     --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
     --extra-peer-dir k8s.io/apimachinery/pkg/conversion \

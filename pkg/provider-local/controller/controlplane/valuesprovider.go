@@ -19,7 +19,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/provider-local/charts"
 	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"

@@ -25,8 +25,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1/helper"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -35,7 +35,6 @@ type delegateFactory struct {
 	runtimeClient client.Client
 	decoder       runtime.Decoder
 	restConfig    *rest.Config
-	scheme        *runtime.Scheme
 }
 
 type actuator struct {
@@ -50,7 +49,6 @@ func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster) worker.Actu
 		runtimeClient: mgr.GetClient(),
 		decoder:       serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
 		restConfig:    mgr.GetConfig(),
-		scheme:        mgr.GetScheme(),
 	}
 
 	if gardenCluster != nil {
@@ -88,7 +86,6 @@ func (d *delegateFactory) WorkerDelegate(ctx context.Context, worker *extensions
 		d.runtimeClient,
 		d.restConfig,
 		d.decoder,
-		d.scheme,
 		serverVersion.GitVersion,
 		worker,
 		cluster,
@@ -106,16 +103,15 @@ type workerDelegate struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/extensions/provider-local.md#credentials.
 	providerClient client.Client
 	decoder        runtime.Decoder
-	scheme         *runtime.Scheme
 
 	podExecutor         kubernetesclient.PodExecutor
 	serverVersion       string
-	cloudProfileConfig  *api.CloudProfileConfig
+	cloudProfileConfig  *localv1alpha1.CloudProfileConfig
 	cluster             *extensionscontroller.Cluster
 	worker              *extensionsv1alpha1.Worker
 	machineClassSecrets []*corev1.Secret
 	machineClasses      []*machinev1alpha1.MachineClass
-	machineImages       []api.MachineImage
+	machineImages       []localv1alpha1.MachineImage
 	machineDeployments  worker.MachineDeployments
 }
 
@@ -126,7 +122,6 @@ func NewWorkerDelegate(
 	runtimeClient client.Client,
 	restConfig *rest.Config,
 	decoder runtime.Decoder,
-	scheme *runtime.Scheme,
 	serverVersion string,
 	worker *extensionsv1alpha1.Worker,
 	cluster *extensionscontroller.Cluster,
@@ -167,7 +162,6 @@ func NewWorkerDelegate(
 	}
 
 	return &workerDelegate{
-		scheme:             scheme,
 		runtimeClient:      runtimeClient,
 		providerClient:     providerClient,
 		decoder:            decoder,

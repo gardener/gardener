@@ -13,13 +13,13 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ValidateCloudProfileConfig validates a CloudProfileConfig object.
-func ValidateCloudProfileConfig(cpConfig *api.CloudProfileConfig, machineImages []core.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileConfig(cpConfig *localv1alpha1.CloudProfileConfig, machineImages []core.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	machineImagesPath := fldPath.Child("machineImages")
 
@@ -36,7 +36,7 @@ func ValidateCloudProfileConfig(cpConfig *api.CloudProfileConfig, machineImages 
 }
 
 // validateMachineImages validates the machine images section of CloudProfileConfig
-func validateMachineImages(machineImages []api.MachineImages, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func validateMachineImages(machineImages []localv1alpha1.MachineImages, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure at least one machine image is provided
@@ -55,7 +55,7 @@ func validateMachineImages(machineImages []api.MachineImages, capabilityDefiniti
 }
 
 // validateMachineImage validates an individual machine image configuration
-func validateMachineImage(machineImage api.MachineImages, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, idxPath *field.Path) field.ErrorList {
+func validateMachineImage(machineImage localv1alpha1.MachineImages, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, idxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImage.Name) == 0 {
@@ -78,7 +78,7 @@ func validateMachineImage(machineImage api.MachineImages, capabilityDefinitions 
 }
 
 // validateMachineImageVersion validates a specific machine image version
-func validateMachineImageVersion(version api.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
+func validateMachineImageVersion(version localv1alpha1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(version.Version) == 0 {
@@ -96,7 +96,7 @@ func validateMachineImageVersion(version api.MachineImageVersion, capabilityDefi
 }
 
 // validateWithCapabilities validates a machine image version when capabilities are defined
-func validateWithCapabilities(version api.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
+func validateWithCapabilities(version localv1alpha1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// When using capabilities, image must not be set directly
@@ -118,7 +118,7 @@ func validateWithCapabilities(version api.MachineImageVersion, capabilityDefinit
 }
 
 // validateWithoutCapabilities validates a machine image version when capabilities are not defined
-func validateWithoutCapabilities(version api.MachineImageVersion, jdxPath *field.Path) field.ErrorList {
+func validateWithoutCapabilities(version localv1alpha1.MachineImageVersion, jdxPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// When not using capabilities, image must be set directly
@@ -136,7 +136,7 @@ func validateWithoutCapabilities(version api.MachineImageVersion, jdxPath *field
 }
 
 // validateMachineImageMapping validates that for each machine image there is a corresponding providerConfig entry.
-func validateMachineImageMapping(coreMachineImages []core.MachineImage, machineImages []api.MachineImages, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
+func validateMachineImageMapping(coreMachineImages []core.MachineImage, machineImages []localv1alpha1.MachineImages, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	providerImages := NewProviderImagesContext(machineImages)
 
@@ -160,7 +160,7 @@ func validateMachineImageMapping(coreMachineImages []core.MachineImage, machineI
 }
 
 // validateMachineImageVersionMapping validates that versions in a machine image have corresponding mappings in the providerConfig.
-func validateMachineImageVersionMapping(machineImage core.MachineImage, providerImages *gardenerutils.ImagesContext[api.MachineImages, api.MachineImageVersion], capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, machineImagePath *field.Path) field.ErrorList {
+func validateMachineImageVersionMapping(machineImage core.MachineImage, providerImages *gardenerutils.ImagesContext[localv1alpha1.MachineImages, localv1alpha1.MachineImageVersion], capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, machineImagePath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// If no capabilities are defined, no version mapping validation is needed
@@ -189,7 +189,7 @@ func validateMachineImageVersionMapping(machineImage core.MachineImage, provider
 }
 
 // validateImageFlavorMapping validates that each flavor in a version has a corresponding mapping
-func validateImageFlavorMapping(imageName string, version core.MachineImageVersion, imageVersion api.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, machineImageVersionPath *field.Path) field.ErrorList {
+func validateImageFlavorMapping(imageName string, version core.MachineImageVersion, imageVersion localv1alpha1.MachineImageVersion, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition, machineImageVersionPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	var v1beta1Version gardencorev1beta1.MachineImageVersion
@@ -219,11 +219,11 @@ func validateImageFlavorMapping(imageName string, version core.MachineImageVersi
 }
 
 // NewProviderImagesContext creates a new ImagesContext for provider images.
-func NewProviderImagesContext(providerImages []api.MachineImages) *gardenerutils.ImagesContext[api.MachineImages, api.MachineImageVersion] {
+func NewProviderImagesContext(providerImages []localv1alpha1.MachineImages) *gardenerutils.ImagesContext[localv1alpha1.MachineImages, localv1alpha1.MachineImageVersion] {
 	return gardenerutils.NewImagesContext(
-		utils.CreateMapFromSlice(providerImages, func(mi api.MachineImages) string { return mi.Name }),
-		func(mi api.MachineImages) map[string]api.MachineImageVersion {
-			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })
+		utils.CreateMapFromSlice(providerImages, func(mi localv1alpha1.MachineImages) string { return mi.Name }),
+		func(mi localv1alpha1.MachineImages) map[string]localv1alpha1.MachineImageVersion {
+			return utils.CreateMapFromSlice(mi.Versions, func(v localv1alpha1.MachineImageVersion) string { return v.Version })
 		},
 	)
 }

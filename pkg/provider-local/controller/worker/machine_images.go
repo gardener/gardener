@@ -13,8 +13,8 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1/helper"
 )
 
 // UpdateMachineImagesStatus implements genericactuator.WorkerDelegate.
@@ -39,8 +39,8 @@ func (w *workerDelegate) UpdateMachineImagesStatus(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, machineCapabilities gardencorev1beta1.Capabilities) (*api.MachineImage, error) {
-	selectedMachineImage := &api.MachineImage{
+func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, machineCapabilities gardencorev1beta1.Capabilities) (*localv1alpha1.MachineImage, error) {
+	selectedMachineImage := &localv1alpha1.MachineImage{
 		Name:    name,
 		Version: version,
 	}
@@ -53,7 +53,7 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 
 	// Try to look up machine image in worker provider status as it was not found in CloudProfile.
 	if providerStatus := w.worker.Status.ProviderStatus; providerStatus != nil {
-		workerStatus := &api.WorkerStatus{}
+		workerStatus := &localv1alpha1.WorkerStatus{}
 		if _, _, err := w.decoder.Decode(providerStatus.Raw, nil, workerStatus); err != nil {
 			return nil, fmt.Errorf("could not decode worker status of worker '%s': %w", client.ObjectKeyFromObject(w.worker), err)
 		}
@@ -77,7 +77,7 @@ func (w *workerDelegate) selectMachineImageForWorkerPool(name, version string, m
 	return nil, worker.ErrorMachineImageNotFound(name, version)
 }
 
-func appendMachineImage(machineImages []api.MachineImage, machineImage api.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []api.MachineImage {
+func appendMachineImage(machineImages []localv1alpha1.MachineImage, machineImage localv1alpha1.MachineImage, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) []localv1alpha1.MachineImage {
 	// support for cloudprofile machine images without capabilities
 	if len(capabilityDefinitions) == 0 {
 		for _, image := range machineImages {
@@ -86,7 +86,7 @@ func appendMachineImage(machineImages []api.MachineImage, machineImage api.Machi
 				return machineImages
 			}
 		}
-		return append(machineImages, api.MachineImage{
+		return append(machineImages, localv1alpha1.MachineImage{
 			Name:    machineImage.Name,
 			Version: machineImage.Version,
 			Image:   machineImage.Image,
@@ -106,7 +106,7 @@ func appendMachineImage(machineImages []api.MachineImage, machineImage api.Machi
 	}
 
 	// If the image does not exist, we create a new machine image entry with the capabilities.
-	machineImages = append(machineImages, api.MachineImage{
+	machineImages = append(machineImages, localv1alpha1.MachineImage{
 		Name:         machineImage.Name,
 		Version:      machineImage.Version,
 		Image:        machineImage.Image,
