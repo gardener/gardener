@@ -268,6 +268,16 @@ EOF
         continue
       fi
 
+      # Skip if the node's kubelet serving cert is already CA-signed (CSR was approved in a previous
+      # run but garbage-collected since). Self-signed certs have the node as issuer; CA-signed certs
+      # have 'kubernetes' as issuer.
+      cert_issuer=$(docker exec "$node" sh -c \
+        "openssl x509 -noout -issuer -in /var/lib/kubelet/pki/kubelet-server-current.pem 2>/dev/null || true")
+      if echo "$cert_issuer" | grep -qi "kubernetes"; then
+        echo "Node ${node} already has a CA-signed kubelet serving certificate, skipping."
+        continue
+      fi
+
       max_retries=600
       for ((i = 0; i < max_retries; i++)); do
         csr_names=$(kubectl get csr -o json | jq -r --arg node "$node" '
