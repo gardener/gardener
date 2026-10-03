@@ -2984,7 +2984,6 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	out.IgnoreTaints = *(*[]string)(unsafe.Pointer(&in.IgnoreTaints))
 	out.NewPodScaleUpDelay = (*v1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
-	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	out.IgnoreDaemonsetsUtilization = (*bool)(unsafe.Pointer(in.IgnoreDaemonsetsUtilization))
 	out.Verbosity = (*int32)(unsafe.Pointer(in.Verbosity))
 	out.StartupTaints = *(*[]string)(unsafe.Pointer(&in.StartupTaints))
@@ -3022,7 +3021,6 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.StatusTaints = *(*[]string)(unsafe.Pointer(&in.StatusTaints))
 	out.IgnoreTaints = *(*[]string)(unsafe.Pointer(&in.IgnoreTaints))
 	out.NewPodScaleUpDelay = (*v1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
-	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	out.MaxScaleDownParallelism = (*int32)(unsafe.Pointer(in.MaxScaleDownParallelism))
 	out.MaxDrainParallelism = (*int32)(unsafe.Pointer(in.MaxDrainParallelism))
 	out.IgnoreDaemonsetsUtilization = (*bool)(unsafe.Pointer(in.IgnoreDaemonsetsUtilization))
@@ -4332,7 +4330,6 @@ func autoConvert_v1beta1_KubeControllerManagerConfig_To_core_KubeControllerManag
 	}
 	out.HorizontalPodAutoscalerConfig = (*core.HorizontalPodAutoscalerConfig)(unsafe.Pointer(in.HorizontalPodAutoscalerConfig))
 	out.NodeCIDRMaskSize = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSize))
-	out.PodEvictionTimeout = (*v1.Duration)(unsafe.Pointer(in.PodEvictionTimeout))
 	out.NodeMonitorGracePeriod = (*v1.Duration)(unsafe.Pointer(in.NodeMonitorGracePeriod))
 	out.NodeCIDRMaskSizeIPv6 = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSizeIPv6))
 	return nil
@@ -4350,7 +4347,6 @@ func autoConvert_core_KubeControllerManagerConfig_To_v1beta1_KubeControllerManag
 	out.HorizontalPodAutoscalerConfig = (*HorizontalPodAutoscalerConfig)(unsafe.Pointer(in.HorizontalPodAutoscalerConfig))
 	out.NodeCIDRMaskSize = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSize))
 	out.NodeCIDRMaskSizeIPv6 = (*int32)(unsafe.Pointer(in.NodeCIDRMaskSizeIPv6))
-	out.PodEvictionTimeout = (*v1.Duration)(unsafe.Pointer(in.PodEvictionTimeout))
 	out.NodeMonitorGracePeriod = (*v1.Duration)(unsafe.Pointer(in.NodeMonitorGracePeriod))
 	return nil
 }

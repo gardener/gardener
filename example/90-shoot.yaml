@@ -251,7 +251,6 @@ spec:
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   nodeCIDRMaskSizeIPv6: 80
-  #   podEvictionTimeout: 2m0s # This field is no-op and is forbidden to be set starting from Kubernetes 1.33
   #   nodeMonitorGracePeriod: 40s
   #   featureGates:
   #     SomeKubernetesFeature: true
@@ -340,7 +339,6 @@ spec:
   #   statusTaints:
   #     - "reservedForTenant"
   #   newPodScaleUpDelay: 0s
-  #   maxEmptyBulkDelete: 10 # Deprecated and forbidden to be set starting from Kubernetes 1.33. Will be removed once gardener drops support for Kubernetes v1.32. Use maxScaleDownParallelism instead.
   #   maxScaleDownParallelism: 10
   #   maxDrainParallelism: 1
   #   ignoreDaemonsetsUtilization: false

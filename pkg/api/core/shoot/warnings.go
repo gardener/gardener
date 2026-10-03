@@ -34,13 +34,6 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, getWarningsForIncompleteCredentialsRotation(shoot, credentialsRotationInterval)...)
 	}
 
-	// TODO(plkokanov): Remove this after support for Kubernetes v1.32 is dropped.
-	// We do not check for the Kubernetes version here because the shoot validation code is called before this
-	// and forbids setting .spec.kubernetes.kubeControllerManager.podEvictionTimeout for kubernetes >= v1.33.
-	if kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.PodEvictionTimeout != nil {
-		warnings = append(warnings, "you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13 and is forbidden to be set starting from Kubernetes 1.33. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")
-	}
-
 	// TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
 	// We do not check for the Kubernetes version here because the shoot validation code is called before this
 	// and forbids setting the etcd encryption key rotation start and complete annotations for kubernetes >= v1.34.
@@ -48,12 +41,8 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, fmt.Sprintf("you are setting the operation annotation to %s. This annotation has been deprecated and is forbidden to be set starting from Kubernetes 1.34. Instead, use the %s annotation, which performs a full rotation of the ETCD encryption key.", shoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateETCDEncryptionKey))
 	}
 
-	if supportedVersion, _ := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.33"); supportedVersion && shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
-		warnings = append(warnings, "you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.33. The value is not used and will be set to nil. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")
-	}
-
 	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
-	if err == nil && versionutils.ConstraintK8sGreaterEqual133.Check(kubernetesVersion) && ptr.Deref(shoot.Spec.CloudProfileName, "") != "" {
+	if ptr.Deref(shoot.Spec.CloudProfileName, "") != "" {
 		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be forcefully set empty starting with Kubernetes 1.34. Use the new spec.cloudProfile.name field instead.")
 	}
 

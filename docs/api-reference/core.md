@@ -2120,18 +2120,6 @@ string array
 </tr>
 <tr>
 <td>
-<code>maxEmptyBulkDelete</code></br>
-<em>
-integer
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: MaxScaleDownParallelism when that is set).<br />Deprecated: This field is deprecated. Setting this field will be forbidden starting from Kubernetes 1.33 and will be removed once gardener drops support for kubernetes v1.32.<br />This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>ignoreDaemonsetsUtilization</code></br>
 <em>
 boolean
@@ -2187,7 +2175,7 @@ integer
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel.<br />Default: 10 or MaxEmptyBulkDelete when that is set</p>
+<p>MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel.<br />Default: 10</p>
 </td>
 </tr>
 <tr>
@@ -5717,18 +5705,6 @@ integer
 <td>
 <em>(Optional)</em>
 <p>NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>podEvictionTimeout</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#duration-v1-meta">Duration</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.<br />Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated<br />in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.<br />The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint<br />based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,<br />instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and<br />`spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. Setting this field is forbidden starting<br />from Kubernetes 1.33.</p>
 </td>
 </tr>
 <tr>

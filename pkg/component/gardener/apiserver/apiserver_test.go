@@ -590,10 +590,8 @@ var _ = Describe("GardenerAPIServer", func() {
 		}
 		if version.ConstraintK8sGreaterEqual134.Check(values.TargetVersion) {
 			endpointsResources = []client.Object{endpointSlice}
-		} else if version.ConstraintK8sGreaterEqual133.Check(values.TargetVersion) {
-			endpointsResources = []client.Object{endpoints, endpointSlice}
 		} else {
-			endpointsResources = []client.Object{endpoints}
+			endpointsResources = []client.Object{endpoints, endpointSlice}
 		}
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
