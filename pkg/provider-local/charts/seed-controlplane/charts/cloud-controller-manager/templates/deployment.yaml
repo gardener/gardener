@@ -39,14 +39,13 @@ spec:
         # Case: Hosted Shoot
         networking.resources.gardener.cloud/to-kube-apiserver-tcp-443: allowed # Allows communication to kube-apiserver
                                                                                # of shoot (e.g., for watching Services).
-       
+
         {{- if .Values.hasManagedInfrastructure }}
         # Needed for looking up where machine pods are running for setting up routes on the load balancer containers.
-        # With managed infrastructure, we cannot tell where the infrastructure is running, so we need to allow
-        # communication to private networks, as this gives access to different local kind clusters.
-        networking.gardener.cloud/to-private-networks: allowed # Allows communication to any kind apiserver - needed
-                                                                # for looking up where machine pods are running for
-                                                                # setting up routes on the load balancer containers.
+        # With managed infrastructure, the machine pods run in the infrastructure cluster referenced by the provider
+        # credentials, which is not necessarily the runtime/seed cluster (e.g., for the second kind cluster).
+        networking.gardener.cloud/to-infra-cluster: allowed # Allows communication to the infrastructure cluster, see the
+                                                            # allow-to-infra-cluster NetworkPolicy in the parent chart.
         {{- else }}
         networking.gardener.cloud/to-runtime-apiserver: allowed # Allows communication to the kind apiserver - needed
                                                                 # for looking up where machine pods are running for
