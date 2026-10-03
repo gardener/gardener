@@ -15,46 +15,47 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	shootextensionactuator "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
-	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(s *ShootContext) {
-		BeforeTestSetup(func() {
-			metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, shootextensionactuator.AnnotationTestForceDeleteShoot, "true")
+	test := func(tc *ShootContext) {
+		metav1.SetMetaDataAnnotation(&tc.Shoot.ObjectMeta, shootextensionactuator.AnnotationTestForceDeleteShoot, "true")
+
+		BeforeAll(func() {
+			tc.Init()
 		})
 
 		Describe("Create and Force Delete Shoot", Label("force-delete"), func() {
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldAnnotateShoot(s, map[string]string{
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldAnnotateShoot(tc, map[string]string{
 				v1beta1constants.ShootIgnore: "true",
 			})
-			ItShouldDeleteShoot(s)
+			ItShouldDeleteShoot(tc)
 
 			It("Add ErrorInfraDependencies to LastErrors", func(ctx SpecContext) {
-				patch := client.MergeFrom(s.Shoot.DeepCopy())
-				s.Shoot.Status.LastErrors = []gardencorev1beta1.LastError{{
+				patch := client.MergeFrom(tc.Shoot.DeepCopy())
+				tc.Shoot.Status.LastErrors = []gardencorev1beta1.LastError{{
 					Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies},
 				}}
 
 				Eventually(ctx, func() error {
-					return s.GardenClient.Status().Patch(ctx, s.Shoot, patch)
+					return tc.GardenClient.Status().Patch(ctx, tc.Shoot, patch)
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			ItShouldAnnotateShoot(s, map[string]string{
+			ItShouldAnnotateShoot(tc, map[string]string{
 				v1beta1constants.AnnotationConfirmationForceDeletion: "true",
 				v1beta1constants.ShootIgnore:                         "false",
 			})
 
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldWaitForShootToBeDeleted(tc)
 		})
 	}
 
 	Context("Shoot with workers", Ordered, func() {
-		test(NewTestContext().ForShoot(DefaultShoot("e2e-force-delete")))
+		test(NewShootContext(DefaultShoot("e2e-force-delete")))
 	})
 
 	Context("Hibernated Shoot", Ordered, func() {
@@ -63,10 +64,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Enabled: new(true),
 		}
 
-		test(NewTestContext().ForShoot(shoot))
+		test(NewShootContext(shoot))
 	})
 
 	Context("Workerless Shoot", Ordered, func() {
-		test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-fd")))
+		test(NewShootContext(DefaultWorkerlessShoot("e2e-fd")))
 	})
 })

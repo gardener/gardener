@@ -5,8 +5,6 @@
 package seed
 
 import (
-	"context"
-	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,37 +29,29 @@ import (
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 	Describe("Garden Cluster Access For Seed Components", Ordered, PriorityFast, func() {
 		var (
-			s                *SeedContext
+			tc = NewSeedContext()
+
 			seedNamespace    string
 			gardenAccessName string
 			accessSecret     *corev1.Secret
 		)
 
-		BeforeTestSetup(func() {
-			testContext := NewTestContext()
+		BeforeAll(func(ctx SpecContext) {
+			tc.Init()
 
 			// Find the first seed which is not "e2e-managedseed". Seed name differs between test scenarios, e.g., non-ha/ha.
 			// However, this test should not use "e2e-managedseed", because it is created and deleted in a separate e2e test.
 			// This e2e test already includes tests for the "Renew gardenlet kubeconfig" functionality. Additionally,
 			// it might be already gone before the kubeconfig was renewed.
-			seedList := &gardencorev1beta1.SeedList{}
-			if err := testContext.GardenClient.List(context.Background(), seedList); err != nil {
-				testContext.Log.Error(err, "Failed to list seeds")
-				Fail(err.Error())
-			}
+			var seed gardencorev1beta1.Seed
+			Eventually(ctx, tc.GardenKomega.ObjectList(&gardencorev1beta1.SeedList{})).Should(
+				HaveField("Items", ContainElement(HaveField("Name", Not(Equal(DefaultManagedSeedName()))), &seed)),
+				"should find an applicable seed",
+			)
 
-			seedIndex := slices.IndexFunc(seedList.Items, func(item gardencorev1beta1.Seed) bool {
-				return item.Name != DefaultManagedSeedName()
-			})
+			tc.SetSeed(&seed)
 
-			if seedIndex == -1 {
-				Fail("failed to find applicable seed")
-			}
-
-			s = testContext.ForSeed(&seedList.Items[seedIndex])
-			ItShouldInitializeSeedClient(s)
-
-			seedNamespace = gardenerutils.ComputeGardenNamespace(s.Seed.Name)
+			seedNamespace = gardenerutils.ComputeGardenNamespace(tc.Seed.Name)
 			gardenAccessName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 			accessSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -76,11 +66,13 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 					},
 				},
 			}
-		})
+		}, NodeTimeout(time.Minute))
+
+		ItShouldInitializeSeedClient(tc)
 
 		It("Should create garden access secret", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
-				if err := s.SeedClient.Create(ctx, accessSecret); !apierrors.IsAlreadyExists(err) {
+				if err := tc.SeedClient.Create(ctx, accessSecret); !apierrors.IsAlreadyExists(err) {
 					return err
 				}
 				return StopTrying("access secret already exists")
@@ -102,7 +94,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}
 
 			Eventually(ctx, func() error {
-				if err := s.GardenClient.Create(ctx, role); !apierrors.IsAlreadyExists(err) {
+				if err := tc.GardenClient.Create(ctx, role); !apierrors.IsAlreadyExists(err) {
 					return err
 				}
 				return StopTrying("role already exists")
@@ -127,7 +119,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}
 
 			Eventually(ctx, func() error {
-				if err := s.GardenClient.Create(ctx, roleBinding); !apierrors.IsAlreadyExists(err) {
+				if err := tc.GardenClient.Create(ctx, roleBinding); !apierrors.IsAlreadyExists(err) {
 					return err
 				}
 				return StopTrying("rolebinding already exists")
@@ -137,14 +129,14 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		var accessSecretBefore *corev1.Secret
 		It("Should wait for to be populated in garden access secret", func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
-				g.Expect(s.SeedClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(tc.SeedClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
 				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(BeEmpty())))
 				accessSecretBefore = accessSecret.DeepCopy()
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("Should initialize client from garden access secret", func(ctx SpecContext) {
-			gardenAccessConfig := rest.CopyConfig(s.GardenClientSet.RESTConfig())
+			gardenAccessConfig := rest.CopyConfig(tc.GardenClientSet.RESTConfig())
 
 			// drop kind admin client certificate so that we can test other credentials
 			gardenAccessConfig.CertData = nil
@@ -160,15 +152,17 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		ItShouldAnnotateSeed(s, map[string]string{
+		ItShouldAnnotateSeed(tc, map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.SeedOperationRenewGardenAccessSecrets,
 		})
 
-		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Seed)
+		It("Should remove the operation annotation after requesting the garden access secrets renewal", func(ctx SpecContext) {
+			EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Seed)
+		}, SpecTimeout(2*time.Minute))
 
 		It("Should wait for token to be renewed in garden access secret", func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
-				g.Expect(s.SeedClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(tc.SeedClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
 				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(Equal(accessSecretBefore.Data[resourcesv1alpha1.DataKeyToken]))))
 				g.Expect(accessSecret.Annotations).To(HaveKeyWithValue(resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, Not(Equal(accessSecretBefore.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]))))
 			}).Should(Succeed())
@@ -179,12 +173,12 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 				const testAnnotation = "provider-local-e2e-test-garden-access"
 
 				Eventually(func(g Gomega) {
-					g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Seed), s.Seed)).To(Succeed())
+					g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(tc.Seed), tc.Seed)).To(Succeed())
 
-					g.Expect(s.Seed.Annotations).To(HaveKey(testAnnotation))
-					g.Expect(time.Parse(time.RFC3339, s.Seed.Annotations[testAnnotation])).
-						Should(BeTemporally(">", s.Seed.CreationTimestamp.UTC()),
-							"Timestamp in %s annotation on seed %s should be after creationTimestamp of seed", testAnnotation, s.Seed.Name)
+					g.Expect(tc.Seed.Annotations).To(HaveKey(testAnnotation))
+					g.Expect(time.Parse(time.RFC3339, tc.Seed.Annotations[testAnnotation])).
+						Should(BeTemporally(">", tc.Seed.CreationTimestamp.UTC()),
+							"Timestamp in %s annotation on seed %s should be after creationTimestamp of seed", testAnnotation, tc.Seed.Name)
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 		})

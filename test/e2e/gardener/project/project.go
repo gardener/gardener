@@ -18,12 +18,12 @@ import (
 )
 
 // ItShouldCreateProject creates the project
-func ItShouldCreateProject(s *ProjectContext) {
+func ItShouldCreateProject(tc *ProjectContext) {
 	GinkgoHelper()
 
 	It("Create Project", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			if err := s.GardenClient.Create(ctx, s.Project); !apierrors.IsAlreadyExists(err) {
+			if err := tc.GardenClient.Create(ctx, tc.Project); !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 
@@ -33,45 +33,45 @@ func ItShouldCreateProject(s *ProjectContext) {
 }
 
 // ItShouldDeleteProject deletes the project
-func ItShouldDeleteProject(s *ProjectContext) {
+func ItShouldDeleteProject(tc *ProjectContext) {
 	GinkgoHelper()
 
 	It("Delete Project", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Project)).To(Succeed())
-			g.Expect(s.GardenClient.Delete(ctx, s.Project)).To(Succeed())
+			g.Expect(gardenerutils.ConfirmDeletion(ctx, tc.GardenClient, tc.Project)).To(Succeed())
+			g.Expect(tc.GardenClient.Delete(ctx, tc.Project)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldWaitForProjectToBeDeleted waits for the project to be gone
-func ItShouldWaitForProjectToBeDeleted(s *ProjectContext) {
+func ItShouldWaitForProjectToBeDeleted(tc *ProjectContext) {
 	GinkgoHelper()
 
 	It("Wait for Project to be deleted", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			err := s.GardenKomega.Get(s.Project)()
+			err := tc.GardenKomega.Get(tc.Project)()
 			if err == nil {
-				s.Log.Info("Waiting for deletion", "phase", s.Project.Status.Phase)
+				tc.Log.Info("Waiting for deletion", "phase", tc.Project.Status.Phase)
 			}
 			return err
 		}).WithPolling(30 * time.Second).Should(BeNotFoundError())
 
-		s.Log.Info("Project has been deleted")
+		tc.Log.Info("Project has been deleted")
 	}, SpecTimeout(5*time.Minute))
 }
 
 // ItShouldWaitForProjectToBeReconciledAndReady waits for the project to be reconciled successfully and ready.
-func ItShouldWaitForProjectToBeReconciledAndReady(s *ProjectContext) {
+func ItShouldWaitForProjectToBeReconciledAndReady(tc *ProjectContext) {
 	GinkgoHelper()
 
 	It("Wait for Project to be reconciled", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenKomega.Get(s.Project)()).To(Succeed())
-			g.Expect(s.Project.Status.ObservedGeneration).To(Equal(s.Project.Generation))
-			g.Expect(s.Project.Status.Phase).To(Equal(gardencorev1beta1.ProjectReady))
+			g.Expect(tc.GardenKomega.Get(tc.Project)()).To(Succeed())
+			g.Expect(tc.Project.Status.ObservedGeneration).To(Equal(tc.Project.Generation))
+			g.Expect(tc.Project.Status.Phase).To(Equal(gardencorev1beta1.ProjectReady))
 		}).WithPolling(5 * time.Second).Should(Succeed())
 
-		s.Log.Info("Project has been reconciled and is ready")
+		tc.Log.Info("Project has been reconciled and is ready")
 	}, SpecTimeout(5*time.Minute))
 }

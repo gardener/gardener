@@ -90,10 +90,10 @@ func FindNodesOfInPlaceWorkers(ctx context.Context, log logr.Logger, shootClient
 
 // ItShouldLabelManualInPlaceNodesWithSelectedForUpdate labels all manual in-place nodes with the selected-for-update label.
 // In the actual scenario, this should be done by the user, but for testing purposes, we do it here.
-func ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s *ShootContext) {
+func ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("should label all the manual in-place nodes with selected-for-update", func(ctx SpecContext) {
-		LabelManualInPlaceNodesWithSelectedForUpdate(ctx, s.Log, s.ShootClient, s.Shoot)
+		LabelManualInPlaceNodesWithSelectedForUpdate(ctx, tc.Log, tc.ShootClient, tc.Shoot)
 	}, SpecTimeout(2*time.Minute))
 }

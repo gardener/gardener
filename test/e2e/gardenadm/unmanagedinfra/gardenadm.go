@@ -320,10 +320,10 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			// `gardenlet` reconciles immediately after it came up, and we should make sure that this (the `Shoot`
 			// controller) works as expected and finishes its operation successfully.
 			Context("shoot gardenlet reconciles self-hosted shoot", func() {
-				var s *e2egardener.ShootContext
+				var tc *e2egardener.ShootContext
 
 				BeforeAll(func() {
-					s = (&e2egardener.TestContext{
+					tc = (&e2egardener.TestContext{
 						GardenClientSet: gardenClientSet,
 						GardenClient:    gardenClientSet.Client(),
 						GardenKomega:    New(gardenClientSet.Client()),
@@ -332,18 +332,18 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 				It("should wait for the self-hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
 					Eventually(ctx, func(g Gomega) bool {
-						g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
-						g.Expect(s.Shoot.Status.Gardener.Name).To(ContainSubstring("gardenlet"))
+						g.Expect(tc.GardenKomega.Get(tc.Shoot)()).To(Succeed())
+						g.Expect(tc.Shoot.Status.Gardener.Name).To(ContainSubstring("gardenlet"))
 						// TODO(rfranzke): Uncomment this code and remove the manual checks once the Shoot controller
 						//  has progressed and the .status.conditions properly reflect healthiness.
 						//
-						// completed, _ := shootoperation.ReconciliationSuccessful(s.Shoot)
+						// completed, _ := shootoperation.ReconciliationSuccessful(tc.Shoot)
 						// return completed
 
-						if s.Shoot.Generation != s.Shoot.Status.ObservedGeneration {
+						if tc.Shoot.Generation != tc.Shoot.Status.ObservedGeneration {
 							return false
 						}
-						if len(s.Shoot.Status.Conditions) == 0 && s.Shoot.Status.LastOperation == nil {
+						if len(tc.Shoot.Status.Conditions) == 0 && tc.Shoot.Status.LastOperation == nil {
 							return false
 						}
 						if shoot.Status.LastOperation != nil {
@@ -358,7 +358,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					}).WithPolling(30 * time.Second).Should(BeTrue())
 
 					By("Verifying ShootTaskUpdateGardenerNodeAgentSecretName task annotation has been removed")
-					Expect(controllerutils.HasTask(s.Shoot.Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName)).To(BeFalse())
+					Expect(controllerutils.HasTask(tc.Shoot.Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName)).To(BeFalse())
 				}, SpecTimeout(30*time.Minute))
 
 				It("should ensure the static token secret only contains the health-check token (cluster-admin token eliminated)", func(ctx SpecContext) {
@@ -497,13 +497,13 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 		})
 
 		Context("hosted shoot on promoted seed", Ordered, Label("hosted-shoot"), func() {
-			var s *e2egardener.ShootContext
+			var tc *e2egardener.ShootContext
 
 			BeforeAll(func(ctx SpecContext) {
 				initGardenClientSet(ctx)
 
 				hostedShoot := e2egardener.DefaultShoot("e2e-gardenadm")
-				s = (&e2egardener.TestContext{
+				tc = (&e2egardener.TestContext{
 					GardenClientSet: gardenClientSet,
 					GardenClient:    gardenClientSet.Client(),
 					GardenKomega:    New(gardenClientSet.Client()),
@@ -512,43 +512,43 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 			It("should create the hosted shoot", func(ctx SpecContext) {
 				Eventually(ctx, func() error {
-					return s.GardenClient.Create(ctx, s.Shoot)
+					return tc.GardenClient.Create(ctx, tc.Shoot)
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			It("should wait for the hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
 				Eventually(ctx, func(g Gomega) bool {
-					g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
-					completed, _ := shootoperation.ReconciliationSuccessful(s.Shoot)
+					g.Expect(tc.GardenKomega.Get(tc.Shoot)()).To(Succeed())
+					completed, _ := shootoperation.ReconciliationSuccessful(tc.Shoot)
 					return completed
 				}).WithPolling(30 * time.Second).Should(BeTrue())
 			}, SpecTimeout(30*time.Minute))
 
 			It("should initialize the shoot client", func(ctx SpecContext) {
 				Eventually(ctx, func() error {
-					clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+					clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, tc.GardenClientSet, tc.Shoot)
 					if err != nil {
 						return err
 					}
-					s.WithShootClientSet(clientSet)
+					tc.SetShootClientSet(clientSet)
 					return nil
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			It("should verify shoot access using admin kubeconfig", func(ctx SpecContext) {
-				Eventually(ctx, s.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
+				Eventually(ctx, tc.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			It("should delete the hosted shoot", func(ctx SpecContext) {
 				Eventually(ctx, func(g Gomega) {
-					g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Shoot)).To(Succeed())
-					g.Expect(s.GardenClient.Delete(ctx, s.Shoot)).To(Succeed())
+					g.Expect(gardenerutils.ConfirmDeletion(ctx, tc.GardenClient, tc.Shoot)).To(Succeed())
+					g.Expect(tc.GardenClient.Delete(ctx, tc.Shoot)).To(Succeed())
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			It("should wait for the hosted shoot to be deleted", func(ctx SpecContext) {
 				Eventually(ctx, func() error {
-					return s.GardenKomega.Get(s.Shoot)()
+					return tc.GardenKomega.Get(tc.Shoot)()
 				}).WithPolling(30 * time.Second).Should(BeNotFoundError())
 			}, SpecTimeout(20*time.Minute))
 		})

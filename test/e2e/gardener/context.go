@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -56,14 +55,18 @@ type TestContext struct {
 	GardenKomega komega.Komega
 }
 
-// NewTestContext sets up a new TestContext for working with the garden cluster pointed to by the KUBECONFIG env var.
-// As NewTestContext is expected to be called during tree construction, we cannot perform gomega assertions and have to
-// handle errors by panicking.
+// NewTestContext returns a new TestContext for working with the garden cluster pointed to by the KUBECONFIG env var.
+// The clients are not initialized yet, this must be done by calling Init. NewTestContext does not fail, so it is safe to
+// call it during tree construction. Init on the other hand must be called in a setup node like BeforeAll.
 func NewTestContext() *TestContext {
-	t := &TestContext{
+	return &TestContext{
 		Log: logger.MustNewZapLogger(logger.DebugLevel, logger.FormatText, logzap.WriteTo(GinkgoWriter)),
 	}
+}
 
+// Init initializes the garden clients of the TestContext. It panics if the initialization fails and should be called in
+// a setup node like BeforeAll, not during tree construction.
+func (t *TestContext) Init() *TestContext {
 	gardenScheme := kubernetes.GardenScheme
 	utilruntime.Must(operatorv1alpha1.AddToScheme(gardenScheme))
 	utilruntime.Must(resourcesv1alpha1.AddToScheme(gardenScheme))
@@ -87,32 +90,25 @@ func NewTestContext() *TestContext {
 	return t
 }
 
-// ForShoot copies the receiver TestContext for deriving a ShootContext.
-func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
-	s := &ShootContext{
-		TestContext: *t,
-		Shoot:       shoot,
-	}
-	s.Log = s.Log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
-
-	return s
-}
-
 // ShootContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, ShootContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare ShootContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare ShootContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A ShootContext can be initialized using TestContext.ForShoot.
+// A ShootContext is created using NewShootContext and initialized by calling Init in a BeforeAll node. In contrast to
+// the other context types, the Shoot is set during tree construction because many shared helper functions decide which
+// specs to register depending on the shoot's spec (e.g., whether it is workerless). Building the Shoot object cannot
+// fail, so this is safe. Only the clients are initialized in the BeforeAll node.
 type ShootContext struct {
 	TestContext
-	SeedContext
+
+	// SeedContext of the seed the shoot is scheduled to.
+	*SeedContext
 
 	// Shoot object that the test case is working with.
 	Shoot *gardencorev1beta1.Shoot
 
-	// ShootClientSet is a client for the shoot cluster. It must be initialized via WithShootClientSet.
+	// ShootClientSet is a client for the shoot cluster. It must be initialized via SetShootClientSet.
 	ShootClientSet kubernetes.Interface
 	// ShootClient is the controller-runtime client of the ShootClientSet. This is a more convenient equivalent of
 	// ShootClientSet.Client().
@@ -124,65 +120,96 @@ type ShootContext struct {
 	ShootKomega komega.Komega
 
 	// ControlPlaneNamespace contains the namespace for the Shoot Control Plane in the Seed.
-	// It must be initialized via WithControlPlaneNamespace.
+	// It must be initialized via SetControlPlaneNamespace.
 	ControlPlaneNamespace string
 }
 
-// WithShootClientSet initializes the shoot clients of this ShootContext from the given client set.
-func (s *ShootContext) WithShootClientSet(clientSet kubernetes.Interface) *ShootContext {
-	s.ShootClientSet = clientSet
-	s.ShootClient = clientSet.Client()
-	s.ShootKomega = komega.New(s.ShootClient)
-	return s
+// ForShoot copies the receiver TestContext for deriving a ShootContext.
+func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
+	return (&ShootContext{TestContext: *t, SeedContext: &SeedContext{}}).SetShoot(shoot)
 }
 
-// WithControlPlaneNamespace sets the namespace for the Shoot Control Plane in the Seed.
-func (s *ShootContext) WithControlPlaneNamespace(namespace string) *ShootContext {
-	s.ControlPlaneNamespace = namespace
-	return s
+// NewShootContext returns a ShootContext for the given shoot. The clients are not initialized yet, this must be done in
+// a BeforeAll node by calling Init. NewShootContext does not fail, so it is safe to call it during tree construction.
+// This is needed because many shared helper functions decide which specs to register depending on the shoot's spec
+// (e.g., whether it is workerless).
+func NewShootContext(shoot *gardencorev1beta1.Shoot) *ShootContext {
+	return (&ShootContext{TestContext: *NewTestContext(), SeedContext: &SeedContext{}}).SetShoot(shoot)
+}
+
+// Init initializes the garden clients of the ShootContext, see TestContext.Init.
+func (t *ShootContext) Init() *ShootContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetShoot sets the Shoot of the ShootContext and adds it to the logger.
+func (t *ShootContext) SetShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
+	t.Shoot = shoot
+	t.Log = t.Log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
+	return t
+}
+
+// SetShootClientSet initializes the shoot clients of this ShootContext from the given client set.
+func (t *ShootContext) SetShootClientSet(clientSet kubernetes.Interface) *ShootContext {
+	t.ShootClientSet = clientSet
+	t.ShootClient = clientSet.Client()
+	t.ShootKomega = komega.New(t.ShootClient)
+	return t
+}
+
+// SetControlPlaneNamespace sets the namespace for the Shoot Control Plane in the Seed.
+func (t *ShootContext) SetControlPlaneNamespace(namespace string) *ShootContext {
+	t.ControlPlaneNamespace = namespace
+	return t
 }
 
 // ProjectContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, ProjectContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare ProjectContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare ProjectContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A ProjectContext can be initialized using TestContext.ForProject.
+// A ProjectContext is created using NewProjectContext and initialized by calling Init followed by SetProject in a
+// BeforeAll node.
 type ProjectContext struct {
 	TestContext
 
 	Project *gardencorev1beta1.Project
 }
 
-// ForProject copies the receiver TestContext for deriving a ProjectContext.
-func (t *TestContext) ForProject(project *gardencorev1beta1.Project) *ProjectContext {
-	s := &ProjectContext{
-		TestContext: *t,
-		Project:     project,
-	}
-	s.Log = s.Log.WithValues("project", client.ObjectKeyFromObject(project))
+// NewProjectContext returns an empty ProjectContext. The clients are not initialized yet, this must be done in a
+// BeforeAll node by calling Init, followed by SetProject.
+func NewProjectContext() *ProjectContext {
+	return &ProjectContext{TestContext: *NewTestContext()}
+}
 
-	return s
+// Init initializes the garden clients of the ProjectContext, see TestContext.Init.
+func (t *ProjectContext) Init() *ProjectContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetProject sets the Project of the ProjectContext and adds it to the logger.
+func (t *ProjectContext) SetProject(project *gardencorev1beta1.Project) *ProjectContext {
+	t.Project = project
+	t.Log = t.Log.WithValues("project", client.ObjectKeyFromObject(project))
+	return t
 }
 
 // GardenContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, GardenContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare GardenContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare GardenContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A GardenContext can be initialized using TestContext.ForGarden.
+// A GardenContext is created using NewGardenContext and initialized by calling Init followed by SetGarden in a BeforeAll
+// node.
 type GardenContext struct {
 	TestContext
 
 	// Garden object the test is working with
 	Garden *operatorv1alpha1.Garden
 
-	// BackupSecret contains the backup secret the test is working with
-	BackupSecret *corev1.Secret
-
-	// VirtualClusterClientSet is a client for the virtual cluster. It must be initialized via WithVirtualClusterClientSet.
+	// VirtualClusterClientSet is a client for the virtual cluster. It must be initialized via SetVirtualClusterClientSet.
 	VirtualClusterClientSet kubernetes.Interface
 	// VirtualClusterClient is the controller-runtime client of the VirtualClusterClientSet. This is a more convenient equivalent of
 	// VirtualClusterClientSet.Client().
@@ -194,40 +221,48 @@ type GardenContext struct {
 	VirtualClusterKomega komega.Komega
 }
 
-// ForGarden copies the receiver TestContext for deriving a GardenContext.
-func (t *TestContext) ForGarden(garden *operatorv1alpha1.Garden, backupSecret *corev1.Secret) *GardenContext {
-	s := &GardenContext{
-		TestContext:  *t,
-		Garden:       garden,
-		BackupSecret: backupSecret,
-	}
-	s.Log = s.Log.WithValues("garden", client.ObjectKeyFromObject(garden))
-
-	return s
+// NewGardenContext returns an empty GardenContext. The clients are not initialized yet, this must be done in a BeforeAll
+// node by calling Init, followed by SetGarden.
+func NewGardenContext() *GardenContext {
+	return &GardenContext{TestContext: *NewTestContext()}
 }
 
-// WithVirtualClusterClientSet initializes the virtual cluster clients of this GardenContext from the given client set.
-func (s *GardenContext) WithVirtualClusterClientSet(clientSet kubernetes.Interface) *GardenContext {
-	s.VirtualClusterClientSet = clientSet
-	s.VirtualClusterClient = clientSet.Client()
-	s.VirtualClusterKomega = komega.New(s.VirtualClusterClient)
-	return s
+// Init initializes the garden clients of the GardenContext, see TestContext.Init.
+func (t *GardenContext) Init() *GardenContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetGarden sets the Garden of the GardenContext and adds it to the logger.
+func (t *GardenContext) SetGarden(garden *operatorv1alpha1.Garden) *GardenContext {
+	t.Garden = garden
+	t.Log = t.Log.WithValues("garden", client.ObjectKeyFromObject(garden))
+
+	return t
+}
+
+// SetVirtualClusterClientSet initializes the virtual cluster clients of this GardenContext from the given client set.
+func (t *GardenContext) SetVirtualClusterClientSet(clientSet kubernetes.Interface) *GardenContext {
+	t.VirtualClusterClientSet = clientSet
+	t.VirtualClusterClient = clientSet.Client()
+	t.VirtualClusterKomega = komega.New(t.VirtualClusterClient)
+	return t
 }
 
 // SeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, SeedContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare SeedContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare SeedContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A SeedContext can be initialized using TestContext.ForSeed.
+// A SeedContext is created using NewSeedContext and initialized by calling Init followed by SetSeed in a BeforeAll node.
+// Alternatively, it can be derived from an initialized TestContext using TestContext.ForSeed.
 type SeedContext struct {
 	TestContext
 
 	// Seed object the test is working with
 	Seed *gardencorev1beta1.Seed
 
-	// SeedClientSet is a client for the seed cluster. It must be initialized via WithSeedClientSet.
+	// SeedClientSet is a client for the seed cluster. It must be initialized via SetSeedClientSet.
 	SeedClientSet kubernetes.Interface
 	// SeedClient is the controller-runtime client of the SeedClientSet. This is a more convenient equivalent of
 	// SeedClientSet.Client().
@@ -241,59 +276,87 @@ type SeedContext struct {
 
 // ForSeed copies the receiver TestContext for deriving a SeedContext.
 func (t *TestContext) ForSeed(seed *gardencorev1beta1.Seed) *SeedContext {
-	s := &SeedContext{
-		TestContext: *t,
-		Seed:        seed,
-	}
-	s.Log = s.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
-
-	return s
+	return (&SeedContext{TestContext: *t}).SetSeed(seed)
 }
 
-// WithSeedClientSet initializes the seed clients of this SeedContext from the given client set.
-func (s *SeedContext) WithSeedClientSet(clientSet kubernetes.Interface) *SeedContext {
-	s.SeedClientSet = clientSet
-	s.SeedClient = clientSet.Client()
-	s.SeedKomega = komega.New(s.SeedClient)
-	return s
+// NewSeedContext returns an empty SeedContext. The clients are not initialized yet, this must be done in a BeforeAll
+// node by calling Init, followed by SetSeed.
+func NewSeedContext() *SeedContext {
+	return &SeedContext{TestContext: *NewTestContext()}
+}
+
+// Init initializes the garden clients of the SeedContext, see TestContext.Init.
+func (t *SeedContext) Init() *SeedContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetSeed sets the Seed of the SeedContext and adds it to the logger.
+func (t *SeedContext) SetSeed(seed *gardencorev1beta1.Seed) *SeedContext {
+	t.Seed = seed
+	t.Log = t.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
+
+	return t
+}
+
+// SetSeedClientSet initializes the seed clients of this SeedContext from the given client set.
+func (t *SeedContext) SetSeedClientSet(clientSet kubernetes.Interface) *SeedContext {
+	t.SeedClientSet = clientSet
+	t.SeedClient = clientSet.Client()
+	t.SeedKomega = komega.New(t.SeedClient)
+	return t
 }
 
 // ManagedSeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, ManagedSeedContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare ManagedSeedContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare ManagedSeedContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A ManagedSeedContext can be initialized using TestContext.ForManagedSeed.
+// A ManagedSeedContext is created using NewManagedSeedContext and initialized by calling Init followed by
+// SetManagedSeed in a BeforeAll node.
 type ManagedSeedContext struct {
 	TestContext
 
 	// ManagedSeed object the test is working with
 	ManagedSeed *seedmanagementv1alpha1.ManagedSeed
 
-	// ShootContext object the managed seed is referencing
+	// ShootContext of the shoot the managed seed is referencing
 	ShootContext *ShootContext
 
-	// Seed object the managed seed is referencing
+	// SeedContext of the seed the managed seed is referencing
 	SeedContext *SeedContext
 }
 
-// ForManagedSeed copies the receiver ShootContext for deriving a ManagedSeedContext.
-func (t *TestContext) ForManagedSeed(baseShoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
+// NewManagedSeedContext returns an empty ManagedSeedContext. It is safe to call during tree construction, i.e., the
+// ShootContext and SeedContext can already be passed to shared helper functions. The context must be initialized in a
+// BeforeAll node by calling Init, followed by SetManagedSeed.
+func NewManagedSeedContext() *ManagedSeedContext {
+	return &ManagedSeedContext{
+		TestContext:  *NewTestContext(),
+		ShootContext: &ShootContext{},
+		SeedContext:  &SeedContext{},
+	}
+}
+
+// Init initializes the garden clients of the ManagedSeedContext, see TestContext.Init.
+func (t *ManagedSeedContext) Init() *ManagedSeedContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetManagedSeed sets the ManagedSeed of the ManagedSeedContext and derives the ShootContext and SeedContext from it.
+// It must be called after Init.
+func (t *ManagedSeedContext) SetManagedSeed(baseShoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: managedSeed.Name,
 		},
 	}
 
-	ms := &ManagedSeedContext{
-		TestContext:  *t,
-		ManagedSeed:  managedSeed,
-		SeedContext:  t.ForSeed(seed),
-		ShootContext: t.ForShoot(baseShoot),
-	}
-
+	t.ManagedSeed = managedSeed
+	*t.SeedContext = *t.ForSeed(seed)
+	*t.ShootContext = *t.ForShoot(baseShoot)
 	t.Log = t.Log.WithValues("managedSeed", client.ObjectKeyFromObject(managedSeed))
 
-	return ms
+	return t
 }

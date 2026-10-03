@@ -39,19 +39,24 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Authenticate, Delete", Ordered, Label("authentication"), func() {
-		shoot1 := NewTestContext().ForShoot(DefaultShoot("e2e-auth-one"))
-		shoot2 := NewTestContext().ForShoot(DefaultShoot("e2e-auth-two"))
+		shoot1 := NewShootContext(DefaultShoot("e2e-auth-one"))
+		shoot2 := NewShootContext(DefaultShoot("e2e-auth-two"))
+
+		BeforeAll(func() {
+			shoot1.Init()
+			shoot2.Init()
+		})
 
 		ItShouldCreateShoot(shoot1)
 		ItShouldCreateShoot(shoot2)
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(shoot1)
 		ItShouldGetResponsibleSeed(shoot1)
-		seed.ItShouldInitializeSeedClient(&shoot1.SeedContext)
+		seed.ItShouldInitializeSeedClient(shoot1.SeedContext)
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(shoot2)
 		ItShouldGetResponsibleSeed(shoot2)
-		seed.ItShouldInitializeSeedClient(&shoot2.SeedContext)
+		seed.ItShouldInitializeSeedClient(shoot2.SeedContext)
 
 		var shoot1Client, shoot2Client, shoot1TokenClient, shoot2TokenClient kubernetes.Interface
 

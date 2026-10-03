@@ -33,42 +33,43 @@ import (
 )
 
 var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, PriorityLonger, func() {
-	var s *ManagedSeedContext
+	tc := NewManagedSeedContext()
 
-	BeforeTestSetup(func() {
+	BeforeAll(func() {
+		tc.Init()
+
 		shoot := DefaultShoot(DefaultManagedSeedName())
 		shoot.Namespace = v1beta1constants.GardenNamespace
-		managedSeed := buildManagedSeed(shoot)
 
-		s = NewTestContext().ForManagedSeed(shoot, managedSeed)
+		tc.SetManagedSeed(shoot, buildManagedSeed(shoot))
 	})
 
-	ItShouldCreateShoot(s.ShootContext)
-	ItShouldWaitForShootToBeReconciledAndHealthy(s.ShootContext)
-	ItShouldInitializeShootClient(s.ShootContext)
-	ItShouldCreateManagedSeed(s)
-	ItShouldWaitForManagedSeedToBeReady(s)
-	ItShouldWaitForSeedToBeReady(s.SeedContext)
+	ItShouldCreateShoot(tc.ShootContext)
+	ItShouldWaitForShootToBeReconciledAndHealthy(tc.ShootContext)
+	ItShouldInitializeShootClient(tc.ShootContext)
+	ItShouldCreateManagedSeed(tc)
+	ItShouldWaitForManagedSeedToBeReady(tc)
+	ItShouldWaitForSeedToBeReady(tc.SeedContext)
 
 	// validate Prometheus health checks are in place for Prometheuses in the seed.
-	itShouldVerifyPrometheusHealthCheck(s, "aggregate")
-	itShouldVerifyPrometheusHealthCheck(s, "cache")
-	itShouldVerifyPrometheusHealthCheck(s, "seed")
+	itShouldVerifyPrometheusHealthCheck(tc, "aggregate")
+	itShouldVerifyPrometheusHealthCheck(tc, "cache")
+	itShouldVerifyPrometheusHealthCheck(tc, "seed")
 
 	verifier := &rotation.GardenletKubeconfigRotationVerifier{
-		GardenReader:                       s.GardenClient,
 		GardenletKubeconfigSecretName:      gardenletKubeconfigSecretName,
 		GardenletKubeconfigSecretNamespace: gardenletKubeconfigSecretNamespace,
 	}
 
-	It("Should initialize seed fields in verifier", func() {
-		verifier.SeedReader = s.ShootContext.ShootClient
-		verifier.Seed = s.SeedContext.Seed
+	It("Should initialize clients and seed in verifier", func() {
+		verifier.GardenReader = tc.GardenClient
+		verifier.SeedReader = tc.ShootContext.ShootClient
+		verifier.Seed = tc.SeedContext.Seed
 	})
 
 	Describe("Trigger gardenlet kubeconfig rotation by annotating Seed", func() {
 		itShouldVerifyGardenletKubeconfigRotation(verifier, false, func() {
-			ItShouldAnnotateSeed(s.SeedContext, map[string]string{
+			ItShouldAnnotateSeed(tc.SeedContext, map[string]string{
 				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
 			})
 		})
@@ -76,7 +77,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 
 	Describe("Trigger gardenlet kubeconfig rotation by annotating ManagedSeed", func() {
 		itShouldVerifyGardenletKubeconfigRotation(verifier, false, func() {
-			ItShouldAnnotateManagedSeed(s, map[string]string{
+			ItShouldAnnotateManagedSeed(tc, map[string]string{
 				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
 			})
 		})
@@ -92,7 +93,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 					},
 				}
 
-				Eventually(ctx, s.ShootContext.ShootKomega.Update(secret, func() {
+				Eventually(ctx, tc.ShootContext.ShootKomega.Update(secret, func() {
 					metav1.SetMetaDataAnnotation(&secret.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.KubeconfigSecretOperationRenew)
 				})).Should(Succeed())
 			}, SpecTimeout(time.Minute))
@@ -109,15 +110,15 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 			}
 
 			Eventually(ctx, func(g Gomega) {
-				g.Expect(s.ShootContext.ShootClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+				g.Expect(tc.ShootContext.ShootClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
 				if ptr.Deref(deployment.Spec.Replicas, 0) != 0 {
-					g.Expect(s.ShootContext.ShootKomega.Update(deployment, func() {
+					g.Expect(tc.ShootContext.ShootKomega.Update(deployment, func() {
 						deployment.Spec.Replicas = new(int32(0))
 					})()).To(Succeed())
 				}
 
-				g.Expect(s.ShootContext.ShootKomega.ObjectList(&corev1.PodList{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})()).
+				g.Expect(tc.ShootContext.ShootKomega.ObjectList(&corev1.PodList{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})()).
 					To(HaveField("Items", BeEmpty()))
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
@@ -130,7 +131,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 					// kube-controller-manager backdates the issued certificate, see https://github.com/kubernetes/kubernetes/blob/252935368ab67f38cb252df0a961a6dcb81d20eb/pkg/controller/certificates/signer/signer.go#L197.
 					// ~40% * 15m =~ 6m. The jittering in gardenlet adds this to the time at which the certificate became
 					// valid and then renews it.
-					return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, s.GardenClient, s.ManagedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
+					return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, tc.GardenClient, tc.ManagedSeed, &gardenletconfigv1alpha1.KubeconfigValidity{
 						Validity:                        &metav1.Duration{Duration: 10 * time.Minute},
 						AutoRotationJitterPercentageMin: new(int32(40)),
 						AutoRotationJitterPercentageMax: new(int32(41)),
@@ -144,16 +145,16 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 
 		It("Revert kubeconfig validity settings", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
-				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, s.GardenClient, s.ManagedSeed, nil)
+				return patchGardenletKubeconfigValiditySettingsAndTriggerRotation(ctx, tc.GardenClient, tc.ManagedSeed, nil)
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 	})
 
-	ItShouldDeleteManagedSeed(s)
-	ItShouldWaitForSeedToBeDeleted(s.SeedContext)
-	ItShouldWaitForManagedSeedToBeDeleted(s)
-	ItShouldDeleteShoot(s.ShootContext)
-	ItShouldWaitForShootToBeDeleted(s.ShootContext)
+	ItShouldDeleteManagedSeed(tc)
+	ItShouldWaitForSeedToBeDeleted(tc.SeedContext)
+	ItShouldWaitForManagedSeedToBeDeleted(tc)
+	ItShouldDeleteShoot(tc.ShootContext)
+	ItShouldWaitForShootToBeDeleted(tc.ShootContext)
 })
 
 const (
@@ -271,7 +272,7 @@ func patchGardenletKubeconfigValiditySettingsAndTriggerRotation(
 	return gardenClient.Patch(ctx, managedSeed, patch)
 }
 
-func itShouldVerifyPrometheusHealthCheck(s *ManagedSeedContext, prometheusName string) {
+func itShouldVerifyPrometheusHealthCheck(tc *ManagedSeedContext, prometheusName string) {
 	rule := &monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      prometheusName + "-test-job-down",
@@ -294,10 +295,10 @@ func itShouldVerifyPrometheusHealthCheck(s *ManagedSeedContext, prometheusName s
 		},
 	}
 
-	ItShouldCreatePrometheusRuleForShoot(s.ShootContext, rule)
+	ItShouldCreatePrometheusRuleForShoot(tc.ShootContext, rule)
 
 	It("Wait until SeedSystemComponentsHealthy is false", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Object(s.SeedContext.Seed)).Should(
+		Eventually(ctx, tc.GardenKomega.Object(tc.SeedContext.Seed)).Should(
 			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(gardencorev1beta1.SeedSystemComponentsHealthy),
 				"Status": Equal(gardencorev1beta1.ConditionFalse),
@@ -308,10 +309,10 @@ func itShouldVerifyPrometheusHealthCheck(s *ManagedSeedContext, prometheusName s
 		)
 	}, SpecTimeout(10*time.Minute))
 
-	ItShouldDeletePrometheusRuleForShoot(s.ShootContext, rule)
+	ItShouldDeletePrometheusRuleForShoot(tc.ShootContext, rule)
 
 	It("Wait until SeedSystemComponentsHealthy is true", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Object(s.SeedContext.Seed)).Should(
+		Eventually(ctx, tc.GardenKomega.Object(tc.SeedContext.Seed)).Should(
 			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":    Equal(gardencorev1beta1.SeedSystemComponentsHealthy),
 				"Status":  Equal(gardencorev1beta1.ConditionTrue),
