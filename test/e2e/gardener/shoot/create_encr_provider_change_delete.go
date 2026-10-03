@@ -38,7 +38,7 @@ func init() {
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Change Encryption Provider Type and Delete Shoot", Label("encryption-provider-change"), func() {
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			var s *ShootContext
+			var tc *ShootContext
 
 			BeforeTestSetup(func() {
 				shoot := DefaultWorkerlessShoot("e2e-encr-chg")
@@ -49,38 +49,38 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						},
 					},
 				}
-				s = NewTestContext().Init().ForShoot(shoot)
+				tc = NewTestContext().Init().ForShoot(shoot)
 			})
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldInitializeShootClient(s)
-			ItShouldGetResponsibleSeed(s)
-			seed.ItShouldInitializeSeedClient(&s.SeedContext)
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldInitializeShootClient(tc)
+			ItShouldGetResponsibleSeed(tc)
+			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
 
 			It("Verify initial encryption config uses AESCBC", func(ctx SpecContext) {
-				verifyEncryptionConfigProvider(ctx, s, gardencorev1beta1.EncryptionProviderTypeAESCBC)
+				verifyEncryptionConfigProvider(ctx, tc, gardencorev1beta1.EncryptionProviderTypeAESCBC)
 			}, SpecTimeout(2*time.Minute))
 
 			It("Verify encrypted data can be created and read before provider change", func(ctx SpecContext) {
-				rotationutils.VerifyEncryptedData(ctx, s.ShootClient, defaultEncryptedResources())
+				rotationutils.VerifyEncryptedData(ctx, tc.ShootClient, defaultEncryptedResources())
 			}, SpecTimeout(2*time.Minute))
 
-			itShouldChangeEncryptionProviderAndVerify(s, gardencorev1beta1.EncryptionProviderTypeAESGCM)
-			itShouldChangeEncryptionProviderAndVerify(s, gardencorev1beta1.EncryptionProviderTypeSecretbox)
-			itShouldChangeEncryptionProviderAndVerify(s, gardencorev1beta1.EncryptionProviderTypeAESCBC)
+			itShouldChangeEncryptionProviderAndVerify(tc, gardencorev1beta1.EncryptionProviderTypeAESGCM)
+			itShouldChangeEncryptionProviderAndVerify(tc, gardencorev1beta1.EncryptionProviderTypeSecretbox)
+			itShouldChangeEncryptionProviderAndVerify(tc, gardencorev1beta1.EncryptionProviderTypeAESCBC)
 
-			ItShouldDeleteShoot(s)
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldDeleteShoot(tc)
+			ItShouldWaitForShootToBeDeleted(tc)
 		})
 	})
 })
 
-func itShouldChangeEncryptionProviderAndVerify(s *ShootContext, providerType gardencorev1beta1.EncryptionProviderType) {
+func itShouldChangeEncryptionProviderAndVerify(tc *ShootContext, providerType gardencorev1beta1.EncryptionProviderType) {
 	GinkgoHelper()
 
 	It("Update Shoot encryption provider type to "+string(providerType), func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-			s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+		Eventually(ctx, tc.GardenKomega.Update(tc.Shoot, func() {
+			tc.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 				Provider: gardencorev1beta1.EncryptionProvider{
 					Type: new(providerType),
 				},
@@ -88,27 +88,27 @@ func itShouldChangeEncryptionProviderAndVerify(s *ShootContext, providerType gar
 		})).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	ItShouldWaitForShootToBeReconciledAndHealthy(s)
+	ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 
 	It("Verify shoot status reflects "+string(providerType)+" encryption provider", func(ctx SpecContext) {
-		verifyShootEncryptionStatus(ctx, s, providerType)
+		verifyShootEncryptionStatus(ctx, tc, providerType)
 	}, SpecTimeout(2*time.Minute))
 
 	It("Verify encryption config uses "+string(providerType), func(ctx SpecContext) {
-		verifyEncryptionConfigProvider(ctx, s, providerType)
+		verifyEncryptionConfigProvider(ctx, tc, providerType)
 	}, SpecTimeout(2*time.Minute))
 
 	It("Verify encrypted data can still be read after provider change to "+string(providerType), func(ctx SpecContext) {
-		rotationutils.VerifyEncryptedData(ctx, s.ShootClient, defaultEncryptedResources())
+		rotationutils.VerifyEncryptedData(ctx, tc.ShootClient, defaultEncryptedResources())
 	}, SpecTimeout(2*time.Minute))
 }
 
-func getEncryptionConfiguration(ctx context.Context, g Gomega, s *ShootContext) *apiserverconfigv1.EncryptionConfiguration {
+func getEncryptionConfiguration(ctx context.Context, g Gomega, tc *ShootContext) *apiserverconfigv1.EncryptionConfiguration {
 	secretList := &corev1.SecretList{}
-	g.Expect(s.SeedClient.List(
+	g.Expect(tc.SeedClient.List(
 		ctx,
 		secretList,
-		client.InNamespace(s.Shoot.Status.TechnicalID),
+		client.InNamespace(tc.Shoot.Status.TechnicalID),
 		client.MatchingLabels{v1beta1constants.LabelRole: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration},
 	)).To(Succeed())
 	g.Expect(secretList.Items).NotTo(BeEmpty())
@@ -119,18 +119,18 @@ func getEncryptionConfiguration(ctx context.Context, g Gomega, s *ShootContext) 
 	return encryptionConfiguration
 }
 
-func verifyShootEncryptionStatus(ctx context.Context, s *ShootContext, expectedType gardencorev1beta1.EncryptionProviderType) {
-	Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Shoot), s.Shoot)).To(Succeed())
-	Expect(s.Shoot.Status.Credentials).NotTo(BeNil())
-	Expect(s.Shoot.Status.Credentials.Rotation).NotTo(BeNil())
-	Expect(s.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey).NotTo(BeNil())
-	Expect(s.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.Phase).To(Equal(gardencorev1beta1.RotationCompleted))
-	Expect(s.Shoot.Status.Credentials.EncryptionAtRest).NotTo(BeNil())
-	Expect(s.Shoot.Status.Credentials.EncryptionAtRest.Provider.Type).To(Equal(expectedType))
+func verifyShootEncryptionStatus(ctx context.Context, tc *ShootContext, expectedType gardencorev1beta1.EncryptionProviderType) {
+	Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(tc.Shoot), tc.Shoot)).To(Succeed())
+	Expect(tc.Shoot.Status.Credentials).NotTo(BeNil())
+	Expect(tc.Shoot.Status.Credentials.Rotation).NotTo(BeNil())
+	Expect(tc.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey).NotTo(BeNil())
+	Expect(tc.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.Phase).To(Equal(gardencorev1beta1.RotationCompleted))
+	Expect(tc.Shoot.Status.Credentials.EncryptionAtRest).NotTo(BeNil())
+	Expect(tc.Shoot.Status.Credentials.EncryptionAtRest.Provider.Type).To(Equal(expectedType))
 }
 
-func verifyEncryptionConfigProvider(ctx context.Context, s *ShootContext, expectedProvider gardencorev1beta1.EncryptionProviderType) {
-	encryptionConfiguration := getEncryptionConfiguration(ctx, Default, s)
+func verifyEncryptionConfigProvider(ctx context.Context, tc *ShootContext, expectedProvider gardencorev1beta1.EncryptionProviderType) {
+	encryptionConfiguration := getEncryptionConfiguration(ctx, Default, tc)
 	Expect(encryptionConfiguration.Resources).To(HaveLen(1))
 	providers := encryptionConfiguration.Resources[0].Providers
 	Expect(providers).NotTo(BeEmpty())

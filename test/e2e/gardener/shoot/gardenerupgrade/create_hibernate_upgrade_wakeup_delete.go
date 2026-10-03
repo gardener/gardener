@@ -13,24 +13,24 @@ import (
 
 var _ = Describe("Gardener Upgrade Tests", func() {
 	Describe("Create and Hibernate Shoot, Upgrade Gardener version, Wake Up and Delete Shoot", func() {
-		test := func(s *ShootContext) {
+		test := func(tc *ShootContext) {
 			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
-				ItShouldCreateShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
+				ItShouldCreateShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 
-				ItShouldHibernateShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
+				ItShouldHibernateShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
 				// This tests that we can wake-up a Shoot which was hibernated with the previous Gardener version.
-				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
-				ItShouldWakeUpShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
-				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s)
+				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(tc)
+				ItShouldWakeUpShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(tc)
 
-				ItShouldDeleteShoot(s)
-				ItShouldWaitForShootToBeDeleted(s)
+				ItShouldDeleteShoot(tc)
+				ItShouldWaitForShootToBeDeleted(tc)
 			})
 		}
 

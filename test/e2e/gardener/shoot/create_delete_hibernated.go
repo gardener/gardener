@@ -20,28 +20,28 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
-		test := func(s *ShootContext) {
+		test := func(tc *ShootContext) {
 			BeforeTestSetup(func() {
-				s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				tc.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 					Enabled: new(true),
 				}
 			})
 
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldGetResponsibleSeed(s)
-			seed.ItShouldInitializeSeedClient(&s.SeedContext)
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldGetResponsibleSeed(tc)
+			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
 
 			It("should not have any control plane pods", func(ctx SpecContext) {
 				Eventually(ctx,
-					s.SeedKomega.ObjectList(&corev1.PodList{}, client.InNamespace(s.Shoot.Status.TechnicalID)),
+					tc.SeedKomega.ObjectList(&corev1.PodList{}, client.InNamespace(tc.Shoot.Status.TechnicalID)),
 				).Should(
 					HaveField("Items", BeEmpty()),
 				)
 			}, SpecTimeout(time.Minute))
 
-			ItShouldDeleteShoot(s)
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldDeleteShoot(tc)
+			ItShouldWaitForShootToBeDeleted(tc)
 		}
 
 		Context("Shoot with workers", Ordered, func() {

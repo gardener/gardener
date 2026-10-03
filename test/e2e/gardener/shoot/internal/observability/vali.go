@@ -16,12 +16,12 @@ import (
 )
 
 // ItShouldWaitForLogsCountWithLabelToBeInVali waits for a specific number of logs with a given label to be present in Vali.
-func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map[string]string, key, value string, expectedLogCount int) {
+func ItShouldWaitForLogsCountWithLabelToBeInVali(tc *ShootContext, valiLabels map[string]string, key, value string, expectedLogCount int) {
 	GinkgoHelper()
 
 	It("Wait for logs with label to appear in Vali", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
+			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, tc.ControlPlaneNamespace, key, value, tc.SeedClientSet)
 			if err != nil {
 				return err
 			}
@@ -36,12 +36,12 @@ func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map
 }
 
 // ItShouldWaitForLogsWithLabelToBeInVali waits for logs with a specific label to be present in Vali. Does not regard the count of the logs.
-func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
+func ItShouldWaitForLogsWithLabelToBeInVali(tc *ShootContext, valiLabels map[string]string, key, value string) {
 	GinkgoHelper()
 
 	It("Wait for logs with label to appear in Vali", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
+			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, tc.ControlPlaneNamespace, key, value, tc.SeedClientSet)
 			if err != nil {
 				return err
 			}
@@ -56,7 +56,7 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 }
 
 // ItShouldWaitForLogsWithLabelToNotBeInVali check that, after a timeout, logs with a specific label are NOT present in Vali. This check is not perfectly strict.
-func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
+func ItShouldWaitForLogsWithLabelToNotBeInVali(tc *ShootContext, valiLabels map[string]string, key, value string) {
 	GinkgoHelper()
 
 	// We need to ensure that logs for the pod are not found in Vali.
@@ -66,7 +66,7 @@ func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[s
 	// every specified interval.
 	It("Ensure logs do not exist", func(ctx SpecContext) {
 		Consistently(ctx, func() error {
-			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
+			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, tc.ControlPlaneNamespace, key, value, tc.SeedClientSet)
 			if err != nil {
 				return err
 			}

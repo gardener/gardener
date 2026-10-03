@@ -22,18 +22,18 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
-	test := func(s *ShootContext) {
+	test := func(tc *ShootContext) {
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
-		s.Shoot.Spec.SeedName = new(getSeedName(false))
+		tc.Shoot.Spec.SeedName = new(getSeedName(false))
 
-		ItShouldCreateShoot(s)
-		ItShouldWaitForShootToBeReconciledAndHealthy(s)
-		ItShouldGetResponsibleSeed(s)
-		seed.ItShouldInitializeSeedClient(&s.SeedContext)
+		ItShouldCreateShoot(tc)
+		ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+		ItShouldGetResponsibleSeed(tc)
+		seed.ItShouldInitializeSeedClient(&tc.SeedContext)
 
-		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
-			ItShouldInitializeShootClient(s)
-			inclusterclient.VerifyInClusterAccessToAPIServer(s)
+		if !v1beta1helper.IsWorkerless(tc.Shoot) && !v1beta1helper.HibernationIsEnabled(tc.Shoot) {
+			ItShouldInitializeShootClient(tc)
+			inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 		}
 
 		var (
@@ -42,55 +42,55 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		)
 
 		It("Record current seed client", func() {
-			seedClientSourceCluster = s.SeedClient
+			seedClientSourceCluster = tc.SeedClient
 		})
 
-		machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s, func() client.Client { return seedClientSourceCluster })
+		machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(tc, func() client.Client { return seedClientSourceCluster })
 
 		It("Populate comparison elements before migration", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
 				var err error
-				secretsBeforeMigration, err = shootmigration.GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				secretsBeforeMigration, err = shootmigration.GetPersistedSecrets(ctx, tc.SeedClientSet.Client(), tc.Shoot.Status.TechnicalID)
 				return err
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("Migrate Shoot", func(ctx SpecContext) {
-			patch := client.MergeFrom(s.Shoot.DeepCopy())
-			s.Shoot.Spec.SeedName = new(getSeedName(true))
+			patch := client.MergeFrom(tc.Shoot.DeepCopy())
+			tc.Shoot.Spec.SeedName = new(getSeedName(true))
 			Eventually(ctx, func() error {
-				return s.GardenClient.SubResource("binding").Patch(ctx, s.Shoot, patch)
+				return tc.GardenClient.SubResource("binding").Patch(ctx, tc.Shoot, patch)
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
-		ItShouldWaitForShootToBeReconciledAndHealthy(s)
-		ItShouldGetResponsibleSeed(s)
-		seed.ItShouldInitializeSeedClient(&s.SeedContext)
+		ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+		ItShouldGetResponsibleSeed(tc)
+		seed.ItShouldInitializeSeedClient(&tc.SeedContext)
 
 		It("Verify that all secrets have been migrated without regeneration", func(ctx SpecContext) {
 			var secretsAfterMigration map[string]corev1.Secret
 			Eventually(ctx, func() error {
 				var err error
-				secretsAfterMigration, err = shootmigration.GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				secretsAfterMigration, err = shootmigration.GetPersistedSecrets(ctx, tc.SeedClientSet.Client(), tc.Shoot.Status.TechnicalID)
 				return err
 			}).Should(Succeed())
 			Expect(shootmigration.ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("Verify that there are no orphaned resources in the source seed", func(ctx SpecContext) {
-			Expect(shootmigration.CheckForOrphanedNonNamespacedResources(ctx, s.Shoot.Namespace, seedClientSourceCluster)).To(Succeed())
+			Expect(shootmigration.CheckForOrphanedNonNamespacedResources(ctx, tc.Shoot.Namespace, seedClientSourceCluster)).To(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		// the "infrastructure" (aka the machine pods), still exist in the "kind-gardener-local" cluster
-		ItShouldCompareMachinePodNamesAfter(s, func() client.Client { return seedClientSourceCluster }, machinePodNamesBeforeTest)
+		ItShouldCompareMachinePodNamesAfter(tc, func() client.Client { return seedClientSourceCluster }, machinePodNamesBeforeTest)
 
-		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
-			ItShouldInitializeShootClient(s)
-			inclusterclient.VerifyInClusterAccessToAPIServer(s)
+		if !v1beta1helper.IsWorkerless(tc.Shoot) && !v1beta1helper.HibernationIsEnabled(tc.Shoot) {
+			ItShouldInitializeShootClient(tc)
+			inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 		}
 
-		ItShouldDeleteShoot(s)
-		ItShouldWaitForShootToBeDeleted(s)
+		ItShouldDeleteShoot(tc)
+		ItShouldWaitForShootToBeDeleted(tc)
 	}
 
 	Context("Shoot with workers", Ordered, PriorityLonger, func() {

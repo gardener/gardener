@@ -23,7 +23,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create and Delete Unprivileged Shoot. Test expected shoot logs", Ordered, Label("unprivileged", "basic", "observability"), PriorityLong, func() {
-		var s *ShootContext
+		var tc *ShootContext
 
 		BeforeTestSetup(func() {
 			shoot := DefaultShoot("e2e-unpriv")
@@ -43,12 +43,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				},
 			}
 
-			s = NewTestContext().Init().ForShoot(shoot)
+			tc = NewTestContext().Init().ForShoot(shoot)
 		})
 
-		ItShouldCreateShoot(s)
-		ItShouldWaitForShootToBeReconciledAndHealthy(s)
-		ItShouldInitializeShootClient(s)
+		ItShouldCreateShoot(tc)
+		ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+		ItShouldInitializeShootClient(tc)
 
 		Describe("Shoot Logging Tests", Label("observability"), func() {
 			// Since Vali does not support IPv6, Vali does not get deployed during the IPv6 tests.
@@ -59,7 +59,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			if os.Getenv("IPFAMILY") == "ipv6" {
 				return
 			}
-			ShootLogging(s)
+			ShootLogging(tc)
 		})
 
 		It("should allow creating pod in the kube-system namespace", func(ctx SpecContext) {
@@ -67,12 +67,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			DeferCleanup(func(ctx SpecContext) {
 				Eventually(ctx, func() error {
-					return s.ShootClient.Delete(ctx, pod)
+					return tc.ShootClient.Delete(ctx, pod)
 				}).Should(Or(Succeed(), BeNotFoundError()))
 			}, NodeTimeout(time.Minute))
 
 			Eventually(ctx, func() error {
-				return s.ShootClient.Create(ctx, pod)
+				return tc.ShootClient.Create(ctx, pod)
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
@@ -82,12 +82,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			DeferCleanup(func(ctx SpecContext) {
 				// ensure test step leaves clean state even in the case of failure (the pod is allowed to be created)
 				Eventually(ctx, func() error {
-					return s.ShootClient.Delete(ctx, pod)
+					return tc.ShootClient.Delete(ctx, pod)
 				}).Should(Or(Succeed(), BeNotFoundError()))
 			}, NodeTimeout(time.Minute))
 
 			Eventually(ctx, func() error {
-				if err := s.ShootClient.Create(ctx, pod); err != nil {
+				if err := tc.ShootClient.Create(ctx, pod); err != nil {
 					return err
 				}
 				return StopTrying("pod was created")
@@ -97,10 +97,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			))
 		}, SpecTimeout(time.Minute))
 
-		inclusterclient.VerifyInClusterAccessToAPIServer(s)
+		inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 
-		ItShouldDeleteShoot(s)
-		ItShouldWaitForShootToBeDeleted(s)
+		ItShouldDeleteShoot(tc)
+		ItShouldWaitForShootToBeDeleted(tc)
 	})
 })
 

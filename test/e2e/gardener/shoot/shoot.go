@@ -57,29 +57,29 @@ func RegisterShootFlags() {
 }
 
 // ItShouldCreateShoot creates the shoot. If an existing shoot is specified, the step is skipped.
-func ItShouldCreateShoot(s *ShootContext) {
+func ItShouldCreateShoot(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Create Shoot", func(ctx SpecContext) {
 		if existingShootName != "" {
-			s.Shoot = &gardencorev1beta1.Shoot{
+			tc.Shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      existingShootName,
 					Namespace: projectNamespace,
 				},
 			}
-			s.Log = s.Log.WithValues("shoot", client.ObjectKeyFromObject(s.Shoot))
+			tc.Log = tc.Log.WithValues("shoot", client.ObjectKeyFromObject(tc.Shoot))
 
-			Eventually(s.GardenKomega.Get(s.Shoot)).Should(Succeed())
-			s.Log.Info("Using existing shoot")
+			Eventually(tc.GardenKomega.Get(tc.Shoot)).Should(Succeed())
+			tc.Log.Info("Using existing shoot")
 
 			Skip("Using existing shoot instead of creating a new one")
 		}
 
-		s.Log.Info("Creating Shoot")
+		tc.Log.Info("Creating Shoot")
 
 		Eventually(ctx, func() error {
-			if err := s.GardenClient.Create(ctx, s.Shoot); !apierrors.IsAlreadyExists(err) {
+			if err := tc.GardenClient.Create(ctx, tc.Shoot); !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 
@@ -90,16 +90,16 @@ func ItShouldCreateShoot(s *ShootContext) {
 
 // ItShouldUpdateShootToHighAvailability updates shoot to high availability configuration with the given failure
 // tolerance type.
-func ItShouldUpdateShootToHighAvailability(s *ShootContext, failureToleranceType gardencorev1beta1.FailureToleranceType) {
+func ItShouldUpdateShootToHighAvailability(tc *ShootContext, failureToleranceType gardencorev1beta1.FailureToleranceType) {
 	GinkgoHelper()
 
 	It("Update Shoot to High Availability", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-			if s.Shoot.Spec.ControlPlane == nil {
-				s.Shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+		Eventually(ctx, tc.GardenKomega.Update(tc.Shoot, func() {
+			if tc.Shoot.Spec.ControlPlane == nil {
+				tc.Shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
 			}
 
-			s.Shoot.Spec.ControlPlane.HighAvailability = &gardencorev1beta1.HighAvailability{
+			tc.Shoot.Spec.ControlPlane.HighAvailability = &gardencorev1beta1.HighAvailability{
 				FailureTolerance: gardencorev1beta1.FailureTolerance{
 					Type: failureToleranceType,
 				},
@@ -109,12 +109,12 @@ func ItShouldUpdateShootToHighAvailability(s *ShootContext, failureToleranceType
 }
 
 // ItShouldHibernateShoot hibernates the shoot.
-func ItShouldHibernateShoot(s *ShootContext) {
+func ItShouldHibernateShoot(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Hibernate Shoot", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+		Eventually(ctx, tc.GardenKomega.Update(tc.Shoot, func() {
+			tc.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 				Enabled: new(true),
 			}
 		})).Should(Succeed())
@@ -122,12 +122,12 @@ func ItShouldHibernateShoot(s *ShootContext) {
 }
 
 // ItShouldWakeUpShoot wakes up the shoot.
-func ItShouldWakeUpShoot(s *ShootContext) {
+func ItShouldWakeUpShoot(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Wake Up Shoot", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+		Eventually(ctx, tc.GardenKomega.Update(tc.Shoot, func() {
+			tc.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 				Enabled: new(false),
 			}
 		})).Should(Succeed())
@@ -135,7 +135,7 @@ func ItShouldWakeUpShoot(s *ShootContext) {
 }
 
 // ItShouldDeleteShoot deletes the shoot. If an existing shoot is specified, the step is skipped.
-func ItShouldDeleteShoot(s *ShootContext) {
+func ItShouldDeleteShoot(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Delete Shoot", func(ctx SpecContext) {
@@ -143,37 +143,37 @@ func ItShouldDeleteShoot(s *ShootContext) {
 			Skip("Skip deleting existing shoot")
 		}
 
-		s.Log.Info("Deleting Shoot")
+		tc.Log.Info("Deleting Shoot")
 
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Shoot)).To(Succeed())
-			g.Expect(s.GardenClient.Delete(ctx, s.Shoot)).To(Succeed())
+			g.Expect(gardenerutils.ConfirmDeletion(ctx, tc.GardenClient, tc.Shoot)).To(Succeed())
+			g.Expect(tc.GardenClient.Delete(ctx, tc.Shoot)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldWaitForShootToBeReconciledAndHealthy waits for the shoot to be reconciled successfully and healthy.
-func ItShouldWaitForShootToBeReconciledAndHealthy(s *ShootContext) {
+func ItShouldWaitForShootToBeReconciledAndHealthy(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Wait for Shoot to be reconciled", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) bool {
-			g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+			g.Expect(tc.GardenKomega.Get(tc.Shoot)()).To(Succeed())
 
-			completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
+			completed, reason := shootoperation.ReconciliationSuccessful(tc.Shoot)
 			if !completed {
-				s.Log.Info("Waiting for reconciliation and healthiness", "lastOperation", s.Shoot.Status.LastOperation, "reason", reason)
+				tc.Log.Info("Waiting for reconciliation and healthiness", "lastOperation", tc.Shoot.Status.LastOperation, "reason", reason)
 			}
 			return completed
 		}).WithPolling(30 * time.Second).Should(BeTrue())
 
-		s.Log.Info("Shoot has been reconciled and is healthy")
+		tc.Log.Info("Shoot has been reconciled and is healthy")
 	}, SpecTimeout(30*time.Minute))
 }
 
 // ItShouldWaitForShootToBeDeleted waits for the shoot to be gone. If an existing shoot is specified, the step is
 // skipped.
-func ItShouldWaitForShootToBeDeleted(s *ShootContext) {
+func ItShouldWaitForShootToBeDeleted(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Wait for Shoot to be deleted", func(ctx SpecContext) {
@@ -182,83 +182,83 @@ func ItShouldWaitForShootToBeDeleted(s *ShootContext) {
 		}
 
 		Eventually(ctx, func() error {
-			err := s.GardenKomega.Get(s.Shoot)()
+			err := tc.GardenKomega.Get(tc.Shoot)()
 			if err == nil {
-				s.Log.Info("Waiting for deletion", "lastOperation", s.Shoot.Status.LastOperation)
+				tc.Log.Info("Waiting for deletion", "lastOperation", tc.Shoot.Status.LastOperation)
 			}
 			return err
 		}).WithPolling(30 * time.Second).Should(BeNotFoundError())
 
-		s.Log.Info("Shoot has been deleted")
+		tc.Log.Info("Shoot has been deleted")
 	}, SpecTimeout(20*time.Minute))
 }
 
 // ItShouldInitializeShootClient requests a kubeconfig for the shoot and initializes the context's shoot clients.
-func ItShouldInitializeShootClient(s *ShootContext) {
+func ItShouldInitializeShootClient(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Initialize Shoot client", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+			clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, tc.GardenClientSet, tc.Shoot)
 			if err != nil {
 				return err
 			}
 
-			s.WithShootClientSet(clientSet)
+			tc.WithShootClientSet(clientSet)
 			return nil
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldGetResponsibleSeed retrieves the Seed object responsible for the shoot and stores it in ShootContext.Seed.
-func ItShouldGetResponsibleSeed(s *ShootContext) {
+func ItShouldGetResponsibleSeed(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Get the responsible Seed", func(ctx SpecContext) {
-		s.Seed = &gardencorev1beta1.Seed{}
+		tc.Seed = &gardencorev1beta1.Seed{}
 
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+			g.Expect(tc.GardenKomega.Get(tc.Shoot)()).To(Succeed())
 
-			s.Seed.Name = gardenerutils.GetResponsibleSeedName(gardenerutils.GetShootSeedNames(s.Shoot))
-			g.Expect(s.Seed.Name).NotTo(BeEmpty())
-			g.Expect(s.GardenKomega.Get(s.Seed)()).To(Succeed())
+			tc.Seed.Name = gardenerutils.GetResponsibleSeedName(gardenerutils.GetShootSeedNames(tc.Shoot))
+			g.Expect(tc.Seed.Name).NotTo(BeEmpty())
+			g.Expect(tc.GardenKomega.Get(tc.Seed)()).To(Succeed())
 		}).Should(Succeed())
 
-		s.SeedContext = *s.ForSeed(s.Seed)
+		tc.SeedContext = *tc.ForSeed(tc.Seed)
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldComputeControlPlaneNamespace computes the control plane namespace for the shoot and stores it in ShootContext.ControlPlaneNamespace.
 // It's hard to determine what the namespace of the control-plane will be before shoot creation, thus to compute it we need to first create the Shoot.
-func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
+func ItShouldComputeControlPlaneNamespace(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Compute Control Plane Namespace", func(_ SpecContext) {
-		s.WithControlPlaneNamespace(s.Shoot.Status.TechnicalID)
+		tc.WithControlPlaneNamespace(tc.Shoot.Status.TechnicalID)
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldAnnotateShoot sets the given annotation within the shoot metadata to the specified value and patches the shoot object
-func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
+func ItShouldAnnotateShoot(tc *ShootContext, annotations map[string]string) {
 	GinkgoHelper()
 
 	It("Annotate Shoot", func(ctx SpecContext) {
-		patch := client.MergeFrom(s.Shoot.DeepCopy())
+		patch := client.MergeFrom(tc.Shoot.DeepCopy())
 
 		for annotationKey, annotationValue := range annotations {
-			s.Log.Info("Setting annotation", "annotation", annotationKey, "value", annotationValue)
-			metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, annotationKey, annotationValue)
+			tc.Log.Info("Setting annotation", "annotation", annotationKey, "value", annotationValue)
+			metav1.SetMetaDataAnnotation(&tc.Shoot.ObjectMeta, annotationKey, annotationValue)
 		}
 
 		Eventually(ctx, func() error {
-			return s.GardenClient.Patch(ctx, s.Shoot, patch)
+			return tc.GardenClient.Patch(ctx, tc.Shoot, patch)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
-func ItShouldFindAllMachinePodsBefore(s *ShootContext, clientFn func() client.Client) sets.Set[string] {
+func ItShouldFindAllMachinePodsBefore(tc *ShootContext, clientFn func() client.Client) sets.Set[string] {
 	GinkgoHelper()
 
 	machinePodNamesBeforeTest := sets.New[string]()
@@ -268,7 +268,7 @@ func ItShouldFindAllMachinePodsBefore(s *ShootContext, clientFn func() client.Cl
 		beforeStartMachinePodList := &corev1.PodList{}
 		Eventually(ctx, func() error {
 			return k8sClient.List(ctx, beforeStartMachinePodList,
-				client.InNamespace(infrastructure.NamespaceName(s.Shoot.Status.TechnicalID)),
+				client.InNamespace(infrastructure.NamespaceName(tc.Shoot.Status.TechnicalID)),
 				client.MatchingLabels{
 					"app":              "machine",
 					"machine-provider": "local",
@@ -285,7 +285,7 @@ func ItShouldFindAllMachinePodsBefore(s *ShootContext, clientFn func() client.Cl
 }
 
 // ItShouldCompareMachinePodNamesAfter compares the machine pod names before and after running the required tests.
-func ItShouldCompareMachinePodNamesAfter(s *ShootContext, clientFn func() client.Client, machinePodNamesBeforeTest sets.Set[string]) {
+func ItShouldCompareMachinePodNamesAfter(tc *ShootContext, clientFn func() client.Client, machinePodNamesBeforeTest sets.Set[string]) {
 	GinkgoHelper()
 
 	It("Compare machine pod names", func(ctx SpecContext) {
@@ -293,7 +293,7 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, clientFn func() client
 		machinePodListAfterTest := &corev1.PodList{}
 		Eventually(ctx, func() error {
 			return k8sClient.List(ctx, machinePodListAfterTest,
-				client.InNamespace(infrastructure.NamespaceName(s.Shoot.Status.TechnicalID)),
+				client.InNamespace(infrastructure.NamespaceName(tc.Shoot.Status.TechnicalID)),
 				client.MatchingLabels{
 					"app":              "machine",
 					"machine-provider": "local",
@@ -312,7 +312,7 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, clientFn func() client
 
 // ItShouldRenderAndDeployTemplateToShoot finds a template via the given template name. Afterwards, it renders is via the
 // given values and deploys the resources to the shoot.
-func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string, values any) {
+func ItShouldRenderAndDeployTemplateToShoot(tc *ShootContext, templateName string, values any) {
 	GinkgoHelper()
 
 	It("Render and deploy template to shoot", func(ctx SpecContext) {
@@ -341,19 +341,19 @@ func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string
 			}
 
 			manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-			return s.ShootClientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
+			return tc.ShootClientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldWaitForPodsInShootToBeReady waits for all pods matching the namespace and labels to be in a Ready state.
-func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podLabels labels.Selector) {
+func ItShouldWaitForPodsInShootToBeReady(tc *ShootContext, namespace string, podLabels labels.Selector) {
 	GinkgoHelper()
 
 	It("Wait for pods in Shoot to be ready", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
 			podList := &corev1.PodList{}
-			if err := s.ShootClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: podLabels}); err != nil {
+			if err := tc.ShootClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: podLabels}); err != nil {
 				return err
 			}
 
@@ -373,23 +373,23 @@ func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podL
 }
 
 // ItShouldCreatePrometheusRuleForShoot creates a PrometheusRule and makes sure it is created.
-func ItShouldCreatePrometheusRuleForShoot(s *ShootContext, rule *monitoringv1.PrometheusRule) {
+func ItShouldCreatePrometheusRuleForShoot(tc *ShootContext, rule *monitoringv1.PrometheusRule) {
 	GinkgoHelper()
 
 	It("Create PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.ShootClient.Create(ctx, rule)).To(Succeed())
+			g.Expect(tc.ShootClient.Create(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldDeletePrometheusRuleForShoot deletes a PrometheusRule and makes sure it is deleted.
-func ItShouldDeletePrometheusRuleForShoot(s *ShootContext, rule *monitoringv1.PrometheusRule) {
+func ItShouldDeletePrometheusRuleForShoot(tc *ShootContext, rule *monitoringv1.PrometheusRule) {
 	GinkgoHelper()
 
 	It("Delete PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.ShootClient.Delete(ctx, rule)).To(Succeed())
+			g.Expect(tc.ShootClient.Delete(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }

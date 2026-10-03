@@ -20,36 +20,36 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(s *ShootContext) {
+	test := func(tc *ShootContext) {
 		BeforeTestSetup(func() {
-			metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, shootextensionactuator.AnnotationTestForceDeleteShoot, "true")
+			metav1.SetMetaDataAnnotation(&tc.Shoot.ObjectMeta, shootextensionactuator.AnnotationTestForceDeleteShoot, "true")
 		})
 
 		Describe("Create and Force Delete Shoot", Label("force-delete"), func() {
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldAnnotateShoot(s, map[string]string{
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldAnnotateShoot(tc, map[string]string{
 				v1beta1constants.ShootIgnore: "true",
 			})
-			ItShouldDeleteShoot(s)
+			ItShouldDeleteShoot(tc)
 
 			It("Add ErrorInfraDependencies to LastErrors", func(ctx SpecContext) {
-				patch := client.MergeFrom(s.Shoot.DeepCopy())
-				s.Shoot.Status.LastErrors = []gardencorev1beta1.LastError{{
+				patch := client.MergeFrom(tc.Shoot.DeepCopy())
+				tc.Shoot.Status.LastErrors = []gardencorev1beta1.LastError{{
 					Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies},
 				}}
 
 				Eventually(ctx, func() error {
-					return s.GardenClient.Status().Patch(ctx, s.Shoot, patch)
+					return tc.GardenClient.Status().Patch(ctx, tc.Shoot, patch)
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			ItShouldAnnotateShoot(s, map[string]string{
+			ItShouldAnnotateShoot(tc, map[string]string{
 				v1beta1constants.AnnotationConfirmationForceDeletion: "true",
 				v1beta1constants.ShootIgnore:                         "false",
 			})
 
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldWaitForShootToBeDeleted(tc)
 		})
 	}
 
