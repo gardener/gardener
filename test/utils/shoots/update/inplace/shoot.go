@@ -20,11 +20,11 @@ import (
 
 // ItShouldVerifyInPlaceUpdateStart verifies that the starting of in-place update  by checking the
 // .status.inPlaceUpdates and the ManualInPlaceWorkersUpdated constraint of the Shoot.
-func ItShouldVerifyInPlaceUpdateStart(s *ShootContext, hasAutoInplaceUpdate, hasManualInplaceUpdate bool) {
+func ItShouldVerifyInPlaceUpdateStart(tc *ShootContext, hasAutoInplaceUpdate, hasManualInplaceUpdate bool) {
 	GinkgoHelper()
 
 	It("Verify in-place update start", func(ctx SpecContext) {
-		VerifyInPlaceUpdateStart(ctx, s.Log, s.GardenClient, s.Shoot, hasAutoInplaceUpdate, hasManualInplaceUpdate)
+		VerifyInPlaceUpdateStart(ctx, tc.Log, tc.GardenClient, tc.Shoot, hasAutoInplaceUpdate, hasManualInplaceUpdate)
 	}, SpecTimeout(5*time.Minute))
 }
 
@@ -57,11 +57,11 @@ func VerifyInPlaceUpdateStart(ctx context.Context, log logr.Logger, gardenClient
 
 // ItShouldVerifyInPlaceUpdateCompletion verifies that the in-place update was completed successfully by checking the
 // .status.inPlaceUpdates and the ManualInPlaceWorkersUpdated constraint of the Shoot.
-func ItShouldVerifyInPlaceUpdateCompletion(s *ShootContext) {
+func ItShouldVerifyInPlaceUpdateCompletion(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Verify in-place update completion", func(ctx SpecContext) {
-		VerifyInPlaceUpdateCompletion(ctx, s.Log, s.GardenClient, s.Shoot)
+		VerifyInPlaceUpdateCompletion(ctx, tc.Log, tc.GardenClient, tc.Shoot)
 	}, SpecTimeout(10*time.Minute))
 }
 

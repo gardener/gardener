@@ -46,28 +46,28 @@ const (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Update, Delete", Label("simple"), func() {
-		test := func(s *ShootContext, withInPlaceUpdatePools, testBastionAndExposureClass, testMaintenanceAnnotation bool) {
+		test := func(tc *ShootContext, withInPlaceUpdatePools, testBastionAndExposureClass, testMaintenanceAnnotation bool) {
 			BeforeTestSetup(func() {
-				s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+				tc.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
 					Resources: []string{"services", "clusterroles.rbac.authorization.k8s.io"},
 				}
 
-				s.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
+				tc.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
 
-				if !v1beta1helper.IsWorkerless(s.Shoot) {
+				if !v1beta1helper.IsWorkerless(tc.Shoot) {
 					// create worker pools which explicitly specify the kubernetes version and with different update strategies
-					pool1 := s.Shoot.Spec.Provider.Workers[0]
+					pool1 := tc.Shoot.Spec.Provider.Workers[0]
 					pool2, pool3 := pool1.DeepCopy(), pool1.DeepCopy()
 					pool2.Name += "2"
-					pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
+					pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &tc.Shoot.Spec.Kubernetes.Version}
 					pool3.Name += "3"
 					pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(kubernetesSourceVersion)}
-					s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, *pool2, *pool3)
+					tc.Shoot.Spec.Provider.Workers = append(tc.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 				}
 
 				if withInPlaceUpdatePools {
 					pool4 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-					pool4.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
+					pool4.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &tc.Shoot.Spec.Kubernetes.Version}
 					pool4.Minimum = 2
 					pool4.Maximum = 2
 					pool4.MaxUnavailable = new(intstr.FromInt(1))
@@ -89,62 +89,62 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					pool6.MaxSurge = new(intstr.FromInt(1))
 					pool6.MaxUnavailable = new(intstr.FromInt(0))
 
-					s.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{pool4, pool5, pool6}
+					tc.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{pool4, pool5, pool6}
 				}
 			})
 
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldInitializeShootClient(s)
-			ItShouldGetResponsibleSeed(s)
-			seed.ItShouldInitializeSeedClient(&s.SeedContext)
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldInitializeShootClient(tc)
+			ItShouldGetResponsibleSeed(tc)
+			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
 
 			It("Verify shoot access using admin kubeconfig", func(ctx SpecContext) {
-				Eventually(ctx, s.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
+				Eventually(ctx, tc.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			verifyViewerKubeconfigShootAccess(s)
+			verifyViewerKubeconfigShootAccess(tc)
 
 			if withInPlaceUpdatePools {
-				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
+				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(tc)
 			}
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				verifyWorkerNodeLabels(s)
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				verifyWorkerNodeLabels(tc)
 
 				It("Verify reported CIDRs", func(ctx SpecContext) {
 					// For workerless shoots, the status.networking section is not reported. Skip its verification accordingly.
 					Eventually(ctx, func(g Gomega) {
-						g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+						g.Expect(tc.GardenKomega.Get(tc.Shoot)()).To(Succeed())
 
-						networking := ptr.Deref(s.Shoot.Status.Networking, gardencorev1beta1.NetworkingStatus{})
-						if nodes := s.Shoot.Spec.Networking.Nodes; nodes != nil {
+						networking := ptr.Deref(tc.Shoot.Status.Networking, gardencorev1beta1.NetworkingStatus{})
+						if nodes := tc.Shoot.Spec.Networking.Nodes; nodes != nil {
 							g.Expect(networking.Nodes).To(ConsistOf(*nodes))
 							g.Expect(networking.EgressCIDRs).To(ConsistOf(*nodes))
 						}
-						if services := s.Shoot.Spec.Networking.Services; services != nil {
+						if services := tc.Shoot.Spec.Networking.Services; services != nil {
 							g.Expect(networking.Services).To(ConsistOf(*services))
 						}
-						if pods := s.Shoot.Spec.Networking.Pods; pods != nil {
+						if pods := tc.Shoot.Spec.Networking.Pods; pods != nil {
 							g.Expect(networking.Pods).To(ConsistOf(*pods))
 						}
 					}).Should(Succeed())
 				}, SpecTimeout(time.Minute))
 
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+				inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 				if testBastionAndExposureClass {
-					bastion.VerifyBastion(s)
+					bastion.VerifyBastion(tc)
 				}
 			}
 
 			zeroDowntimeValidatorJob := &zerodowntimevalidator.Job{}
-			if v1beta1helper.IsHAControlPlaneConfigured(s.Shoot) {
-				zeroDowntimeValidatorJob.ItShouldDeployJob(s)
-				zeroDowntimeValidatorJob.ItShouldWaitForJobToBeReady(s)
-				zeroDowntimeValidatorJob.AfterAllDeleteJob(s)
+			if v1beta1helper.IsHAControlPlaneConfigured(tc.Shoot) {
+				zeroDowntimeValidatorJob.ItShouldDeployJob(tc)
+				zeroDowntimeValidatorJob.ItShouldWaitForJobToBeReady(tc)
+				zeroDowntimeValidatorJob.AfterAllDeleteJob(tc)
 			}
 
-			verifyNodeKubernetesVersions(s)
+			verifyNodeKubernetesVersions(tc)
 
 			var (
 				nodesOfInPlaceWorkersBeforeTest sets.Set[string]
@@ -155,42 +155,42 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			if withInPlaceUpdatePools {
 				It("should get the nodes of worker with in-place update strategy", func(ctx SpecContext) {
-					nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
+					nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, tc.Log, tc.ShootClient, tc.Shoot)
 				}, SpecTimeout(2*time.Minute))
 			}
 
 			It("Get CloudProfile", func(ctx SpecContext) {
 				Eventually(ctx, func() error {
 					var err error
-					cloudProfile, err = gardenerutils.GetCloudProfile(ctx, s.GardenClient, s.Shoot)
+					cloudProfile, err = gardenerutils.GetCloudProfile(ctx, tc.GardenClient, tc.Shoot)
 					return err
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			It("Compute new Kubernetes version for control plane and worker pools", func() {
 				var err error
-				controlPlaneKubernetesVersion, poolNameToKubernetesVersion, err = shootupdatesuite.ComputeNewKubernetesVersions(cloudProfile, s.Shoot, nil, nil)
+				controlPlaneKubernetesVersion, poolNameToKubernetesVersion, err = shootupdatesuite.ComputeNewKubernetesVersions(cloudProfile, tc.Shoot, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("Update Shoot", func(ctx SpecContext) {
-				patch := client.StrategicMergeFrom(s.Shoot.DeepCopy())
+				patch := client.StrategicMergeFrom(tc.Shoot.DeepCopy())
 				if controlPlaneKubernetesVersion != "" {
-					s.Log.Info("Updating control plane Kubernetes version", "version", controlPlaneKubernetesVersion)
-					s.Shoot.Spec.Kubernetes.Version = controlPlaneKubernetesVersion
+					tc.Log.Info("Updating control plane Kubernetes version", "version", controlPlaneKubernetesVersion)
+					tc.Shoot.Spec.Kubernetes.Version = controlPlaneKubernetesVersion
 				}
-				for i, worker := range s.Shoot.Spec.Provider.Workers {
+				for i, worker := range tc.Shoot.Spec.Provider.Workers {
 					if workerPoolVersion, ok := poolNameToKubernetesVersion[worker.Name]; ok {
-						s.Log.Info("Updating worker pool Kubernetes version", "pool", worker.Name, "version", workerPoolVersion)
-						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Version = &workerPoolVersion
+						tc.Log.Info("Updating worker pool Kubernetes version", "pool", worker.Name, "version", workerPoolVersion)
+						tc.Shoot.Spec.Provider.Workers[i].Kubernetes.Version = &workerPoolVersion
 					}
 
 					if ptr.Deref(worker.UpdateStrategy, "") == gardencorev1beta1.AutoInPlaceUpdate {
-						s.Log.Info("Updating worker pool machine image version", "pool", worker.Name, "version", "2.0.0")
-						s.Shoot.Spec.Provider.Workers[i].Machine.Image.Version = new("2.0.0")
+						tc.Log.Info("Updating worker pool machine image version", "pool", worker.Name, "version", "2.0.0")
+						tc.Shoot.Spec.Provider.Workers[i].Machine.Image.Version = new("2.0.0")
 					} else if ptr.Deref(worker.UpdateStrategy, "") == gardencorev1beta1.ManualInPlaceUpdate {
-						s.Log.Info("Updating worker pool Kubelet config", "pool", worker.Name)
-						s.Shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
+						tc.Log.Info("Updating worker pool Kubelet config", "pool", worker.Name)
+						tc.Shoot.Spec.Provider.Workers[i].Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
 							CPUManagerPolicy: new("static"),
 							EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
 								MemoryAvailable: new("200Mi"),
@@ -201,68 +201,68 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}
 
 				Eventually(ctx, func() error {
-					return s.GardenClient.Patch(ctx, s.Shoot, patch)
+					return tc.GardenClient.Patch(ctx, tc.Shoot, patch)
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			if withInPlaceUpdatePools {
-				inplace.ItShouldVerifyInPlaceUpdateStart(s, true, true)
+				inplace.ItShouldVerifyInPlaceUpdateStart(tc, true, true)
 			}
 
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldInitializeShootClient(s)
-			verifyNodeKubernetesVersions(s)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldInitializeShootClient(tc)
+			verifyNodeKubernetesVersions(tc)
 
-			if v1beta1helper.IsHAControlPlaneConfigured(s.Shoot) {
-				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(s)
+			if v1beta1helper.IsHAControlPlaneConfigured(tc.Shoot) {
+				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(tc)
 			}
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 
 			}
 
 			if withInPlaceUpdatePools {
 				It("should compare the node names after the test", func(ctx SpecContext) {
-					totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(s.Shoot)
-					s.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
+					totalInPlaceWorkersMaxSurge := inplace.GetTotalInPlaceWorkersMaxSurge(tc.Shoot)
+					tc.Log.Info("Total in-place workers max surge", "maxSurge", totalInPlaceWorkersMaxSurge)
 
-					nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, s.Log, s.ShootClient, s.Shoot)
-					s.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
+					nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, tc.Log, tc.ShootClient, tc.Shoot)
+					tc.Log.Info("Nodes of in-place workers before test and after test", "beforeNodes", nodesOfInPlaceWorkersBeforeTest.UnsortedList(), "afterNodes", nodesOfInPlaceWorkersAfterTest.UnsortedList())
 
 					Expect(nodesOfInPlaceWorkersAfterTest.Intersection(nodesOfInPlaceWorkersBeforeTest)).To(HaveLen(nodesOfInPlaceWorkersBeforeTest.Len() - totalInPlaceWorkersMaxSurge))
 				}, SpecTimeout(2*time.Minute))
 
-				inplace.ItShouldVerifyInPlaceUpdateCompletion(s)
+				inplace.ItShouldVerifyInPlaceUpdateCompletion(tc)
 			}
 
 			if testBastionAndExposureClass {
-				exposureclass.VerifyExposureClassSwitch(s, ItShouldWaitForShootToBeReconciledAndHealthy)
+				exposureclass.VerifyExposureClassSwitch(tc, ItShouldWaitForShootToBeReconciledAndHealthy)
 			}
 
 			if testMaintenanceAnnotation {
-				ItShouldAnnotateShoot(s, map[string]string{
+				ItShouldAnnotateShoot(tc, map[string]string{
 					"shoot.gardener.cloud/skip-readiness": "",
 					"gardener.cloud/operation":            "maintain",
 				})
 
 				It("Wait for operation annotation to be gone (meaning controller picked up reconciliation request)", func(ctx SpecContext) {
-					Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+					Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(
 						HaveField("Annotations", Not(HaveKey("gardener.cloud/operation"))),
 					)
 				}, SpecTimeout(time.Minute))
 
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 
 				It("Wait for skip-readiness annotation to be gone", func(ctx SpecContext) {
-					Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+					Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(
 						HaveField("Annotations", Not(HaveKey("shoot.gardener.cloud/skip-readiness"))),
 					)
 				}, SpecTimeout(time.Minute))
 			}
 
-			ItShouldDeleteShoot(s)
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldDeleteShoot(tc)
+			ItShouldWaitForShootToBeDeleted(tc)
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
@@ -285,43 +285,43 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	})
 })
 
-func verifyNodeKubernetesVersions(s *ShootContext) {
+func verifyNodeKubernetesVersions(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Verify that the Kubernetes versions for all existing nodes match the versions defined in the Shoot spec", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, s.ShootClientSet, s.Shoot)).To(Succeed())
+			g.Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, tc.ShootClientSet, tc.Shoot)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
-func verifyWorkerNodeLabels(s *ShootContext) {
+func verifyWorkerNodeLabels(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Verify worker node labels", func(ctx SpecContext) {
-		commonNodeLabels := utils.MergeStringMaps(s.Shoot.Spec.Provider.Workers[0].Labels)
+		commonNodeLabels := utils.MergeStringMaps(tc.Shoot.Spec.Provider.Workers[0].Labels)
 		commonNodeLabels["networking.gardener.cloud/node-local-dns-enabled"] = "false"
 		commonNodeLabels["node.kubernetes.io/role"] = "node"
 
 		Eventually(ctx, func(g Gomega) {
-			for _, workerPool := range s.Shoot.Spec.Provider.Workers {
+			for _, workerPool := range tc.Shoot.Spec.Provider.Workers {
 				expectedNodeLabels := utils.MergeStringMaps(commonNodeLabels)
 				expectedNodeLabels["worker.gardener.cloud/pool"] = workerPool.Name
 				expectedNodeLabels["worker.gardener.cloud/cri-name"] = string(workerPool.CRI.Name)
 				expectedNodeLabels["worker.gardener.cloud/system-components"] = strconv.FormatBool(workerPool.SystemComponents.Allow)
 
-				kubernetesVersion := s.Shoot.Spec.Kubernetes.Version
+				kubernetesVersion := tc.Shoot.Spec.Kubernetes.Version
 				if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
 					kubernetesVersion = *workerPool.Kubernetes.Version
 				}
 				expectedNodeLabels["worker.gardener.cloud/kubernetes-version"] = kubernetesVersion
 
 				// The node controller of cloud-controller-manager-local sets the topology labels based on the machine class.
-				expectedNodeLabels[corev1.LabelTopologyRegion] = s.Shoot.Spec.Region
+				expectedNodeLabels[corev1.LabelTopologyRegion] = tc.Shoot.Spec.Region
 				expectedNodeLabels[corev1.LabelInstanceTypeStable] = workerPool.Machine.Type
 
 				nodeList := &corev1.NodeList{}
-				g.Expect(s.ShootClient.List(ctx, nodeList, client.MatchingLabels{
+				g.Expect(tc.ShootClient.List(ctx, nodeList, client.MatchingLabels{
 					"worker.gardener.cloud/pool": workerPool.Name,
 				})).To(Succeed())
 				g.Expect(len(nodeList.Items)).To(BeNumerically(">=", workerPool.Minimum), "worker pool %s should have at least %d nodes", workerPool.Name, workerPool.Minimum)
@@ -335,7 +335,7 @@ func verifyWorkerNodeLabels(s *ShootContext) {
 						g.Expect(node.Labels).To(HaveKeyWithValue(corev1.LabelTopologyZone, BeElementOf(workerPool.Zones)), "worker pool %s node %s should have a zone label", workerPool.Name, node.Name)
 					} else {
 						// The region is used as fallback zone for worker pools without zones.
-						g.Expect(node.Labels).To(HaveKeyWithValue(corev1.LabelTopologyZone, s.Shoot.Spec.Region), "worker pool %s node %s should have the region as fallback zone label", workerPool.Name, node.Name)
+						g.Expect(node.Labels).To(HaveKeyWithValue(corev1.LabelTopologyZone, tc.Shoot.Spec.Region), "worker pool %s node %s should have the region as fallback zone label", workerPool.Name, node.Name)
 					}
 					// The node controller of cloud-controller-manager-local sets the provider ID to the machine pod name, which is
 					// also the node name.
@@ -346,12 +346,12 @@ func verifyWorkerNodeLabels(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
-func verifyViewerKubeconfigShootAccess(s *ShootContext) {
+func verifyViewerKubeconfigShootAccess(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Verify shoot access using viewer kubeconfig", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			readOnlyShootClient, err := access.CreateShootClientFromViewerKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+			readOnlyShootClient, err := access.CreateShootClientFromViewerKubeconfig(ctx, tc.GardenClientSet, tc.Shoot)
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.ConfigMapList{})).To(Succeed())

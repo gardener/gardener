@@ -29,65 +29,65 @@ type Job struct {
 }
 
 // ItShouldDeployJob deploys the zero-downtime validator job to ensure no API server downtime while upgrading Gardener.
-func (j *Job) ItShouldDeployJob(s *ShootContext) {
+func (j *Job) ItShouldDeployJob(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Deploy zero-downtime validator job to ensure no API server downtime while upgrading Gardener", func(ctx SpecContext) {
 		By("Fetch kube-apiserver auth token")
-		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.Shoot.Status.TechnicalID}}
-		Eventually(s.SeedKomega.Get(deployment)).Should(Succeed())
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: tc.Shoot.Status.TechnicalID}}
+		Eventually(tc.SeedKomega.Get(deployment)).Should(Succeed())
 		authToken := deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.HTTPHeaders[0].Value
 
 		By("Deploy job with name " + jobName)
 		Eventually(ctx, func() error {
 			var err error
-			j.job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx, s.SeedClient, jobName, s.Shoot.Status.TechnicalID, authToken)
+			j.job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx, tc.SeedClient, jobName, tc.Shoot.Status.TechnicalID, authToken)
 			return err
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldWaitForJobToBeReady waits until the zero-downtime validator job is ready.
-func (j *Job) ItShouldWaitForJobToBeReady(s *ShootContext) {
+func (j *Job) ItShouldWaitForJobToBeReady(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Wait until zero-downtime validator job is ready", func(ctx SpecContext) {
-		shootupdatesuite.WaitForJobToBeReady(ctx, s.SeedClient, j.job)
+		shootupdatesuite.WaitForJobToBeReady(ctx, tc.SeedClient, j.job)
 	}, SpecTimeout(5*time.Minute))
 }
 
 // ItShouldEnsureThereWasNoDowntime ensures there was no downtime while upgrading shoot by checking the job status.
-func (j *Job) ItShouldEnsureThereWasNoDowntime(s *ShootContext) {
+func (j *Job) ItShouldEnsureThereWasNoDowntime(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Ensure there was no downtime while upgrading shoot", func(ctx SpecContext) {
-		j.initJobIfNeeded(s)
-		Eventually(ctx, s.SeedKomega.Get(j.job)).Should(Succeed())
+		j.initJobIfNeeded(tc)
+		Eventually(ctx, tc.SeedKomega.Get(j.job)).Should(Succeed())
 		Expect(j.job.Status.Failed).To(BeZero())
 	}, SpecTimeout(time.Minute))
 }
 
 // AfterAllDeleteJob registers an 'AfterAll' node for deleting the zero-downtime validator job.
-func (j *Job) AfterAllDeleteJob(s *ShootContext) {
+func (j *Job) AfterAllDeleteJob(tc *ShootContext) {
 	GinkgoHelper()
 
 	AfterAll(func(ctx SpecContext) {
 		// In ordered containers, the seed client might not have been initialized if a previous spec failed,
 		// e.g., before ItShouldInitializeSeedClient ran. Skip the deletion in this case to avoid a panic
 		// that would mask the actual failure.
-		if s.SeedClient == nil {
+		if tc.SeedClient == nil {
 			return
 		}
 
-		j.initJobIfNeeded(s)
+		j.initJobIfNeeded(tc)
 		Eventually(ctx, func() error {
-			return s.SeedClient.Delete(ctx, j.job, client.PropagationPolicy(metav1.DeletePropagationForeground))
+			return tc.SeedClient.Delete(ctx, j.job, client.PropagationPolicy(metav1.DeletePropagationForeground))
 		}).Should(Or(Succeed(), BeNotFoundError()))
 	}, NodeTimeout(time.Minute))
 }
 
-func (j *Job) initJobIfNeeded(s *ShootContext) {
+func (j *Job) initJobIfNeeded(tc *ShootContext) {
 	if j.job == nil {
-		j.job = highavailability.EmptyZeroDownTimeValidatorJob(jobName, s.Shoot.Status.TechnicalID)
+		j.job = highavailability.EmptyZeroDownTimeValidatorJob(jobName, tc.Shoot.Status.TechnicalID)
 	}
 }
