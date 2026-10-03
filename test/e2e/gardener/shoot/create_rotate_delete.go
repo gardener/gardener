@@ -372,9 +372,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 						return tc.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
 					},
-					ResourcesToEncrypt: append([]string{"configmaps", "shirts.stable.example.com"}, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
-					EncryptionKey:      v1beta1constants.SecretNameETCDEncryptionKey,
-					RoleLabelValue:     v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
+					GetResourcesToEncrypt: func() []string {
+						return append([]string{"configmaps", "shirts.stable.example.com"}, sets.List(gardenerutils.DefaultResourcesForEncryption())...)
+					},
+					EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
+					RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 				},
 				&rotationutils.ServiceAccountKeyVerifier{
 					GetServiceAccountKeySecretNamespace: func() string {
