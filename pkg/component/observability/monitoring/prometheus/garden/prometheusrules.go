@@ -231,6 +231,18 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			},
 		},
 		{
+			Alert:  "GardenConstraintStatusNotTrue",
+			Expr:   intstr.FromString(`garden_garden_constraint{status!="True"} == 1`),
+			For:    new(monitoringv1.Duration("10m")),
+			Labels: getLabels("warning"),
+			Annotations: map[string]string{
+				"summary": "Garden runtime constraint {{$labels.constraint}} is in state {{$labels.status}}",
+				"description": "Garden {{$labels.name}} in landscape " +
+					"{{$externalLabels.landscape}} has constraint {{$labels.constraint}} unequal to True" +
+					" for 10 minutes.",
+			},
+		},
+		{
 			Alert:  "GardenLastOperationInErrorState",
 			Expr:   intstr.FromString(`garden_garden_last_operation{state=~"Error|Failed"} == 1`),
 			For:    new(monitoringv1.Duration("10m")),

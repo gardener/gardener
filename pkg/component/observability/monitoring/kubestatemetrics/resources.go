@@ -409,6 +409,7 @@ var gardenMetricAllowlist = []string{
 	"^garden_garden_condition$",
 	"^garden_garden_last_operation$",
 	"^garden_extension_condition$",
+	"^garden_garden_constraint$",
 }
 
 var cacheMetricAllowlist = []string{
