@@ -15,10 +15,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func defaultBackupSecret() *corev1.Secret {
+const backupSecretName = "virtual-garden-etcd-main-backup"
+
+// backupSecretForGarden returns the backup secret that is referenced by the main etcd backup of the given garden.
+func backupSecretForGarden(garden *operatorv1alpha1.Garden) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "virtual-garden-etcd-main-backup",
+			Name:      garden.Spec.VirtualCluster.ETCD.Main.Backup.SecretRef.Name,
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -26,7 +29,7 @@ func defaultBackupSecret() *corev1.Secret {
 	}
 }
 
-func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *operatorv1alpha1.Garden {
+func defaultGarden(specifyBackupBucket bool) *operatorv1alpha1.Garden {
 	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
 	Expect(err).NotTo(HaveOccurred())
 	name := "garden-" + randomSuffix
@@ -98,7 +101,7 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 							Region:     new("local"),
 							BucketName: bucketName,
 							SecretRef: corev1.LocalObjectReference{
-								Name: backupSecret.Name,
+								Name: backupSecretName,
 							},
 						},
 					},
