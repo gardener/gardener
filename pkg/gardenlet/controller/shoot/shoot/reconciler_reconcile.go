@@ -243,6 +243,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		_                           = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
 		initializeSecretsManagement = g.AddGroup(b.InitializeSecretsManagementTaskGroup().WithDependencies(reconcileIstioInternalLoadBalancingConfigMap))
 		_                           = g.AddGroup(b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, shootIsGarden, flowCtx.skipReadiness))
+		_                           = g.AddGroup(b.ReconcileIstioTaskGroup(flowCtx.skipReadiness))
 		initialValiDeployment       = g.Add(flow.Task{
 			Name:         "Deploying initial shoot logging stack in Seed",
 			Fn:           flow.TaskFn(b.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),

@@ -43,6 +43,8 @@ const (
 	RoleGarden = "garden"
 	// RoleSeed is the label value for the seed ingress gateway pods.
 	RoleSeed = "seed"
+	// RoleShoot is the label value for the (self-hosted) shoot ingress gateway pods.
+	RoleShoot = "shoot"
 	// IstiodServiceName is the name of the istiod service.
 	IstiodServiceName = "istiod"
 	// IstiodPort is the port of the istiod service.

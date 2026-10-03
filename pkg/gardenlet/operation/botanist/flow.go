@@ -198,6 +198,37 @@ func (b *Botanist) ReconcileRuntimeGardenerResourceManagerTaskGroup(podNetworkAv
 	return g
 }
 
+// TaskGroupReconcileIstio is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileIstio flow.TaskID = "TaskGroupReconcileIstio"
+
+// ReconcileIstioTaskGroup returns the flow.TaskGroup for deploying the Istio installation (istiod + ingress gateway)
+// inside a self-hosted shoot.
+func (b *Botanist) ReconcileIstioTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileIstio).
+			SkipIf(!b.Shoot.IsSelfHosted()).
+			WithDependencies(
+				TaskGroupReconcileCustomResourceDefinitions,
+				TaskGroupReconcileRuntimeGardenerResourceManager,
+			)
+
+		deployIstio = g.Add(flow.Task{
+			Name: "Deploying Istio",
+			Fn:   b.DeployIstio,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until Istio is ready",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.Istio.Wait(ctx)
+			},
+			SkipIf:       skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployIstio),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileGardenerResourceManager is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileGardenerResourceManager flow.TaskID = "TaskGroupReconcileGardenerResourceManager"
 
