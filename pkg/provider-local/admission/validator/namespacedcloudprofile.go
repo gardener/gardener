@@ -21,10 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/admission"
 	"github.com/gardener/gardener/pkg/provider-local/admission/mutator"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
 	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1/validation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -51,7 +49,7 @@ func (p *namespacedCloudProfileValidator) Validate(ctx context.Context, newNames
 	if cloudProfile.DeletionTimestamp != nil {
 		return nil
 	}
-	cloudProfileConfig := &api.CloudProfileConfig{}
+	cloudProfileConfig := &localv1alpha1.CloudProfileConfig{}
 
 	if cloudProfile.Spec.ProviderConfig != nil {
 		cpConfig, err := admission.DecodeCloudProfileConfig(p.decoder, cloudProfile.Spec.ProviderConfig)
@@ -77,7 +75,7 @@ func (p *namespacedCloudProfileValidator) Validate(ctx context.Context, newNames
 	return p.validateNamespacedCloudProfileProviderConfig(cloudProfileConfig, cloudProfile.Spec.MachineImages, parentProfile).ToAggregate()
 }
 
-func (p *namespacedCloudProfileValidator) validateNamespacedCloudProfileProviderConfig(providerConfig *api.CloudProfileConfig, machineImages []core.MachineImage, parentProfile *gardencorev1beta1.CloudProfile) field.ErrorList {
+func (p *namespacedCloudProfileValidator) validateNamespacedCloudProfileProviderConfig(providerConfig *localv1alpha1.CloudProfileConfig, machineImages []core.MachineImage, parentProfile *gardencorev1beta1.CloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	profileImages := gardenerutils.NewCoreImagesContext(machineImages)
@@ -141,13 +139,9 @@ func (p *namespacedCloudProfileValidator) validateNamespacedCloudProfileProvider
 
 // SimulateTransformToParentFormat simulates the transformation of the given NamespacedCloudProfile and its providerConfig
 // to the parent CloudProfile format. This includes the transformation of both the providerConfig and the spec.
-func SimulateTransformToParentFormat(cloudProfileConfig *api.CloudProfileConfig, cloudProfile *core.NamespacedCloudProfile, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) error {
-	cloudProfileConfigV1alpha1 := &localv1alpha1.CloudProfileConfig{}
+func SimulateTransformToParentFormat(cloudProfileConfig *localv1alpha1.CloudProfileConfig, cloudProfile *core.NamespacedCloudProfile, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) error {
 	path := field.NewPath("spec").Child("providerConfig")
 
-	if err := helper.Scheme.Convert(cloudProfileConfig, cloudProfileConfigV1alpha1, nil); err != nil {
-		return field.InternalError(path, err)
-	}
 	namespacedCloudProfileSpecV1beta1 := gardencorev1beta1.NamespacedCloudProfileSpec{}
 	if err := gardencoreapi.Scheme.Convert(&cloudProfile.Spec, &namespacedCloudProfileSpecV1beta1, nil); err != nil {
 		return field.InternalError(path, err)
@@ -155,13 +149,10 @@ func SimulateTransformToParentFormat(cloudProfileConfig *api.CloudProfileConfig,
 
 	// simulate transformation to parent spec format
 	// - performed in mutating extension webhook
-	transformedSpecConfig := mutator.TransformProviderConfigToParentFormat(cloudProfileConfigV1alpha1, capabilityDefinitions)
+	mutator.TransformProviderConfigToParentFormat(cloudProfileConfig, capabilityDefinitions)
 	// - performed in namespaced cloud profile controller
 	transformedSpec := gardenerutils.TransformSpecToParentFormat(namespacedCloudProfileSpecV1beta1, capabilityDefinitions)
 
-	if err := helper.Scheme.Convert(transformedSpecConfig, cloudProfileConfig, nil); err != nil {
-		return field.InternalError(path, err)
-	}
 	if err := gardencoreapi.Scheme.Convert(&transformedSpec, &cloudProfile.Spec, nil); err != nil {
 		return field.InternalError(path, err)
 	}
