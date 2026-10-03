@@ -287,39 +287,53 @@ func (t *SeedContext) SetSeedClientSet(clientSet kubernetes.Interface) *SeedCont
 // ManagedSeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, ManagedSeedContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare ManagedSeedContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare ManagedSeedContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A ManagedSeedContext can be initialized using TestContext.ForManagedSeed.
+// A ManagedSeedContext is created using NewManagedSeedContext and initialized by calling Init followed by
+// SetManagedSeed in a BeforeAll node.
 type ManagedSeedContext struct {
 	TestContext
 
 	// ManagedSeed object the test is working with
 	ManagedSeed *seedmanagementv1alpha1.ManagedSeed
 
-	// ShootContext object the managed seed is referencing
+	// ShootContext of the shoot the managed seed is referencing
 	ShootContext *ShootContext
 
-	// Seed object the managed seed is referencing
+	// SeedContext of the seed the managed seed is referencing
 	SeedContext *SeedContext
 }
 
-// ForManagedSeed copies the receiver ShootContext for deriving a ManagedSeedContext.
-func (t *TestContext) ForManagedSeed(baseShoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
+// NewManagedSeedContext returns an empty ManagedSeedContext. It is safe to call during tree construction, i.e., the
+// ShootContext and SeedContext can already be passed to shared helper functions. The context must be initialized in a
+// BeforeAll node by calling Init, followed by SetManagedSeed.
+func NewManagedSeedContext() *ManagedSeedContext {
+	return &ManagedSeedContext{
+		TestContext:  *NewTestContext(),
+		ShootContext: &ShootContext{},
+		SeedContext:  &SeedContext{},
+	}
+}
+
+// Init initializes the garden clients of the ManagedSeedContext, see TestContext.Init.
+func (t *ManagedSeedContext) Init() *ManagedSeedContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetManagedSeed sets the ManagedSeed of the ManagedSeedContext and derives the ShootContext and SeedContext from it.
+// It must be called after Init.
+func (t *ManagedSeedContext) SetManagedSeed(baseShoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: managedSeed.Name,
 		},
 	}
 
-	ms := &ManagedSeedContext{
-		TestContext:  *t,
-		ManagedSeed:  managedSeed,
-		SeedContext:  t.ForSeed(seed),
-		ShootContext: t.ForShoot(baseShoot),
-	}
-
+	t.ManagedSeed = managedSeed
+	*t.SeedContext = *t.ForSeed(seed)
+	*t.ShootContext = *t.ForShoot(baseShoot)
 	t.Log = t.Log.WithValues("managedSeed", client.ObjectKeyFromObject(managedSeed))
 
-	return ms
+	return t
 }
