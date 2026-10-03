@@ -40,7 +40,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 		shoot.Namespace = v1beta1constants.GardenNamespace
 		managedSeed := buildManagedSeed(shoot)
 
-		s = NewTestContext().ForManagedSeed(shoot, managedSeed)
+		s = NewTestContext().Init().ForManagedSeed(shoot, managedSeed)
 	})
 
 	ItShouldCreateShoot(s.ShootContext)

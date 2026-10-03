@@ -22,7 +22,7 @@ import (
 
 var _ = Describe("Project Tests", Label("Project", "default"), func() {
 	Describe("NamespacedCloudProfile", Ordered, func() {
-		tc := NewTestContext()
+		tc := NewTestContext().Init()
 
 		originalNamespacedCloudProfile := DefaultNamespacedCloudProfile()
 		namespacedCloudProfile := addCustomMachineImage(originalNamespacedCloudProfile.DeepCopy())

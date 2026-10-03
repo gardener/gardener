@@ -33,7 +33,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		BeforeTestSetup(func() {
 			backupSecret := defaultBackupSecret()
-			s = NewTestContext().ForGarden(defaultGarden(backupSecret, false), backupSecret)
+			s = NewTestContext().Init().ForGarden(defaultGarden(backupSecret, false), backupSecret)
 		})
 
 		ItShouldCreateGarden(s)

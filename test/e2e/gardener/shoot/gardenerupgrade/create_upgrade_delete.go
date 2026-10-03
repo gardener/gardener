@@ -52,11 +52,11 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 				DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate)),
 			)
 
-			test(NewTestContext().ForShoot(shoot))
+			test(NewTestContext().Init().ForShoot(shoot))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-upgrade")))
+			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-upgrade")))
 		})
 	})
 })

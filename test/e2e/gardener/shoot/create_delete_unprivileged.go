@@ -43,7 +43,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				},
 			}
 
-			s = NewTestContext().ForShoot(shoot)
+			s = NewTestContext().Init().ForShoot(shoot)
 		})
 
 		ItShouldCreateShoot(s)

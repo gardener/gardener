@@ -94,11 +94,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	}
 
 	Context("Shoot with workers", Ordered, PriorityLonger, func() {
-		test(NewTestContext().ForShoot(DefaultShoot("e2e-migrate")))
+		test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-migrate")))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-		test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-migrate")))
+		test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-migrate")))
 	})
 
 	Context("Hibernated Shoot", Label("hibernated"), Ordered, PriorityLong, func() {
@@ -106,7 +106,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Enabled: new(true),
 		}
-		test(NewTestContext().ForShoot(shoot))
+		test(NewTestContext().Init().ForShoot(shoot))
 	})
 })
 
