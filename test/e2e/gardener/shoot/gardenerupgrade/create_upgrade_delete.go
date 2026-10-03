@@ -27,7 +27,7 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 				ItShouldCreateShoot(tc)
 				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 				ItShouldGetResponsibleSeed(tc)
-				seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+				seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 				zeroDowntimeValidatorJob.ItShouldDeployJob(tc)
 				zeroDowntimeValidatorJob.ItShouldWaitForJobToBeReady(tc)
@@ -35,7 +35,7 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
 				ItShouldGetResponsibleSeed(tc)
-				seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+				seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(tc)
 				zeroDowntimeValidatorJob.AfterAllDeleteJob(tc)

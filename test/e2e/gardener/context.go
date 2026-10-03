@@ -102,7 +102,9 @@ func (t *TestContext) Init() *TestContext {
 // fail, so this is safe. Only the clients are initialized in the BeforeAll node.
 type ShootContext struct {
 	TestContext
-	SeedContext
+
+	// SeedContext of the seed the shoot is scheduled to.
+	*SeedContext
 
 	// Shoot object that the test case is working with.
 	Shoot *gardencorev1beta1.Shoot
@@ -125,7 +127,7 @@ type ShootContext struct {
 
 // ForShoot copies the receiver TestContext for deriving a ShootContext.
 func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
-	return (&ShootContext{TestContext: *t}).SetShoot(shoot)
+	return (&ShootContext{TestContext: *t, SeedContext: &SeedContext{}}).SetShoot(shoot)
 }
 
 // NewShootContext returns a ShootContext for the given shoot. The clients are not initialized yet, this must be done in
@@ -133,7 +135,7 @@ func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
 // This is needed because many shared helper functions decide which specs to register depending on the shoot's spec
 // (e.g., whether it is workerless).
 func NewShootContext(shoot *gardencorev1beta1.Shoot) *ShootContext {
-	return (&ShootContext{TestContext: *NewTestContext()}).SetShoot(shoot)
+	return (&ShootContext{TestContext: *NewTestContext(), SeedContext: &SeedContext{}}).SetShoot(shoot)
 }
 
 // Init initializes the garden clients of the ShootContext, see TestContext.Init.

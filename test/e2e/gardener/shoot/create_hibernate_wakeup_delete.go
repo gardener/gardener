@@ -35,7 +35,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldInitializeShootClient(tc)
 			ItShouldGetResponsibleSeed(tc)
-			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 			// validate Prometheus health checks are in place for the shoot Prometheus.
 			if testPrometheusHealthCheck {
@@ -104,7 +104,7 @@ func itShouldVerifyShootPrometheusHealthCheck(tc *ShootContext) {
 		},
 	}
 
-	seed.ItShouldCreatePrometheusRuleForSeed(&tc.SeedContext, rule)
+	seed.ItShouldCreatePrometheusRuleForSeed(tc.SeedContext, rule)
 
 	It("Wait until ObservabilityComponentsHealthy is false", func(ctx SpecContext) {
 		Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(
@@ -118,7 +118,7 @@ func itShouldVerifyShootPrometheusHealthCheck(tc *ShootContext) {
 		)
 	}, SpecTimeout(10*time.Minute))
 
-	seed.ItShouldDeletePrometheusRuleForSeed(&tc.SeedContext, rule)
+	seed.ItShouldDeletePrometheusRuleForSeed(tc.SeedContext, rule)
 
 	It("Wait until ObservabilityComponentsHealthy is true", func(ctx SpecContext) {
 		Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(
