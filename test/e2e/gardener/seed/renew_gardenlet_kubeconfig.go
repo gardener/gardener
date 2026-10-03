@@ -26,7 +26,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		)
 
 		BeforeTestSetup(func() {
-			testContext := NewTestContext()
+			testContext := NewTestContext().Init()
 
 			// Find the first seed which is not "e2e-managedseed". Seed name differs between test scenarios, e.g., non-ha/ha.
 			// However, this test should not use "e2e-managedseed", because it is created and deleted in a separate e2e test.

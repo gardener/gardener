@@ -41,11 +41,11 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 		}
 
 		Context("Shoot with workers", Label("high-availability"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-upg-ha")))
+			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-upg-ha")))
 		})
 
 		Context("Workerless Shoot", Label("high-availability", "workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-upg-ha")))
+			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-upg-ha")))
 		})
 	})
 })

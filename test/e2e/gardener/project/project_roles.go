@@ -46,7 +46,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 			},
 		}
 
-		s = NewTestContext().ForProject(project)
+		s = NewTestContext().Init().ForProject(project)
 	})
 
 	BeforeAll(func() {

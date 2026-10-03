@@ -54,7 +54,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	}
 
 	Context("Shoot with workers", Ordered, func() {
-		test(NewTestContext().ForShoot(DefaultShoot("e2e-force-delete")))
+		test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-force-delete")))
 	})
 
 	Context("Hibernated Shoot", Ordered, func() {
@@ -63,10 +63,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Enabled: new(true),
 		}
 
-		test(NewTestContext().ForShoot(shoot))
+		test(NewTestContext().Init().ForShoot(shoot))
 	})
 
 	Context("Workerless Shoot", Ordered, func() {
-		test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-fd")))
+		test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-fd")))
 	})
 })

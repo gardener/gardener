@@ -62,11 +62,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-wake-up")), true)
+			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-wake-up")), true)
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-wake-up")), false)
+			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-wake-up")), false)
 		})
 	})
 })

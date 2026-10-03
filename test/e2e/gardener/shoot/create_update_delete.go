@@ -266,21 +266,21 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")), false, true, true)
+			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-default")), false, true, true)
 		})
 
 		Context("Shoot with only in-place workers", Label("basic", "in-place"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-inplace")), true, false, false)
+			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-inplace")), true, false, false)
 		})
 
 		Context("Shoot with workers and layer 4 load balancing", Ordered, Label("basic"), PriorityLong, func() {
 			shoot := DefaultShoot("e2e-layer4-lb")
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootDisableIstioTLSTermination, "true")
-			test(NewTestContext().ForShoot(shoot), false, true, false)
+			test(NewTestContext().Init().ForShoot(shoot), false, true, false)
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-default")), false, false, true)
+			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-default")), false, false, true)
 		})
 	})
 })
