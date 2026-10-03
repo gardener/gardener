@@ -91,24 +91,15 @@ func (t *TestContext) Init() *TestContext {
 	return t
 }
 
-// ForShoot copies the receiver TestContext for deriving a ShootContext.
-func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
-	s := &ShootContext{
-		TestContext: *t,
-		Shoot:       shoot,
-	}
-	s.Log = s.Log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
-
-	return s
-}
-
 // ShootContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, ShootContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare ShootContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare ShootContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A ShootContext can be initialized using TestContext.ForShoot.
+// A ShootContext is created using NewShootContext and initialized by calling Init in a BeforeAll node. In contrast to
+// the other context types, the Shoot is set during tree construction because many shared helper functions decide which
+// specs to register depending on the shoot's spec (e.g., whether it is workerless). Building the Shoot object cannot
+// fail, so this is safe. Only the clients are initialized in the BeforeAll node.
 type ShootContext struct {
 	TestContext
 	SeedContext
@@ -116,7 +107,7 @@ type ShootContext struct {
 	// Shoot object that the test case is working with.
 	Shoot *gardencorev1beta1.Shoot
 
-	// ShootClientSet is a client for the shoot cluster. It must be initialized via WithShootClientSet.
+	// ShootClientSet is a client for the shoot cluster. It must be initialized via SetShootClientSet.
 	ShootClientSet kubernetes.Interface
 	// ShootClient is the controller-runtime client of the ShootClientSet. This is a more convenient equivalent of
 	// ShootClientSet.Client().
@@ -128,22 +119,48 @@ type ShootContext struct {
 	ShootKomega komega.Komega
 
 	// ControlPlaneNamespace contains the namespace for the Shoot Control Plane in the Seed.
-	// It must be initialized via WithControlPlaneNamespace.
+	// It must be initialized via SetControlPlaneNamespace.
 	ControlPlaneNamespace string
 }
 
-// WithShootClientSet initializes the shoot clients of this ShootContext from the given client set.
-func (s *ShootContext) WithShootClientSet(clientSet kubernetes.Interface) *ShootContext {
-	s.ShootClientSet = clientSet
-	s.ShootClient = clientSet.Client()
-	s.ShootKomega = komega.New(s.ShootClient)
-	return s
+// ForShoot copies the receiver TestContext for deriving a ShootContext.
+func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
+	return (&ShootContext{TestContext: *t}).SetShoot(shoot)
 }
 
-// WithControlPlaneNamespace sets the namespace for the Shoot Control Plane in the Seed.
-func (s *ShootContext) WithControlPlaneNamespace(namespace string) *ShootContext {
-	s.ControlPlaneNamespace = namespace
-	return s
+// NewShootContext returns a ShootContext for the given shoot. The clients are not initialized yet, this must be done in
+// a BeforeAll node by calling Init. NewShootContext does not fail, so it is safe to call it during tree construction.
+// This is needed because many shared helper functions decide which specs to register depending on the shoot's spec
+// (e.g., whether it is workerless).
+func NewShootContext(shoot *gardencorev1beta1.Shoot) *ShootContext {
+	return (&ShootContext{TestContext: *NewTestContext()}).SetShoot(shoot)
+}
+
+// Init initializes the garden clients of the ShootContext, see TestContext.Init.
+func (t *ShootContext) Init() *ShootContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetShoot sets the Shoot of the ShootContext and adds it to the logger.
+func (t *ShootContext) SetShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
+	t.Shoot = shoot
+	t.Log = t.Log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
+	return t
+}
+
+// SetShootClientSet initializes the shoot clients of this ShootContext from the given client set.
+func (t *ShootContext) SetShootClientSet(clientSet kubernetes.Interface) *ShootContext {
+	t.ShootClientSet = clientSet
+	t.ShootClient = clientSet.Client()
+	t.ShootKomega = komega.New(t.ShootClient)
+	return t
+}
+
+// SetControlPlaneNamespace sets the namespace for the Shoot Control Plane in the Seed.
+func (t *ShootContext) SetControlPlaneNamespace(namespace string) *ShootContext {
+	t.ControlPlaneNamespace = namespace
+	return t
 }
 
 // ProjectContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the

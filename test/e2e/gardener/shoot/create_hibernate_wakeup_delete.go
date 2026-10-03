@@ -27,6 +27,10 @@ import (
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Hibernate, Wake up and Delete Shoot", func() {
 		test := func(tc *ShootContext, testPrometheusHealthCheck bool) {
+			BeforeAll(func() {
+				tc.Init()
+			})
+
 			ItShouldCreateShoot(tc)
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldInitializeShootClient(tc)
@@ -62,11 +66,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
-			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-wake-up")), true)
+			test(NewShootContext(DefaultShoot("e2e-wake-up")), true)
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-wake-up")), false)
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-wake-up")), false)
 		})
 	})
 })

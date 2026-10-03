@@ -38,19 +38,21 @@ func init() {
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Change Encryption Provider Type and Delete Shoot", Label("encryption-provider-change"), func() {
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			var tc *ShootContext
-
-			BeforeTestSetup(func() {
-				shoot := DefaultWorkerlessShoot("e2e-encr-chg")
-				shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
-					Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
-						ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
-							RotationPeriod: &metav1.Duration{Duration: v1beta1constants.ETCDEncryptionKeyAutoRotationPeriod},
-						},
+			shoot := DefaultWorkerlessShoot("e2e-encr-chg")
+			shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
+				Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+					ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+						RotationPeriod: &metav1.Duration{Duration: v1beta1constants.ETCDEncryptionKeyAutoRotationPeriod},
 					},
-				}
-				tc = NewTestContext().Init().ForShoot(shoot)
+				},
+			}
+
+			tc := NewShootContext(shoot)
+
+			BeforeAll(func() {
+				tc.Init()
 			})
+
 			ItShouldCreateShoot(tc)
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldInitializeShootClient(tc)

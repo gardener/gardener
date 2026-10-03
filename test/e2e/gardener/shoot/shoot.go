@@ -204,7 +204,7 @@ func ItShouldInitializeShootClient(tc *ShootContext) {
 				return err
 			}
 
-			tc.WithShootClientSet(clientSet)
+			tc.SetShootClientSet(clientSet)
 			return nil
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
@@ -235,7 +235,7 @@ func ItShouldComputeControlPlaneNamespace(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Compute Control Plane Namespace", func(_ SpecContext) {
-		tc.WithControlPlaneNamespace(tc.Shoot.Status.TechnicalID)
+		tc.SetControlPlaneNamespace(tc.Shoot.Status.TechnicalID)
 	}, SpecTimeout(time.Minute))
 }
 

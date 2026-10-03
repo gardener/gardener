@@ -47,50 +47,52 @@ const (
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Update, Delete", Label("simple"), func() {
 		test := func(tc *ShootContext, withInPlaceUpdatePools, testBastionAndExposureClass, testMaintenanceAnnotation bool) {
-			BeforeTestSetup(func() {
-				tc.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
-					Resources: []string{"services", "clusterroles.rbac.authorization.k8s.io"},
-				}
+			tc.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+				Resources: []string{"services", "clusterroles.rbac.authorization.k8s.io"},
+			}
 
-				tc.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
+			tc.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
 
-				if !v1beta1helper.IsWorkerless(tc.Shoot) {
-					// create worker pools which explicitly specify the kubernetes version and with different update strategies
-					pool1 := tc.Shoot.Spec.Provider.Workers[0]
-					pool2, pool3 := pool1.DeepCopy(), pool1.DeepCopy()
-					pool2.Name += "2"
-					pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &tc.Shoot.Spec.Kubernetes.Version}
-					pool3.Name += "3"
-					pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(kubernetesSourceVersion)}
-					tc.Shoot.Spec.Provider.Workers = append(tc.Shoot.Spec.Provider.Workers, *pool2, *pool3)
-				}
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				// create worker pools which explicitly specify the kubernetes version and with different update strategies
+				pool1 := tc.Shoot.Spec.Provider.Workers[0]
+				pool2, pool3 := pool1.DeepCopy(), pool1.DeepCopy()
+				pool2.Name += "2"
+				pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &tc.Shoot.Spec.Kubernetes.Version}
+				pool3.Name += "3"
+				pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: new(kubernetesSourceVersion)}
+				tc.Shoot.Spec.Provider.Workers = append(tc.Shoot.Spec.Provider.Workers, *pool2, *pool3)
+			}
 
-				if withInPlaceUpdatePools {
-					pool4 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-					pool4.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &tc.Shoot.Spec.Kubernetes.Version}
-					pool4.Minimum = 2
-					pool4.Maximum = 2
-					pool4.MaxUnavailable = new(intstr.FromInt(1))
-					pool4.MaxSurge = new(intstr.FromInt(0))
+			if withInPlaceUpdatePools {
+				pool4 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+				pool4.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &tc.Shoot.Spec.Kubernetes.Version}
+				pool4.Minimum = 2
+				pool4.Maximum = 2
+				pool4.MaxUnavailable = new(intstr.FromInt(1))
+				pool4.MaxSurge = new(intstr.FromInt(0))
 
-					pool5 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
-					pool5.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
-						Version: new(kubernetesSourceVersion),
-						Kubelet: &gardencorev1beta1.KubeletConfig{
-							CPUManagerPolicy: new("none"),
-							EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
-								MemoryAvailable: new("100Mi"),
-								NodeFSAvailable: new("100Mi"),
-							},
+				pool5 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+				pool5.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+					Version: new(kubernetesSourceVersion),
+					Kubelet: &gardencorev1beta1.KubeletConfig{
+						CPUManagerPolicy: new("none"),
+						EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+							MemoryAvailable: new("100Mi"),
+							NodeFSAvailable: new("100Mi"),
 						},
-					}
-
-					pool6 := DefaultWorker("auto-surge", new(gardencorev1beta1.AutoInPlaceUpdate))
-					pool6.MaxSurge = new(intstr.FromInt(1))
-					pool6.MaxUnavailable = new(intstr.FromInt(0))
-
-					tc.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{pool4, pool5, pool6}
+					},
 				}
+
+				pool6 := DefaultWorker("auto-surge", new(gardencorev1beta1.AutoInPlaceUpdate))
+				pool6.MaxSurge = new(intstr.FromInt(1))
+				pool6.MaxUnavailable = new(intstr.FromInt(0))
+
+				tc.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{pool4, pool5, pool6}
+			}
+
+			BeforeAll(func() {
+				tc.Init()
 			})
 
 			ItShouldCreateShoot(tc)
@@ -266,21 +268,21 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
-			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-default")), false, true, true)
+			test(NewShootContext(DefaultShoot("e2e-default")), false, true, true)
 		})
 
 		Context("Shoot with only in-place workers", Label("basic", "in-place"), Ordered, PriorityLong, func() {
-			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-inplace")), true, false, false)
+			test(NewShootContext(DefaultShoot("e2e-inplace")), true, false, false)
 		})
 
 		Context("Shoot with workers and layer 4 load balancing", Ordered, Label("basic"), PriorityLong, func() {
 			shoot := DefaultShoot("e2e-layer4-lb")
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootDisableIstioTLSTermination, "true")
-			test(NewTestContext().Init().ForShoot(shoot), false, true, false)
+			test(NewShootContext(shoot), false, true, false)
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-default")), false, false, true)
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-default")), false, false, true)
 		})
 	})
 })

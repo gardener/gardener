@@ -14,6 +14,10 @@ import (
 var _ = Describe("Gardener Upgrade Tests", func() {
 	Describe("Create and Hibernate Shoot, Upgrade Gardener version, Wake Up and Delete Shoot", func() {
 		test := func(tc *ShootContext) {
+			BeforeAll(func() {
+				tc.Init()
+			})
+
 			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
 				ItShouldCreateShoot(tc)
 				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
@@ -35,11 +39,11 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-upg-hib")))
+			test(NewShootContext(DefaultShoot("e2e-upg-hib")))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-upg-hib")))
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-upg-hib")))
 		})
 	})
 })

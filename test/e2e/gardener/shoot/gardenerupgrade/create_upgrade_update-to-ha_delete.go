@@ -16,9 +16,13 @@ import (
 var _ = Describe("Gardener Upgrade Tests", func() {
 	Describe("Create Shoot, Upgrade Gardener version, Update to High Availability, Delete Shoot", func() {
 		test := func(tc *ShootContext) {
-			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
-				tc.Shoot.Spec.ControlPlane = nil
+			tc.Shoot.Spec.ControlPlane = nil
 
+			BeforeAll(func() {
+				tc.Init()
+			})
+
+			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
 				ItShouldCreateShoot(tc)
 				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			})
@@ -41,11 +45,11 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 		}
 
 		Context("Shoot with workers", Label("high-availability"), Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-upg-ha")))
+			test(NewShootContext(DefaultShoot("e2e-upg-ha")))
 		})
 
 		Context("Workerless Shoot", Label("high-availability", "workerless"), Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-upg-ha")))
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-upg-ha")))
 		})
 	})
 })

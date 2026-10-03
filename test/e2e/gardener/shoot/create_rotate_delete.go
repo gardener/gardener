@@ -60,7 +60,9 @@ func testCredentialRotation(tc *ShootContext, shootVerifiers, utilsverifiers rot
 			v1beta1constants.GardenerOperation: startRotationAnnotation,
 		})
 
-		ItShouldEventuallyNotHaveOperationAnnotation(tc.GardenKomega, tc.Shoot)
+		It(fmt.Sprintf("Should not have operation annotation after requesting %s", startRotationAnnotation), func(ctx SpecContext) {
+			EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Shoot)
+		}, SpecTimeout(2*time.Minute))
 
 		It("Rotation should be in preparing status", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
@@ -97,7 +99,9 @@ func testCredentialRotationComplete(tc *ShootContext, shootVerifiers, utilsverif
 			v1beta1constants.GardenerOperation: completeRotationAnnotation,
 		})
 
-		ItShouldEventuallyNotHaveOperationAnnotation(tc.GardenKomega, tc.Shoot)
+		It(fmt.Sprintf("Should not have operation annotation after requesting %s", completeRotationAnnotation), func(ctx SpecContext) {
+			EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Shoot)
+		}, SpecTimeout(2*time.Minute))
 
 		It("Rotation in completing status", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
@@ -141,7 +145,9 @@ func testCredentialRotationWithoutWorkersRollout(tc *ShootContext, shootVerifier
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 	})
 
-	ItShouldEventuallyNotHaveOperationAnnotation(tc.GardenKomega, tc.Shoot)
+	It("Should not have operation annotation after requesting rotation without workers rollout", func(ctx SpecContext) {
+		EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Shoot)
+	}, SpecTimeout(2*time.Minute))
 
 	It("Rotation in preparing without workers rollout status", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
@@ -271,7 +277,10 @@ func testManualWorkersRollout(tc *ShootContext) {
 	ItShouldAnnotateShoot(tc, map[string]string{
 		v1beta1constants.GardenerOperation: "rollout-workers=" + tc.Shoot.Spec.Provider.Workers[0].Name,
 	})
-	ItShouldEventuallyNotHaveOperationAnnotation(tc.GardenKomega, tc.Shoot)
+
+	It("Should not have operation annotation after requesting rollout of the first worker pool", func(ctx SpecContext) {
+		EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Shoot)
+	}, SpecTimeout(2*time.Minute))
 
 	It("Should fetch new MachineSet creation timestamps and ensure they're newer", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
@@ -305,6 +314,10 @@ func testManualWorkersRollout(tc *ShootContext) {
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
 		test := func(tc *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools bool) {
+			BeforeAll(func() {
+				tc.Init()
+			})
+
 			ItShouldCreateShoot(tc)
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldInitializeShootClient(tc)
@@ -434,56 +447,44 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		Context("Shoot with workers", Label("basic"), func() {
 			Context("with workers rollout", Label("with-workers-rollout"), Ordered, PriorityLonger, func() {
-				var tc *ShootContext
+				shoot := DefaultShoot("e2e-rotate")
 
-				BeforeTestSetup(func() {
-					shoot := DefaultShoot("e2e-rotate")
+				worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+				worker1.Minimum = 2
+				worker1.Maximum = 2
+				worker1.MaxUnavailable = new(intstr.FromInt(1))
+				worker1.MaxSurge = new(intstr.FromInt(0))
 
-					worker1 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-					worker1.Minimum = 2
-					worker1.Maximum = 2
-					worker1.MaxUnavailable = new(intstr.FromInt(1))
-					worker1.MaxSurge = new(intstr.FromInt(0))
+				worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 
-					worker2 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker1, worker2)
 
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker1, worker2)
-
-					tc = NewTestContext().Init().ForShoot(shoot)
-				})
-
-				test(tc, false, false, true)
+				test(NewShootContext(shoot), false, false, true)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, PriorityLonger, func() {
-				var tc *ShootContext
+				shoot := DefaultShoot("e2e-rot-noroll")
 
-				BeforeTestSetup(func() {
-					shoot := DefaultShoot("e2e-rot-noroll")
+				worker2 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
+				worker2.Minimum = 2
+				worker2.Maximum = 2
+				worker2.MaxUnavailable = new(intstr.FromInt(1))
+				worker2.MaxSurge = new(intstr.FromInt(0))
 
-					worker2 := DefaultWorker("auto", new(gardencorev1beta1.AutoInPlaceUpdate))
-					worker2.Minimum = 2
-					worker2.Maximum = 2
-					worker2.MaxUnavailable = new(intstr.FromInt(1))
-					worker2.MaxSurge = new(intstr.FromInt(0))
+				worker3 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
 
-					worker3 := DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate))
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker2, worker3)
 
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker2, worker3)
+				// Add an extra worker pool when worker rollout should not be performed such that we can make proper
+				// assertions of the shoot status
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker(shoot.Spec.Provider.Workers[0].Name+"-nr", nil))
 
-					// Add an extra worker pool when worker rollout should not be performed such that we can make proper
-					// assertions of the shoot status
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker(shoot.Spec.Provider.Workers[0].Name+"-nr", nil))
-
-					tc = NewTestContext().Init().ForShoot(shoot)
-				})
-
-				test(tc, true, true, true)
+				test(NewShootContext(shoot), true, true, true)
 			})
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
 		})
 	})
 })
