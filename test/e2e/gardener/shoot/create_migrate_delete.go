@@ -26,6 +26,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
 		tc.Shoot.Spec.SeedName = new(getSeedName(false))
 
+		BeforeAll(func() {
+			tc.Init()
+		})
+
 		ItShouldCreateShoot(tc)
 		ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 		ItShouldGetResponsibleSeed(tc)
@@ -94,11 +98,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	}
 
 	Context("Shoot with workers", Ordered, PriorityLonger, func() {
-		test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-migrate")))
+		test(NewShootContext(DefaultShoot("e2e-migrate")))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-		test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-migrate")))
+		test(NewShootContext(DefaultWorkerlessShoot("e2e-migrate")))
 	})
 
 	Context("Hibernated Shoot", Label("hibernated"), Ordered, PriorityLong, func() {
@@ -106,7 +110,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Enabled: new(true),
 		}
-		test(NewTestContext().Init().ForShoot(shoot))
+		test(NewShootContext(shoot))
 	})
 })
 

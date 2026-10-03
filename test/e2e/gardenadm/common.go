@@ -145,7 +145,7 @@ func ItShouldCreateHostedShootOnPromotedSeed(gardenClientSet *kubernetes.Interfa
 				if err != nil {
 					return err
 				}
-				s.WithShootClientSet(clientSet)
+				s.SetShootClientSet(clientSet)
 				return nil
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
