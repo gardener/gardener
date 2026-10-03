@@ -80,8 +80,10 @@ func AddToManager(
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
-	// unmanaged infrastructure shoots only support AutoInPlaceUpdate update strategy
-	// status controller is required only if shoots has workers with ManualInPlaceUpdate update strategy
+	// The status controller watches the seed-side Worker resource to clear completed in-place update worker pools
+	// (both AutoInPlaceUpdate and ManualInPlaceUpdate) from the Shoot status. It is only relevant for shoots with
+	// managed infrastructure; unmanaged infrastructure shoots have no Worker resource and track their in-place
+	// update state directly in the Shoot status.
 	if selfHostedShoot == nil || v1beta1helper.HasManagedInfrastructure(selfHostedShoot) {
 		if err := (&status.Reconciler{
 			Config:   *cfg.Controllers.ShootStatus,

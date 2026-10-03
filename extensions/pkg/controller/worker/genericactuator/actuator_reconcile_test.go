@@ -678,6 +678,38 @@ var _ = Describe("ActuatorReconcile", func() {
 				"pool2": "04863233bf6b9bb0",
 			}))
 		})
+
+		It("should not update the worker pool in the status because the pool has strategy auto in-place and some machinedeployments have not been updated", func() {
+			autoInPlaceMachineDeployment := &machinev1alpha1.MachineDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "machine-deployment-pool1",
+					Namespace: worker.Namespace,
+					Labels: map[string]string{
+						"worker.gardener.cloud/name": worker.Name,
+						"worker.gardener.cloud/pool": "pool1",
+					},
+				},
+				Status: machinev1alpha1.MachineDeploymentStatus{
+					Replicas:        3,
+					UpdatedReplicas: 2,
+				},
+			}
+			Expect(seedClient.Create(ctx, autoInPlaceMachineDeployment)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(seedClient.Delete(ctx, autoInPlaceMachineDeployment)).To(Succeed())
+			})
+
+			worker.Spec.Pools[0].KubernetesVersion = new("1.33.0")
+
+			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
+			Expect(worker.Status.InPlaceUpdates.WorkerPoolToHashMap).To(Equal(map[string]string{
+				"pool1": "89e7871a154fd3d0",
+				"pool2": "04863233bf6b9bb0",
+			}))
+		})
 	})
 
 	Describe("#waitUntilWantedMachineDeploymentsAvailable", func() {
