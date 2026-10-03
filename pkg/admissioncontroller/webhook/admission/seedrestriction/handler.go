@@ -250,16 +250,19 @@ func (h *Handler) admitBackupEntry(ctx context.Context, seedName string, request
 
 func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry) admission.Response {
 	// The source BackupEntry is created during the restore phase of control plane migration
-	// so allow creations only if the shoot that owns the BackupEntry is currently being restored.
+	// or the live migration phase, so allow creations only if the shoot is currently being
+	// restored or live-migrated.
 	shootName := gardenerutils.GetShootNameFromOwnerReferences(backupEntry)
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := h.Client.Get(ctx, client.ObjectKey{Namespace: backupEntry.Namespace, Name: shootName}, shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeRestore ||
+	if shoot.Status.LastOperation == nil ||
+		(shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeRestore &&
+			shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeLiveMigrate) ||
 		shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateProcessing {
-		return admission.Errored(http.StatusForbidden, fmt.Errorf("creation of source BackupEntry is only allowed during shoot Restore operation (shoot: %s)", shootName))
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("creation of source BackupEntry is only allowed during shoot Restore or LiveMigrate operation (shoot: %s)", shootName))
 	}
 
 	// When the source BackupEntry is created it's spec is the same as that of the shoot's original BackupEntry.
