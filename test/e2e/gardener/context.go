@@ -229,17 +229,17 @@ func (s *GardenContext) WithVirtualClusterClientSet(clientSet kubernetes.Interfa
 // SeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, SeedContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare SeedContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare SeedContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A SeedContext can be initialized using TestContext.ForSeed.
+// A SeedContext is created using NewSeedContext and initialized by calling Init followed by SetSeed in a BeforeAll node.
+// Alternatively, it can be derived from an initialized TestContext using TestContext.ForSeed.
 type SeedContext struct {
 	TestContext
 
 	// Seed object the test is working with
 	Seed *gardencorev1beta1.Seed
 
-	// SeedClientSet is a client for the seed cluster. It must be initialized via WithSeedClientSet.
+	// SeedClientSet is a client for the seed cluster. It must be initialized via SetSeedClientSet.
 	SeedClientSet kubernetes.Interface
 	// SeedClient is the controller-runtime client of the SeedClientSet. This is a more convenient equivalent of
 	// SeedClientSet.Client().
@@ -253,21 +253,35 @@ type SeedContext struct {
 
 // ForSeed copies the receiver TestContext for deriving a SeedContext.
 func (t *TestContext) ForSeed(seed *gardencorev1beta1.Seed) *SeedContext {
-	s := &SeedContext{
-		TestContext: *t,
-		Seed:        seed,
-	}
-	s.Log = s.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
-
-	return s
+	return (&SeedContext{TestContext: *t}).SetSeed(seed)
 }
 
-// WithSeedClientSet initializes the seed clients of this SeedContext from the given client set.
-func (s *SeedContext) WithSeedClientSet(clientSet kubernetes.Interface) *SeedContext {
-	s.SeedClientSet = clientSet
-	s.SeedClient = clientSet.Client()
-	s.SeedKomega = komega.New(s.SeedClient)
-	return s
+// NewSeedContext returns an empty SeedContext. The clients are not initialized yet, this must be done in a BeforeAll
+// node by calling Init, followed by SetSeed.
+func NewSeedContext() *SeedContext {
+	return &SeedContext{TestContext: *NewTestContext()}
+}
+
+// Init initializes the garden clients of the SeedContext, see TestContext.Init.
+func (t *SeedContext) Init() *SeedContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetSeed sets the Seed of the SeedContext and adds it to the logger.
+func (t *SeedContext) SetSeed(seed *gardencorev1beta1.Seed) *SeedContext {
+	t.Seed = seed
+	t.Log = t.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
+
+	return t
+}
+
+// SetSeedClientSet initializes the seed clients of this SeedContext from the given client set.
+func (t *SeedContext) SetSeedClientSet(clientSet kubernetes.Interface) *SeedContext {
+	t.SeedClientSet = clientSet
+	t.SeedClient = clientSet.Client()
+	t.SeedKomega = komega.New(t.SeedClient)
+	return t
 }
 
 // ManagedSeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
