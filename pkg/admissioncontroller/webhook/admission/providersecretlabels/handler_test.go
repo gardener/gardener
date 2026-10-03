@@ -17,7 +17,10 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/providersecretlabels"
+	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -38,7 +41,14 @@ var _ = Describe("handler", func() {
 		ctx = context.Background()
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithIndex(&gardencorev1beta1.SecretBinding{}, gardencore.SecretBindingSecretRefName, indexer.SecretBindingSecretRefNameIndexerFunc).
+			WithIndex(&gardencorev1beta1.SecretBinding{}, gardencore.SecretBindingSecretRefNamespace, indexer.SecretBindingSecretRefNamespaceIndexerFunc).
+			WithIndex(&securityv1alpha1.CredentialsBinding{}, security.CredentialsBindingCredentialsRefName, indexer.CredentialsBindingCredentialsRefNameIndexerFunc).
+			WithIndex(&securityv1alpha1.CredentialsBinding{}, security.CredentialsBindingCredentialsRefNamespace, indexer.CredentialsBindingCredentialsRefNamespaceIndexerFunc).
+			WithIndex(&securityv1alpha1.CredentialsBinding{}, security.CredentialsBindingCredentialsRefKind, indexer.CredentialsBindingCredentialsRefKindIndexerFunc).
+			Build()
 
 		namespace = "test"
 		provider1, provider2 = "provider1", "provider2"
