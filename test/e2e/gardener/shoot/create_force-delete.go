@@ -15,14 +15,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	shootextensionactuator "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
-	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	test := func(tc *ShootContext) {
-		BeforeTestSetup(func() {
-			metav1.SetMetaDataAnnotation(&tc.Shoot.ObjectMeta, shootextensionactuator.AnnotationTestForceDeleteShoot, "true")
+		metav1.SetMetaDataAnnotation(&tc.Shoot.ObjectMeta, shootextensionactuator.AnnotationTestForceDeleteShoot, "true")
+
+		BeforeAll(func() {
+			tc.Init()
 		})
 
 		Describe("Create and Force Delete Shoot", Label("force-delete"), func() {
@@ -54,7 +55,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	}
 
 	Context("Shoot with workers", Ordered, func() {
-		test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-force-delete")))
+		test(NewShootContext(DefaultShoot("e2e-force-delete")))
 	})
 
 	Context("Hibernated Shoot", Ordered, func() {
@@ -63,10 +64,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Enabled: new(true),
 		}
 
-		test(NewTestContext().Init().ForShoot(shoot))
+		test(NewShootContext(shoot))
 	})
 
 	Context("Workerless Shoot", Ordered, func() {
-		test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-fd")))
+		test(NewShootContext(DefaultWorkerlessShoot("e2e-fd")))
 	})
 })

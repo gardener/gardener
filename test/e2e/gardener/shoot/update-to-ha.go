@@ -20,6 +20,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 		test := func(tc *ShootContext) {
 			tc.Shoot.Spec.ControlPlane = nil
 
+			BeforeAll(func() {
+				tc.Init()
+			})
+
 			ItShouldCreateShoot(tc)
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldGetResponsibleSeed(tc)
@@ -43,15 +47,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultShoot(shootName)))
+			test(NewShootContext(DefaultShoot(shootName)))
 		})
 
 		Context("Shoot with workers and overlapping CIDR ranges", Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultOverlappingShoot(shootName)))
+			test(NewShootContext(DefaultOverlappingShoot(shootName)))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot(shootName)))
+			test(NewShootContext(DefaultWorkerlessShoot(shootName)))
 		})
 	}
 

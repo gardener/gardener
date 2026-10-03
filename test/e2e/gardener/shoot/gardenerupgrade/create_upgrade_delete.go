@@ -17,6 +17,10 @@ import (
 var _ = Describe("Gardener Upgrade Tests", func() {
 	Describe("Create Shoot, Upgrade Gardener version, Delete Shoot", func() {
 		test := func(tc *ShootContext) {
+			BeforeAll(func() {
+				tc.Init()
+			})
+
 			zeroDowntimeValidatorJob := &zerodowntimevalidator.Job{}
 
 			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
@@ -52,11 +56,11 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 				DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate)),
 			)
 
-			test(NewTestContext().Init().ForShoot(shoot))
+			test(NewShootContext(shoot))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-upgrade")))
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-upgrade")))
 		})
 	})
 })

@@ -18,15 +18,15 @@ import (
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create and Delete Failed Shoot", PriorityFast, func() {
 		Context("Shoot with invalid DNS configuration", Ordered, func() {
-			var tc *ShootContext
+			shoot := DefaultShoot("e2e-invalid-dns")
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{
+				Domain: new("shoot.non-existing-domain"),
+			}
 
-			BeforeTestSetup(func() {
-				shoot := DefaultShoot("e2e-invalid-dns")
-				shoot.Spec.DNS = &gardencorev1beta1.DNS{
-					Domain: new("shoot.non-existing-domain"),
-				}
+			tc := NewShootContext(shoot)
 
-				tc = NewTestContext().Init().ForShoot(shoot)
+			BeforeAll(func() {
+				tc.Init()
 			})
 
 			ItShouldCreateShoot(tc)

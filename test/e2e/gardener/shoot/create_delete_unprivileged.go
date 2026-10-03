@@ -23,15 +23,12 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create and Delete Unprivileged Shoot. Test expected shoot logs", Ordered, Label("unprivileged", "basic", "observability"), PriorityLong, func() {
-		var tc *ShootContext
-
-		BeforeTestSetup(func() {
-			shoot := DefaultShoot("e2e-unpriv")
-			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-				{
-					Name: "PodSecurity",
-					Config: &runtime.RawExtension{
-						Raw: []byte(`{
+		shoot := DefaultShoot("e2e-unpriv")
+		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+			{
+				Name: "PodSecurity",
+				Config: &runtime.RawExtension{
+					Raw: []byte(`{
   "apiVersion": "pod-security.admission.config.k8s.io/v1beta1",
   "kind": "PodSecurityConfiguration",
   "defaults": {
@@ -39,11 +36,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
     "enforce-version": "latest"
   }
 }`),
-					},
 				},
-			}
+			},
+		}
 
-			tc = NewTestContext().Init().ForShoot(shoot)
+		tc := NewShootContext(shoot)
+
+		BeforeAll(func() {
+			tc.Init()
 		})
 
 		ItShouldCreateShoot(tc)
