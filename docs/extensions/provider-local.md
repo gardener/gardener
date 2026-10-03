@@ -202,6 +202,9 @@ This is needed, because the shoot node IPs are pod IPs in the kind cluster, whic
 Therefore, cloud-controller-manager-local configures IP routes to the machine pod IPs via the kind nodes on which the machine pods are running.
 This way, creating a `Service` of type `LoadBalancer` works even in shoots.
 
+The infrastructure cluster of provider-local (the kind cluster hosting the machine pods) is not necessarily the runtime/seed cluster (e.g., for shoots on in the second seed).
+Hence, the `ControlPlane` controller deploys the `allow-to-infra-cluster` `NetworkPolicy` to the shoot's control plane namespace, which allows the cloud-controller-manager and machine-controller-manager pods (labeled with `networking.gardener.cloud/to-infra-cluster=allowed`) to talk to the API server of the infrastructure cluster.
+
 ### machine-controller-manager-provider-local
 
 Out of tree (controller-based) implementation for `local` as a new provider.

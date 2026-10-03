@@ -1,0 +1,25 @@
+{{- if hasPrefix "shoot-" .Release.Namespace }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-infra-cluster
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    gardener.cloud/description: Allows egress from pods labeled with 'networking.gardener.cloud/to-infra-cluster=allowed'
+      to the infrastructure cluster of provider-local, i.e., the kind cluster hosting the machine pods. This is needed
+      for provider-local components (e.g., cloud-controller-manager and machine-controller-manager), as the
+      infrastructure cluster is not necessarily the runtime/seed cluster (e.g., for the second seed).
+spec:
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-infra-cluster: allowed
+  egress:
+  - to:
+    # kind network CIDR, which contains the nodes of the infrastructure cluster
+    - ipBlock:
+        cidr: 172.18.0.0/24
+    - ipBlock:
+        cidr: fd00:10::/64
+  policyTypes:
+  - Egress
+{{- end }}
