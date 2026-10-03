@@ -13,13 +13,13 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	. "github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	. "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1/validation"
 )
 
 var _ = Describe("CloudProfileConfig validation", func() {
 	var (
-		cloudProfileConfig    *api.CloudProfileConfig
+		cloudProfileConfig    *localv1alpha1.CloudProfileConfig
 		machineImages         []core.MachineImage
 		capabilityDefinitions []v1beta1.CapabilityDefinition
 		imageString           string
@@ -28,14 +28,14 @@ var _ = Describe("CloudProfileConfig validation", func() {
 
 	BeforeEach(func() {
 		imageString = "some-image-reference"
-		cloudProfileConfig = &api.CloudProfileConfig{
-			MachineImages: []api.MachineImages{
+		cloudProfileConfig = &localv1alpha1.CloudProfileConfig{
+			MachineImages: []localv1alpha1.MachineImages{
 				{
 					Name: "ubuntu",
-					Versions: []api.MachineImageVersion{
+					Versions: []localv1alpha1.MachineImageVersion{
 						{
 							Version: "18.04",
-							CapabilityFlavors: []api.MachineImageFlavor{
+							CapabilityFlavors: []localv1alpha1.MachineImageFlavor{
 								{
 									Image: imageString,
 									Capabilities: v1beta1.Capabilities{
@@ -97,7 +97,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail with empty machine images", func() {
-				cloudProfileConfig.MachineImages = []api.MachineImages{}
+				cloudProfileConfig.MachineImages = []localv1alpha1.MachineImages{}
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
@@ -116,7 +116,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail with empty versions", func() {
-				cloudProfileConfig.MachineImages[0].Versions = []api.MachineImageVersion{}
+				cloudProfileConfig.MachineImages[0].Versions = []localv1alpha1.MachineImageVersion{}
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -137,7 +137,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 		Context("with no capabilities defined", func() {
 			BeforeEach(func() {
 				// set capabilityFlavors to empty to simulate no capabilities defined
-				cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = []api.MachineImageFlavor{}
+				cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = []localv1alpha1.MachineImageFlavor{}
 				cloudProfileConfig.MachineImages[0].Versions[0].Image = "ubuntu-18.04-amd64"
 				machineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{}
 				capabilityDefinitions = []v1beta1.CapabilityDefinition{}

@@ -12,13 +12,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 )
 
 var _ = Describe("Helper", func() {
 	Describe("#FindImageFromCloudProfile", func() {
 		var (
-			cloudProfileConfig    *local.CloudProfileConfig
+			cloudProfileConfig    *localv1alpha1.CloudProfileConfig
 			imageName             string
 			imageVersion          string
 			latestImageVersion    string
@@ -54,14 +54,14 @@ var _ = Describe("Helper", func() {
 				},
 			}
 
-			cloudProfileConfig = &local.CloudProfileConfig{
-				MachineImages: []local.MachineImages{
+			cloudProfileConfig = &localv1alpha1.CloudProfileConfig{
+				MachineImages: []localv1alpha1.MachineImages{
 					{
 						Name: imageName,
-						Versions: []local.MachineImageVersion{
+						Versions: []localv1alpha1.MachineImageVersion{
 							{
 								Version: imageVersion,
-								CapabilityFlavors: []local.MachineImageFlavor{
+								CapabilityFlavors: []localv1alpha1.MachineImageFlavor{
 									{
 										Image: imageVersion + suffixOne,
 										Capabilities: v1beta1.Capabilities{
@@ -80,7 +80,7 @@ var _ = Describe("Helper", func() {
 							},
 							{
 								Version: latestImageVersion,
-								CapabilityFlavors: []local.MachineImageFlavor{
+								CapabilityFlavors: []localv1alpha1.MachineImageFlavor{
 									{
 										Image: latestImageVersion + suffixOne,
 										Capabilities: v1beta1.Capabilities{
@@ -139,7 +139,7 @@ var _ = Describe("Helper", func() {
 			// +------------+-----------+-----------+-----------+-----------+
 
 			It("should find image based on capability order", func() {
-				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []local.MachineImageFlavor{
+				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []localv1alpha1.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
@@ -166,7 +166,7 @@ var _ = Describe("Helper", func() {
 
 			It("should select image based on capability value priority within one capability", func() {
 				// Set up two capabilities with different value orders for cap2
-				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []local.MachineImageFlavor{
+				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []localv1alpha1.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
@@ -193,7 +193,7 @@ var _ = Describe("Helper", func() {
 		When("handling edge cases", func() {
 			It("should error on multiple version flavors with identical capabilities", func() {
 				// Both flavors have identical capabilities - this should be considered an error
-				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []local.MachineImageFlavor{
+				cloudProfileConfig.MachineImages[0].Versions[1].CapabilityFlavors = []localv1alpha1.MachineImageFlavor{
 					{
 						Image: latestImageVersion + suffixOne,
 						Capabilities: v1beta1.Capabilities{
