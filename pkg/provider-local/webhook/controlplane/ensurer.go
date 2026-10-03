@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/coreos/go-systemd/v22/unit"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -17,6 +18,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -61,6 +63,30 @@ func (e *ensurer) EnsureMachineControllerManagerVPA(_ context.Context, _ extensi
 		machinecontrollermanager.ProviderSidecarVPAContainerPolicy(local.Name),
 	)
 	return nil
+}
+
+// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
+func (e *ensurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx extensionscontextwebhook.GardenContext, _ *semver.Version, newObj, _ []*unit.UnitOption) ([]*unit.UnitOption, error) {
+	cluster, err := gctx.GetCluster(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading Cluster: %w", err)
+	}
+
+	// Shoot nodes are only initialized by the node controller of cloud-controller-manager-local if the shoot has managed
+	// infrastructure (i.e., nodes are machine pods in the runtime cluster). Only in this case, kubelet must be configured
+	// with the external cloud provider so that nodes are registered with the "uninitialized" taint, which is removed by
+	// the cloud-controller-manager once it has initialized the node (provider ID, topology labels, addresses).
+	if !v1beta1helper.HasManagedInfrastructure(cluster.Shoot) {
+		return newObj, nil
+	}
+
+	if opt := webhook.UnitOptionWithSectionAndName(newObj, "Service", "ExecStart"); opt != nil {
+		command := webhook.DeserializeCommandLine(opt.Value)
+		command = webhook.EnsureStringWithPrefix(command, "--cloud-provider=", "external")
+		opt.Value = webhook.SerializeCommandLine(command, 0, " \\\n    ")
+	}
+
+	return newObj, nil
 }
 
 func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
