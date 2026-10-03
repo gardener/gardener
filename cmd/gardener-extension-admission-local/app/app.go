@@ -28,7 +28,7 @@ import (
 	securityinstall "github.com/gardener/gardener/pkg/apis/security/install"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	admissioncmd "github.com/gardener/gardener/pkg/provider-local/admission/cmd"
-	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
@@ -108,7 +108,7 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 			gardencoreinstall.Install(mgr.GetScheme())
 			securityinstall.Install(mgr.GetScheme())
 
-			if err := localinstall.AddToScheme(mgr.GetScheme()); err != nil {
+			if err := localv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 
