@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -200,20 +199,17 @@ func (t *ProjectContext) SetProject(project *gardencorev1beta1.Project) *Project
 // GardenContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, GardenContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare GardenContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare GardenContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A GardenContext can be initialized using TestContext.ForGarden.
+// A GardenContext is created using NewGardenContext and initialized by calling Init followed by SetGarden in a BeforeAll
+// node.
 type GardenContext struct {
 	TestContext
 
 	// Garden object the test is working with
 	Garden *operatorv1alpha1.Garden
 
-	// BackupSecret contains the backup secret the test is working with
-	BackupSecret *corev1.Secret
-
-	// VirtualClusterClientSet is a client for the virtual cluster. It must be initialized via WithVirtualClusterClientSet.
+	// VirtualClusterClientSet is a client for the virtual cluster. It must be initialized via SetVirtualClusterClientSet.
 	VirtualClusterClientSet kubernetes.Interface
 	// VirtualClusterClient is the controller-runtime client of the VirtualClusterClientSet. This is a more convenient equivalent of
 	// VirtualClusterClientSet.Client().
@@ -225,24 +221,32 @@ type GardenContext struct {
 	VirtualClusterKomega komega.Komega
 }
 
-// ForGarden copies the receiver TestContext for deriving a GardenContext.
-func (t *TestContext) ForGarden(garden *operatorv1alpha1.Garden, backupSecret *corev1.Secret) *GardenContext {
-	s := &GardenContext{
-		TestContext:  *t,
-		Garden:       garden,
-		BackupSecret: backupSecret,
-	}
-	s.Log = s.Log.WithValues("garden", client.ObjectKeyFromObject(garden))
-
-	return s
+// NewGardenContext returns an empty GardenContext. The clients are not initialized yet, this must be done in a BeforeAll
+// node by calling Init, followed by SetGarden.
+func NewGardenContext() *GardenContext {
+	return &GardenContext{TestContext: *NewTestContext()}
 }
 
-// WithVirtualClusterClientSet initializes the virtual cluster clients of this GardenContext from the given client set.
-func (s *GardenContext) WithVirtualClusterClientSet(clientSet kubernetes.Interface) *GardenContext {
-	s.VirtualClusterClientSet = clientSet
-	s.VirtualClusterClient = clientSet.Client()
-	s.VirtualClusterKomega = komega.New(s.VirtualClusterClient)
-	return s
+// Init initializes the garden clients of the GardenContext, see TestContext.Init.
+func (t *GardenContext) Init() *GardenContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetGarden sets the Garden of the GardenContext and adds it to the logger.
+func (t *GardenContext) SetGarden(garden *operatorv1alpha1.Garden) *GardenContext {
+	t.Garden = garden
+	t.Log = t.Log.WithValues("garden", client.ObjectKeyFromObject(garden))
+
+	return t
+}
+
+// SetVirtualClusterClientSet initializes the virtual cluster clients of this GardenContext from the given client set.
+func (t *GardenContext) SetVirtualClusterClientSet(clientSet kubernetes.Interface) *GardenContext {
+	t.VirtualClusterClientSet = clientSet
+	t.VirtualClusterClient = clientSet.Client()
+	t.VirtualClusterKomega = komega.New(t.VirtualClusterClient)
+	return t
 }
 
 // SeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
