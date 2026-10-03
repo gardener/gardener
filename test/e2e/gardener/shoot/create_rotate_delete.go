@@ -472,7 +472,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker1, worker2)
 
-					s = NewTestContext().ForShoot(shoot)
+					s = NewTestContext().Init().ForShoot(shoot)
 				})
 
 				test(s, false, false, true)
@@ -498,7 +498,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					// assertions of the shoot status
 					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker(shoot.Spec.Provider.Workers[0].Name+"-nr", nil))
 
-					s = NewTestContext().ForShoot(shoot)
+					s = NewTestContext().Init().ForShoot(shoot)
 				})
 
 				test(s, true, true, true)
@@ -508,7 +508,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
 			shoot := DefaultWorkerlessShoot("e2e-rotate")
 
-			test(NewTestContext().ForShoot(shoot), false, false, false)
+			test(NewTestContext().Init().ForShoot(shoot), false, false, false)
 		})
 	})
 })

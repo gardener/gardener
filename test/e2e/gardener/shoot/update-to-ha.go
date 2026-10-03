@@ -43,15 +43,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot(shootName)))
+			test(NewTestContext().Init().ForShoot(DefaultShoot(shootName)))
 		})
 
 		Context("Shoot with workers and overlapping CIDR ranges", Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultOverlappingShoot(shootName)))
+			test(NewTestContext().Init().ForShoot(DefaultOverlappingShoot(shootName)))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot(shootName)))
+			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot(shootName)))
 		})
 	}
 
