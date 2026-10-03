@@ -33,7 +33,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		ItShouldCreateShoot(tc)
 		ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 		ItShouldGetResponsibleSeed(tc)
-		seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+		seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 		if !v1beta1helper.IsWorkerless(tc.Shoot) && !v1beta1helper.HibernationIsEnabled(tc.Shoot) {
 			ItShouldInitializeShootClient(tc)
@@ -69,7 +69,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 		ItShouldGetResponsibleSeed(tc)
-		seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+		seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 		It("Verify that all secrets have been migrated without regeneration", func(ctx SpecContext) {
 			var secretsAfterMigration map[string]corev1.Secret

@@ -27,7 +27,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 			ItShouldCreateShoot(tc)
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldGetResponsibleSeed(tc)
-			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
 			ItShouldInitializeShootClient(tc)
 
 			if !v1beta1helper.IsWorkerless(tc.Shoot) {

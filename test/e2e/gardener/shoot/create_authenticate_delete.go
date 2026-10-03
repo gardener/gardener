@@ -52,11 +52,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(shoot1)
 		ItShouldGetResponsibleSeed(shoot1)
-		seed.ItShouldInitializeSeedClient(&shoot1.SeedContext)
+		seed.ItShouldInitializeSeedClient(shoot1.SeedContext)
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(shoot2)
 		ItShouldGetResponsibleSeed(shoot2)
-		seed.ItShouldInitializeSeedClient(&shoot2.SeedContext)
+		seed.ItShouldInitializeSeedClient(shoot2.SeedContext)
 
 		var shoot1Client, shoot2Client, shoot1TokenClient, shoot2TokenClient kubernetes.Interface
 
