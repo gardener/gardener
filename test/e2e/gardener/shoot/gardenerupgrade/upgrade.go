@@ -24,18 +24,18 @@ var (
 	gardenerInfoPostUpgrade = fmt.Sprintf(" (Gardener version: %s, Git version: %s)", gardenerCurrentVersion, gardenerCurrentGitVersion)
 )
 
-func itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s *ShootContext) {
+func itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Ensure Shoot was reconciled with previous Gardener version", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(HaveField("Status.Gardener.Version", Equal(gardenerPreviousVersion)))
+		Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(HaveField("Status.Gardener.Version", Equal(gardenerPreviousVersion)))
 	})
 }
 
-func itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s *ShootContext) {
+func itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Ensure Shoot was reconciled with current Gardener version", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(HaveField("Status.Gardener.Version", Equal(gardenerCurrentVersion)))
+		Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(HaveField("Status.Gardener.Version", Equal(gardenerCurrentVersion)))
 	})
 }

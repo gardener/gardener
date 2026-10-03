@@ -15,28 +15,28 @@ import (
 
 var _ = Describe("Gardener Upgrade Tests", func() {
 	Describe("Create Shoot, Upgrade Gardener version, Update to High Availability, Delete Shoot", func() {
-		test := func(s *ShootContext) {
+		test := func(tc *ShootContext) {
 			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
-				s.Shoot.Spec.ControlPlane = nil
+				tc.Shoot.Spec.ControlPlane = nil
 
-				ItShouldCreateShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
+				ItShouldCreateShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
-				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
+				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(tc)
 
-				ItShouldGetResponsibleSeed(s)
-				seed.ItShouldInitializeSeedClient(&s.SeedContext)
+				ItShouldGetResponsibleSeed(tc)
+				seed.ItShouldInitializeSeedClient(&tc.SeedContext)
 
-				ItShouldUpdateShootToHighAvailability(s, GetFailureToleranceType())
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
+				ItShouldUpdateShootToHighAvailability(tc, GetFailureToleranceType())
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 
-				highavailability.VerifyHighAvailability(s)
-				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s)
+				highavailability.VerifyHighAvailability(tc)
+				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(tc)
 
-				ItShouldDeleteShoot(s)
-				ItShouldWaitForShootToBeDeleted(s)
+				ItShouldDeleteShoot(tc)
+				ItShouldWaitForShootToBeDeleted(tc)
 			})
 		}
 
