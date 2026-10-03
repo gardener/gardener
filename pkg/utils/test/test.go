@@ -5,12 +5,10 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -169,16 +167,6 @@ func WithTempFile(dir, pattern string, content []byte, fileName *string) func() 
 			ginkgo.Fail(fmt.Sprintf("could not delete temp file %s: %v", file.Name(), err))
 		}
 	}
-}
-
-// CEventually is like gomega.Eventually but with a context.Context. When it has a deadline then the gomega.Eventually
-// call with be configured with the respective timeout.
-func CEventually(ctx context.Context, actual any) AsyncAssertion {
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return Eventually(actual)
-	}
-	return Eventually(actual).WithTimeout(time.Until(deadline))
 }
 
 // ExpectKindWithNameAndNamespace expects that kind, name and namespace is present in the given manifests.
