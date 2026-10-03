@@ -149,25 +149,33 @@ func (s *ShootContext) WithControlPlaneNamespace(namespace string) *ShootContext
 // ProjectContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, ProjectContext values must not be reused across multiple test cases (ordered containers). Make sure to
-// declare ProjectContext variables within the ordered container and initialize them during ginkgo tree construction,
-// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+// declare ProjectContext variables within the ordered container and initialize them in a BeforeAll node.
 //
-// A ProjectContext can be initialized using TestContext.ForProject.
+// A ProjectContext is created using NewProjectContext and initialized by calling Init followed by SetProject in a
+// BeforeAll node.
 type ProjectContext struct {
 	TestContext
 
 	Project *gardencorev1beta1.Project
 }
 
-// ForProject copies the receiver TestContext for deriving a ProjectContext.
-func (t *TestContext) ForProject(project *gardencorev1beta1.Project) *ProjectContext {
-	s := &ProjectContext{
-		TestContext: *t,
-		Project:     project,
-	}
-	s.Log = s.Log.WithValues("project", client.ObjectKeyFromObject(project))
+// NewProjectContext returns an empty ProjectContext. The clients are not initialized yet, this must be done in a
+// BeforeAll node by calling Init, followed by SetProject.
+func NewProjectContext() *ProjectContext {
+	return &ProjectContext{TestContext: *NewTestContext()}
+}
 
-	return s
+// Init initializes the garden clients of the ProjectContext, see TestContext.Init.
+func (t *ProjectContext) Init() *ProjectContext {
+	t.TestContext.Init()
+	return t
+}
+
+// SetProject sets the Project of the ProjectContext and adds it to the logger.
+func (t *ProjectContext) SetProject(project *gardencorev1beta1.Project) *ProjectContext {
+	t.Project = project
+	t.Log = t.Log.WithValues("project", client.ObjectKeyFromObject(project))
+	return t
 }
 
 // GardenContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the

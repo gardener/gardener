@@ -22,12 +22,18 @@ import (
 
 var _ = Describe("Project Tests", Label("Project", "default"), func() {
 	Describe("NamespacedCloudProfile", Ordered, func() {
-		tc := NewTestContext().Init()
+		var (
+			tc = NewTestContext()
 
-		originalNamespacedCloudProfile := DefaultNamespacedCloudProfile()
-		namespacedCloudProfile := addCustomMachineImage(originalNamespacedCloudProfile.DeepCopy())
+			originalNamespacedCloudProfile, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+		)
 
 		BeforeAll(func() {
+			tc.Init()
+
+			originalNamespacedCloudProfile = DefaultNamespacedCloudProfile()
+			namespacedCloudProfile = addCustomMachineImage(originalNamespacedCloudProfile.DeepCopy())
+
 			DeferCleanup(func(ctx SpecContext) {
 				Eventually(ctx, func() error {
 					return tc.GardenClient.Delete(ctx, namespacedCloudProfile)
