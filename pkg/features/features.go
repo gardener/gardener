@@ -143,6 +143,14 @@ const (
 	// owner: @pujitha24
 	// alpha: v1.152.0
 	StrictAuditPolicyValidation featuregate.Feature = "StrictAuditPolicyValidation"
+
+	// AllowlistSeedReferences enforces that resources (Secrets, ConfigMaps, WorkloadIdentities) referenced in
+	// a Seed's spec must carry the annotation `seed.gardener.cloud/names` listing the seed's name (or `*`
+	// for a wildcard) before the reference is accepted. This prevents a compromised gardenlet from pointing
+	// its Seed's credential references at arbitrary resources to gain unauthorized access.
+	// owner: @rfranzke
+	// alpha: v1.153.0
+	AllowlistSeedReferences featuregate.Feature = "AllowlistSeedReferences"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -189,6 +197,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.Beta},
 	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
+	AllowlistSeedReferences:        {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

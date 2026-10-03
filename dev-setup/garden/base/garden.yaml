@@ -62,6 +62,7 @@ spec:
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
           DisableNginxIngressInShoot: true
+          AllowlistSeedReferences: true
       gardenerControllerManager:
         featureGates:
           DisableNginxIngressInShoot: true
