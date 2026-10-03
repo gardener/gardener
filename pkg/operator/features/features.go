@@ -16,7 +16,6 @@ func RegisterFeatureGates() {
 		features.BackupEntryForGarden,
 		features.DefaultSeccompProfile,
 		features.IstioTLSTermination,
-		features.DoNotCopyBackupCredentials,
 		features.VictoriaLogsBackend,
 		features.PrometheusHealthChecks,
 		features.RemoveVali,

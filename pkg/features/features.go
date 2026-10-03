@@ -48,15 +48,6 @@ const (
 	// alpha: v1.137.0
 	VersionClassificationLifecycle featuregate.Feature = "VersionClassificationLifecycle"
 
-	// DoNotCopyBackupCredentials disables the copying of Shoot infrastructure credentials as backup credentials when the Shoot is used as a ManagedSeed.
-	// Operators are responsible for providing the credentials for backup explicitly.
-	// Credentials that were already copied will be labeled with "secret.backup.gardener.cloud/status=previously-managed" and would have to be cleaned up by operators.
-	// owner: @dimityrmirchev
-	// alpha: v1.121.0
-	// beta: v1.123.0
-	// GA: v1.134.0
-	DoNotCopyBackupCredentials featuregate.Feature = "DoNotCopyBackupCredentials"
-
 	// OpenTelemetryCollector enables the usage of an OpenTelemetry Collector instance in the Control Plane of Shoot clusters.
 	// All logs will be routed through the Collector before they reach the Vali instance.
 	// owner: @rrhubenov
@@ -128,6 +119,7 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.142.0
 	// beta: v1.147.0
+	// GA: v1.153.0
 	BackupEntryForGarden featuregate.Feature = "BackupEntryForGarden"
 
 	// RemoveHTTPProxyLegacyPort removes the old HTTP proxy network infrastructure on the seed side (ingress
@@ -174,7 +166,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	InPlaceNodeUpdates:             {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:            {Default: true, PreRelease: featuregate.Beta},
 	CloudProfileCapabilities:       {Default: true, PreRelease: featuregate.Beta},
-	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:         {Default: true, PreRelease: featuregate.Beta},
 	VictoriaLogsBackend:            {Default: false, PreRelease: featuregate.Alpha},
 	CustomDNSServerInNodeLocalDNS:  {Default: true, PreRelease: featuregate.Beta},
@@ -186,7 +177,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
-	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.Beta},
+	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
 }
