@@ -28,8 +28,15 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 
 	// Allow the gardener-internal service account to update resources. This service account is used by the
 	// gardener-operator to label all encrypted resources with the name of the current ETCD encryption key secret.
+	// TODO (shafeeqes): Remove this when the minimum kubernetes version supported by Gardener is v1.37
 	if req.UserInfo.Username == "system:serviceaccount:kube-system:gardener-internal" && req.Operation == admissionv1.Update {
 		return admission.Allowed("system:serviceaccount:kube-system:gardener-internal is allowed to update system resources")
+	}
+
+	// Allow the storage-version-migrator-controller service account to update resources. This service account rewrites
+	// encrypted resources during a StorageVersionMigration so they get re-encrypted with the current ETCD encryption key.
+	if req.UserInfo.Username == "system:serviceaccount:kube-system:storage-version-migrator-controller" && req.Operation == admissionv1.Update {
+		return admission.Allowed("system:serviceaccount:kube-system:storage-version-migrator-controller is allowed to update system resources")
 	}
 
 	if sets.New(req.UserInfo.Groups...).HasAny(v1beta1constants.SeedsGroup, v1beta1constants.ShootsGroup) {
