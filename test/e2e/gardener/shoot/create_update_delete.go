@@ -99,7 +99,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldInitializeShootClient(tc)
 			ItShouldGetResponsibleSeed(tc)
-			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 			It("Verify shoot access using admin kubeconfig", func(ctx SpecContext) {
 				Eventually(ctx, tc.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())

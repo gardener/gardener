@@ -322,7 +322,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldInitializeShootClient(tc)
 			ItShouldGetResponsibleSeed(tc)
-			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 			// isolated test for ssh key rotation (does not trigger node rolling update)
 			if !v1beta1helper.IsWorkerless(tc.Shoot) && !withoutWorkersRollout {

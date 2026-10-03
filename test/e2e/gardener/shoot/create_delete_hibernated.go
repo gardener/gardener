@@ -31,7 +31,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldCreateShoot(tc)
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldGetResponsibleSeed(tc)
-			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 			It("should not have any control plane pods", func(ctx SpecContext) {
 				Eventually(ctx,
