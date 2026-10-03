@@ -5,7 +5,9 @@
 package managedinfra
 
 import (
+	"context"
 	"os"
+	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -18,6 +20,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
@@ -30,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/e2e/gardenadm"
 	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
 
@@ -39,12 +44,24 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		PrepareBinary()
 	}, NodeTimeout(5*time.Minute))
 
-	Describe("Bootstrap a self-hosted shoot with managed infrastructure", Ordered, func() {
-		const (
-			shootName   = "root"
-			technicalID = "shoot--garden--" + shootName
-		)
+	const (
+		shootName      = "root"
+		shootNamespace = "garden"
+		technicalID    = "shoot--" + shootNamespace + "--" + shootName
+	)
 
+	var (
+		shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+	)
+
+	runInMachine := func(ctx context.Context, ordinal int, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
+		return RunInMachine(ctx, technicalID, ordinal, cmd...)
+	}
+	runInNode := func(ctx context.Context, nodeName string, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
+		return RunInNode(ctx, technicalID, nodeName, cmd...)
+	}
+
+	Context("gardenadm bootstrap", Ordered, Label("bootstrap"), func() {
 		var (
 			session *gexec.Session
 
@@ -182,7 +199,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should bootstrap the control plane", func(ctx SpecContext) {
 			Eventually(ctx, session.Err).Should(gbytes.Say("Bootstrapping control plane on the first control plane machine"))
 			Eventually(ctx, session.Out).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
-		}, SpecTimeout(15*time.Minute))
+		}, SpecTimeout(20*time.Minute))
 
 		It("should write the shoot kubeconfig to the specified file", func(ctx SpecContext) {
 			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the self-hosted shoot to file"))
@@ -309,6 +326,53 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
 			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--bastion-ingress-cidr", "1.2.3.4/32")
 		}, SpecTimeout(10*time.Minute))
+	})
+
+	Context("gardenadm connect", Ordered, Label("connect"), func() {
+		var (
+			shootClientSet  kubernetes.Interface
+			gardenClientSet kubernetes.Interface
+
+			clusterAdminStaticToken string
+		)
+
+		gardenadm.ItShouldCreateShootClient(&shootClientSet)
+		gardenadm.ItShouldCreateGardenClient(&gardenClientSet)
+
+		It("should store the cluster-admin static token for later assertions", func(ctx SpecContext) {
+			kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig", Namespace: technicalID}}
+			Eventually(ctx, Object(kubeconfigSecret)).Should(HaveField("Data", HaveKey("kubeconfig")))
+
+			Expect(kubeconfigSecret.Data).To(HaveKey("kubeconfig"))
+
+			kubeconfig := &clientcmdv1.Config{}
+			_, _, err := clientcmdlatest.Codec.Decode(kubeconfigSecret.Data["kubeconfig"], nil, kubeconfig)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kubeconfig.AuthInfos).ToNot(BeEmpty())
+			clusterAdminStaticToken = kubeconfig.AuthInfos[0].AuthInfo.Token
+		}, SpecTimeout(time.Minute))
+
+		It("should generate a bootstrap token and connect the self-hosted shoot to Gardener", func(ctx SpecContext) {
+			session := RunCommand(NewCommand(
+				[]string{"KUBECONFIG=" + gardenadm.GardenClusterKubeconfigPathOnHost},
+				"token", "create", "--print-connect-command", "--shoot-namespace", shootNamespace, "--shoot-name", shootName,
+			))
+			Wait(ctx, session)
+			connectCommand := strings.Split(strings.ReplaceAll(string(session.Out.Contents()), `"`, ``), " ")
+
+			command := []string{
+				"IMAGEVECTOR_OVERWRITE=/var/lib/gardenadm/imagevector-overwrite.yaml",
+				"IMAGEVECTOR_OVERWRITE_CHARTS=/var/lib/gardenadm/imagevector-overwrite-charts.yaml",
+				"/opt/bin/" + strings.Join(connectCommand, " "),
+			}
+			stdOut, _, err := RunInMachine(ctx, technicalID, 0, "bash", "-c", strings.Join(command, " "))
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
+		}, SpecTimeout(time.Minute))
+
+		gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, runInMachine)
+		gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, runInMachine, runInNode)
 	})
 })
 

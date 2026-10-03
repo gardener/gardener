@@ -23,5 +23,7 @@ trap "
 
 make kind-up
 make gardenadm-up SCENARIO=managed-infra
+make test-e2e-local-gardenadm-managed-infra-bootstrap
 
-make test-e2e-local-gardenadm-managed-infra
+make gardenadm-up SCENARIO=connect
+make test-e2e-local-gardenadm-managed-infra-connect
