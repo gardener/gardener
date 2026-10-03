@@ -22,19 +22,19 @@ import (
 
 // ItShouldInitializeSeedClient initializes the context's seed clients from the garden/seed-<name> kubeconfig secret.
 // Requires ItShouldGetResponsibleSeed to be called first.
-func ItShouldInitializeSeedClient(s *SeedContext) {
+func ItShouldInitializeSeedClient(tc *SeedContext) {
 	GinkgoHelper()
 
 	It("Initialize Seed client", func(ctx SpecContext) {
-		Expect(s.Seed).NotTo(BeNil(), "ItShouldGetResponsibleSeed should be called first")
+		Expect(tc.Seed).NotTo(BeNil(), "ItShouldGetResponsibleSeed should be called first")
 
 		seedSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "seed-" + s.Seed.Name,
+				Name:      "seed-" + tc.Seed.Name,
 				Namespace: "garden",
 			},
 		}
-		Eventually(ctx, s.GardenKomega.Object(seedSecret)).Should(
+		Eventually(ctx, tc.GardenKomega.Object(seedSecret)).Should(
 			HaveField("Data", HaveKey(kubernetes.KubeConfig)),
 			"secret %v should contain the seed kubeconfig",
 		)
@@ -44,75 +44,75 @@ func ItShouldInitializeSeedClient(s *SeedContext) {
 			kubernetes.WithDisabledCachedClient(),
 		)
 		Expect(err).NotTo(HaveOccurred())
-		s.WithSeedClientSet(clientSet)
+		tc.SetSeedClientSet(clientSet)
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldAnnotateSeed sets the given annotation within the seed metadata to the specified value and patches the seed object
-func ItShouldAnnotateSeed(s *SeedContext, annotations map[string]string) {
+func ItShouldAnnotateSeed(tc *SeedContext, annotations map[string]string) {
 	GinkgoHelper()
 
 	It("Annotate Seed", func(ctx SpecContext) {
-		patch := client.MergeFrom(s.Seed.DeepCopy())
+		patch := client.MergeFrom(tc.Seed.DeepCopy())
 
 		for key, value := range annotations {
-			s.Log.Info("Setting annotation", "annotation", key, "value", value)
-			metav1.SetMetaDataAnnotation(&s.Seed.ObjectMeta, key, value)
+			tc.Log.Info("Setting annotation", "annotation", key, "value", value)
+			metav1.SetMetaDataAnnotation(&tc.Seed.ObjectMeta, key, value)
 		}
 
 		Eventually(ctx, func() error {
-			return s.GardenClient.Patch(ctx, s.Seed, patch)
+			return tc.GardenClient.Patch(ctx, tc.Seed, patch)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldWaitForSeedToBeReady waits for the seed object to be ready
-func ItShouldWaitForSeedToBeReady(s *SeedContext) {
+func ItShouldWaitForSeedToBeReady(tc *SeedContext) {
 	GinkgoHelper()
 
 	It("Should wait for seed to be ready", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Seed), s.Seed)).To(Succeed())
-			g.Expect(health.CheckSeed(s.Seed, s.Seed.Status.Gardener)).To(Succeed())
+			g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(tc.Seed), tc.Seed)).To(Succeed())
+			g.Expect(health.CheckSeed(tc.Seed, tc.Seed.Status.Gardener)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(10*time.Minute))
 }
 
 // ItShouldWaitForSeedToBeDeleted waits for the seed object to be gone
-func ItShouldWaitForSeedToBeDeleted(s *SeedContext) {
+func ItShouldWaitForSeedToBeDeleted(tc *SeedContext) {
 	GinkgoHelper()
 
 	It("Wait for Seed to be deleted", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			err := s.GardenKomega.Get(s.Seed)()
+			err := tc.GardenKomega.Get(tc.Seed)()
 			if err == nil {
-				s.Log.Info("Waiting for deletion", "lastOperation", s.Seed.Status.LastOperation)
+				tc.Log.Info("Waiting for deletion", "lastOperation", tc.Seed.Status.LastOperation)
 			}
 			return err
 		}).WithPolling(30 * time.Second).Should(BeNotFoundError())
 
-		s.Log.Info("Seed has been deleted")
+		tc.Log.Info("Seed has been deleted")
 	}, SpecTimeout(10*time.Minute))
 }
 
 // ItShouldCreatePrometheusRuleForSeed creates a PrometheusRule and makes sure it is created.
-func ItShouldCreatePrometheusRuleForSeed(s *SeedContext, rule *monitoringv1.PrometheusRule) {
+func ItShouldCreatePrometheusRuleForSeed(tc *SeedContext, rule *monitoringv1.PrometheusRule) {
 	GinkgoHelper()
 
 	It("Create PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.SeedClient.Create(ctx, rule)).To(Succeed())
+			g.Expect(tc.SeedClient.Create(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldDeletePrometheusRuleForSeed deletes a PrometheusRule and makes sure it is deleted.
-func ItShouldDeletePrometheusRuleForSeed(s *SeedContext, rule *monitoringv1.PrometheusRule) {
+func ItShouldDeletePrometheusRuleForSeed(tc *SeedContext, rule *monitoringv1.PrometheusRule) {
 	GinkgoHelper()
 
 	It("Delete PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.SeedClient.Delete(ctx, rule)).To(Succeed())
+			g.Expect(tc.SeedClient.Delete(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
