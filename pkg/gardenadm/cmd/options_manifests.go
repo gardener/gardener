@@ -43,3 +43,10 @@ func (o *ManifestOptions) AddFlags(fs *pflag.FlagSet) {
 
 // ConfigDirLocation is the location where `gardenadm init` stores the config directory path.
 const ConfigDirLocation = botanist.GardenadmBaseDir + "/config-directory"
+
+// RestoreInProgressLocation is the marker file written by `gardenadm restore` while a restore is
+// in progress. It is written on the first invocation and removed only upon successful completion.
+// Its presence signals that a subsequent `gardenadm restore` invocation is a retry, in which case
+// the check for an already-existing gardenlet deployment (which is expected to be part of the
+// restored etcd snapshot) is skipped.
+const RestoreInProgressLocation = botanist.GardenadmBaseDir + "/restore-in-progress"
