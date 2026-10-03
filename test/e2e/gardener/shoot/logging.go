@@ -34,7 +34,7 @@ func ShootLogging(tc *ShootContext) {
 	ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 	ItShouldInitializeShootClient(tc)
 	ItShouldGetResponsibleSeed(tc)
-	seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+	seed.ItShouldInitializeSeedClient(tc.SeedContext)
 	ItShouldComputeControlPlaneNamespace(tc)
 
 	gardenerLoggerAppLabel := "gardener-logger"

@@ -57,7 +57,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			ItShouldInitializeShootClient(tc)
 			ItShouldGetResponsibleSeed(tc)
-			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 			It("Verify initial encryption config uses AESCBC", func(ctx SpecContext) {
 				verifyEncryptionConfigProvider(ctx, tc, gardencorev1beta1.EncryptionProviderTypeAESCBC)

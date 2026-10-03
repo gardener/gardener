@@ -31,7 +31,7 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(tc)
 
 				ItShouldGetResponsibleSeed(tc)
-				seed.ItShouldInitializeSeedClient(&tc.SeedContext)
+				seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 				ItShouldUpdateShootToHighAvailability(tc, GetFailureToleranceType())
 				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
