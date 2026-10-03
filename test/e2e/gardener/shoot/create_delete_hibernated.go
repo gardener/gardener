@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
 )
@@ -21,10 +20,12 @@ import (
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
 		test := func(tc *ShootContext) {
-			BeforeTestSetup(func() {
-				tc.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-					Enabled: new(true),
-				}
+			tc.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				Enabled: new(true),
+			}
+
+			BeforeAll(func() {
+				tc.Init()
 			})
 
 			ItShouldCreateShoot(tc)
@@ -45,11 +46,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-hib")))
+			test(NewShootContext(DefaultShoot("e2e-hib")))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-hib")))
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-hib")))
 		})
 	})
 })
