@@ -26,39 +26,39 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Hibernate, Wake up and Delete Shoot", func() {
-		test := func(s *ShootContext, testPrometheusHealthCheck bool) {
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldInitializeShootClient(s)
-			ItShouldGetResponsibleSeed(s)
-			seed.ItShouldInitializeSeedClient(&s.SeedContext)
+		test := func(tc *ShootContext, testPrometheusHealthCheck bool) {
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldInitializeShootClient(tc)
+			ItShouldGetResponsibleSeed(tc)
+			seed.ItShouldInitializeSeedClient(&tc.SeedContext)
 
 			// validate Prometheus health checks are in place for the shoot Prometheus.
 			if testPrometheusHealthCheck {
-				itShouldVerifyShootPrometheusHealthCheck(s)
+				itShouldVerifyShootPrometheusHealthCheck(tc)
 			}
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 
 				// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
 				// The default shoot e2e test deals with multiple nodes, deleting all of them and waiting for them to be recreated
 				// might increase the test duration undesirably.
-				node.VerifyNodeCriticalComponentsBootstrapping(s)
+				node.VerifyNodeCriticalComponentsBootstrapping(tc)
 			}
 
-			ItShouldHibernateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
+			ItShouldHibernateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 
-			ItShouldWakeUpShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
+			ItShouldWakeUpShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 			}
 
-			ItShouldDeleteShoot(s)
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldDeleteShoot(tc)
+			ItShouldWaitForShootToBeDeleted(tc)
 		}
 
 		Context("Shoot with workers", Label("basic"), Ordered, PriorityLong, func() {
@@ -71,17 +71,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	})
 })
 
-func itShouldVerifyShootPrometheusHealthCheck(s *ShootContext) {
+func itShouldVerifyShootPrometheusHealthCheck(tc *ShootContext) {
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		// TODO(vicwicker): Run the tests normally for IPv6 once the shoot cross-node communication in the local setup works.
-		s.Log.Info("Skip shoot Prometheus health check test in IPv6 mode due to cross-node communication issues in the test setup")
+		tc.Log.Info("Skip shoot Prometheus health check test in IPv6 mode due to cross-node communication issues in the test setup")
 		return
 	}
 
 	rule := &monitoringv1.PrometheusRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "shoot-test-job-down",
-			Namespace: "shoot--local--" + s.Shoot.Name,
+			Namespace: "shoot--local--" + tc.Shoot.Name,
 			Labels:    map[string]string{"prometheus": "shoot"},
 		},
 		Spec: monitoringv1.PrometheusRuleSpec{
@@ -100,24 +100,24 @@ func itShouldVerifyShootPrometheusHealthCheck(s *ShootContext) {
 		},
 	}
 
-	seed.ItShouldCreatePrometheusRuleForSeed(&s.SeedContext, rule)
+	seed.ItShouldCreatePrometheusRuleForSeed(&tc.SeedContext, rule)
 
 	It("Wait until ObservabilityComponentsHealthy is false", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+		Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(
 			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(gardencorev1beta1.ShootObservabilityComponentsHealthy),
 				"Status": Equal(gardencorev1beta1.ConditionFalse),
 				"Reason": Equal("PrometheusHealthCheckDown"),
-				"Message": Equal(`There are health issues in Prometheus pod "shoot--local--` + s.Shoot.Name + `/prometheus-shoot-0". ` +
+				"Message": Equal(`There are health issues in Prometheus pod "shoot--local--` + tc.Shoot.Name + `/prometheus-shoot-0". ` +
 					`Access Prometheus UI and query for "healthcheck:up" for more details: healthcheck:up{job="test", task="target:down"} => 0`),
 			}))),
 		)
 	}, SpecTimeout(10*time.Minute))
 
-	seed.ItShouldDeletePrometheusRuleForSeed(&s.SeedContext, rule)
+	seed.ItShouldDeletePrometheusRuleForSeed(&tc.SeedContext, rule)
 
 	It("Wait until ObservabilityComponentsHealthy is true", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+		Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(
 			HaveField("Status.Conditions", ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":    Equal(gardencorev1beta1.ShootObservabilityComponentsHealthy),
 				"Status":  Equal(gardencorev1beta1.ConditionTrue),

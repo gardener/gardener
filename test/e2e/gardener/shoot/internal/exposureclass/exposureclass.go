@@ -24,7 +24,7 @@ import (
 // VerifyExposureClassSwitch verifies the switch of exposure class of a shoot cluster.
 // It checks the connectivity to the API server both with exposure class and without exposure class set
 // while waiting that the cluster gets healthy after the exposure class switch.
-func VerifyExposureClassSwitch(s *ShootContext, waitForReconcileFunc func(s *ShootContext)) {
+func VerifyExposureClassSwitch(tc *ShootContext, waitForReconcileFunc func(tc *ShootContext)) {
 	GinkgoHelper()
 	defer GinkgoRecover()
 
@@ -36,34 +36,34 @@ func VerifyExposureClassSwitch(s *ShootContext, waitForReconcileFunc func(s *Sho
 
 	Describe("switching exposure class", Ordered, func() {
 		BeforeAll(func(ctx context.Context) {
-			if err := s.GardenClient.Get(ctx, client.ObjectKeyFromObject(expClass), expClass); apierrors.IsNotFound(err) {
+			if err := tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(expClass), expClass); apierrors.IsNotFound(err) {
 				Skip("exposure class not installed")
 			}
 		})
 
 		verifyAPIServerAccess := func() {
 			It("should be able to talk to API server", func(ctx SpecContext) {
-				Eventually(ctx, s.ShootKomega.Get(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}})).Should(Succeed())
+				Eventually(ctx, tc.ShootKomega.Get(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}})).Should(Succeed())
 			}, SpecTimeout(3*time.Minute)) // timeout must be greater than the ttl of the dnsrecord
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 			}
 		}
 
 		It("Switch exposure class", func(ctx SpecContext) {
-			Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-				s.Shoot.Spec.ExposureClassName = &expClass.Name
+			Eventually(ctx, tc.GardenKomega.Update(tc.Shoot, func() {
+				tc.Shoot.Spec.ExposureClassName = &expClass.Name
 			})).Should(Succeed())
 		}, SpecTimeout(time.Minute))
-		waitForReconcileFunc(s)
+		waitForReconcileFunc(tc)
 		Describe("with exposure class", verifyAPIServerAccess)
 
 		It("Without exposure class", func(ctx SpecContext) {
-			Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-				s.Shoot.Spec.ExposureClassName = nil
+			Eventually(ctx, tc.GardenKomega.Update(tc.Shoot, func() {
+				tc.Shoot.Spec.ExposureClassName = nil
 			})).Should(Succeed())
 		}, SpecTimeout(time.Minute))
-		waitForReconcileFunc(s)
+		waitForReconcileFunc(tc)
 		Describe("Without exposure class", verifyAPIServerAccess)
 	})
 }

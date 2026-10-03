@@ -33,7 +33,7 @@ import (
 const name = "e2e-test-bastion"
 
 // VerifyBastion tests the Bastion functionality of a shoot cluster.
-func VerifyBastion(s *ShootContext) {
+func VerifyBastion(tc *ShootContext) {
 	GinkgoHelper()
 
 	Describe("Bastion", Label("bastion"), func() {
@@ -45,12 +45,12 @@ func VerifyBastion(s *ShootContext) {
 		BeforeAll(func() {
 			bastion = &operationsv1alpha1.Bastion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      name + "-" + s.Shoot.Name,
-					Namespace: s.Shoot.Namespace,
+					Name:      name + "-" + tc.Shoot.Name,
+					Namespace: tc.Shoot.Namespace,
 				},
 				Spec: operationsv1alpha1.BastionSpec{
 					ShootRef: corev1.LocalObjectReference{
-						Name: s.Shoot.Name,
+						Name: tc.Shoot.Name,
 					},
 					Ingress: []operationsv1alpha1.BastionIngressPolicy{{
 						IPBlock: networkingv1.IPBlock{
@@ -66,7 +66,7 @@ func VerifyBastion(s *ShootContext) {
 					return
 				}
 				Eventually(ctx, func() error {
-					return s.GardenClient.Delete(ctx, bastion)
+					return tc.GardenClient.Delete(ctx, bastion)
 				}).Should(Or(Succeed(), BeNotFoundError()))
 			}, NodeTimeout(time.Minute))
 
@@ -83,10 +83,10 @@ func VerifyBastion(s *ShootContext) {
 		var nodeSSHKey []byte
 		It("should fetch the shoot SSH key", func(ctx SpecContext) {
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      gardenerutils.ComputeShootProjectResourceName(s.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair),
-				Namespace: s.Shoot.Namespace,
+				Name:      gardenerutils.ComputeShootProjectResourceName(tc.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair),
+				Namespace: tc.Shoot.Namespace,
 			}}
-			Eventually(ctx, s.GardenKomega.Get(secret)).Should(Succeed())
+			Eventually(ctx, tc.GardenKomega.Get(secret)).Should(Succeed())
 
 			nodeSSHKey = secret.Data[secretsutils.DataKeyRSAPrivateKey]
 		}, SpecTimeout(time.Minute))
@@ -94,7 +94,7 @@ func VerifyBastion(s *ShootContext) {
 		var nodeName, nodeAddrHostname, nodeAddrInternalIP string
 		It("should pick a shoot Node with Hostname and InternalIP", func(ctx SpecContext) {
 			var nodes []corev1.Node
-			Eventually(ctx, s.ShootKomega.ObjectList(&corev1.NodeList{})).Should(
+			Eventually(ctx, tc.ShootKomega.ObjectList(&corev1.NodeList{})).Should(
 				HaveField("Items", ContainElement(
 					HaveField("Status.Addresses", ContainElements(
 						HaveField("Type", corev1.NodeHostName),
@@ -136,7 +136,7 @@ func VerifyBastion(s *ShootContext) {
 			bastion.Spec.SSHPublicKey = string(sshKey.SecretData()[secretsutils.DataKeySSHAuthorizedKeys])
 
 			Eventually(ctx, func() error {
-				err := s.GardenClient.Create(ctx, bastion)
+				err := tc.GardenClient.Create(ctx, bastion)
 				if apierrors.IsAlreadyExists(err) {
 					return StopTrying(err.Error())
 				}
@@ -146,7 +146,7 @@ func VerifyBastion(s *ShootContext) {
 
 		var bastionAddr string
 		It("should get ready", func(ctx SpecContext) {
-			Eventually(ctx, s.GardenKomega.Object(bastion)).Should(And(
+			Eventually(ctx, tc.GardenKomega.Object(bastion)).Should(And(
 				HaveField("Status.Conditions", ConsistOf(And(
 					HaveField("Type", operationsv1alpha1.BastionReady),
 					HaveField("Status", gardencorev1beta1.ConditionTrue),
@@ -199,12 +199,12 @@ func VerifyBastion(s *ShootContext) {
 
 		It("should delete the Bastion", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
-				return s.GardenClient.Delete(ctx, bastion)
+				return tc.GardenClient.Delete(ctx, bastion)
 			}).Should(Or(Succeed(), BeNotFoundError()))
 		}, SpecTimeout(time.Minute))
 
 		It("should get deleted", func(ctx SpecContext) {
-			Eventually(ctx, s.GardenKomega.Get(bastion)).Should(BeNotFoundError())
+			Eventually(ctx, tc.GardenKomega.Get(bastion)).Should(BeNotFoundError())
 		}, SpecTimeout(time.Minute))
 	})
 }

@@ -18,7 +18,7 @@ import (
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create and Delete Failed Shoot", PriorityFast, func() {
 		Context("Shoot with invalid DNS configuration", Ordered, func() {
-			var s *ShootContext
+			var tc *ShootContext
 
 			BeforeTestSetup(func() {
 				shoot := DefaultShoot("e2e-invalid-dns")
@@ -26,19 +26,19 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					Domain: new("shoot.non-existing-domain"),
 				}
 
-				s = NewTestContext().Init().ForShoot(shoot)
+				tc = NewTestContext().Init().ForShoot(shoot)
 			})
 
-			ItShouldCreateShoot(s)
+			ItShouldCreateShoot(tc)
 
 			It("Wait until last operation in Shoot is set to Failed", func(ctx SpecContext) {
-				Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+				Eventually(ctx, tc.GardenKomega.Object(tc.Shoot)).Should(
 					HaveField("Status.LastOperation.State", Equal(gardencorev1beta1.LastOperationStateFailed)),
 				)
 			}, SpecTimeout(time.Minute))
 
-			ItShouldDeleteShoot(s)
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldDeleteShoot(tc)
+			ItShouldWaitForShootToBeDeleted(tc)
 		})
 	})
 })
