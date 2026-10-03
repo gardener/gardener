@@ -25,16 +25,18 @@ import (
 )
 
 var _ = Describe("Project Tests", Ordered, Label("Project", "default"), PriorityFast, func() {
-	var s *ProjectContext
-
 	var (
+		tc = NewProjectContext()
+
 		testUserName         string
 		testUserClient       client.Client
 		testEndpoint         *corev1.Endpoints
 		extensionClusterRole *rbacv1.ClusterRole
 	)
 
-	BeforeTestSetup(func() {
+	BeforeAll(func() {
+		tc.Init()
+
 		projectName := "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:5]
 
 		project := &gardencorev1beta1.Project{
@@ -46,32 +48,30 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 			},
 		}
 
-		s = NewTestContext().Init().ForProject(project)
-	})
+		tc.SetProject(project)
 
-	BeforeAll(func() {
 		DeferCleanup(func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
 				if testEndpoint != nil {
-					g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, testEndpoint))).To(Succeed())
+					g.Expect(client.IgnoreNotFound(tc.GardenClient.Delete(ctx, testEndpoint))).To(Succeed())
 				}
 
 				if extensionClusterRole != nil {
-					g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, extensionClusterRole))).To(Succeed())
+					g.Expect(client.IgnoreNotFound(tc.GardenClient.Delete(ctx, extensionClusterRole))).To(Succeed())
 				}
 
-				g.Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Project))).To(Succeed())
-				g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, s.Project))).To(Succeed())
+				g.Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, tc.GardenClient, tc.Project))).To(Succeed())
+				g.Expect(client.IgnoreNotFound(tc.GardenClient.Delete(ctx, tc.Project))).To(Succeed())
 			}).Should(Succeed())
 		}, NodeTimeout(time.Minute))
 	})
 
-	ItShouldCreateProject(s)
-	ItShouldWaitForProjectToBeReconciledAndReady(s)
+	ItShouldCreateProject(tc)
+	ItShouldWaitForProjectToBeReconciledAndReady(tc)
 
 	It("Initialize test user", func(ctx SpecContext) {
-		testUserName = s.Project.Name
-		testUserConfig := rest.CopyConfig(s.GardenClientSet.RESTConfig())
+		testUserName = tc.Project.Name
+		testUserConfig := rest.CopyConfig(tc.GardenClientSet.RESTConfig())
 		// use impersonation to simulate different user
 		// TODO: use a ServiceAccount instead
 		testUserConfig.Impersonate = rest.ImpersonationConfig{
@@ -88,11 +88,11 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 	It("Create test Endpoint", func(ctx SpecContext) {
 		testEndpoint = &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
-			Namespace:    *s.Project.Spec.Namespace,
+			Namespace:    *tc.Project.Spec.Namespace,
 		}}
 
 		Eventually(ctx, func() error {
-			return s.GardenClient.Create(ctx, testEndpoint)
+			return tc.GardenClient.Create(ctx, testEndpoint)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
@@ -119,13 +119,13 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 		}
 
 		Eventually(ctx, func() error {
-			return s.GardenClient.Create(ctx, extensionClusterRole)
+			return tc.GardenClient.Create(ctx, extensionClusterRole)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
 	It("Add new member with extension role", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Update(s.Project, func() {
-			s.Project.Spec.Members = append(s.Project.Spec.Members, gardencorev1beta1.ProjectMember{
+		Eventually(ctx, tc.GardenKomega.Update(tc.Project, func() {
+			tc.Project.Spec.Members = append(tc.Project.Spec.Members, gardencorev1beta1.ProjectMember{
 				Subject: rbacv1.Subject{
 					APIGroup: rbacv1.GroupName,
 					Kind:     rbacv1.UserKind,
@@ -146,7 +146,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 		It("Verify non-gardenlet users cannot create a ServiceAccount with the reserved prefix", func(ctx SpecContext) {
 			reservedSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
 				Name:      "extension-shoot--test--foo",
-				Namespace: *s.Project.Spec.Namespace,
+				Namespace: *tc.Project.Spec.Namespace,
 			}}
 
 			Expect(testUserClient.Create(ctx, reservedSA)).To(BeForbiddenError())
@@ -157,7 +157,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 			// so we can use a non-existent SA to test the token subresource restriction.
 			reservedSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
 				Name:      "extension-shoot--test--nonexistent",
-				Namespace: *s.Project.Spec.Namespace,
+				Namespace: *tc.Project.Spec.Namespace,
 			}}
 
 			tokenRequest := &authenticationv1.TokenRequest{
@@ -170,6 +170,6 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), Priority
 		}, SpecTimeout(time.Minute))
 	})
 
-	ItShouldDeleteProject(s)
-	ItShouldWaitForProjectToBeDeleted(s)
+	ItShouldDeleteProject(tc)
+	ItShouldWaitForProjectToBeDeleted(tc)
 })
