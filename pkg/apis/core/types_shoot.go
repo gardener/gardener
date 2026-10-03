@@ -452,7 +452,8 @@ type ControlPlane struct {
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Domain is the external available domain of the Shoot cluster. This domain will be written into the
-	// kubeconfig that is handed out to end-users. This field is immutable.
+	// kubeconfig that is handed out to end-users. This field is immutable, unless the MutableShootDomains feature gate
+	// is enabled. Then it can be changed together with the start of a certificate authorities rotation.
 	Domain *string
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.

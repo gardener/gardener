@@ -62,6 +62,7 @@ spec:
           InPlaceNodeUpdates: true
           VersionClassificationLifecycle: true
           DisableNginxIngressInShoot: true
+          MutableShootDomains: true
       gardenerControllerManager:
         featureGates:
           DisableNginxIngressInShoot: true

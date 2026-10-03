@@ -3609,7 +3609,7 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. This field is immutable.",
+							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. This field is immutable, unless the MutableShootDomains feature gate is enabled. Then it can be changed together with the start of a certificate authorities rotation.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

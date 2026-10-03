@@ -21,8 +21,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("shoot", func() {
@@ -271,6 +273,18 @@ var _ = Describe("shoot", func() {
 
 				Expect(s.ComputeOutOfClusterAPIServerAddress(false)).To(Equal("api." + externalDomain))
 			})
+
+			It("should return the new external domain while a domain migration is running", func() {
+				externalDomain := "foo"
+				priorExternalDomain := "prior-foo"
+				s := &Shoot{
+					ExternalClusterDomain:      &externalDomain,
+					PriorExternalClusterDomain: &priorExternalDomain,
+				}
+				s.SetInfo(&gardencorev1beta1.Shoot{})
+
+				Expect(s.ComputeOutOfClusterAPIServerAddress(false)).To(Equal("api." + externalDomain))
+			})
 		})
 
 		Describe("#IsSelfHosted", func() {
@@ -450,6 +464,153 @@ var _ = Describe("shoot", func() {
 				Expect(shoot.GetInfo().Spec.DNS).To(Equal(&gardencorev1beta1.DNS{
 					Domain: new("shoot.example.com"),
 				}))
+			})
+		})
+
+		Describe("#PriorExternalClusterDomain", func() {
+			var (
+				ctx           context.Context
+				c             client.Client
+				seedClientSet kubernetes.Interface
+				shootObject   *gardencorev1beta1.Shoot
+			)
+
+			buildShoot := func() *Shoot {
+				GinkgoHelper()
+
+				s, err := NewBuilder().
+					WithShootObject(shootObject).
+					WithCloudProfileObject(nil).
+					WithoutShootCredentials().
+					WithDefaultDomains([]*gardener.Domain{{Domain: "example.com"}}).
+					Build(ctx, seedClientSet, c)
+				Expect(err).NotTo(HaveOccurred())
+
+				return s
+			}
+
+			advertisedAddress := func(name, domain string) gardencorev1beta1.ShootAdvertisedAddress {
+				return gardencorev1beta1.ShootAdvertisedAddress{Name: name, URL: "https://api." + domain}
+			}
+
+			withCARotationPhase := func(phase gardencorev1beta1.CredentialsRotationPhase) {
+				shootObject.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+						CertificateAuthorities: &gardencorev1beta1.CARotation{Phase: phase},
+					},
+				}
+			}
+
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+				ctx = context.Background()
+				c = fake.NewFakeClient()
+				seedClientSet = fakekubernetes.NewClientSetBuilder().WithVersion("1.35.0").Build()
+
+				uid := "057cf3ec-1b86-40b3-abc2-47ac71abbe85"
+				shootObject = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden-bar", UID: types.UID(uid)},
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS:        &gardencorev1beta1.DNS{Domain: new("new.example.com")},
+						Kubernetes: gardencorev1beta1.Kubernetes{Version: "v1.35.0"},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: "shoot--bar--foo-" + uid,
+						AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+							advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "old.example.com"),
+						},
+					},
+				}
+				withCARotationPhase(gardencorev1beta1.RotationPrepared)
+			})
+
+			It("should take the domain from the external address", func() {
+				Expect(buildShoot().PriorExternalClusterDomain).To(PointTo(Equal("old.example.com")))
+			})
+
+			DescribeTable("should take the domain from the external address in each migration phase",
+				func(phase gardencorev1beta1.CredentialsRotationPhase) {
+					withCARotationPhase(phase)
+
+					Expect(buildShoot().PriorExternalClusterDomain).To(PointTo(Equal("old.example.com")))
+				},
+
+				Entry("Preparing", gardencorev1beta1.RotationPreparing),
+				Entry("PreparingWithoutWorkersRollout", gardencorev1beta1.RotationPreparingWithoutWorkersRollout),
+				Entry("WaitingForWorkersRollout", gardencorev1beta1.RotationWaitingForWorkersRollout),
+				Entry("Prepared", gardencorev1beta1.RotationPrepared),
+			)
+
+			It("should prefer the prior external address over the external address", func() {
+				shootObject.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+					advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "new.example.com"),
+					advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal, "old.example.com"),
+				}
+
+				Expect(buildShoot().PriorExternalClusterDomain).To(PointTo(Equal("old.example.com")))
+			})
+
+			It("should be nil if the external address matches the domain in the spec", func() {
+				shootObject.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+					advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "new.example.com"),
+				}
+
+				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
+			})
+
+			It("should be nil if there are no advertised addresses", func() {
+				shootObject.Status.AdvertisedAddresses = nil
+
+				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
+			})
+
+			It("should be nil if the shoot has no domain", func() {
+				shootObject.Spec.DNS = nil
+
+				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
+			})
+
+			It("should be nil if the builder removes the shoot DNS, even if a prior external address exists", func() {
+				shootObject.Status.AdvertisedAddresses = append(shootObject.Status.AdvertisedAddresses,
+					advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal, "old.example.com"),
+				)
+
+				s, err := NewBuilder().
+					WithShootObject(shootObject).
+					WithCloudProfileObject(nil).
+					WithoutShootCredentials().
+					WithoutShootDNS().
+					WithDefaultDomains([]*gardener.Domain{{Domain: "example.com"}}).
+					Build(ctx, seedClientSet, c)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(s.PriorExternalClusterDomain).To(BeNil())
+				Expect(s.PriorExternalDomain).To(BeNil())
+			})
+
+			DescribeTable("should be nil outside of the migration phases",
+				func(phase gardencorev1beta1.CredentialsRotationPhase) {
+					withCARotationPhase(phase)
+
+					Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
+				},
+
+				Entry("Completing", gardencorev1beta1.RotationCompleting),
+				Entry("Completed", gardencorev1beta1.RotationCompleted),
+				Entry("no phase", gardencorev1beta1.CredentialsRotationPhase("")),
+			)
+
+			It("should be nil if there is no CA rotation at all", func() {
+				shootObject.Status.Credentials = nil
+
+				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
+			})
+
+			It("should be nil if the feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
 			})
 		})
 

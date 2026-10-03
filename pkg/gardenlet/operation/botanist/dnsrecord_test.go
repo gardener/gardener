@@ -50,6 +50,10 @@ const (
 	externalProvider = "external-provider"
 	externalZone     = "external-zone"
 
+	priorExternalDomain   = "foo.bar.prior-external.example.com"
+	priorExternalProvider = "prior-external-provider"
+	priorExternalZone     = "prior-external-zone"
+
 	internalDomain   = "foo.bar.internal.example.com"
 	internalProvider = "internal-provider"
 	internalZone     = "internal-zone"
@@ -67,8 +71,9 @@ var _ = Describe("dnsrecord", func() {
 		scheme *runtime.Scheme
 		c      client.Client
 
-		externalDNSRecord *mockdnsrecord.MockInterface
-		internalDNSRecord *mockdnsrecord.MockInterface
+		externalDNSRecord      *mockdnsrecord.MockInterface
+		priorExternalDNSRecord *mockdnsrecord.MockInterface
+		internalDNSRecord      *mockdnsrecord.MockInterface
 
 		b *Botanist
 
@@ -91,6 +96,7 @@ var _ = Describe("dnsrecord", func() {
 		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
+		priorExternalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 		internalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 
 		cleanup = test.WithVar(&dnsrecord.TimeNow, func() time.Time { return now })
@@ -122,8 +128,9 @@ var _ = Describe("dnsrecord", func() {
 					InternalClusterDomain: new(internalDomain),
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
-							ExternalDNSRecord: externalDNSRecord,
-							InternalDNSRecord: internalDNSRecord,
+							ExternalDNSRecord:      externalDNSRecord,
+							PriorExternalDNSRecord: priorExternalDNSRecord,
+							InternalDNSRecord:      internalDNSRecord,
 						},
 					},
 				},
@@ -367,6 +374,58 @@ var _ = Describe("dnsrecord", func() {
 		})
 	})
 
+	Describe("#DefaultPriorExternalDNSRecord", func() {
+		Context("domain migration in progress", func() {
+			JustBeforeEach(func() {
+				b.Shoot.PriorExternalClusterDomain = new(priorExternalDomain)
+				b.Shoot.PriorExternalDomain = &gardenerutils.Domain{
+					Domain:   priorExternalDomain,
+					Provider: priorExternalProvider,
+					Zone:     priorExternalZone,
+					Credentials: &corev1.Secret{
+						Data: map[string][]byte{
+							"prior-external-foo": []byte("prior-external-bar"),
+						},
+					},
+				}
+			})
+
+			It("should create a component with correct values", func() {
+				r := b.DefaultPriorExternalDNSRecord()
+				r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+				r.SetValues([]string{address})
+
+				Expect(r.GetValues()).To(DeepEqual(&dnsrecord.Values{
+					Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorExternalName,
+					SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorExternalName,
+					Namespace:         controlPlaneNamespace,
+					TTL:               new(ttl),
+					Type:              priorExternalProvider,
+					Zone:              new(priorExternalZone),
+					DNSName:           "api." + priorExternalDomain,
+					RecordType:        extensionsv1alpha1.DNSRecordTypeA,
+					Values:            []string{address},
+					AnnotateOperation: false,
+					IPStack:           "ipv4",
+					Labels: map[string]string{
+						"role":                "prior-external",
+						"gardener.cloud/role": "controlplane",
+					},
+				}))
+			})
+		})
+
+		Context("no domain migration", func() {
+			It("should create a component without domain information", func() {
+				values := b.DefaultPriorExternalDNSRecord().GetValues()
+
+				Expect(values.DNSName).To(BeEmpty())
+				Expect(values.Type).To(BeEmpty())
+				Expect(values.Zone).To(BeNil())
+			})
+		})
+	})
+
 	Describe("#DefaultInternalDNSRecord", func() {
 		It("should create a component with correct values", func() {
 			c := b.DefaultInternalDNSRecord()
@@ -481,6 +540,63 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#DeployOrDestroyExternalDNSRecord", func() {
+		Context("domain migration in progress", func() {
+			createExternalDNSRecord := func(name string) {
+				Expect(c.Create(ctx, &extensionsv1alpha1.DNSRecord{
+					ObjectMeta: metav1.ObjectMeta{Name: shootName + "-external", Namespace: controlPlaneNamespace},
+					Spec: extensionsv1alpha1.DNSRecordSpec{
+						Name:       name,
+						RecordType: extensionsv1alpha1.DNSRecordTypeA,
+						Values:     []string{address},
+					},
+				})).To(Succeed())
+			}
+
+			JustBeforeEach(func() {
+				b.Shoot.PriorExternalClusterDomain = new(priorExternalDomain)
+				b.Shoot.PriorExternalDomain = &gardenerutils.Domain{Domain: priorExternalDomain, Provider: priorExternalProvider}
+			})
+
+			It("should hand over the record of the old domain before it deploys the record of the new domain", func() {
+				createExternalDNSRecord("api." + priorExternalDomain)
+
+				gomock.InOrder(
+					externalDNSRecord.EXPECT().Migrate(ctx),
+					externalDNSRecord.EXPECT().WaitMigrate(ctx),
+					externalDNSRecord.EXPECT().Destroy(ctx),
+					externalDNSRecord.EXPECT().WaitCleanup(ctx),
+					externalDNSRecord.EXPECT().Deploy(ctx),
+					externalDNSRecord.EXPECT().Wait(ctx),
+				)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should only deploy if the record already has the new domain", func() {
+				createExternalDNSRecord("api." + externalDomain)
+
+				externalDNSRecord.EXPECT().Deploy(ctx)
+				externalDNSRecord.EXPECT().Wait(ctx)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should only deploy if there is no record yet", func() {
+				externalDNSRecord.EXPECT().Deploy(ctx)
+				externalDNSRecord.EXPECT().Wait(ctx)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should fail if the migration of the old record fails", func() {
+				createExternalDNSRecord("api." + priorExternalDomain)
+
+				externalDNSRecord.EXPECT().Migrate(ctx).Return(testErr)
+
+				Expect(b.DeployOrDestroyExternalDNSRecord(ctx)).To(MatchError(testErr))
+			})
+		})
+
 		Context("deploy", func() {
 			It("should call Deploy and Wait and succeed if they succeeded", func() {
 				externalDNSRecord.EXPECT().Deploy(ctx)
@@ -593,6 +709,65 @@ var _ = Describe("dnsrecord", func() {
 				internalDNSRecord.EXPECT().Destroy(ctx).Return(testErr)
 				Expect(b.DeployOrDestroyInternalDNSRecord(ctx)).To(MatchError(testErr))
 			})
+		})
+	})
+
+	Describe("#DeployOrDestroyPriorExternalDNSRecord", func() {
+		Context("deploy", func() {
+			JustBeforeEach(func() {
+				b.Shoot.PriorExternalClusterDomain = new(priorExternalDomain)
+				b.Shoot.PriorExternalDomain = &gardenerutils.Domain{Domain: priorExternalDomain, Provider: priorExternalProvider}
+			})
+
+			It("should call Deploy and Wait and succeed if they succeeded", func() {
+				priorExternalDNSRecord.EXPECT().Deploy(ctx)
+				priorExternalDNSRecord.EXPECT().Wait(ctx)
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should call Deploy and fail if it failed", func() {
+				priorExternalDNSRecord.EXPECT().Deploy(ctx).Return(testErr)
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(MatchError(testErr))
+			})
+		})
+
+		Context("destroy (no domain migration)", func() {
+			It("should call Destroy and WaitCleanup and succeed if they succeeded", func() {
+				priorExternalDNSRecord.EXPECT().Destroy(ctx)
+				priorExternalDNSRecord.EXPECT().WaitCleanup(ctx)
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should call Destroy and fail if it failed", func() {
+				priorExternalDNSRecord.EXPECT().Destroy(ctx).Return(testErr)
+				Expect(b.DeployOrDestroyPriorExternalDNSRecord(ctx)).To(MatchError(testErr))
+			})
+		})
+	})
+
+	Describe("#DestroyPriorExternalDNSRecord", func() {
+		It("should call Destroy and WaitCleanup and succeed if they succeeded", func() {
+			priorExternalDNSRecord.EXPECT().Destroy(ctx)
+			priorExternalDNSRecord.EXPECT().WaitCleanup(ctx)
+			Expect(b.DestroyPriorExternalDNSRecord(ctx)).To(Succeed())
+		})
+
+		It("should call Destroy and fail if it failed", func() {
+			priorExternalDNSRecord.EXPECT().Destroy(ctx).Return(testErr)
+			Expect(b.DestroyPriorExternalDNSRecord(ctx)).To(MatchError(testErr))
+		})
+	})
+
+	Describe("#MigratePriorExternalDNSRecord", func() {
+		It("should call Migrate and WaitMigrate and succeed if they succeeded", func() {
+			priorExternalDNSRecord.EXPECT().Migrate(ctx)
+			priorExternalDNSRecord.EXPECT().WaitMigrate(ctx)
+			Expect(b.MigratePriorExternalDNSRecord(ctx)).To(Succeed())
+		})
+
+		It("should call Migrate and fail if it failed", func() {
+			priorExternalDNSRecord.EXPECT().Migrate(ctx).Return(testErr)
+			Expect(b.MigratePriorExternalDNSRecord(ctx)).To(MatchError(testErr))
 		})
 	})
 

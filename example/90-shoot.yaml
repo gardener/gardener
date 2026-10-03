@@ -378,6 +378,8 @@ spec:
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.
+    # With the `MutableShootDomains` feature gate, the domain can be changed together with the start of a CA rotation,
+    # see docs/usage/shoot-operations/shoot_credentials_rotation.md#changing-the-external-domain.
     domain: crazy-botany.core.my-custom-domain.com
     # Provider configuration required if custom shoot domain is configured.
   # providers:

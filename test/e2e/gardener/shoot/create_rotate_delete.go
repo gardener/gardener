@@ -37,6 +37,10 @@ import (
 )
 
 func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string, inPlaceUpdate bool) {
+	testCredentialRotationWithDomainMigration(s, shootVerifiers, utilsverifiers, startRotationAnnotation, completeRotationAnnotation, inPlaceUpdate, "")
+}
+
+func testCredentialRotationWithDomainMigration(s *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string, inPlaceUpdate bool, newDomain string) {
 	// the verifier interface requires that we pass a context to some of the verifier functions
 	// this is not needed anymore for refactored tests as these use the SpecContext supplied by the "It" statement
 	// Also we cannot pass a nil as the context argument as this makes the linter unhappy :(
@@ -56,9 +60,12 @@ func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rota
 	}
 
 	if startRotationAnnotation != "" {
-		ItShouldAnnotateShoot(s, map[string]string{
-			v1beta1constants.GardenerOperation: startRotationAnnotation,
-		})
+		startAnnotations := map[string]string{v1beta1constants.GardenerOperation: startRotationAnnotation}
+		if newDomain != "" {
+			ItShouldAnnotateShootAndChangeDomain(s, startAnnotations, newDomain)
+		} else {
+			ItShouldAnnotateShoot(s, startAnnotations)
+		}
 
 		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Shoot)
 
@@ -304,7 +311,11 @@ func testManualWorkersRollout(s *ShootContext) {
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		test := func(s *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools bool) {
+		// migrationDomain is the default domain the shoot is migrated to during the credentials rotation. The local
+		// setup provides it in addition to the default domain a shoot gets on creation.
+		const migrationDomain = "migration.local.gardener.cloud"
+
+		test := func(s *ShootContext, withoutWorkersRollout, workersRollout, withInPlaceUpdatePools, migrateDomain bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -399,7 +410,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			}
 
-			if !withoutWorkersRollout {
+			if migrateDomain {
+				newDomain := fmt.Sprintf("%s.%s.%s", s.Shoot.Name, strings.TrimPrefix(s.Shoot.Namespace, "garden-"), migrationDomain)
+				shootVerifiers = append(shootVerifiers, &rotation.ExternalDomainVerifier{ShootContext: s, NewDomain: newDomain})
+
+				testCredentialRotationWithDomainMigration(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, withInPlaceUpdatePools, newDomain)
+			} else if !withoutWorkersRollout {
 				// test rotation for every rotation type
 				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, withInPlaceUpdatePools)
 			} else {
@@ -452,7 +468,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, false, false, true)
+				test(s, false, false, true, false)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, PriorityLonger, func() {
@@ -478,12 +494,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, true, true, true)
+				test(s, true, true, true, false)
 			})
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false)
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false, false, true)
 		})
 	})
 })

@@ -672,6 +672,8 @@ const (
 	LabelExtensionProjectRole = "extension-project-role"
 	// LabelDNSRecordExternal is a constant for a label value for external DNSRecord.
 	LabelDNSRecordExternal = "external"
+	// LabelDNSRecordPriorExternal is a constant for a label value for the prior external DNSRecord.
+	LabelDNSRecordPriorExternal = "prior-external"
 	// LabelDNSRecordInternal is a constant for a label value for internal DNSRecord.
 	LabelDNSRecordInternal = "internal"
 	// LabelDNSRecordIngress is a constant for a label value for ingress DNSRecord.
@@ -988,6 +990,8 @@ const (
 	DNSRecordInternalName = "internal"
 	// DNSRecordExternalName is a constant for DNSRecord objects used for the external domain name.
 	DNSRecordExternalName = "external"
+	// DNSRecordPriorExternalName is a constant for DNSRecord objects used for the prior external domain name.
+	DNSRecordPriorExternalName = "prior-external"
 
 	// ArchitectureName is a constant for the 'architecture' cloud profile capability name.
 	ArchitectureName = "architecture"
@@ -1018,6 +1022,9 @@ const (
 
 	// AdvertisedAddressExternal is a constant that represents the name of the external kube-apiserver address.
 	AdvertisedAddressExternal = "external"
+	// AdvertisedAddressPriorExternal is a constant that represents the name of the external kube-apiserver address
+	// which is replaced by a domain migration and stays valid until the migration is completed.
+	AdvertisedAddressPriorExternal = "prior-external"
 	// AdvertisedAddressInternal is a constant that represents the name of the internal kube-apiserver address.
 	AdvertisedAddressInternal = "internal"
 	// AdvertisedAddressUnmanaged is a constant that represents the name of the unmanaged kube-apiserver address.

@@ -2245,4 +2245,15 @@ var _ = Describe("Helper", func() {
 			[]string{"rotate-ca-start", "", ""},
 			[]string{"rotate-ca-start"}),
 	)
+
+	DescribeTable("#GetDomainFromAPIServerURL",
+		func(url, expected string) {
+			Expect(GetDomainFromAPIServerURL(url)).To(Equal(expected))
+		},
+
+		Entry("reverses GetAPIServerDomain", "https://"+GetAPIServerDomain("foo.example.com"), "foo.example.com"),
+		Entry("url without scheme", "api.foo.example.com", "foo.example.com"),
+		Entry("url without api prefix", "https://foo.example.com", "foo.example.com"),
+		Entry("empty url", "", ""),
+	)
 })
