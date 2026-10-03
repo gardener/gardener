@@ -6,6 +6,7 @@ package victorialogs_test
 
 import (
 	"context"
+	"fmt"
 
 	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
@@ -40,6 +41,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -53,8 +56,9 @@ var _ = Describe("VictoriaLogs", func() {
 		imageRepository = "europe-docker.pkg.dev/gardener-project/releases/some-image"
 		imageTag        = "some-tag"
 		values          = Values{
-			ImageRepository: imageRepository,
-			ImageTag:        imageTag,
+			ImageRepository:    imageRepository,
+			ImageTag:           imageTag,
+			SecretNameServerCA: "ca",
 		}
 
 		c         client.Client
@@ -65,10 +69,11 @@ var _ = Describe("VictoriaLogs", func() {
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
 
-		vlSingle       *victoriametricsv1.VLSingle
-		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
-		serviceMonitor *monitoringv1.ServiceMonitor
-		prometheusRule *monitoringv1.PrometheusRule
+		vlSingle          *victoriametricsv1.VLSingle
+		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceMonitor    *monitoringv1.ServiceMonitor
+		prometheusRule    *monitoringv1.PrometheusRule
+		fakeSecretManager secretsmanager.Interface
 	)
 
 	BeforeEach(func() {
@@ -77,8 +82,10 @@ var _ = Describe("VictoriaLogs", func() {
 		utilruntime.Must(victoriametricsv1.AddToScheme(scheme))
 
 		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
-		component = New(c, namespace, values)
+		fakeSecretManager = fakesecretsmanager.New(c, namespace)
+		component = New(c, namespace, values, fakeSecretManager)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+
 	})
 
 	JustBeforeEach(func() {
@@ -112,7 +119,7 @@ var _ = Describe("VictoriaLogs", func() {
 						Repository: "europe-docker.pkg.dev/gardener-project/releases/some-image",
 						Tag:        "some-tag",
 					},
-					Port: "9428",
+					Port: "9429",
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -120,6 +127,23 @@ var _ = Describe("VictoriaLogs", func() {
 						},
 					},
 					ReplicaCount: new(int32(0)),
+					ExtraArgs: map[string]string{
+						"httpListenAddr": fmt.Sprintf(":%d,:%d", 9429, 9428),
+						"tls":            "true,false",
+						"tlsCertFile":    "/etc/victorialogs/tls/tls.crt",
+						"tlsKeyFile":     "/etc/victorialogs/tls/tls.key",
+					},
+					Volumes: []corev1.Volume{{
+						Name: "vl-server-tls",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{SecretName: "victoria-logs-server-tls"},
+						},
+					}},
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      "vl-server-tls",
+						MountPath: "/etc/victorialogs/tls",
+						ReadOnly:  true,
+					}},
 				},
 				RetentionPeriod: "15d",
 				Storage: &corev1.PersistentVolumeClaimSpec{
@@ -138,6 +162,22 @@ var _ = Describe("VictoriaLogs", func() {
 				ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
 					EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 						Name: "logging-vl",
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "https",
+								Port:       9429,
+								TargetPort: intstr.FromInt32(9429),
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "http",
+								Port:       9428,
+								TargetPort: intstr.FromInt32(9428),
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
 					},
 				},
 			},
@@ -174,18 +214,15 @@ var _ = Describe("VictoriaLogs", func() {
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"app.kubernetes.io/name":      "vlsingle",
-						"app.kubernetes.io/instance":  victorialogsconstants.VLSingleResourceName,
-						"app.kubernetes.io/component": "monitoring",
-						"managed-by":                  "vm-operator",
+						"app.kubernetes.io/name":                          "vlsingle",
+						"app.kubernetes.io/instance":                      victorialogsconstants.VLSingleResourceName,
+						"app.kubernetes.io/component":                     "monitoring",
+						"managed-by":                                      "vm-operator",
+						"operator.victoriametrics.com/additional-service": "managed",
 					},
-					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      "operator.victoriametrics.com/additional-service",
-						Operator: metav1.LabelSelectorOpDoesNotExist,
-					}},
 				},
 				Endpoints: []monitoringv1.Endpoint{{
-					Port: "http",
+					Port: "https",
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
 							Action:      "replace",
@@ -195,6 +232,12 @@ var _ = Describe("VictoriaLogs", func() {
 						{
 							Action: "labelmap",
 							Regex:  `__meta_kubernetes_service_label_(.+)`,
+						},
+					},
+					Scheme: new(monitoringv1.SchemeHTTPS),
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 						},
 					},
 				}},
@@ -234,7 +277,7 @@ var _ = Describe("VictoriaLogs", func() {
 				"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
 				"sha512:ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff",
 			} {
-				component = New(c, namespace, Values{ImageRepository: imageRepository, ImageTag: digestTag})
+				component = New(c, namespace, Values{ImageRepository: imageRepository, ImageTag: digestTag}, fakeSecretManager)
 				Expect(component.Deploy(ctx)).To(MatchError(ContainSubstring("digest-only image reference")))
 			}
 		})
@@ -284,14 +327,15 @@ var _ = Describe("VictoriaLogs", func() {
 		DescribeTable("should successfully deploy all resources including the PersistentVolumeClaimAutoscaler when PVC autoscaler is enabled",
 			func(maxCapacity resource.Quantity) {
 				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
 					PVCAutoscaling: PVCAutoscalingConfig{
 						Enabled:     true,
 						MaxCapacity: maxCapacity,
 					},
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 
 				Expect(component.Deploy(ctx)).To(Succeed())
 
@@ -312,11 +356,12 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in seed cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
-					ClusterType:     componentpkg.ClusterTypeSeed,
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
+					ClusterType:        componentpkg.ClusterTypeSeed,
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 			})
 
 			It("should successfully deploy all resources with seed-specific configuration", func() {
@@ -328,7 +373,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9429}]`,
 					},
 				}
 
@@ -355,16 +400,17 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in garden cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
-					ClusterType:     componentpkg.ClusterTypeSeed,
-					IsGardenCluster: true,
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
+					ClusterType:        componentpkg.ClusterTypeSeed,
+					IsGardenCluster:    true,
 					PVCAutoscaling: PVCAutoscalingConfig{
 						Enabled:     true,
 						MaxCapacity: resource.MustParse("200Gi"),
 					},
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 			})
 
 			It("should successfully deploy all resources with garden-specific configuration", func() {
@@ -376,7 +422,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyGardenScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9429}]`,
 					},
 				}
 
@@ -402,11 +448,12 @@ var _ = Describe("VictoriaLogs", func() {
 		Context("when deployed in shoot cluster", func() {
 			BeforeEach(func() {
 				values = Values{
-					ImageRepository: imageRepository,
-					ImageTag:        imageTag,
-					ClusterType:     componentpkg.ClusterTypeShoot,
+					ImageRepository:    imageRepository,
+					ImageTag:           imageTag,
+					SecretNameServerCA: "ca",
+					ClusterType:        componentpkg.ClusterTypeShoot,
 				}
-				component = New(c, namespace, values)
+				component = New(c, namespace, values, fakeSecretManager)
 			})
 
 			It("should successfully deploy all resources with shoot-specific configuration", func() {
@@ -418,7 +465,7 @@ var _ = Describe("VictoriaLogs", func() {
 				expectedVlSingle := vlSingle.DeepCopy()
 				expectedVlSingle.Spec.ManagedMetadata = &victoriametricsv1beta1.ManagedObjectsMetadata{
 					Annotations: map[string]string{
-						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9428}]`,
+						resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicyScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":9429}]`,
 						resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias: "all-shoots",
 						resourcesv1alpha1.NetworkingNamespaceSelectors:             `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
 					},

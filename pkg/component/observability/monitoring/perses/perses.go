@@ -121,7 +121,8 @@ func (p *perses) getPodLabels() map[string]string {
 	}
 
 	if p.values.VictoriaLogsEnabled {
-		labels[gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort)] = v1beta1constants.LabelNetworkPolicyAllowed
+		// TODO(teodordichev): switch to HTTPS once the perses-operator upstream issue is resolved.
+		labels[gardenerutils.NetworkPolicyLabel(victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsHttpPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
 	seedSpecificLabels := map[string]string{
