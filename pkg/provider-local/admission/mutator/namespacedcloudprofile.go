@@ -18,7 +18,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -48,11 +48,11 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return nil
 	}
 
-	specConfig := &v1alpha1.CloudProfileConfig{}
+	specConfig := &localv1alpha1.CloudProfileConfig{}
 	if _, _, err := p.decoder.Decode(profile.Spec.ProviderConfig.Raw, nil, specConfig); err != nil {
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile spec for '%s': %w", profile.Name, err)
 	}
-	statusConfig := &v1alpha1.CloudProfileConfig{}
+	statusConfig := &localv1alpha1.CloudProfileConfig{}
 	if _, _, err := p.decoder.Decode(profile.Status.CloudProfileSpec.ProviderConfig.Raw, nil, statusConfig); err != nil {
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
 	}
@@ -75,16 +75,16 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 // Depending on whether the parent CloudProfile is in capability format or not, it transforms the given config to
 // the capability format or the deprecated architecture fields format respectively.
 // It assumes that the given config is either completely in the capability format or in the deprecated architecture fields format.
-func TransformProviderConfigToParentFormat(cloudProfileConfig *v1alpha1.CloudProfileConfig, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *v1alpha1.CloudProfileConfig {
+func TransformProviderConfigToParentFormat(cloudProfileConfig *localv1alpha1.CloudProfileConfig, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) *localv1alpha1.CloudProfileConfig {
 	isParentInCapabilityFormat := len(capabilityDefinitions) != 0
 	for idx, machineImage := range cloudProfileConfig.MachineImages {
-		cloudProfileConfig.MachineImages[idx].Versions = make([]v1alpha1.MachineImageVersion, 0, len(machineImage.Versions))
+		cloudProfileConfig.MachineImages[idx].Versions = make([]localv1alpha1.MachineImageVersion, 0, len(machineImage.Versions))
 		for _, version := range machineImage.Versions {
 			isVersionInCapabilityFormat := len(version.CapabilityFlavors) != 0
-			transformedVersion := v1alpha1.MachineImageVersion{Version: version.Version}
+			transformedVersion := localv1alpha1.MachineImageVersion{Version: version.Version}
 			if isParentInCapabilityFormat && !isVersionInCapabilityFormat {
 				// transform to capability format
-				transformedVersion.CapabilityFlavors = []v1alpha1.MachineImageFlavor{{Image: version.Image}}
+				transformedVersion.CapabilityFlavors = []localv1alpha1.MachineImageFlavor{{Image: version.Image}}
 			} else if !isParentInCapabilityFormat && isVersionInCapabilityFormat {
 				// transform to old format
 				transformedVersion.Image = version.CapabilityFlavors[0].Image
@@ -97,20 +97,20 @@ func TransformProviderConfigToParentFormat(cloudProfileConfig *v1alpha1.CloudPro
 	return cloudProfileConfig
 }
 
-func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.MachineImages) []v1alpha1.MachineImages {
-	specImages := utils.CreateMapFromSlice(specMachineImages, func(mi v1alpha1.MachineImages) string { return mi.Name })
-	statusImages := utils.CreateMapFromSlice(statusMachineImages, func(mi v1alpha1.MachineImages) string { return mi.Name })
+func mergeMachineImages(specMachineImages, statusMachineImages []localv1alpha1.MachineImages) []localv1alpha1.MachineImages {
+	specImages := utils.CreateMapFromSlice(specMachineImages, func(mi localv1alpha1.MachineImages) string { return mi.Name })
+	statusImages := utils.CreateMapFromSlice(statusMachineImages, func(mi localv1alpha1.MachineImages) string { return mi.Name })
 	for _, specMachineImage := range specImages {
 		if _, exists := statusImages[specMachineImage.Name]; !exists {
 			statusImages[specMachineImage.Name] = specMachineImage
 		} else {
-			statusImageVersions := utils.CreateMapFromSlice(statusImages[specMachineImage.Name].Versions, func(v v1alpha1.MachineImageVersion) string { return v.Version })
-			specImageVersions := utils.CreateMapFromSlice(specImages[specMachineImage.Name].Versions, func(v v1alpha1.MachineImageVersion) string { return v.Version })
+			statusImageVersions := utils.CreateMapFromSlice(statusImages[specMachineImage.Name].Versions, func(v localv1alpha1.MachineImageVersion) string { return v.Version })
+			specImageVersions := utils.CreateMapFromSlice(specImages[specMachineImage.Name].Versions, func(v localv1alpha1.MachineImageVersion) string { return v.Version })
 			for _, version := range specImageVersions {
 				statusImageVersions[version.Version] = version
 			}
 
-			statusImages[specMachineImage.Name] = v1alpha1.MachineImages{
+			statusImages[specMachineImage.Name] = localv1alpha1.MachineImages{
 				Name:     specMachineImage.Name,
 				Versions: slices.Collect(maps.Values(statusImageVersions)),
 			}

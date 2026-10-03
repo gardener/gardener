@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 )
 
 func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error) {
@@ -31,9 +31,9 @@ func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error)
 }
 
 func (w *workerDelegate) updateWorkerProviderStatus(ctx context.Context, workerStatus *api.WorkerStatus) error {
-	workerStatusV1alpha1 := &v1alpha1.WorkerStatus{
+	workerStatusV1alpha1 := &localv1alpha1.WorkerStatus{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			APIVersion: localv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "WorkerStatus",
 		},
 	}

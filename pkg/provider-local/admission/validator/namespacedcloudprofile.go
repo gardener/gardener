@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/admission/mutator"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/helper"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -142,7 +142,7 @@ func (p *namespacedCloudProfileValidator) validateNamespacedCloudProfileProvider
 // SimulateTransformToParentFormat simulates the transformation of the given NamespacedCloudProfile and its providerConfig
 // to the parent CloudProfile format. This includes the transformation of both the providerConfig and the spec.
 func SimulateTransformToParentFormat(cloudProfileConfig *api.CloudProfileConfig, cloudProfile *core.NamespacedCloudProfile, capabilityDefinitions []gardencorev1beta1.CapabilityDefinition) error {
-	cloudProfileConfigV1alpha1 := &v1alpha1.CloudProfileConfig{}
+	cloudProfileConfigV1alpha1 := &localv1alpha1.CloudProfileConfig{}
 	path := field.NewPath("spec").Child("providerConfig")
 
 	if err := helper.Scheme.Convert(cloudProfileConfig, cloudProfileConfigV1alpha1, nil); err != nil {

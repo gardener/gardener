@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/admission/mutator"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -64,32 +64,32 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 
 	Describe("TransformProviderConfigToParentFormat", func() {
 		var parentCloudProfile *gardencorev1beta1.CloudProfile
-		var cpConfig *v1alpha1.CloudProfileConfig
-		var capabilityMachineImage v1alpha1.MachineImages
-		var legacyMachineImage v1alpha1.MachineImages
+		var cpConfig *localv1alpha1.CloudProfileConfig
+		var capabilityMachineImage localv1alpha1.MachineImages
+		var legacyMachineImage localv1alpha1.MachineImages
 
 		BeforeEach(func() {
 			parentCloudProfile = &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{},
 			}
-			cpConfig = &v1alpha1.CloudProfileConfig{
+			cpConfig = &localv1alpha1.CloudProfileConfig{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "CloudProfileConfig",
 					APIVersion: "local.provider.extensions.gardener.cloud/v1alpha1",
 				},
 			}
-			capabilityMachineImage = v1alpha1.MachineImages{
+			capabilityMachineImage = localv1alpha1.MachineImages{
 				Name: "image-1",
-				Versions: []v1alpha1.MachineImageVersion{{
+				Versions: []localv1alpha1.MachineImageVersion{{
 					Version: "1.0",
-					CapabilityFlavors: []v1alpha1.MachineImageFlavor{{
+					CapabilityFlavors: []localv1alpha1.MachineImageFlavor{{
 						Image: "local/image:1.0-amd64",
 					}},
 				}},
 			}
-			legacyMachineImage = v1alpha1.MachineImages{
+			legacyMachineImage = localv1alpha1.MachineImages{
 				Name: "image-1",
-				Versions: []v1alpha1.MachineImageVersion{{
+				Versions: []localv1alpha1.MachineImageVersion{{
 					Version: "1.0",
 					Image:   "local/image:1.0-amd64",
 				}},
@@ -104,7 +104,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			})
 
 			It("should do nothing if the NamespacedCloudProfile spec is in capability format", func() {
-				machineImages := []v1alpha1.MachineImages{capabilityMachineImage}
+				machineImages := []localv1alpha1.MachineImages{capabilityMachineImage}
 				cpConfig.MachineImages = machineImages
 
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
@@ -113,7 +113,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			})
 
 			It("should transform the status to capability format if the NamespacedCloudProfile spec is in old format", func() {
-				cpConfig.MachineImages = []v1alpha1.MachineImages{legacyMachineImage}
+				cpConfig.MachineImages = []localv1alpha1.MachineImages{legacyMachineImage}
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages[0]).To(Equal(capabilityMachineImage))
 			})
@@ -121,7 +121,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 
 		When("the parentCloudProfile has NO machineCapabilities defined", func() {
 			It("should do nothing if the NamespacedCloudProfile spec is in legacy format", func() {
-				machineImages := []v1alpha1.MachineImages{legacyMachineImage}
+				machineImages := []localv1alpha1.MachineImages{legacyMachineImage}
 				cpConfig.MachineImages = machineImages
 
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
@@ -130,7 +130,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			})
 
 			It("should transform the status to legacy format if the NamespacedCloudProfile spec is in capability format", func() {
-				cpConfig.MachineImages = []v1alpha1.MachineImages{capabilityMachineImage}
+				cpConfig.MachineImages = []localv1alpha1.MachineImages{capabilityMachineImage}
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages[0]).To(Equal(legacyMachineImage))
 			})
