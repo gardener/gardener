@@ -19,7 +19,10 @@ import (
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
-	Describe("Renew gardenlet kubeconfig", Ordered, PriorityFast, func() {
+	// This test is Serial because renewing the kubeconfig restarts gardenlet. This interrupts operations of concurrently
+	// running shoot specs and blocks new shoot operations until the seed is healthy again. Use Serial with care, as it
+	// increases the overall test duration.
+	Describe("Renew gardenlet kubeconfig", Ordered, Serial, PriorityFast, func() {
 		var (
 			s        *SeedContext
 			verifier rotation.GardenletKubeconfigRotationVerifier
@@ -75,5 +78,10 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		It("Verify after gardenlet kubeconfig rotation", func(ctx SpecContext) {
 			verifier.After(ctx, false)
 		}, SpecTimeout(time.Minute))
+
+		// Restarting gardenlet makes the seed unhealthy until the seed Prometheus has scraped the new gardenlet pod. Gardenlet
+		// doesn't start any shoot operation in the meantime, so wait for the seed to be fully ready again before the next
+		// specs start.
+		ItShouldWaitForSeedToBeReady(s)
 	})
 })
