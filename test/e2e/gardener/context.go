@@ -56,14 +56,18 @@ type TestContext struct {
 	GardenKomega komega.Komega
 }
 
-// NewTestContext sets up a new TestContext for working with the garden cluster pointed to by the KUBECONFIG env var.
-// As NewTestContext is expected to be called during tree construction, we cannot perform gomega assertions and have to
-// handle errors by panicking.
+// NewTestContext returns a new TestContext for working with the garden cluster pointed to by the KUBECONFIG env var.
+// The clients are not initialized yet, this must be done by calling Init. NewTestContext does not fail, so it is safe to
+// call it during tree construction. Init on the other hand must be called in a setup node like BeforeAll.
 func NewTestContext() *TestContext {
-	t := &TestContext{
+	return &TestContext{
 		Log: logger.MustNewZapLogger(logger.DebugLevel, logger.FormatText, logzap.WriteTo(GinkgoWriter)),
 	}
+}
 
+// Init initializes the garden clients of the TestContext. It panics if the initialization fails and should be called in
+// a setup node like BeforeAll, not during tree construction.
+func (t *TestContext) Init() *TestContext {
 	gardenScheme := kubernetes.GardenScheme
 	utilruntime.Must(operatorv1alpha1.AddToScheme(gardenScheme))
 	utilruntime.Must(resourcesv1alpha1.AddToScheme(gardenScheme))

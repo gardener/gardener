@@ -39,8 +39,8 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create, Authenticate, Delete", Ordered, Label("authentication"), func() {
-		shoot1 := NewTestContext().ForShoot(DefaultShoot("e2e-auth-one"))
-		shoot2 := NewTestContext().ForShoot(DefaultShoot("e2e-auth-two"))
+		shoot1 := NewTestContext().Init().ForShoot(DefaultShoot("e2e-auth-one"))
+		shoot2 := NewTestContext().Init().ForShoot(DefaultShoot("e2e-auth-two"))
 
 		ItShouldCreateShoot(shoot1)
 		ItShouldCreateShoot(shoot2)

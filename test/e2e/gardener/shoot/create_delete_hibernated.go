@@ -45,11 +45,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-hib")))
+			test(NewTestContext().Init().ForShoot(DefaultShoot("e2e-hib")))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-hib")))
+			test(NewTestContext().Init().ForShoot(DefaultWorkerlessShoot("e2e-hib")))
 		})
 	})
 })

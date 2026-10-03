@@ -26,7 +26,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					Domain: new("shoot.non-existing-domain"),
 				}
 
-				s = NewTestContext().ForShoot(shoot)
+				s = NewTestContext().Init().ForShoot(shoot)
 			})
 
 			ItShouldCreateShoot(s)

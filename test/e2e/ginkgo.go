@@ -36,7 +36,7 @@ const (
 //	Context("Ordered test case", Ordered, func() {
 //	  var c *TestContext
 //	  BeforeTestSetup(func() {
-//	    c = NewTestContext()
+//	    c = NewTestContext().Init()
 //	  })
 //	  ItShouldDoStuff(c)
 //	})
@@ -45,6 +45,13 @@ const (
 // The only alternative is implementing an initialization method on the `TestContext`. However, sharing the context
 // variable in multiple containers (i.e., test cases) would require zeroing the context before the initialization, which
 // is easy to forget and might lead to surprises.
+//
+// Deprecated: BeforeTestSetup runs during ginkgo's tree construction, i.e., also for specs that are not selected by the
+// label filter. A failing setup (e.g., creating the garden client) then breaks the whole test run instead of just the
+// affected spec, and it doesn't show up in the JUnit report. Furthermore, it looks like a ginkgo setup node but isn't
+// one, which invites reintroducing failable code in container nodes. Instead, declare an empty context and initialize
+// it in a BeforeAll node (e.g., `tc := NewTestContext()` and `tc.Init()`).
+// See https://github.com/gardener/gardener/issues/13134.
 func BeforeTestSetup(f func()) {
 	// Recover from panics that might happen by calling Fail() during the test setup.
 	defer GinkgoRecover()
