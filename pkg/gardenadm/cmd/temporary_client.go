@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 )
 
@@ -40,18 +41,23 @@ var NewClientFromBytes = kubernetes.NewClientFromBytes
 
 // InitializeTemporaryClientSet acquires a short-lived client certificate-based kubeconfig.
 func InitializeTemporaryClientSet(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface) (kubernetes.Interface, error) {
-	bootstrapKubeconfig, cached, err := getCachedBootstrapKubeconfig(b)
+	var (
+		certificateSubject = bootstrapCertificateSubject(b)
+		cachePath          = CachedBootstrapKubeconfigPath(b.FS, bootstrapClientSet.RESTConfig().Host, certificateSubject.CommonName)
+	)
+
+	bootstrapKubeconfig, cached, err := getCachedBootstrapKubeconfig(b.FS, cachePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed retrieving cached bootstrap kubeconfig: %w", err)
 	}
 
 	if !cached {
-		bootstrapKubeconfig, err = requestShortLivedBootstrapKubeconfig(ctx, b, bootstrapClientSet)
+		bootstrapKubeconfig, err = requestShortLivedBootstrapKubeconfig(ctx, b, bootstrapClientSet, certificateSubject)
 		if err != nil {
 			return nil, fmt.Errorf("failed to request short-lived bootstrap kubeconfig via CertificateSigningRequest API: %w", err)
 		}
 
-		if err := b.FS.WriteFile(cachedBootstrapKubeconfigPath(b.FS), bootstrapKubeconfig, 0600); err != nil {
+		if err := b.FS.WriteFile(cachePath, bootstrapKubeconfig, 0600); err != nil {
 			return nil, fmt.Errorf("failed writing the retrieved bootstrap kubeconfig to a temporary file: %w", err)
 		}
 	}
@@ -63,14 +69,17 @@ func InitializeTemporaryClientSet(ctx context.Context, b *botanist.GardenadmBota
 	)
 }
 
-func cachedBootstrapKubeconfigPath(fs afero.Afero) string {
-	return filepath.Join(fs.GetTempDir(""), "gardenadm-bootstrap-kubeconfig")
+// CachedBootstrapKubeconfigPath returns the path of the file caching the short-lived bootstrap kubeconfig. The file
+// name is specific to the target API server and the requested user, so that executing gardenadm against different
+// clusters (e.g., when running `gardenadm connect` outside the control plane machines) never reuses foreign credentials.
+func CachedBootstrapKubeconfigPath(fs afero.Afero, host, commonName string) string {
+	return filepath.Join(fs.GetTempDir(""), "gardenadm-bootstrap-kubeconfig-"+utils.ComputeSHA256Hex([]byte(host + "\n" + commonName))[:16])
 }
 
 const bootstrapKubeconfigValidity = 10 * time.Minute
 
-func getCachedBootstrapKubeconfig(b *botanist.GardenadmBotanist) ([]byte, bool, error) {
-	fileInfo, err := b.FS.Stat(cachedBootstrapKubeconfigPath(b.FS))
+func getCachedBootstrapKubeconfig(fs afero.Afero, path string) ([]byte, bool, error) {
+	fileInfo, err := fs.Stat(path)
 	if err != nil || time.Since(fileInfo.ModTime()) > bootstrapKubeconfigValidity-2*time.Minute {
 		// We deliberately ignore the error here - this is just a best-effort attempt to cache the bootstrap kubeconfig.
 		// If the file doesn't exist, or we cannot read/find it for whatever reason, we just consider it as a cache
@@ -80,7 +89,7 @@ func getCachedBootstrapKubeconfig(b *botanist.GardenadmBotanist) ([]byte, bool, 
 		return nil, false, nil //nolint:nilerr
 	}
 
-	data, err := b.FS.ReadFile(cachedBootstrapKubeconfigPath(b.FS))
+	data, err := fs.ReadFile(path)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed reading the cached bootstrap kubeconfig: %w", err)
 	}
@@ -88,17 +97,19 @@ func getCachedBootstrapKubeconfig(b *botanist.GardenadmBotanist) ([]byte, bool, 
 	return data, true, nil
 }
 
-func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface) ([]byte, error) {
+func bootstrapCertificateSubject(b *botanist.GardenadmBotanist) *pkix.Name {
 	commonNameSuffix := b.HostName
 	if b.Shoot != nil && b.Shoot.GetInfo() != nil {
 		commonNameSuffix = b.Shoot.GetInfo().Namespace + ":" + b.Shoot.GetInfo().Name
 	}
 
-	certificateSubject := &pkix.Name{
+	return &pkix.Name{
 		Organization: []string{v1beta1constants.ShootsGroup},
 		CommonName:   v1beta1constants.GardenadmUserNamePrefix + commonNameSuffix,
 	}
+}
 
+func requestShortLivedBootstrapKubeconfig(ctx context.Context, b *botanist.GardenadmBotanist, bootstrapClientSet kubernetes.Interface, certificateSubject *pkix.Name) ([]byte, error) {
 	certData, privateKeyData, _, err := certificatesigningrequest.RequestCertificate(ctx, b.Logger, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, &metav1.Duration{Duration: bootstrapKubeconfigValidity}, "gardenadm-csr-")
 	if err != nil {
 		return nil, fmt.Errorf("unable to bootstrap the kubeconfig: %w", err)

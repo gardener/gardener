@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/x509/pkix"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -80,7 +79,7 @@ var _ = Describe("Temporary Client", func() {
 				WithRESTConfig(restConfig).
 				Build()
 
-			cachedPath = filepath.Join(fakeFS.GetTempDir(""), "gardenadm-bootstrap-kubeconfig")
+			cachedPath = CachedBootstrapKubeconfigPath(fakeFS, restConfig.Host, "gardener.cloud:gardenadm:shoot:test-namespace:test-shoot")
 			csr = &certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "gardenadm-csr-test",
@@ -275,6 +274,7 @@ users:
 			BeforeEach(func() {
 				b.Shoot.SetInfo(nil)
 				b.HostName = "test-hostname"
+				cachedPath = CachedBootstrapKubeconfigPath(fakeFS, restConfig.Host, "gardener.cloud:gardenadm:shoot:test-hostname")
 			})
 
 			It("should use hostname as common name suffix when shoot info is not set", func() {
@@ -329,6 +329,27 @@ users:
 				Expect(capturedSubject.Organization).To(Equal([]string{"gardener.cloud:system:shoots"}))
 				Expect(capturedSubject.CommonName).To(Equal("gardener.cloud:gardenadm:shoot:test-namespace:test-shoot"))
 			})
+		})
+	})
+
+	Describe("#CachedBootstrapKubeconfigPath", func() {
+		var fakeFS afero.Afero
+
+		BeforeEach(func() {
+			fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
+		})
+
+		It("should return a stable path in the temp dir", func() {
+			path := CachedBootstrapKubeconfigPath(fakeFS, "https://garden", "user")
+			Expect(path).To(HavePrefix(fakeFS.GetTempDir("")))
+			Expect(path).To(ContainSubstring("gardenadm-bootstrap-kubeconfig-"))
+			Expect(CachedBootstrapKubeconfigPath(fakeFS, "https://garden", "user")).To(Equal(path))
+		})
+
+		It("should return different paths for different API servers or users", func() {
+			path := CachedBootstrapKubeconfigPath(fakeFS, "https://garden", "user")
+			Expect(CachedBootstrapKubeconfigPath(fakeFS, "https://other-garden", "user")).NotTo(Equal(path))
+			Expect(CachedBootstrapKubeconfigPath(fakeFS, "https://garden", "other-user")).NotTo(Equal(path))
 		})
 	})
 })
