@@ -99,6 +99,21 @@ func NewGardenadmBotanistFromManifests(
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
 	}
 
+	return NewGardenadmBotanistFromResources(ctx, log, clientSet, resources, runsControlPlane)
+}
+
+// NewGardenadmBotanistFromResources computes the extensions for the given resources and initializes a new
+// GardenadmBotanist with them.
+func NewGardenadmBotanistFromResources(
+	ctx context.Context,
+	log logr.Logger,
+	clientSet kubernetes.Interface,
+	resources gardenadm.Resources,
+	runsControlPlane bool,
+) (
+	*GardenadmBotanist,
+	error,
+) {
 	extensions, err := ComputeExtensions(resources, runsControlPlane, v1beta1helper.HasManagedInfrastructure(resources.Shoot))
 	if err != nil {
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
@@ -350,13 +365,6 @@ func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runs
 			shoot.Status.UID = uid
 		}
 
-		if v1beta1helper.HasManagedInfrastructure(resources.Shoot) && resources.ShootState == nil {
-			return fmt.Errorf("shoot has managed infrastructure, but ShootState is missing " +
-				"(the ShootState is usually exported by `gardenadm bootstrap` and read by `gardenadm init`): " +
-				"you should either use `gardenadm bootstrap` to create the self-hosted shoot cluster with managed infrastructure or " +
-				"remove the `Shoot.spec.{secret,credentials}BindingName` field to mark the shoot as having unmanaged infrastructure")
-		}
-
 		if resources.ShootState != nil {
 			// Instruct the botanist and shoot package to read the ShootState and restore the state of extensions, secrets, etc.
 			// For managed infrastructure, this restores the state exported by `gardenadm bootstrap`.
@@ -369,6 +377,19 @@ func initializeShootResource(resources gardenadm.Resources, fs afero.Afero, runs
 		// For `gardenadm bootstrap`, we don't need a stable UID. We generate a random one instead, because we might not be
 		// able to persist the generated UID in /var/lib/gardenadm (e.g., when running `gardenadm bootstrap` on macOS).
 		shoot.Status.UID = uuid.NewUUID()
+	}
+
+	return nil
+}
+
+// ValidateShootStateForInit validates that a ShootState is present if the shoot has managed infrastructure. This is
+// required when initializing the control plane, as the state of the infrastructure is restored from it.
+func ValidateShootStateForInit(resources gardenadm.Resources) error {
+	if v1beta1helper.HasManagedInfrastructure(resources.Shoot) && resources.ShootState == nil {
+		return fmt.Errorf("shoot has managed infrastructure, but ShootState is missing " +
+			"(the ShootState is usually exported by `gardenadm bootstrap` and read by `gardenadm init`): " +
+			"you should either use `gardenadm bootstrap` to create the self-hosted shoot cluster with managed infrastructure or " +
+			"remove the `Shoot.spec.{secret,credentials}BindingName` field to mark the shoot as having unmanaged infrastructure")
 	}
 
 	return nil

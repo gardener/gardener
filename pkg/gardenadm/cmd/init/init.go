@@ -340,6 +340,10 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath st
 		return nil, err
 	}
 
+	if err := gardenadmbotanist.ValidateShootStateForInit(b.Resources); err != nil {
+		return nil, err
+	}
+
 	if opts.Zone != "" {
 		b.Zone = new(opts.Zone)
 	}

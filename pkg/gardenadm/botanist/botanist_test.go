@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/gardenadm"
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -97,9 +98,11 @@ metadata:
 `)}
 				})
 
-				It("should fail if the ShootState is missing", func() {
+				It("should not fail if the ShootState is missing (validated separately by ValidateShootStateForInit)", func() {
 					delete(fsys, configDir+"/shootstate.yaml")
-					Expect(NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)).Error().To(MatchError(ContainSubstring("ShootState is missing")))
+					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(b.Shoot.GetInfo().Status.LastOperation).To(BeNil())
 				})
 
 				It("should set the LastOperation to Restore and fetch the ShootState", func() {
@@ -229,6 +232,29 @@ metadata:
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "local"}, &securityv1alpha1.WorkloadIdentity{})).To(Succeed())
+		})
+	})
+
+	Describe("#ValidateShootStateForInit", func() {
+		var resources gardenadm.Resources
+
+		BeforeEach(func() {
+			resources = gardenadm.Resources{Shoot: &gardencorev1beta1.Shoot{}}
+		})
+
+		It("should succeed for unmanaged infrastructure without ShootState", func() {
+			Expect(ValidateShootStateForInit(resources)).To(Succeed())
+		})
+
+		It("should succeed for managed infrastructure with ShootState", func() {
+			resources.Shoot.Spec.CredentialsBindingName = new("provider-account")
+			resources.ShootState = &gardencorev1beta1.ShootState{}
+			Expect(ValidateShootStateForInit(resources)).To(Succeed())
+		})
+
+		It("should fail for managed infrastructure without ShootState", func() {
+			resources.Shoot.Spec.CredentialsBindingName = new("provider-account")
+			Expect(ValidateShootStateForInit(resources)).To(MatchError(ContainSubstring("ShootState is missing")))
 		})
 	})
 })
