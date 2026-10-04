@@ -322,7 +322,9 @@ self-hosted shoot cluster:
   gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s
 
 Copy the output and run it on a control plane node in order to deploy the
-gardenlet for connectivity to Gardener.
+gardenlet for connectivity to Gardener. Alternatively, run it anywhere else with
+the KUBECONFIG environment variable pointing to this cluster and the
+--config-dir flag pointing to the resources used for creating it.
 
 Please use the shoots/adminkubeconfig subresource to retrieve a kubeconfig,
 see https://gardener.cloud/docs/gardener/shoot/shoot_access/.

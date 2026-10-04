@@ -4,7 +4,11 @@ Deploy a gardenlet for further cluster management
 
 ### Synopsis
 
-Deploy a gardenlet for further cluster management
+Deploy a gardenlet for further cluster management.
+
+The command can be executed on a control plane machine of the self-hosted shoot cluster or anywhere else. The
+self-hosted shoot cluster is targeted via the KUBECONFIG environment variable (defaults to /etc/kubernetes/admin.conf).
+Outside of a control plane machine, the --config-dir flag must point to the resources used for creating the cluster.
 
 ```
 gardenadm connect [flags]
@@ -13,8 +17,11 @@ gardenadm connect [flags]
 ### Examples
 
 ```
-# Deploy a gardenlet
-gardenadm connect
+# Deploy a gardenlet (on a control plane machine)
+gardenadm connect --bootstrap-token <token> --ca-certificate <ca> https://api.garden.example.com
+
+# Deploy a gardenlet (from outside the self-hosted shoot cluster)
+KUBECONFIG=/path/to/self-hosted-shoot/kubeconfig gardenadm connect --config-dir /path/to/manifests --bootstrap-token <token> --ca-certificate <ca> https://api.garden.example.com
 ```
 
 ### Options

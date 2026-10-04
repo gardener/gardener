@@ -33,8 +33,11 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -50,10 +53,17 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "connect",
 		Short: "Deploy a gardenlet for further cluster management",
-		Long:  "Deploy a gardenlet for further cluster management",
+		Long: `Deploy a gardenlet for further cluster management.
 
-		Example: `# Deploy a gardenlet
-gardenadm connect`,
+The command can be executed on a control plane machine of the self-hosted shoot cluster or anywhere else. The
+self-hosted shoot cluster is targeted via the KUBECONFIG environment variable (defaults to /etc/kubernetes/admin.conf).
+Outside of a control plane machine, the --config-dir flag must point to the resources used for creating the cluster.`,
+
+		Example: `# Deploy a gardenlet (on a control plane machine)
+gardenadm connect --bootstrap-token <token> --ca-certificate <ca> https://api.garden.example.com
+
+# Deploy a gardenlet (from outside the self-hosted shoot cluster)
+KUBECONFIG=/path/to/self-hosted-shoot/kubeconfig gardenadm connect --config-dir /path/to/manifests --bootstrap-token <token> --ca-certificate <ca> https://api.garden.example.com`,
 
 		Args: cobra.MaximumNArgs(1),
 
@@ -82,14 +92,33 @@ gardenadm connect`,
 func run(ctx context.Context, opts *Options) error {
 	opts.Log.Info("Using resources from directory", "configDir", opts.ConfigDir)
 
-	b, err := botanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
-	if err != nil {
-		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
-	}
-	b.SeedClientSet, err = b.CreateClientSet(ctx)
+	clientSet, err := tokenutils.CreateClientSet(ctx, opts.Log)
 	if err != nil {
 		return fmt.Errorf("failed creating client set for self-hosted shoot: %w", err)
 	}
+
+	resources, err := gardenadm.ReadManifests(opts.Log, botanist.DirFS(opts.ConfigDir))
+	if err != nil {
+		return fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
+	}
+
+	// The shoot UID determines the names of the BackupBucket/BackupEntry and must match the one used by `gardenadm init`.
+	// Read it from the Cluster resource in the self-hosted shoot instead of the control plane machine's file system, so
+	// that `gardenadm connect` can also be executed outside the control plane machines.
+	cluster, err := gardenerextensions.GetCluster(ctx, clientSet.Client(), metav1.NamespaceSystem)
+	if err != nil {
+		return fmt.Errorf("failed reading Cluster resource %s from self-hosted shoot (was it initialized with 'gardenadm init'?): %w", metav1.NamespaceSystem, err)
+	}
+	if cluster.Shoot == nil || cluster.Shoot.Status.UID == "" {
+		return fmt.Errorf("cluster resource %s in self-hosted shoot does not contain the shoot UID", metav1.NamespaceSystem)
+	}
+	resources.Shoot.Status.UID = cluster.Shoot.Status.UID
+
+	b, err := botanist.NewGardenadmBotanistFromResources(ctx, opts.Log, nil, resources, true)
+	if err != nil {
+		return fmt.Errorf("failed creating gardenadm botanist: %w", err)
+	}
+	b.SeedClientSet = clientSet
 
 	if bootstrapEtcdExists, err := isBootstrapEtcdStillRunning(ctx, b); err != nil {
 		return fmt.Errorf("failed checking if bootstrap etcd is still running: %w", err)
@@ -196,7 +225,8 @@ API, rather than by directly editing resources in the cluster.
 
 The bootstrap token will be deleted automatically by kube-controller-manager
 after it has expired. If you want to delete it right away, run the following
-command on any control plane node:
+command on any control plane node (or anywhere with KUBECONFIG pointing to the
+self-hosted shoot cluster):
 
   gardenadm token delete %s
 

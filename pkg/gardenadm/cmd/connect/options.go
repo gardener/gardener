@@ -48,8 +48,13 @@ func (o *Options) Validate() error {
 		// `gardenadm init` stores the path of the config directory in the cmd.ConfigDirLocation file on the machine's
 		// file system. Hence, we can default it to this location if the user does not explicitly provide us with the
 		// config directory.
+		// When running outside the control plane machines, this file does not exist and the config directory must be
+		// provided explicitly.
 		data, err := os.ReadFile(cmd.ConfigDirLocation)
 		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("must provide a path to a config directory via --config-dir when not running on a control plane machine (%s does not exist)", cmd.ConfigDirLocation)
+			}
 			return fmt.Errorf("error reading config dir location file %s: %w", cmd.ConfigDirLocation, err)
 		}
 		o.ConfigDir = string(data)
