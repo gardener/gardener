@@ -21,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	. "github.com/gardener/gardener/pkg/utils/test"
 )
 
 const (
@@ -59,7 +58,7 @@ func (v *GardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 
 	if expectPodRestart {
 		By("Verify that new gardenlet pod has taken over responsibility for seed")
-		CEventually(ctx, func() error {
+		Eventually(ctx, func() error {
 			if err := v.GardenReader.Get(ctx, client.ObjectKeyFromObject(v.Seed), v.Seed); err != nil {
 				return err
 			}
@@ -73,7 +72,7 @@ func (v *GardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 	}
 
 	By("Verify that gardenlet's kubeconfig secret has actually been renewed")
-	CEventually(ctx, func() error {
+	Eventually(ctx, func() error {
 		secret := &corev1.Secret{}
 		if err := v.SeedReader.Get(ctx, client.ObjectKey{Name: v.GardenletKubeconfigSecretName, Namespace: v.GardenletKubeconfigSecretNamespace}, secret); err != nil {
 			return err
@@ -113,7 +112,7 @@ func (v *GardenletKubeconfigRotationVerifier) After(parentCtx context.Context, e
 	By("Verify that gardenlet's deployment is updated and healthy after kubeconfig secret was renewed")
 	gardenletDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: gardenletDeploymentName, Namespace: gardenletDeploymentNamespace}}
 	isUpdated := health.IsDeploymentUpdated(v.SeedReader, gardenletDeployment)
-	CEventually(ctx, func(g Gomega) {
+	Eventually(ctx, func(g Gomega) {
 		updated, err := isUpdated(ctx)
 		g.Expect(err).ToNot(HaveOccurred())
 		g.Expect(updated).To(BeTrue())
