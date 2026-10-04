@@ -47,6 +47,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		shootName      = "root"
 		shootNamespace = "garden"
 		technicalID    = "shoot--" + shootNamespace + "--" + shootName
+		configDir      = "../../../dev-setup/gardenadm/resources/generated/managed-infra"
 	)
 
 	var (
@@ -80,7 +81,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should start the bootstrap flow", func() {
 			// Start the gardenadm process but don't wait for it to complete so that we can asynchronously perform assertions
 			// on individual steps in the test specs below.
-			session = Run("bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--kubeconfig-output", kubeconfigOutputFile,
+			session = Run("bootstrap", "-d", configDir, "--kubeconfig-output", kubeconfigOutputFile,
 				// Override bastion ingress CIDR to a fixed value to avoid relying on public IP detection in e2e tests.
 				// Restricting bastion ingress traffic does not work in provider-local anyway.
 				"--bastion-ingress-cidr", "1.2.3.4/32",
@@ -353,7 +354,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		}, SpecTimeout(time.Minute))
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
-			RunAndWait(ctx, "bootstrap", "-d", "../../../dev-setup/gardenadm/resources/generated/managed-infra", "--bastion-ingress-cidr", "1.2.3.4/32")
+			RunAndWait(ctx, "bootstrap", "-d", configDir, "--bastion-ingress-cidr", "1.2.3.4/32")
 		}, SpecTimeout(10*time.Minute))
 	})
 
@@ -387,18 +388,20 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 				"token", "create", "--print-connect-command", "--shoot-namespace", shootNamespace, "--shoot-name", shootName,
 			))
 			Wait(ctx, session)
-			connectCommand := strings.Split(strings.ReplaceAll(string(session.Out.Contents()), `"`, ``), " ")
+			connectCommand := strings.Fields(strings.ReplaceAll(string(session.Out.Contents()), `"`, ``))
+			Expect(len(connectCommand)).To(BeNumerically(">", 2))
+			Expect(connectCommand[:2]).To(Equal([]string{"gardenadm", "connect"}))
 
-			command := []string{
-				"IMAGEVECTOR_OVERWRITE=/var/lib/gardenadm/imagevector-overwrite.yaml",
-				"IMAGEVECTOR_OVERWRITE_CHARTS=/var/lib/gardenadm/imagevector-overwrite-charts.yaml",
-				"/opt/bin/" + strings.Join(connectCommand, " "),
-			}
-			stdOut, _, err := RunInMachine(ctx, technicalID, 0, "bash", "-c", strings.Join(command, " "))
-			Expect(err).NotTo(HaveOccurred())
+			// In contrast to the unmanaged infrastructure scenario, run `gardenadm connect` from the host (outside the
+			// control plane machines) to verify that this is supported as well.
+			session = RunCommand(NewCommand(
+				[]string{"KUBECONFIG=" + gardenadm.ShootClusterKubeconfigPathOnHost},
+				append(connectCommand[1:], "--config-dir", configDir)...,
+			))
+			Wait(ctx, session)
 
-			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
-		}, SpecTimeout(time.Minute))
+			Eventually(ctx, session.Out).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
+		}, SpecTimeout(5*time.Minute))
 
 		gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, runInMachine)
 		gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, runInMachine, runInNode)
