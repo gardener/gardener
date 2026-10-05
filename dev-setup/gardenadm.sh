@@ -87,10 +87,10 @@ case "$COMMAND" in
     if [[ "$SCENARIO" != connect* ]]; then
       generate_manifests "$SCENARIO" "$SKAFFOLD_PROFILES"
     else
-      if [[ ! -f "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml" ]]; then
+      if [[ ! -s "$(dirname "$0")/gardenadm/resources/generated/connect/manifests.yaml" ]]; then
         # Generate the connect manifest on demand (rendering needs no cluster) when the control plane is set
         # up before the self-hosted shoot, e.g. in a fresh CI environment that never ran `make gind-up` first.
-        echo "> connect/manifests.yaml not found; generating it from the unmanaged-infra scenario..."
+        echo "> connect/manifests.yaml missing or empty; generating it from the unmanaged-infra scenario..."
         SKAFFOLD_PLATFORM="${SKAFFOLD_PLATFORM:-linux/$(go env GOARCH)}" \
         SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS=false \
           generate_manifests unmanaged-infra "-p unmanaged-infra"
