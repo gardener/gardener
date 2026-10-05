@@ -41,6 +41,7 @@ fi
 # The patch files should contain the Gardener version and the Git commit SHA.
 gardener_version=$(cat "VERSION")
 git_abbrev_commit_sha=$(git rev-parse --short=10 HEAD)
+registry="${SKAFFOLD_DEFAULT_REPO:-}"
 
 # Iterate over all patch files and check for their existence.
 for patch_file in "${patch_files[@]}"; do
@@ -49,6 +50,11 @@ for patch_file in "${patch_files[@]}"; do
   if ! grep -q -E "(tag: |ref: .+)$gardener_version-($git_abbrev_commit_sha|[a-z0-9]{64}$)" "$patch_file"; then
     # The patch file does not exist or does not contain the expected version pattern.
     # Skaffold should not cache artifacts.
+    echo "false"
+    exit 0
+  fi
+  # Check that the patch file references the current registry.
+  if [[ -n "$registry" ]] && ! grep -q -F "$registry/" "$patch_file"; then
     echo "false"
     exit 0
   fi
