@@ -13,6 +13,7 @@ Currently, Gardener supports the following Kubernetes versions:
 | [`v1.34`](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/) | [`v1.132.0`](https://github.com/gardener/gardener/releases/tag/v1.132.0) | `2025-11-13`  | `2027-01-13`    |
 | [`v1.35`](https://kubernetes.io/blog/2025/12/17/kubernetes-v1-35-release/) | [`v1.136.0`](https://github.com/gardener/gardener/releases/tag/v1.136.0) | `2026-02-14`  | `2027-04-14`    |
 | [`v1.36`](https://kubernetes.io/blog/2026/04/22/kubernetes-v1-36-release/) | [`v1.145.0`](https://github.com/gardener/gardener/releases/tag/v1.145.0) | `2026-06-19`  | `2027-08-19`    |
+| [`v1.37`](https://kubernetes.io/blog/2026/08/26/kubernetes-v1-37-release/) | [`v1.152.0`](https://github.com/gardener/gardener/releases/tag/v1.152.0) | `2026-08-28`  | `2027-10-28`    |
 
 > [!NOTE]  
 > Gardener supports Kubernetes versions for at least 14 months after their initial support date.
@@ -24,11 +25,11 @@ Currently, Gardener supports the following Kubernetes versions:
 
 ## Garden Clusters
 
-The minimum version of a garden cluster that can be used to run Gardener is **`1.32.x`** up to **`1.35.x`**.
+The minimum version of a garden cluster that can be used to run Gardener is **`1.32.x`** up to **`1.37.x`**.
 
 ## Seed Clusters
 
-The minimum version of a seed cluster that can be connected to Gardener is **`1.32.x`** up to **`1.35.x`**.
+The minimum version of a seed cluster that can be connected to Gardener is **`1.32.x`** up to **`1.37.x`**.
 
 > [!WARNING]
 > Kubernetes `v1.35.x` with `x` in `0..3` has a [regression](https://github.com/kubernetes/kubernetes/issues/137409) where the `MaxUnavailableStatefulSet` feature gate (enabled by default in `v1.35`) can cause StatefulSet rolling updates to deadlock when readiness probes fail.
@@ -38,7 +39,7 @@ The minimum version of a seed cluster that can be connected to Gardener is **`1.
 
 ## Shoot Clusters
 
-Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.32`** up to **`1.35`**.
+Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.32`** up to **`1.37`**.
 However, the concrete versions that can be used for shoot clusters depend on the installed provider extension.
 Consequently, please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.
 
