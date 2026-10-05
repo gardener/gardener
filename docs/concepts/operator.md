@@ -604,6 +604,7 @@ Some controllers may only be instantiated or added later, because they need the 
 * [`Access` controller](#access-controller)
 * [`Virtual-Cluster-Registrar` controller](#virtual-cluster-registrar-controller)
 * [`Gardenlet` controller](#gardenlet-controller)
+* [`TokenRequestor` controller](#tokenrequestor-controller)
 
 > [!NOTE]
 > Some of the listed controllers are part of `gardenlet`, as well.
@@ -680,6 +681,21 @@ At the end, the prepared REST config is passed to the [`Virtual-Cluster-Registra
 
 Together with the adjusted config and the token file, related controllers can continuously run their operations, even after credentials rotation.
 
+#### Bootstrapping the Garden Access Token
+
+The access secret's token is itself maintained by the [`TokenRequest` controller](#tokenrequest-controller), which in turn needs a working client to the virtual cluster.
+This creates a chicken-and-egg problem on a fresh `Garden` (or right after a `ServiceAccount` token signing key rotation): the token-requestor cannot run until there is a token, but the token only exists once the token-requestor has run.
+
+To break this cycle, the `Access` controller bootstraps the token itself.
+When the bearer token in the `gardener-internal` secret is still empty, or when the token has reached its renew timestamp (annotation `serviceaccount.resources.gardener.cloud/token-renew-timestamp`), the controller:
+
+1. Generates a short-lived (10m) client certificate, signed by the current `ca-client` CA.
+2. Builds a temporary, certificate-based client to the `virtual-garden-kube-apiserver` from that certificate.
+3. Runs an in-line [`TokenRequestor` reconciliation](resource-manager.md#tokenrequestor-controller) against the access secret using this bootstrap client, which populates the secret with a freshly requested `ServiceAccount` token.
+
+The populated token is then picked up on the next reconciliation and written to the bearer token file as described above.
+From that point on, the regular [`TokenRequestor` controller](#tokenrequest-controller) keeps the token renewed, and the bootstrap path is only taken again if the token ever becomes empty or expires.
+
 ### [`Virtual-Cluster-Registrar` Controller](../../pkg/operator/controller/virtual/cluster)
 
 The `Virtual-Cluster-Registrar` controller watches for events on a dedicated channel that is shared with the [`Access` controller](#access-controller).
@@ -705,6 +721,14 @@ On `Gardenlet` deletion, nothing happens: `gardenlet`s must always be deleted ma
 >
 > ⚠️ If you prefer to manage the `Gardenlet` resources via GitOps, Flux, or similar tools, then you should better manage the `.spec.deployment.helm.ociRepository.ref` field yourself and not label the resources as mentioned above (to prevent `gardener-operator` from interfering with your desired state).
 > Make sure to apply your `Gardenlet` resources (potentially containing a new version) after the `Garden` resource was successfully reconciled (i.e., after Gardener control plane was successfully rolled out, see [this](../deployment/version_skew_policy.md#supported-component-upgrade-order) for more information.)
+
+### [`TokenRequestor` Controller](../../pkg/controller/tokenrequestor)
+
+The `TokenRequestor` controller is the [`gardener-resource-manager`'s `TokenRequestor` controller](resource-manager.md#tokenrequestor-controller) running inside `gardener-operator` for the `garden` class.
+It watches access secrets labeled with `resources.gardener.cloud/purpose=token-requestor` and `resources.gardener.cloud/class=garden` and requests `ServiceAccount` tokens for them from the virtual garden cluster, writing the resulting token into the respective `Secret`'s `.data.token`.
+
+This controller requests tokens for access secrets originating from **all** namespaces in the runtime cluster.
+This allows components deployed anywhere in the runtime cluster (e.g., by extensions) to obtain credentials for the virtual garden cluster via the generic garden kubeconfig, just like it works for `Shoot`s (see [this document](../extensions/garden-api-access.md)).
 
 ## Webhooks
 

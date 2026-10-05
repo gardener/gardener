@@ -27,5 +27,5 @@ func (a *gardenerAdmissionController) reconcileSecretServerCert(ctx context.Cont
 }
 
 func (a *gardenerAdmissionController) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(DeploymentName, a.namespace)
+	return gardenerutils.NewGardenAccessSecret(DeploymentName, a.namespace)
 }

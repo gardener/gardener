@@ -136,6 +136,7 @@ metadata:
     resources.gardener.cloud/class: garden
   annotations:
     serviceaccount.resources.gardener.cloud/name: example
+    serviceaccount.resources.gardener.cloud/namespace: seed-<seed-name>
 type: Opaque
 ```
 

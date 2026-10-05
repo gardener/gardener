@@ -76,6 +76,8 @@ type ControllerConfiguration struct {
 	ExtensionRequiredRuntime ExtensionRequiredRuntimeControllerConfiguration `json:"extensionRequiredRuntime"`
 	// ExtensionRequiredVirtual defines the configuration of the ExtensionRequiredVirtual controller.
 	ExtensionRequiredVirtual ExtensionRequiredVirtualControllerConfiguration `json:"extensionRequiredVirtual"`
+	// TokenRequestor is the configuration for the token-requestor controller.
+	TokenRequestor TokenRequestorControllerConfiguration `json:"tokenRequestor"`
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
@@ -165,6 +167,13 @@ type ExtensionRequiredRuntimeControllerConfiguration struct {
 
 // ExtensionRequiredVirtualControllerConfiguration defines the configuration of the extension-required-virtual controller.
 type ExtensionRequiredVirtualControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// TokenRequestorControllerConfiguration defines the configuration of the token-requestor controller.
+type TokenRequestorControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`

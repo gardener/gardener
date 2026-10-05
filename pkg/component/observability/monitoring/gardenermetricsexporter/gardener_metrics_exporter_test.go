@@ -310,11 +310,11 @@ var _ = Describe("GardenerMetricsExporter", func() {
 			It("should successfully deploy the access secret for the virtual garden", func() {
 				accessSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shoot-access-gardener-metrics-exporter",
+						Name:      "garden-access-gardener-metrics-exporter",
 						Namespace: namespace,
 						Labels: map[string]string{
 							"resources.gardener.cloud/purpose": "token-requestor",
-							"resources.gardener.cloud/class":   "shoot",
+							"resources.gardener.cloud/class":   "garden",
 						},
 						Annotations: map[string]string{
 							"serviceaccount.resources.gardener.cloud/name":      "gardener-metrics-exporter",
@@ -326,10 +326,10 @@ var _ = Describe("GardenerMetricsExporter", func() {
 
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
-				actualShootAccessSecret := &corev1.Secret{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), actualShootAccessSecret)).To(Succeed())
+				actualAccessSecret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), actualAccessSecret)).To(Succeed())
 				accessSecret.ResourceVersion = "1"
-				Expect(actualShootAccessSecret).To(Equal(accessSecret))
+				Expect(actualAccessSecret).To(Equal(accessSecret))
 			})
 		})
 	})
@@ -740,7 +740,7 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 										{
 											Secret: &corev1.SecretProjection{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: "shoot-access-gardener-metrics-exporter",
+													Name: "garden-access-gardener-metrics-exporter",
 												},
 												Items: []corev1.KeyToPath{{
 													Key:  "token",

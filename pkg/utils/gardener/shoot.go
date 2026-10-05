@@ -432,10 +432,10 @@ func (s *AccessSecret) Reconcile(ctx context.Context, c client.Client) error {
 		metav1.SetMetaDataLabel(&s.Secret.ObjectMeta, resourcesv1alpha1.ResourceManagerClass, s.Class)
 		metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountName, s.ServiceAccountName)
 
-		if s.Class == resourcesv1alpha1.ResourceManagerClassShoot {
-			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
-		} else if s.serviceAccountNamespace != "" {
+		if s.serviceAccountNamespace != "" {
 			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, s.serviceAccountNamespace)
+		} else {
+			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
 		}
 
 		if s.serviceAccountLabels != nil {

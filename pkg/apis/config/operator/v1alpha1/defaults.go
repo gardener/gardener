@@ -142,3 +142,10 @@ func SetDefaults_ExtensionRequiredVirtualControllerConfiguration(obj *ExtensionR
 		obj.ConcurrentSyncs = new(5)
 	}
 }
+
+// SetDefaults_TokenRequestorControllerConfiguration sets defaults for the TokenRequestorControllerConfiguration object.
+func SetDefaults_TokenRequestorControllerConfiguration(obj *TokenRequestorControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = new(5)
+	}
+}

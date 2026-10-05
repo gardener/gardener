@@ -41,6 +41,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		"",
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
 		v1beta1constants.PriorityClassNameShootControlPlane300,
+		false,
 		b.Shoot.IsWorkerless,
 		metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled),
 		nil,
