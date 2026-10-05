@@ -13,5 +13,5 @@ import (
 
 func TestUpdateRestriction(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Webhook Admission UpdateRestriction Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission FinalizerRestriction Suite")
 }
