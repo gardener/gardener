@@ -208,6 +208,18 @@ spec:
                     - passwordSecretRef
                     type: object
                 type: object
+              literalSubject:
+                description: |-
+                  LiteralSubject defines the requested X.509 certificate subject, represented using the LDAP "String
+                  Representation of a Distinguished Name" [1].
+                  Important: the LDAP string format also specifies the order of the attributes
+                  in the subject, this is important when issuing certs for LDAP authentication.
+                  Example: `CN=foo,DC=corp,DC=example,DC=com`
+                  More info [1]: https://datatracker.ietf.org/doc/html/rfc4514
+
+                  Cannot be set if the `subject` or `commonName` field is set.
+                  Note: The literalSubject is typically ignored by ACME issuers.
+                type: string
               preferredChain:
                 description: 'PreferredChain allows to specify the preferred certificate
                   chain: if the CA offers multiple certificate chains, prefer the
@@ -294,12 +306,106 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              subject:
+                description: |-
+                  Subject defines the optional requested set of X509 certificate subject attributes.
+                  Cannot be set if the `literalSubject` field is set.
+                  Note: The subject is typically ignored by ACME issuers.
+                properties:
+                  countries:
+                    description: Countries to be used on the Certificate.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  localities:
+                    description: Cities to be used on the Certificate.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  organizationalUnits:
+                    description: Organizational Units to be used on the Certificate.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  organizations:
+                    description: Organizations to be used on the Certificate.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  postalCodes:
+                    description: Postal codes to be used on the Certificate.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  provinces:
+                    description: State/Provinces to be used on the Certificate.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  serialNumber:
+                    description: Serial number to be used on the Certificate.
+                    type: string
+                  streetAddresses:
+                    description: Street addresses to be used on the Certificate.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                type: object
               uris:
                 description: URIs are the optional requested URI subject alternative
                   names.
                 items:
                   type: string
                 type: array
+              usages:
+                description: |-
+                  Usages defines the requested key usages and extended key usages.
+                  If unset, defaults to `digital signature` (and `key encipherment` for RSA keys).
+                  Note: Usages are typically ignored by ACME issuers.
+                items:
+                  description: "KeyUsage specifies valid usage contexts for keys.\nSee:
+                    https://tools.ietf.org/html/rfc5280#section-4.2.1.3\n\n\thttps://tools.ietf.org/html/rfc5280#section-4.2.1.12\n\nValid
+                    KeyUsage values are as follows:\n\"signing\", \"digital signature\",
+                    \"content commitment\", \"key encipherment\",\n\"key agreement\",
+                    \"data encipherment\", \"cert sign\", \"crl sign\",\n\"encipher
+                    only\", \"decipher only\", \"any\", \"server auth\", \"client
+                    auth\",\n\"code signing\", \"email protection\", \"s/mime\", \"ipsec
+                    end system\",\n\"ipsec tunnel\", \"ipsec user\", \"timestamping\",
+                    \"ocsp signing\",\n\"microsoft sgc\", \"netscape sgc\""
+                  enum:
+                  - signing
+                  - digital signature
+                  - content commitment
+                  - key encipherment
+                  - key agreement
+                  - data encipherment
+                  - cert sign
+                  - crl sign
+                  - encipher only
+                  - decipher only
+                  - any
+                  - server auth
+                  - client auth
+                  - code signing
+                  - email protection
+                  - s/mime
+                  - ipsec end system
+                  - ipsec tunnel
+                  - ipsec user
+                  - timestamping
+                  - ocsp signing
+                  - microsoft sgc
+                  - netscape sgc
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
             type: object
           status:
             description: CertificateStatus is the status of the certificate request.
