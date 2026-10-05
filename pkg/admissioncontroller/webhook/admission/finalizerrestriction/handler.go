@@ -36,7 +36,7 @@ type Handler struct {
 }
 
 // Handle allows the request unless it removes a protected finalizer. Removal of a protected finalizer is only
-// permitted for the gardenlet, dedicated system service accounts, and system administrators.
+// permitted for gardener system users, dedicated system service accounts, and system administrators.
 func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.Response {
 	log := h.Logger.WithValues(
 		"requestUID", req.UID,
