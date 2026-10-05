@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -70,9 +71,11 @@ var (
 	NotKubernetesProvider = utils.MustNewRequirement(Provider, selection.NotEquals, KubernetesProvider)
 	// NotKubeAggregatorAutoManaged is a requirement that something is not auto-managed by Kube-Aggregator.
 	NotKubeAggregatorAutoManaged = utils.MustNewRequirement(KubeAggregatorAutoManaged, selection.DoesNotExist)
+	// NotManagedByGardener is a requirement that something is not managed via ManagedResources
+	NotManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotEquals, resourcesv1alpha1.GardenerManager)
 
-	// CleanupSelector is a selector that excludes system components and all resources not considered for auto cleanup.
-	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention)
+	// CleanupSelector is a selector that excludes system components, all resources not considered for auto cleanup and all components not managed via ManagedResources
+	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention).Add(NotManagedByGardener)
 
 	// NoCleanupPreventionListOption are CollectionMatching that exclude system components or non-auto cleaned up resource.
 	NoCleanupPreventionListOption = client.MatchingLabelsSelector{Selector: CleanupSelector}
@@ -105,7 +108,7 @@ var (
 	// APIServiceCleanOption is the delete selector for APIServices.
 	APIServiceCleanOption = utilclient.ListWith{
 		client.MatchingLabelsSelector{
-			Selector: labels.NewSelector().Add(NotSystemComponent, NotKubeAggregatorAutoManaged),
+			Selector: labels.NewSelector().Add(NotSystemComponent, NotKubeAggregatorAutoManaged, NotManagedByGardener),
 		},
 	}
 
