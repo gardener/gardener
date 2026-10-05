@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/apiserver/registry/core/shoot/storage"
 )
 
-// Handler protects finalizers on system resources from being removed by users other than the gardenlet,
+// Handler protects finalizers on system resources from being removed by users other than gardener system users,
 // system service accounts, or system administrators.
 type Handler struct {
 	Logger                logr.Logger
