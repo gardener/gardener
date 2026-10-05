@@ -81,6 +81,8 @@ controllers:
     concurrentSyncs: 5
   extensionRequiredVirtual:
     concurrentSyncs: 5
+  tokenRequestor:
+    concurrentSyncs: 5
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60

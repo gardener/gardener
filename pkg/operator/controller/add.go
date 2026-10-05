@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -15,9 +16,12 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/operator/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
+	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
@@ -131,6 +135,21 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 					return true, (&care.Reconciler{
 						Config: *cfg,
 					}).AddToManager(mgr, virtualCluster)
+				},
+			},
+			{
+				Name: tokenrequestor.ControllerName,
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+					if virtualCluster == nil {
+						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add TokenRequestor reconciler")
+						return false, nil
+					}
+
+					return true, (&tokenrequestor.Reconciler{
+						ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+						APIAudiences:    []string{v1beta1constants.GardenerAudience},
+						Class:           new(resourcesv1alpha1.ResourceManagerClassGarden),
+					}).AddToManager(mgr, mgr, virtualCluster)
 				},
 			},
 		}, addVirtualClusterControllerToManager...),
