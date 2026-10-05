@@ -26,7 +26,6 @@ import (
 func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *corev1.Secret) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	var (
 		failurePolicyFail     = admissionregistrationv1.Fail
-		failurePolicyIgnore   = admissionregistrationv1.Ignore
 		sideEffectsNone       = admissionregistrationv1.SideEffectClassNone
 		matchPolicyEquivalent = admissionregistrationv1.Equivalent
 
@@ -337,7 +336,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 							"(oldObject != null && has(oldObject.metadata.finalizers) && oldObject.metadata.finalizers.size() > 0)",
 					},
 				},
-				FailurePolicy: &failurePolicyIgnore,
+				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					URL:      buildClientConfigURL("/webhooks/finalizer-restriction", a.namespace),
