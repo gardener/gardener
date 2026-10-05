@@ -7,13 +7,14 @@ package access
 import (
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // ControllerName is the name of this controller.
@@ -29,21 +30,31 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, namespace, secretName str
 		r.FS = afero.NewOsFs()
 	}
 
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = namespace
+	}
+
+	if len(r.APIAudiences) == 0 {
+		r.APIAudiences = []string{v1beta1constants.GardenerAudience}
+	}
+
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&corev1.Secret{}, builder.WithPredicates(HasRenewAnnotationPredicate(secretName, namespace))).
+		For(&corev1.Secret{}, builder.WithPredicates(IsGardenerInternalSecretPredicate(secretName, namespace))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
 		Complete(r)
 }
 
-// HasRenewAnnotationPredicate is a predicate that returns true if the object has a 'resourcesv1alpha1.ServiceAccountTokenRenewTimestamp' annotation.
-func HasRenewAnnotationPredicate(name, namespace string) predicate.Predicate {
+// IsGardenerInternalSecretPredicate is a predicate that returns true if the object matches the given name and namespace.
+func IsGardenerInternalSecretPredicate(name, namespace string) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(o client.Object) bool {
-		_, hasRenewAnnotation := o.GetAnnotations()[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
-
-		return o.GetNamespace() == namespace && o.GetName() == name && hasRenewAnnotation
+		return o.GetNamespace() == namespace && o.GetName() == name
 	})
 }
