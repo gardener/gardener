@@ -6,13 +6,12 @@ package restore
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
-	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	initcmd "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
-	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -64,50 +63,14 @@ func run(ctx context.Context, opts *Options) error {
 		Zone:             opts.Zone,
 	}
 
-	var (
-		b *gardenadmbotanist.GardenadmBotanist
-
-		g = flow.NewGraph("restore")
-
-		bootstrapControlPlane = g.Add(flow.Task{
-			Name: "Bootstrapping control plane",
-			Fn: func(ctx context.Context) error {
-				var err error
-				b, err = initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath)
-				return err
-			},
-		})
-		deletePriorNode = g.Add(flow.Task{
-			Name: "Deleting prior Node",
-			Fn: func(ctx context.Context) error {
-				return b.DeletePriorNode(ctx, opts.PriorNodeName)
-			},
-			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
-		})
-		forceDeletePriorNodePods = g.Add(flow.Task{
-			Name: "Force deleting Pods running on prior Node",
-			Fn: func(ctx context.Context) error {
-				return b.ForceDeletePriorNodePods(ctx, opts.PriorNodeName)
-			},
-			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
-		})
-		// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
-		// For more details, see https://github.com/gardener/gardener/issues/15279.
-		_ = g.Add(flow.Task{
-			Name: "Running init flow",
-			Fn: func(ctx context.Context) error {
-				return initcmd.RunInitFlow(ctx, b, initOpts)
-			},
-			Dependencies: flow.NewTaskIDs(deletePriorNode, forceDeletePriorNodePods),
-		})
-	)
-
-	if err := g.Compile().Run(ctx, flow.Opts{
-		Log:              opts.Log,
-		ProgressReporter: flow.NewCommandLineProgressReporter(opts.ErrOut),
-	}); err != nil {
-		return flow.Errors(err)
+	// The ETCD snapshot restored during `gardenadm restore` brings stale resources back to life which must be cleaned
+	// up before the init flow re-reconciles the control plane. BootstrapControlPlane runs these cleanups (deleting the
+	// prior control plane Node and its Pods, and the stale gardener-node-agent OperatingSystemConfig Secret) after the
+	// connection to the control plane is established and before the bootstrap secrets are imported.
+	b, err := initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath, opts.PriorNodeName, true)
+	if err != nil {
+		return fmt.Errorf("failed to bootstrap control plane (1st recovery phase): %w", err)
 	}
 
-	return nil
+	return initcmd.RunInitFlow(ctx, b, initOpts)
 }
