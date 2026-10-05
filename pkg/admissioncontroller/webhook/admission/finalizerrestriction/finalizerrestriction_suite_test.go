@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestUpdateRestriction(t *testing.T) {
+func TestFinalizerRestriction(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "AdmissionController Webhook Admission FinalizerRestriction Suite")
 }
