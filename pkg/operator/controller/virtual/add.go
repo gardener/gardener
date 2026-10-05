@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -49,7 +50,9 @@ func AddToManagerFuncs(cfg *operatorconfigv1alpha1.OperatorConfiguration, storeC
 				}
 
 				return true, (&access.Reconciler{
-					Channel: channel,
+					Channel:         channel,
+					ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+					APIAudiences:    []string{v1beta1constants.GardenerAudience},
 				}).AddToManager(mgr, v1beta1constants.GardenNamespace, v1beta1constants.SecretNameGardenerInternal)
 			},
 		},
