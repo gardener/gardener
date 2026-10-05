@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"time"
 
-	authorizationv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -213,15 +212,4 @@ func (r *KubeconfigREST) GroupVersionKind(schema.GroupVersion) schema.GroupVersi
 
 type getter interface {
 	Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error)
-}
-
-func convertToAuthorizationExtraValue(extra map[string][]string) map[string]authorizationv1.ExtraValue {
-	if extra == nil {
-		return nil
-	}
-	ret := make(map[string]authorizationv1.ExtraValue, len(extra))
-	for k, v := range extra {
-		ret[k] = v
-	}
-	return ret
 }
