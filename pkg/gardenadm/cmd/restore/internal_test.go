@@ -5,6 +5,8 @@
 package restore
 
 import (
+	"path/filepath"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,6 +31,19 @@ var _ = Describe("Restore-in-progress marker", func() {
 			exists, err := fs.Exists(cmd.RestoreInProgressLocation)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exists).To(BeTrue())
+		})
+
+		It("should create the parent directory if it does not exist", func() {
+			// Use a real OS-path-style fs backed by MemMapFs but without pre-creating the dir.
+			emptyFs := afero.Afero{Fs: afero.NewMemMapFs()}
+
+			isRetry, err := prepareRestoreInProgressMarker(emptyFs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(isRetry).To(BeFalse())
+
+			dirExists, err := emptyFs.DirExists(filepath.Dir(cmd.RestoreInProgressLocation))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dirExists).To(BeTrue())
 		})
 
 		It("should report a retry and keep the marker when it already exists", func() {

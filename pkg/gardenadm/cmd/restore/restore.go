@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
@@ -150,6 +151,11 @@ func prepareRestoreInProgressMarker(fs afero.Afero) (bool, error) {
 		return true, nil
 	}
 
+	dir := filepath.Dir(cmd.RestoreInProgressLocation)
+	if err := fs.MkdirAll(dir, os.ModeDir); err != nil {
+		return false, fmt.Errorf("failed creating directory %s for restore-in-progress marker file: %w", dir, err)
+	}
+
 	if err := fs.WriteFile(cmd.RestoreInProgressLocation, nil, 0640); err != nil {
 		return false, fmt.Errorf("failed writing restore-in-progress marker file %s: %w", cmd.RestoreInProgressLocation, err)
 	}
@@ -164,7 +170,7 @@ func removeRestoreInProgressMarker(log logr.Logger, fs afero.Afero) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, afero.ErrFileNotFound) || os.IsNotExist(err) {
+	if errors.Is(err, afero.ErrFileNotFound) {
 		log.Info("Warning: restore-in-progress marker file was already absent at completion; something removed it out of band", "path", cmd.RestoreInProgressLocation)
 		return nil
 	}
