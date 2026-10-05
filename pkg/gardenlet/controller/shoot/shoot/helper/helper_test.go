@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -76,6 +77,12 @@ var _ = Describe("ComputeOperationType", func() {
 	It("should return Migrate if spec.seedName and status.seedName differ", func() {
 		shoot.Spec.SeedName = new("other")
 		Expect(ComputeOperationType(shoot)).To(Equal(gardencorev1beta1.LastOperationTypeMigrate))
+	})
+
+	It("should return LiveMigrate if spec.seedName and status.seedName differ and live migration annotation is set", func() {
+		shoot.Spec.SeedName = new("other")
+		shoot.Annotations = map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "true"}
+		Expect(ComputeOperationType(shoot)).To(Equal(gardencorev1beta1.LastOperationTypeLiveMigrate))
 	})
 
 	It("should return Migrate if last operation is Migrate Error", func() {
