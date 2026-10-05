@@ -57,6 +57,9 @@ type GardenadmBotanist struct {
 	// topology.kubernetes.io/zone label on the node resource.
 	// This field is only relevant for shoot with unmanaged infrastructure.
 	Zone *string
+	// IsRestore is true when the botanist was created for `gardenadm restore`. It distinguishes restore from
+	// `gardenadm init` even on an init retry, where a persisted ShootState makes Shoot.IsRestorePhase() return true.
+	IsRestore bool
 
 	operatingSystemConfigSecret *corev1.Secret
 

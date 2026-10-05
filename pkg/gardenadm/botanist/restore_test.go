@@ -22,7 +22,11 @@ import (
 )
 
 var _ = Describe("Restore", func() {
-	const priorNodeName = "prior-node"
+	const (
+		priorNodeName      = "prior-node"
+		oscSecretName      = "gardener-node-agent-control-plane-abc123"
+		oscSecretNamespace = "kube-system"
+	)
 
 	var (
 		b *GardenadmBotanist
@@ -48,8 +52,12 @@ var _ = Describe("Restore", func() {
 	})
 
 	Describe("#DeletePriorNode", func() {
+		It("should error when priorNodeName is empty", func(ctx SpecContext) {
+			Expect(b.DeletePriorNode(ctx, fakeClient, "")).To(MatchError(ContainSubstring("must not be empty")))
+		})
+
 		It("should not fail if the prior Node does not exist", func(ctx SpecContext) {
-			Expect(b.DeletePriorNode(ctx, priorNodeName)).To(Succeed())
+			Expect(b.DeletePriorNode(ctx, fakeClient, priorNodeName)).To(Succeed())
 		})
 
 		It("should delete the prior Node", func(ctx SpecContext) {
@@ -58,7 +66,7 @@ var _ = Describe("Restore", func() {
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 			Expect(fakeClient.Create(ctx, other)).To(Succeed())
 
-			Expect(b.DeletePriorNode(ctx, priorNodeName)).To(Succeed())
+			Expect(b.DeletePriorNode(ctx, fakeClient, priorNodeName)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(other), other)).To(Succeed())
@@ -73,8 +81,12 @@ var _ = Describe("Restore", func() {
 			}
 		}
 
+		It("should error when priorNodeName is empty", func(ctx SpecContext) {
+			Expect(b.ForceDeletePriorNodePods(ctx, fakeClient, "")).To(MatchError(ContainSubstring("must not be empty")))
+		})
+
 		It("should not fail if there are no Pods running on the prior Node", func(ctx SpecContext) {
-			Expect(b.ForceDeletePriorNodePods(ctx, priorNodeName)).To(Succeed())
+			Expect(b.ForceDeletePriorNodePods(ctx, fakeClient, priorNodeName)).To(Succeed())
 		})
 
 		It("should delete all Pods running on the prior Node", func(ctx SpecContext) {
@@ -89,13 +101,43 @@ var _ = Describe("Restore", func() {
 			Expect(fakeClient.Create(ctx, pod4)).To(Succeed())
 			Expect(fakeClient.Create(ctx, pod5)).To(Succeed())
 
-			Expect(b.ForceDeletePriorNodePods(ctx, priorNodeName)).To(Succeed())
+			Expect(b.ForceDeletePriorNodePods(ctx, fakeClient, priorNodeName)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod1), pod1)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod2), pod2)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod3), pod3)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod4), pod4)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod5), pod5)).To(Succeed())
+		})
+	})
+
+	Describe("#DeleteStaleOperatingSystemConfigSecret", func() {
+		BeforeEach(func() {
+			b.operatingSystemConfigSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: oscSecretName, Namespace: oscSecretNamespace},
+			}
+		})
+
+		It("should delete the stale OperatingSystemConfig Secret restored from the ETCD snapshot", func(ctx SpecContext) {
+			restoredSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: oscSecretName, Namespace: oscSecretNamespace},
+				Data:       map[string][]byte{"osc.yaml": []byte("managed-content")},
+			}
+			Expect(fakeClient.Create(ctx, restoredSecret)).To(Succeed())
+
+			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(restoredSecret), &corev1.Secret{})).To(BeNotFoundError())
+		})
+
+		It("should succeed when the Secret is absent (IgnoreNotFound)", func(ctx SpecContext) {
+			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should error when the OperatingSystemConfig Secret was not computed yet", func(ctx SpecContext) {
+			b.operatingSystemConfigSecret = nil
+
+			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(MatchError(ContainSubstring("operating system config secret is nil")))
 		})
 	})
 })

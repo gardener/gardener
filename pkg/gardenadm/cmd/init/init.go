@@ -63,7 +63,7 @@ gardenadm init --config-dir /path/to/manifests --zone zone-a`,
 
 // run bootstraps the control plane and then runs the main init flow that deploys the shoot components.
 func run(ctx context.Context, opts *Options) error {
-	b, err := BootstrapControlPlane(ctx, opts, "")
+	b, err := BootstrapControlPlane(ctx, opts, "", "", false)
 	if err != nil {
 		return fmt.Errorf("failed bootstrapping control plane: %w", err)
 	}
@@ -335,8 +335,12 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 
 // BootstrapControlPlane bootstraps the control plane node and returns a GardenadmBotanist connected to the API server.
 // When backupDataPath is non-empty, the bootstrap etcd is initialized from that local snapshot for disaster recovery.
+// priorNodeName is empty for `gardenadm init` and set for `gardenadm restore`, where it identifies the prior control
+// plane Node to be cleaned up together with the stale resources restored from the ETCD snapshot.
+// isRestore is true when invoked by `gardenadm restore`. It is stored on the botanist as the reliable restore
+// discriminator, since Shoot.IsRestorePhase() also returns true for `gardenadm init` retries with a persisted ShootState.
 // It is exported so that the `gardenadm restore` command can reuse the same graph.
-func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath string) (*gardenadmbotanist.GardenadmBotanist, error) {
+func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath, priorNodeName string, isRestore bool) (*gardenadmbotanist.GardenadmBotanist, error) {
 	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
 	if err != nil {
 		return nil, err
@@ -349,6 +353,8 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath st
 	if opts.Zone != "" {
 		b.Zone = new(opts.Zone)
 	}
+
+	b.IsRestore = isRestore
 
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
 	if err != nil {
@@ -420,13 +426,20 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath st
 			}).RetryUntilTimeout(2*time.Second, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
 		})
+		// For `gardenadm restore` these cleanups run after the connection to the control plane is established and
+		// before the bootstrap secrets are imported. They are skipped for `gardenadm init` (nothing was restored, so
+		// b.IsRestore is false even on an init retry) and when a kubeconfig already exists locally (a retried restore,
+		// where the OperatingSystemConfig Secret was not recomputed).
+		cleanupStaleRestoreResources = g.AddGroup(b.CleanupStaleRestoreResourcesTaskGroup(&clientSet, priorNodeName).
+						WithDependencies(initializeClientSet).
+						SkipIf(kubeconfigFileExists || !b.IsRestore))
 		importSecrets = g.Add(flow.Task{
 			Name: "Importing secrets into control plane",
 			Fn: func(ctx context.Context) error {
 				return b.MigrateSecrets(ctx, b.SeedClientSet.Client(), clientSet.Client())
 			},
 			SkipIf:       kubeconfigFileExists && !b.Shoot.IsRestorePhase(),
-			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet),
+			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet, cleanupStaleRestoreResources),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deleting temporary ShootState containing bootstrap secrets",
@@ -444,5 +457,12 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath st
 		return nil, flow.Errors(err)
 	}
 
-	return gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
+	bootstrappedBotanist, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
+	if err != nil {
+		return nil, err
+	}
+	// Carry the restore intent onto the returned botanist so that RunInitFlow can gate its restore-only steps on it.
+	bootstrappedBotanist.IsRestore = b.IsRestore
+
+	return bootstrappedBotanist, nil
 }

@@ -64,7 +64,7 @@ var _ = Describe("Restore-in-progress marker", func() {
 		It("should remove an existing marker", func() {
 			Expect(fs.WriteFile(cmd.RestoreInProgressLocation, []byte("some-uid"), 0640)).To(Succeed())
 
-			Expect(removeRestoreInProgressMarker(logr.Discard(), fs)).To(Succeed())
+			removeRestoreInProgressMarker(logr.Discard(), fs)
 
 			exists, err := fs.Exists(cmd.RestoreInProgressLocation)
 			Expect(err).NotTo(HaveOccurred())
@@ -72,7 +72,11 @@ var _ = Describe("Restore-in-progress marker", func() {
 		})
 
 		It("should not fail when the marker does not exist", func() {
-			Expect(removeRestoreInProgressMarker(logr.Discard(), fs)).To(Succeed())
+			Expect(func() { removeRestoreInProgressMarker(logr.Discard(), fs) }).NotTo(Panic())
+
+			exists, err := fs.Exists(cmd.RestoreInProgressLocation)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exists).To(BeFalse())
 		})
 	})
 })
