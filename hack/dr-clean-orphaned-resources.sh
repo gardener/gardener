@@ -52,7 +52,7 @@ force_delete() {
   fi
   kubectl_virtual "${ns_args[@]}" annotate "$kind" "$name" confirmation.gardener.cloud/deletion=true --overwrite
   kubectl_virtual "${ns_args[@]}" patch "$kind" "$name" --type=merge -p '{"metadata":{"finalizers":null}}'
-  kubectl_virtual "${ns_args[@]}" delete "$kind" "$name" --wait=true --ignore-not-found
+  kubectl_virtual "${ns_args[@]}" delete "$kind" "$name" --ignore-not-found
 }
 
 echo "> Cleaning up orphaned resources from previous disaster-recovery runs..."
