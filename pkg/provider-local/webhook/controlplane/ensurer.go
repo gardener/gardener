@@ -11,12 +11,14 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -51,6 +53,10 @@ func (e *ensurer) EnsureMachineControllerManagerDeployment(ctx context.Context, 
 		newObj.Spec.Template.Spec.Containers,
 		machinecontrollermanager.ProviderSidecarContainer(cluster.Shoot, newObj.GetNamespace(), local.Name, image.String()),
 	)
+
+	// The provider sidecar talks to the infrastructure cluster hosting the machine pods, which is not necessarily the
+	// runtime cluster of the seed (e.g., for the second kind cluster).
+	metav1.SetMetaDataLabel(&newObj.Spec.Template.ObjectMeta, local.LabelNetworkPolicyToInfraCluster, v1beta1constants.LabelNetworkPolicyAllowed)
 	return nil
 }
 
