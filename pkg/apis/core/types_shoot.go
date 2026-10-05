@@ -1369,7 +1369,7 @@ type Worker struct {
 	Labels map[string]string
 	// Name is the name of the worker group.
 	Name string
-	// Machine contains information about the machine type and image.
+	// Machine contains information about the machine type, image and architecture.
 	Machine Machine
 	// Maximum is the maximum number of machines to create.
 	// This value is divided by the number of configured zones for a fair distribution.
@@ -1524,7 +1524,7 @@ type WorkerKubernetes struct {
 	Version *string
 }
 
-// Machine contains information about the machine type and image.
+// Machine contains information about the machine type, image and architecture.
 type Machine struct {
 	// Type is the machine type of the worker group.
 	Type string
