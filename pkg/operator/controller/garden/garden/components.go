@@ -1445,6 +1445,7 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
+		true,
 	)
 }
 
