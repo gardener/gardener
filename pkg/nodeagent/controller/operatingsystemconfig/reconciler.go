@@ -224,7 +224,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			ctx,
 			log.WithName("secretsmanager"),
 			r.Clock,
-			r.Client,
+			NewFilesystemSecretsManagerClient(r.FS),
 			v1beta1constants.SecretManagerIdentityPrefixNodeAgent+r.HostName,
 			secretsmanager.WithNamespaces(metav1.NamespaceSystem),
 			secretsmanager.WithoutAutomaticSecretRenewal(),
