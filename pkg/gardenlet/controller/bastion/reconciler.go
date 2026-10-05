@@ -117,6 +117,7 @@ func (r *Reconciler) reconcileBastion(
 			},
 			UserData: createUserData(bastion),
 			Ingress:  extensionIngress,
+			Machine:  machineForExtensionBastion(bastion.Spec.Machine),
 		}
 	)
 
@@ -250,6 +251,24 @@ func newBastionExtension(bastion *operationsv1alpha1.Bastion, shoot *gardencorev
 			Namespace: shoot.Status.TechnicalID,
 		},
 	}
+}
+
+func machineForExtensionBastion(machine *operationsv1alpha1.BastionMachine) *extensionsv1alpha1.BastionMachine {
+	if machine == nil {
+		return nil
+	}
+
+	extensionMachine := &extensionsv1alpha1.BastionMachine{
+		Type: machine.Type,
+	}
+	if machine.Image != nil {
+		extensionMachine.Image = &extensionsv1alpha1.BastionMachineImage{
+			Name:    machine.Image.Name,
+			Version: machine.Image.Version,
+		}
+	}
+
+	return extensionMachine
 }
 
 func setReadyCondition(clock clock.Clock, bastion *operationsv1alpha1.Bastion, status gardencorev1beta1.ConditionStatus, reason string, message string) {
