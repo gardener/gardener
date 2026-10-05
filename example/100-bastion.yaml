@@ -12,3 +12,8 @@ spec:
   ingress:
     - ipBlock:
         cidr: 1.2.3.4/32
+# machine:
+#   type: m5.large
+#   image:
+#     name: <some-image-name>
+#     version: <some-image-version>
