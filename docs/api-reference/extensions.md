@@ -677,6 +677,106 @@ BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
 </table>
 
 
+<h3 id="bastionmachine">BastionMachine
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#bastionspec">BastionSpec</a>)
+</p>
+
+<p>
+BastionMachine contains information about the machine type and image.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type is the machine type of the bastion.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>image</code></br>
+<em>
+<a href="#bastionmachineimage">BastionMachineImage</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Image holds information about the machine image to use for the bastion.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="bastionmachineimage">BastionMachineImage
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#bastionmachine">BastionMachine</a>)
+</p>
+
+<p>
+BastionMachineImage defines the name and the version of the bastion's machine image in any environment. Has to be
+defined in the respective CloudProfile.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the image.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Version is the version of the image.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="bastionspec">BastionSpec
 </h3>
 
@@ -753,6 +853,18 @@ integer array
 </td>
 <td>
 <p>Ingress controls from where the created bastion host should be reachable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machine</code></br>
+<em>
+<a href="#bastionmachine">BastionMachine</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Image holds information about the machine image to use for the bastion.</p>
 </td>
 </tr>
 
