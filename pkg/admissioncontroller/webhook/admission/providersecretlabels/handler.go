@@ -19,8 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
@@ -102,32 +104,36 @@ func (h *InternalSecretHandler) Default(ctx context.Context, obj runtime.Object)
 
 func (h *Handler) fetchProviderTypesFromSecretBindings(ctx context.Context, name, namespace string) (sets.Set[string], error) {
 	secretBindingList := &gardencorev1beta1.SecretBindingList{}
-	if err := h.Client.List(ctx, secretBindingList); err != nil {
+	if err := h.Client.List(ctx, secretBindingList, client.MatchingFields{
+		gardencore.SecretBindingSecretRefName:      name,
+		gardencore.SecretBindingSecretRefNamespace: namespace,
+	}); err != nil {
 		return nil, fmt.Errorf("failed to list SecretBindings: %w", err)
 	}
 
 	providerTypes := sets.New[string]()
 	for _, secretBinding := range secretBindingList.Items {
-		if secretBinding.SecretRef.Name == name &&
-			secretBinding.SecretRef.Namespace == namespace {
-			providerTypes.Insert(v1beta1helper.GetSecretBindingTypes(&secretBinding)...)
-		}
+		providerTypes.Insert(v1beta1helper.GetSecretBindingTypes(&secretBinding)...)
 	}
 	return providerTypes, nil
 }
 
 func (h *Handler) fetchProviderTypesFromCredentialsBindings(ctx context.Context, apiVersion, kind, name, namespace string) (sets.Set[string], error) {
 	credentialsBindingList := &securityv1alpha1.CredentialsBindingList{}
-	if err := h.Client.List(ctx, credentialsBindingList); err != nil {
+	if err := h.Client.List(ctx, credentialsBindingList, client.MatchingFields{
+		security.CredentialsBindingCredentialsRefName:      name,
+		security.CredentialsBindingCredentialsRefNamespace: namespace,
+		security.CredentialsBindingCredentialsRefKind:      kind,
+	}); err != nil {
 		return nil, fmt.Errorf("failed to list CredentialsBindings: %w", err)
 	}
 
 	providerTypes := sets.New[string]()
 	for _, credentialsBinding := range credentialsBindingList.Items {
-		if credentialsBinding.CredentialsRef.APIVersion == apiVersion &&
-			credentialsBinding.CredentialsRef.Kind == kind &&
-			credentialsBinding.CredentialsRef.Name == name &&
-			credentialsBinding.CredentialsRef.Namespace == namespace {
+		// The API version must be checked explicitly because it is not indexed.
+		// Indexing it is unnecessary, as the same API version is usually used for all kinds
+		// and would therefore provide no meaningful performance benefit.
+		if credentialsBinding.CredentialsRef.APIVersion == apiVersion {
 			providerTypes.Insert(credentialsBinding.Provider.Type)
 		}
 	}

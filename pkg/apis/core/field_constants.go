@@ -69,6 +69,12 @@ const (
 	// ShootAuthorizationConfigMapName is the field selector path for finding Shoots
 	// referencing a given authorization configuration ConfigMap.
 	ShootAuthorizationConfigMapName = "spec.kubernetes.kubeAPIServer.structuredAuthorization.configMapName"
+	// ShootAdmissionPluginKubeconfigSecretName is the field selector path for finding Shoots
+	// referencing a given kubeconfig Secret via an admission plugin.
+	ShootAdmissionPluginKubeconfigSecretName = "spec.kubernetes.kubeAPIServer.admissionPlugins.kubeconfigSecretName"
+	// ShootStructuredAuthorizationKubeconfigSecretName is the field selector path for finding Shoots
+	// referencing a given kubeconfig Secret via structured authorization.
+	ShootStructuredAuthorizationKubeconfigSecretName = "spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs.secretName"
 	// ShootSeedName is the field selector path for finding
 	// the Seed cluster of a core.gardener.cloud/v1beta1.Shoot.
 	ShootSeedName = "spec.seedName"
@@ -80,4 +86,11 @@ const (
 	// NamespacedCloudProfileParentRefName is the field selector path for finding
 	// the parent CloudProfile of a core.gardener.cloud/v1beta1 NamespacedCloudProfile.
 	NamespacedCloudProfileParentRefName = "spec.parent.name"
+
+	// SecretBindingSecretRefName is the field selector path for finding
+	// the Secret name of a core.gardener.cloud/v1beta1 SecretBinding.
+	SecretBindingSecretRefName = "spec.secretRef.name"
+	// SecretBindingSecretRefNamespace is the field selector path for finding
+	// the Secret namespace of a core.gardener.cloud/v1beta1 SecretBinding.
+	SecretBindingSecretRefNamespace = "spec.secretRef.namespace"
 )
