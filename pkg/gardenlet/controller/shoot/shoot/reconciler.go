@@ -214,10 +214,6 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 		return result, err
 	}
 
-	if err := r.updateShootStatusOperationStart(ctx, shoot, shoot.Status.TechnicalID, gardencorev1beta1.LastOperationTypeLiveMigrate); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to update shoot status to live migrate: %w", err)
-	}
-
 	if flowErr := r.runLiveMigrateShootFlow(ctx, o, role); flowErr != nil {
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeLiveMigrate, false, flowErr.LastErrors...)
 		return reconcile.Result{}, errorsutils.WithSuppressed(fmt.Errorf("%s", flowErr.Description), updateErr)

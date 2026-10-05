@@ -22,6 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const (
+	etcdClientPort = 443
+	// liveMigrationHostLabelHashLength is the number of hex characters of the SHA256 hash used in the left-most DNS label
+	// of the cross-seed etcd hostnames.
+	liveMigrationHostLabelHashLength = 6
+)
+
 // NewPeerExposure is the constructor for the peer exposure component. Exposed for testing.
 var NewPeerExposure = func(c client.Client, namespace string, values peerexposure.Values) component.DeployWaiter {
 	return peerexposure.New(c, namespace, values)
@@ -34,10 +41,6 @@ var CrossSeedPeerHostnames = crossSeedPeerHostnames
 var SetLiveMigrationEtcdValues = func(b *Botanist, ctx context.Context, values *etcd.Values, role string) error {
 	return b.setLiveMigrationEtcdValues(ctx, values, role)
 }
-
-// liveMigrationHostLabelHashLength is the number of hex characters of the SHA256 hash used in the left-most DNS label
-// of the cross-seed etcd hostnames.
-const liveMigrationHostLabelHashLength = 6
 
 // LiveMigrationEtcdPeerHost returns the SNI host under which the peer endpoint of the etcd member with the given role
 // and ordinal on the given seed is reachable from other seeds. It is derived from the seed's ingress domain so that it
@@ -227,7 +230,8 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 				ClientEndpoints: []string{
 					fmt.Sprintf("https://%s:%d",
 						LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role),
-						443),
+						etcdClientPort,
+					),
 				},
 			},
 			ExtraPeerServiceDNSNames:    crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
