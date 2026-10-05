@@ -407,7 +407,7 @@ func (r *Reconciler) reconcile(
 		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying resources for gardener-operator access to virtual garden",
 			Fn:           component.OpWait(c.virtualGardenGardenerAccess).Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilVirtualGardenGardenerResourceManagerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		renewVirtualClusterAccess = g.Add(flow.Task{
 			Name: "Renewing virtual garden access secrets after creation of new ServiceAccount signing key",
