@@ -49,26 +49,16 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 
 	// Checks various user types in the 'gardener.cloud:system:*' and 'system:serviceaccounts' groups
 	_, _, _, userType := shootidentity.FromAuthenticationV1UserInfo(req.UserInfo)
-	if userType == gardenletidentity.UserTypeGardenlet {
-		log.V(1).Info("Allowing request", "reason", "gardenlet is allowed to modify protected finalizers")
-		return admission.Allowed("gardenlet is allowed to modify protected finalizer(s)")
-	}
-	if userType == gardenletidentity.UserTypeExtension {
-		log.V(1).Info("Allowing request", "reason", "extension is allowed to modify protected finalizers")
-		return admission.Allowed("extension is allowed to modify protected finalizer(s)")
-	}
-	if userType == gardenletidentity.UserTypeGardenadm {
-		log.V(1).Info("Allowing request", "reason", "gardenadm is allowed to modify protected finalizers")
-		return admission.Allowed("gardenadm is allowed to modify protected finalizer(s)")
+	switch userType {
+	case gardenletidentity.UserTypeGardenadm, gardenletidentity.UserTypeGardenlet, gardenletidentity.UserTypeExtension:
+		log.V(1).Info("Allowing request", "reason", "user is allowed to modify protected finalizers", "userType", userType)
+		return admission.Allowed(fmt.Sprintf("%s is allowed to modify protected finalizer(s)", userType))
 	}
 	_, _, seedUserType := seedidentity.FromAuthenticationV1UserInfo(req.UserInfo)
-	if seedUserType == gardenletidentity.UserTypeGardenlet {
-		log.V(1).Info("Allowing request", "reason", "gardenlet is allowed to modify protected finalizers")
-		return admission.Allowed("gardenlet is allowed to modify protected finalizer(s)")
-	}
-	if seedUserType == gardenletidentity.UserTypeExtension {
-		log.V(1).Info("Allowing request", "reason", "extension is allowed to modify protected finalizers")
-		return admission.Allowed("extension is allowed to modify protected finalizer(s)")
+	switch seedUserType {
+	case gardenletidentity.UserTypeGardenlet, gardenletidentity.UserTypeExtension:
+		log.V(1).Info("Allowing request", "reason", "user is allowed to modify protected finalizers", "userType", seedUserType)
+		return admission.Allowed(fmt.Sprintf("%s is allowed to modify protected finalizer(s)", seedUserType))
 	}
 
 	// Allow all requests from the 'system:serviceaccounts:kube-system' group
