@@ -777,7 +777,7 @@ var _ = Describe("validator", func() {
 			err := dr.ValidateInitialization()
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("missing shoot lister"))
+			Expect(err).To(MatchError("missing Shoot lister"))
 		})
 
 		It("should return error if no ConfigMapLister is set", func() {

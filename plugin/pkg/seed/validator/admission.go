@@ -103,7 +103,7 @@ func (v *ValidateSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFact
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateSeed) ValidateInitialization() error {
 	if v.shootLister == nil {
-		return errors.New("missing shoot lister")
+		return errors.New("missing Shoot lister")
 	}
 	if v.configMapLister == nil {
 		return errors.New("missing ConfigMap lister")
@@ -304,41 +304,43 @@ func (v *ValidateSeed) validateReferenceAllowlist(attrs admission.Attributes, se
 }
 
 func (v *ValidateSeed) checkAllowlistAnnotation(attrs admission.Attributes, seedName, namespace, name, apiVersion, kind, fieldPath string) error {
-	var annotations map[string]string
+	var getAnnotations func(namespace, name string) (map[string]string, error)
 
 	switch {
 	case apiVersion == corev1.SchemeGroupVersion.String() && kind == "Secret":
-		obj, err := v.secretLister.Secrets(namespace).Get(name)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced Secret %s/%s not found or not allowlisted for seed %q", fieldPath, namespace, name, seedName))
+		getAnnotations = func(namespace, name string) (map[string]string, error) {
+			obj, err := v.secretLister.Secrets(namespace).Get(name)
+			if err != nil {
+				return nil, err
 			}
-			return apierrors.NewInternalError(err)
+			return obj.Annotations, nil
 		}
-		annotations = obj.Annotations
-
 	case apiVersion == corev1.SchemeGroupVersion.String() && kind == "ConfigMap":
-		obj, err := v.configMapLister.ConfigMaps(namespace).Get(name)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced ConfigMap %s/%s not found or not allowlisted for seed %q", fieldPath, namespace, name, seedName))
+		getAnnotations = func(namespace, name string) (map[string]string, error) {
+			obj, err := v.configMapLister.ConfigMaps(namespace).Get(name)
+			if err != nil {
+				return nil, err
 			}
-			return apierrors.NewInternalError(err)
+			return obj.Annotations, nil
 		}
-		annotations = obj.Annotations
-
 	case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
-		obj, err := v.workloadIdentityLister.WorkloadIdentities(namespace).Get(name)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced WorkloadIdentity %s/%s not found or not allowlisted for seed %q", fieldPath, namespace, name, seedName))
+		getAnnotations = func(namespace, name string) (map[string]string, error) {
+			obj, err := v.workloadIdentityLister.WorkloadIdentities(namespace).Get(name)
+			if err != nil {
+				return nil, err
 			}
-			return apierrors.NewInternalError(err)
+			return obj.Annotations, nil
 		}
-		annotations = obj.Annotations
-
 	default:
 		return nil
+	}
+
+	annotations, err := getAnnotations(namespace, name)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return admission.NewForbidden(attrs, fmt.Errorf("%s: referenced %s %s/%s not found or not allowlisted for seed %q", fieldPath, kind, namespace, name, seedName))
+		}
+		return apierrors.NewInternalError(err)
 	}
 
 	if !isSeedAllowlisted(annotations, seedName) {

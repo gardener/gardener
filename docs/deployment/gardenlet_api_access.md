@@ -255,21 +255,21 @@ If the annotation is absent, the `Seed` create/update is rejected with a `Forbid
 
 For `Seed`s backed by a `Gardenlet` or `ManagedSeed` object, `gardener-controller-manager` automatically stamps the `seed.gardener.cloud/names` annotation on all referenced resources.
 The annotation is kept up-to-date as the `Gardenlet`/`ManagedSeed` spec changes, and is cleaned up when the object is deleted.
+See the [`gardener-controller-manager` documentation](../concepts/controller-manager.md) for details on the reconciler behavior, including best-effort cleanup semantics.
 
 > [!NOTE]
 > The GCM controller runs unconditionally — it stamps annotations regardless of whether `AllowlistSeedReferences` is enabled.
 > This lets you prepare your landscape before turning the gate on.
 
-### Manual Annotation for Hand-Managed Seeds
+### Manual Annotation for Manually-Managed Seeds
 
-For `Seed`s that are not backed by a `Gardenlet` or `ManagedSeed` object, you must annotate the referenced resources manually before enabling the gate.
-Failing to do so will cause `Seed` updates to be rejected once the gate is enabled.
+For `Seed`s that are not backed by a `Gardenlet` or `ManagedSeed` object, you must annotate the referenced resources manually before enabling the feature gate.
+Failing to do so will cause `Seed` updates to be rejected once the feature gate is enabled.
 
 ### Migration Guide
 
-1. **Before enabling the gate**: verify that all credential resources referenced by your `Seed`s carry the `seed.gardener.cloud/names` annotation.
+1. **Before enabling the feature gate**: verify that all credential resources referenced by your `Seed`s carry the `seed.gardener.cloud/names` annotation.
    - For `Gardenlet`/`ManagedSeed`-backed `Seed`s, `gardener-controller-manager` stamps this automatically. Confirm by inspecting the `Secret`s/`WorkloadIdentities` referenced in those `Seed`s.
-   - For hand-managed `Seed`s, annotate the referenced resources manually.
-2. **Enable the gate**: add `AllowlistSeedReferences: true` to the `featureGates` section of your `gardener-apiserver` configuration.
-3. Once the gate has been stable in your environment for a release cycle, it will be promoted to beta (default enabled).
+   - For manually-managed `Seed`s, annotate the referenced resources manually.
+2. **Enable the feature gate**: add `AllowlistSeedReferences: true` to the `featureGates` section of your `gardener-apiserver` configuration.
 

@@ -421,7 +421,8 @@ The reconciler covers all five reference paths:
 When a `Gardenlet` or `ManagedSeed` is created, its seed name is added to the annotation of every resource it references.
 When it is updated, the seed name is removed from resources that are no longer referenced and added to newly referenced ones.
 When it is deleted, its seed name is removed from the annotation of every resource it previously referenced.
-Hence, removing the annotation is not guaranteed and operators are responsible for checking and, if necessary, removing the stale entry manually in case they change a reference in the `Gardenlet` or `ManagedSeed` object.
+Note that cleanup on deletion is best-effort: if `gardener-controller-manager` is not running at the time of deletion, stale annotation entries may remain.
+Operators are responsible for checking and, if necessary, removing such stale entries manually.
 
 Operators who manage `Seed` objects directly (without a `Gardenlet` or `ManagedSeed`) must annotate the referenced resources manually.
 

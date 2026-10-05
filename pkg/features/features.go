@@ -141,7 +141,7 @@ const (
 	// AllowlistSeedReferences enforces that resources (Secrets, ConfigMaps, WorkloadIdentities) referenced in
 	// a Seed's spec must carry the annotation `seed.gardener.cloud/names` listing the seed's name (or `*`
 	// for a wildcard) before the reference is accepted. This prevents a compromised gardenlet from pointing
-	// its Seed's credential references at arbitrary resources to gain unauthorized access.
+	// its Seed's credential references at arbitrary resources to gain access.
 	// owner: @rfranzke
 	// alpha: v1.153.0
 	AllowlistSeedReferences featuregate.Feature = "AllowlistSeedReferences"

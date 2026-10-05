@@ -41,7 +41,7 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 	}
 
 	if err := (&refallowlist.Reconciler{}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding seed credentials reconciler: %w", err)
+		return fmt.Errorf("failed adding seed reference allowlist reconciler: %w", err)
 	}
 
 	return nil
