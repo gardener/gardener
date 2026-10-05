@@ -265,6 +265,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		operationsv1alpha1.Bastion{}.OpenAPIModelName():                           schema_pkg_apis_operations_v1alpha1_Bastion(ref),
 		operationsv1alpha1.BastionIngressPolicy{}.OpenAPIModelName():              schema_pkg_apis_operations_v1alpha1_BastionIngressPolicy(ref),
 		operationsv1alpha1.BastionList{}.OpenAPIModelName():                       schema_pkg_apis_operations_v1alpha1_BastionList(ref),
+		operationsv1alpha1.BastionMachine{}.OpenAPIModelName():                    schema_pkg_apis_operations_v1alpha1_BastionMachine(ref),
+		operationsv1alpha1.BastionMachineImage{}.OpenAPIModelName():               schema_pkg_apis_operations_v1alpha1_BastionMachineImage(ref),
 		operationsv1alpha1.BastionSpec{}.OpenAPIModelName():                       schema_pkg_apis_operations_v1alpha1_BastionSpec(ref),
 		operationsv1alpha1.BastionStatus{}.OpenAPIModelName():                     schema_pkg_apis_operations_v1alpha1_BastionStatus(ref),
 		securityv1alpha1.ContextObject{}.OpenAPIModelName():                       schema_pkg_apis_security_v1alpha1_ContextObject(ref),
@@ -6142,7 +6144,7 @@ func schema_pkg_apis_core_v1beta1_Machine(ref common.ReferenceCallback) common.O
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Machine contains information about the machine type and image.",
+				Description: "Machine contains information about the machine type, image and architecture.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
@@ -11132,7 +11134,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"machine": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Machine contains information about the machine type and image.",
+							Description: "Machine contains information about the machine type, image and architecture.",
 							Default:     map[string]interface{}{},
 							Ref:         ref(v1beta1.Machine{}.OpenAPIModelName()),
 						},
@@ -11508,6 +11510,63 @@ func schema_pkg_apis_operations_v1alpha1_BastionList(ref common.ReferenceCallbac
 	}
 }
 
+func schema_pkg_apis_operations_v1alpha1_BastionMachine(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionMachine contains information about the machine type and image.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the machine type of the bastion.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Image holds information about the machine image to use for the bastion.",
+							Ref:         ref(operationsv1alpha1.BastionMachineImage{}.OpenAPIModelName()),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			operationsv1alpha1.BastionMachineImage{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_operations_v1alpha1_BastionMachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionMachineImage defines the name and the version of the bastion's machine image in any environment. Has to be defined in the respective CloudProfile.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the image.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_operations_v1alpha1_BastionSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -11557,12 +11616,18 @@ func schema_pkg_apis_operations_v1alpha1_BastionSpec(ref common.ReferenceCallbac
 							},
 						},
 					},
+					"machine": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Machine contains information about the bastion machine type and image.",
+							Ref:         ref(operationsv1alpha1.BastionMachine{}.OpenAPIModelName()),
+						},
+					},
 				},
 				Required: []string{"shootRef", "sshPublicKey", "ingress"},
 			},
 		},
 		Dependencies: []string{
-			operationsv1alpha1.BastionIngressPolicy{}.OpenAPIModelName(), corev1.LocalObjectReference{}.OpenAPIModelName()},
+			operationsv1alpha1.BastionIngressPolicy{}.OpenAPIModelName(), operationsv1alpha1.BastionMachine{}.OpenAPIModelName(), corev1.LocalObjectReference{}.OpenAPIModelName()},
 	}
 }
 

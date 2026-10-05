@@ -25,6 +25,16 @@ func (in BastionList) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in BastionMachine) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.operations.v1alpha1.BastionMachine"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in BastionMachineImage) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.operations.v1alpha1.BastionMachineImage"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in BastionSpec) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.operations.v1alpha1.BastionSpec"
 }
