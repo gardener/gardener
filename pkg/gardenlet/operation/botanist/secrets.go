@@ -115,10 +115,7 @@ func (b *Botanist) restoreSecretsFromShootStateForLiveMigration(ctx context.Cont
 	// created once at the start of the live migration flow, before the source gardenlet creates the ShootState.
 	// The in-memory copy is therefore nil at this point.
 	shootState := &gardencorev1beta1.ShootState{}
-	if err := b.GardenClient.Get(ctx, client.ObjectKey{
-		Name:      b.Shoot.GetInfo().Name,
-		Namespace: b.Shoot.GetInfo().Namespace,
-	}, shootState); err != nil {
+	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
 		return fmt.Errorf("failed to fetch ShootState for live migration secret restoration: %w", err)
 	}
 
