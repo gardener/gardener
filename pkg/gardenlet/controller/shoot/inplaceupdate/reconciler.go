@@ -51,6 +51,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			if err := r.cleanupAfterSuccessfulUpdate(ctx, log, &node); err != nil {
 				return reconcile.Result{}, err
 			}
+		case node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed:
+			if err := r.handleUpdateFailed(ctx, log, &node); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 	}
 
@@ -73,6 +77,25 @@ func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.
 		return fmt.Errorf("failed to remove update-result label and uncordon node %s: %w", node.Name, err)
 	}
 	log.Info("Cleaned up node after successful in-place update")
+	return nil
+}
+
+// handleUpdateFailed handles the case where GNA has set the update-result=failed label.
+func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	log = log.WithValues("node", node.Name)
+
+	reason := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
+	if reason == "" {
+		reason = "GNA reported in-place update failure"
+	}
+
+	patch := client.MergeFrom(node.DeepCopy())
+	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, reason)
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
+	}
+
+	log.Info("Recorded GNA-reported update failure in condition", "reason", reason)
 	return nil
 }
 
