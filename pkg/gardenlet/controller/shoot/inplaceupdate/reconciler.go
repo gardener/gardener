@@ -7,6 +7,7 @@ package inplaceupdate
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -55,6 +56,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			if err := r.handleUpdateFailed(ctx, log, &node); err != nil {
 				return reconcile.Result{}, err
 			}
+		case r.isUpdateTimedOut(&node):
+			if err := r.markUpdateTimedOut(ctx, log, &node); err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 	}
 
@@ -96,6 +101,31 @@ func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, no
 	}
 
 	log.Info("Recorded GNA-reported update failure in condition", "reason", reason)
+	return nil
+}
+
+func (r *Reconciler) isUpdateTimedOut(node *corev1.Node) bool {
+	return slices.ContainsFunc(node.Status.Conditions, func(cond corev1.NodeCondition) bool {
+		return cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Status == corev1.ConditionTrue && cond.Reason == machinev1alpha1.ReadyForUpdate && r.Clock.Since(cond.LastTransitionTime.Time) > r.Config.UpdateTimeout.Duration
+	})
+}
+
+func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	log = log.WithValues("node", node.Name)
+
+	patch := client.MergeFrom(node.DeepCopy())
+	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
+	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to label node with update failed label %s: %w", node.Name, err)
+	}
+
+	patch = client.MergeFrom(node.DeepCopy())
+	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, "GNA failed to complete the in-place update within the expected time")
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
+	}
+
+	log.Info("Marked in-place update as failed due to timeout")
 	return nil
 }
 
