@@ -329,7 +329,7 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 			override, exists := currentVersionsMerged[newVersion.Version]
 			overrideStage := getExpiryStage(override)
 			newStage := getExpiryStage(newVersion)
-			if !exists || overrideStage == nil || overrideStage.StartTime == nil || newStage == nil || newStage.StartTime == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
+			if !exists || overrideStage == nil || newStage == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 				return fmt.Errorf("expiration date for version %q is in the past", newVersion.Version)
 			}
 		}
@@ -423,7 +423,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						}
 						overrideStage := getExpiryStage(override.ExpirableVersion)
 						newStage := getExpiryStage(imageVersion.ExpirableVersion)
-						if !exists || overrideStage == nil || overrideStage.StartTime == nil || newStage == nil || newStage.StartTime == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
+						if !exists || overrideStage == nil || newStage == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q is in the past", imageVersion.Version)))
 						}
 					}

@@ -101,6 +101,65 @@ var _ = Describe("Admission", func() {
 			validExpirationDate = &metav1.Time{Time: time.Now().Add(24 * time.Hour)}
 		})
 
+		for _, machineImage := range []bool{false, true} {
+			kind := "Kubernetes"
+			if machineImage {
+				kind = "machine image"
+			}
+			DescribeTable(kind+" expired lifecycle updates", func(oldExpiry, newExpiry string, oldVersionExists, allowed bool) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+				version := "1.30.0"
+				if machineImage {
+					version = "1.0.0"
+				}
+				withExpiry := func(expiry string) gardencore.ExpirableVersion {
+					stage := gardencore.LifecycleStage{Classification: gardencore.ClassificationExpired}
+					switch expiry {
+					case "past":
+						stage.StartTime = expiredExpirationDate.DeepCopy()
+					case "earlier":
+						stage.StartTime = new(metav1.NewTime(expiredExpirationDate.Add(-time.Hour)))
+					case "absent":
+						stage.Classification = gardencore.ClassificationSupported
+					}
+					return gardencore.ExpirableVersion{Version: version, Lifecycle: []gardencore.LifecycleStage{stage}}
+				}
+				oldVersion, newVersion := withExpiry(oldExpiry), withExpiry(newExpiry)
+				oldProfile := namespacedCloudProfile.DeepCopy()
+				updatedProfile := namespacedCloudProfile.DeepCopy()
+				// Exercise validation even when the expiration is unchanged.
+				updatedProfile.Labels = map[string]string{"test": "updated"}
+				if machineImage {
+					oldProfile.Spec.MachineImages = []gardencore.MachineImage{{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: oldVersion}}}}
+					updatedProfile.Spec.MachineImages = []gardencore.MachineImage{{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: newVersion}}}}
+					if oldVersionExists {
+						oldProfile.Status.CloudProfileSpec.MachineImages = oldProfile.Spec.MachineImages
+					}
+				} else {
+					oldProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{oldVersion}}
+					updatedProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{newVersion}}
+					if oldVersionExists {
+						oldProfile.Status.CloudProfileSpec.Kubernetes = *oldProfile.Spec.Kubernetes
+					}
+				}
+				attrs := admission.NewAttributesRecord(updatedProfile, oldProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", updatedProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				if allowed {
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				} else {
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("is in the past")))
+				}
+			},
+				Entry("allows unchanged nil start times", "nil", "nil", true, true),
+				Entry("allows equal past start times", "past", "past", true, true),
+				Entry("rejects nil changed to a past start time", "nil", "past", true, false),
+				Entry("rejects a past start time changed to nil", "past", "nil", true, false),
+				Entry("rejects changed past start times", "past", "earlier", true, false),
+				Entry("rejects a newly introduced expired stage", "absent", "nil", true, false),
+				Entry("rejects an expired version missing from the previous status", "nil", "nil", false, false),
+			)
+		}
+
 		Describe("parent", func() {
 			It("should not allow creating a NamespacedCloudProfile with an invalid parent reference", func() {
 				namespacedCloudProfile.Spec.Parent = gardencore.CloudProfileReference{Kind: "CloudProfile", Name: "idontexist"}
