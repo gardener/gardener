@@ -78,14 +78,14 @@ var _ = Describe("ResourceManager", func() {
 		secretMountPathAPIAccess           = "/var/run/secrets/kubernetes.io/serviceaccount"
 		secrets                            Secrets
 		alwaysUpdate                       = true
-		concurrentSyncs                    = 20
+		concurrentSyncs                    = int32(20)
 		genericTokenKubeconfigSecretName   = "generic-token-kubeconfig"
 		clusterRoleName                    = "gardener-resource-manager-seed"
 		healthSyncPeriod                   = metav1.Duration{Duration: time.Minute}
-		maxConcurrentHealthWorkers         = 20
-		maxConcurrentTokenRequestorWorkers = 21
-		maxConcurrentCSRApproverWorkers    = 24
-		maxConcurrentNetworkPolicyWorkers  = 25
+		maxConcurrentHealthWorkers         = int32(20)
+		maxConcurrentTokenRequestorWorkers = int32(21)
+		maxConcurrentCSRApproverWorkers    = int32(24)
+		maxConcurrentNetworkPolicyWorkers  = int32(25)
 		resourceClass                      = "fake-ResourceClass"
 		watchedNamespace                   = "fake-ns"
 		targetDisableCache                 = true
@@ -390,14 +390,14 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
 					HealthProbes: &resourcemanagerconfigv1alpha1.Server{
-						Port: int(healthPort),
+						Port: healthPort,
 					},
 					Metrics: &resourcemanagerconfigv1alpha1.Server{
-						Port: int(metricsPort),
+						Port: metricsPort,
 					},
 					Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
 						Server: resourcemanagerconfigv1alpha1.Server{
-							Port: int(serverPort),
+							Port: serverPort,
 						},
 						TLS: resourcemanagerconfigv1alpha1.TLSServer{
 							ServerCertDir: secretMountPathServer,

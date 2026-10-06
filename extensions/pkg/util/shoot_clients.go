@@ -62,7 +62,7 @@ func NewShootClients(c client.Client, clientset kubernetes.Interface, gardenerCl
 // ApplyRESTOptions applies RESTOptions to the given rest.Config
 func ApplyRESTOptions(restConfig *rest.Config, restOptions extensionsconfigv1alpha1.RESTOptions) *rest.Config {
 	restConfig.QPS = ptr.Deref(restOptions.QPS, restConfig.QPS)
-	restConfig.Burst = ptr.Deref(restOptions.Burst, restConfig.Burst)
+	restConfig.Burst = int(ptr.Deref(restOptions.Burst, int32(restConfig.Burst))) // #nosec G115 -- Burst is a small positive concurrency value, overflow is not possible in practice
 	restConfig.Timeout = ptr.Deref(restOptions.Timeout, restConfig.Timeout)
 	return restConfig
 }

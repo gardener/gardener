@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Delete)),
 		).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			RateLimiter:             r.RateLimiter,
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).

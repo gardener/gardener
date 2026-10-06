@@ -173,7 +173,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&state.Reconciler{
 		Config: gardenletconfigv1alpha1.ShootStateControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
 		},
 		Clock:    fakeClock,

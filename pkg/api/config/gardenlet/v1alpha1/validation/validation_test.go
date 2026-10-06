@@ -25,8 +25,8 @@ var _ = Describe("GardenletConfiguration", func() {
 	var (
 		cfg *gardenletconfigv1alpha1.GardenletConfiguration
 
-		deletionGracePeriodHours = 1
-		concurrentSyncs          = 20
+		deletionGracePeriodHours = int32(1)
+		concurrentSyncs          = int32(20)
 	)
 
 	BeforeEach(func() {
@@ -304,7 +304,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("shoot controller", func() {
 			It("should forbid invalid configuration", func() {
-				invalidConcurrentSyncs := -1
+				invalidConcurrentSyncs := int32(-1)
 
 				cfg.Controllers.Shoot.ConcurrentSyncs = &invalidConcurrentSyncs
 				cfg.Controllers.Shoot.ProgressReportPeriod = &metav1.Duration{Duration: -1}
@@ -358,7 +358,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("shootCare controller", func() {
 			It("should forbid invalid configuration", func() {
-				invalidConcurrentSyncs := -1
+				invalidConcurrentSyncs := int32(-1)
 
 				cfg.Controllers.ShootCare.ConcurrentSyncs = &invalidConcurrentSyncs
 				cfg.Controllers.ShootCare.SyncPeriod = &metav1.Duration{Duration: -1}
@@ -403,7 +403,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("managed seed controller", func() {
 			It("should forbid invalid configuration", func() {
-				invalidConcurrentSyncs := -1
+				invalidConcurrentSyncs := int32(-1)
 
 				cfg.Controllers.ManagedSeed.ConcurrentSyncs = &invalidConcurrentSyncs
 				cfg.Controllers.ManagedSeed.SyncPeriod = &metav1.Duration{Duration: -1}
@@ -471,7 +471,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("bastion controller", func() {
 			It("should forbid invalid configuration", func() {
-				invalidConcurrentSyncs := -1
+				invalidConcurrentSyncs := int32(-1)
 				cfg.Controllers.Bastion.ConcurrentSyncs = &invalidConcurrentSyncs
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
@@ -491,7 +491,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should return errors because concurrent syncs are < 0", func() {
-				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = new(-1)
+				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = new(int32(-1))
 
 				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{

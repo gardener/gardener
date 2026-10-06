@@ -242,7 +242,7 @@ var _ = BeforeSuite(func() {
 	Expect((&backupbucketcontroller.Reconciler{
 		Clock: fakeClock,
 		Config: gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		GardenNamespace: gardenNamespace.Name,
 		SeedName:        seed.Name,

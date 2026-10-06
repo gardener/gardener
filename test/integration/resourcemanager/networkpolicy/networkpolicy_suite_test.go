@@ -111,7 +111,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig{
-			ConcurrentSyncs:    new(5),
+			ConcurrentSyncs:    new(int32(5)),
 			NamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{testID: testRunID}}},
 			IngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 				Namespace:   ingressControllerNamespace,

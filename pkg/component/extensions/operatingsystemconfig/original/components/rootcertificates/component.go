@@ -76,7 +76,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		// This file contains Gardener CAs for Debian based OS
 		{
 			Path:        PathLocalSSLRootCerts,
-			Permissions: new(uint32(0644)),
+			Permissions: new(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -87,7 +87,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		// This file contains Gardener CAs for Redhat/SUSE OS
 		{
 			Path:        PathPKITrustAnchors + "/ROOTcerts.pem",
-			Permissions: new(uint32(0644)),
+			Permissions: new(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -101,7 +101,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		updateCACertsFiles = append(updateCACertsFiles,
 			extensionsv1alpha1.File{
 				Path:        PathLocalSSLRegistryCACerts,
-				Permissions: new(uint32(0644)),
+				Permissions: new(int32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -111,7 +111,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			},
 			extensionsv1alpha1.File{
 				Path:        PathPKITrustAnchorsRegistryCACerts,
-				Permissions: new(uint32(0644)),
+				Permissions: new(int32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -165,7 +165,7 @@ func UpdateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
 
 	return extensionsv1alpha1.File{
 		Path:        PathUpdateLocalCACertificates,
-		Permissions: new(uint32(0744)),
+		Permissions: new(int32(0744)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

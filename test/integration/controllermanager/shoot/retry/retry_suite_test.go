@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&retry.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootRetryControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			RetryPeriod:     &metav1.Duration{Duration: 10 * time.Second},
 		},
 	}).AddToManager(mgr)).To(Succeed())

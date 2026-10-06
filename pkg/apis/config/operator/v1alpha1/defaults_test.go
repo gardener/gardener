@@ -54,11 +54,11 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_OperatorConfiguration(obj)
 
 			Expect(obj.Server.Webhooks.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Webhooks.Port).To(Equal(2750))
+			Expect(obj.Server.Webhooks.Port).To(Equal(int32(2750)))
 			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
-			Expect(obj.Server.HealthProbes.Port).To(Equal(2751))
+			Expect(obj.Server.HealthProbes.Port).To(Equal(int32(2751)))
 			Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Metrics.Port).To(Equal(2752))
+			Expect(obj.Server.Metrics.Port).To(Equal(int32(2752)))
 		})
 
 		It("should not overwrite already set values for Server configuration", func() {
@@ -191,7 +191,7 @@ var _ = Describe("Defaults", func() {
 			It("should default the Garden controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.Garden.ConcurrentSyncs).To(PointTo(Equal(1)))
+				Expect(obj.Controllers.Garden.ConcurrentSyncs).To(PointTo(Equal(int32(1))))
 				Expect(obj.Controllers.Garden.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
 				Expect(obj.Controllers.Garden.ETCDConfig).NotTo(BeNil())
 				Expect(obj.Controllers.Garden.ETCDConfig.ETCDController).NotTo(BeNil())
@@ -209,7 +209,7 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						Garden: GardenControllerConfig{
-							ConcurrentSyncs: new(5),
+							ConcurrentSyncs: new(int32(5)),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 							ETCDConfig: &v1alpha1.ETCDConfig{
 								ETCDController:      &v1alpha1.ETCDController{Workers: new(int64(5))},
@@ -227,7 +227,7 @@ var _ = Describe("Defaults", func() {
 
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.Garden.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.Controllers.Garden.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 				Expect(obj.Controllers.Garden.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 				Expect(obj.Controllers.Garden.ETCDConfig.ETCDController.Workers).To(PointTo(Equal(int64(5))))
 				Expect(obj.Controllers.Garden.ETCDConfig.CustodianController.Workers).To(PointTo(Equal(int64(5))))
@@ -264,21 +264,21 @@ var _ = Describe("Defaults", func() {
 			It("should default the Extension controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.Extension.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.Controllers.Extension.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			})
 
 			It("should not overwrite already set values for GardenCare controller config", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						Extension: ExtensionControllerConfiguration{
-							ConcurrentSyncs: new(2),
+							ConcurrentSyncs: new(int32(2)),
 						},
 					},
 				}
 
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.Extension.ConcurrentSyncs).To(PointTo(Equal(2)))
+				Expect(obj.Controllers.Extension.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 			})
 		})
 
@@ -286,7 +286,7 @@ var _ = Describe("Defaults", func() {
 			It("should default the ExtensionCare controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionCare.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.Controllers.ExtensionCare.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 				Expect(obj.Controllers.ExtensionCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			})
 
@@ -294,7 +294,7 @@ var _ = Describe("Defaults", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						ExtensionCare: ExtensionCareControllerConfiguration{
-							ConcurrentSyncs: new(2),
+							ConcurrentSyncs: new(int32(2)),
 							SyncPeriod:      &metav1.Duration{Duration: time.Second},
 						},
 					},
@@ -302,7 +302,7 @@ var _ = Describe("Defaults", func() {
 
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionCare.ConcurrentSyncs).To(PointTo(Equal(2)))
+				Expect(obj.Controllers.ExtensionCare.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 				Expect(obj.Controllers.ExtensionCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 			})
 		})
@@ -311,21 +311,21 @@ var _ = Describe("Defaults", func() {
 			It("should default the ExtensionReference controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionReference.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.Controllers.ExtensionReference.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			})
 
 			It("should not overwrite already set values for ExtensionReference controller config", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						ExtensionReference: ExtensionReferenceControllerConfiguration{
-							ConcurrentSyncs: new(2),
+							ConcurrentSyncs: new(int32(2)),
 						},
 					},
 				}
 
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionReference.ConcurrentSyncs).To(PointTo(Equal(2)))
+				Expect(obj.Controllers.ExtensionReference.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 			})
 		})
 
@@ -333,21 +333,21 @@ var _ = Describe("Defaults", func() {
 			It("should default the ExtensionRequiredRuntime controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionRequiredRuntime.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.Controllers.ExtensionRequiredRuntime.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			})
 
 			It("should not overwrite already set values for GardenCare controller config", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						ExtensionRequiredRuntime: ExtensionRequiredRuntimeControllerConfiguration{
-							ConcurrentSyncs: new(2),
+							ConcurrentSyncs: new(int32(2)),
 						},
 					},
 				}
 
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionRequiredRuntime.ConcurrentSyncs).To(PointTo(Equal(2)))
+				Expect(obj.Controllers.ExtensionRequiredRuntime.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 			})
 		})
 
@@ -355,21 +355,21 @@ var _ = Describe("Defaults", func() {
 			It("should default the ExtensionRequiredVirtual controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionRequiredVirtual.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.Controllers.ExtensionRequiredVirtual.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			})
 
 			It("should not overwrite already set values for GardenCare controller config", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
 						ExtensionRequiredVirtual: ExtensionRequiredVirtualControllerConfiguration{
-							ConcurrentSyncs: new(2),
+							ConcurrentSyncs: new(int32(2)),
 						},
 					},
 				}
 
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionRequiredVirtual.ConcurrentSyncs).To(PointTo(Equal(2)))
+				Expect(obj.Controllers.ExtensionRequiredVirtual.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 			})
 		})
 	})

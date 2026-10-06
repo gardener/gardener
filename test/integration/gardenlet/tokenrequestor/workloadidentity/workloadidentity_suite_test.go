@@ -161,7 +161,7 @@ var _ = BeforeSuite(func() {
 		Clock:      fakeClock,
 		JitterFunc: func(_ time.Duration, _ float64) time.Duration { return time.Second },
 		Config: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
-			ConcurrentSyncs:         new(5),
+			ConcurrentSyncs:         new(int32(5)),
 			TokenExpirationDuration: &metav1.Duration{Duration: 6 * time.Hour},
 		},
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

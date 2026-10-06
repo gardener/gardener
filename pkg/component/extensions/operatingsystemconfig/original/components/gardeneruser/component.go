@@ -94,7 +94,7 @@ WantedBy=multi-user.target
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathAuthorizedSSHKeys,
-				Permissions: new(uint32(0644)),
+				Permissions: new(int32(0644)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -104,7 +104,7 @@ WantedBy=multi-user.target
 			},
 			{
 				Path:        pathScript,
-				Permissions: new(uint32(0755)),
+				Permissions: new(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

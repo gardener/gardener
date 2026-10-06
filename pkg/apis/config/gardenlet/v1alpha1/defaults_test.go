@@ -179,7 +179,7 @@ var _ = Describe("Defaults", func() {
 		It("should default the backup bucket controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.BackupBucket.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.BackupBucket.ConcurrentSyncs).To(PointTo(Equal(int32(20))))
 			Expect(obj.Controllers.BackupBucket.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 			Expect(obj.Controllers.BackupBucket.JitterUpdates).To(PointTo(BeFalse()))
 		})
@@ -187,14 +187,14 @@ var _ = Describe("Defaults", func() {
 		It("should not overwrite already set values for the backup bucket controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				BackupBucket: &BackupBucketControllerConfiguration{
-					ConcurrentSyncs:  new(10),
+					ConcurrentSyncs:  new(int32(10)),
 					SyncJitterPeriod: &metav1.Duration{Duration: 2 * time.Minute},
 					JitterUpdates:    new(true),
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.BackupBucket.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.BackupBucket.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 			Expect(obj.Controllers.BackupBucket.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 			Expect(obj.Controllers.BackupBucket.JitterUpdates).To(PointTo(BeTrue()))
 		})
@@ -204,8 +204,8 @@ var _ = Describe("Defaults", func() {
 		It("should default the backup entry controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.BackupEntry.ConcurrentSyncs).To(PointTo(Equal(20)))
-			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodHours).To(PointTo(Equal(0)))
+			Expect(obj.Controllers.BackupEntry.ConcurrentSyncs).To(PointTo(Equal(int32(20))))
+			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodHours).To(PointTo(Equal(int32(0))))
 			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodShootPurposes).To(BeEmpty())
 			Expect(obj.Controllers.BackupEntry.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 			Expect(obj.Controllers.BackupEntry.JitterUpdates).To(PointTo(BeFalse()))
@@ -215,8 +215,8 @@ var _ = Describe("Defaults", func() {
 			deletionGracePeriodShootPurposes := []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeEvaluation}
 			obj.Controllers = &GardenletControllerConfiguration{
 				BackupEntry: &BackupEntryControllerConfiguration{
-					ConcurrentSyncs:                  new(10),
-					DeletionGracePeriodHours:         new(1),
+					ConcurrentSyncs:                  new(int32(10)),
+					DeletionGracePeriodHours:         new(int32(1)),
 					DeletionGracePeriodShootPurposes: deletionGracePeriodShootPurposes,
 					SyncJitterPeriod:                 &metav1.Duration{Duration: 2 * time.Minute},
 					JitterUpdates:                    new(true),
@@ -224,8 +224,8 @@ var _ = Describe("Defaults", func() {
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.BackupEntry.ConcurrentSyncs).To(PointTo(Equal(10)))
-			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodHours).To(PointTo(Equal(1)))
+			Expect(obj.Controllers.BackupEntry.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
+			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodHours).To(PointTo(Equal(int32(1))))
 			Expect(obj.Controllers.BackupEntry.DeletionGracePeriodShootPurposes).To(Equal(deletionGracePeriodShootPurposes))
 			Expect(obj.Controllers.BackupEntry.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 			Expect(obj.Controllers.BackupEntry.JitterUpdates).To(PointTo(BeTrue()))
@@ -236,16 +236,16 @@ var _ = Describe("Defaults", func() {
 		It("should default the bastion controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(int32(20))))
 		})
 
 		It("should not overwrite already set values for the bastion controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				Bastion: &BastionControllerConfiguration{ConcurrentSyncs: new(10)},
+				Bastion: &BastionControllerConfiguration{ConcurrentSyncs: new(int32(10))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 		})
 	})
 
@@ -253,16 +253,16 @@ var _ = Describe("Defaults", func() {
 		It("should default the controller installation controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ControllerInstallation.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.ControllerInstallation.ConcurrentSyncs).To(PointTo(Equal(int32(20))))
 		})
 
 		It("should not overwrite already set values for the controller installation controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				ControllerInstallation: &ControllerInstallationControllerConfiguration{ConcurrentSyncs: new(10)},
+				ControllerInstallation: &ControllerInstallationControllerConfiguration{ConcurrentSyncs: new(int32(10))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ControllerInstallation.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.ControllerInstallation.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 		})
 	})
 
@@ -271,7 +271,7 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 30 * time.Second}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ControllerInstallationCare.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.ControllerInstallationCare.ConcurrentSyncs).To(PointTo(Equal(int32(20))))
 			Expect(obj.Controllers.ControllerInstallationCare.SyncPeriod).To(PointTo(Equal(v)))
 		})
 
@@ -279,13 +279,13 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Minute}
 			obj.Controllers = &GardenletControllerConfiguration{
 				ControllerInstallationCare: &ControllerInstallationCareControllerConfiguration{
-					ConcurrentSyncs: new(10),
+					ConcurrentSyncs: new(int32(10)),
 					SyncPeriod:      &v,
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ControllerInstallationCare.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.ControllerInstallationCare.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 			Expect(obj.Controllers.ControllerInstallationCare.SyncPeriod).To(PointTo(Equal(v)))
 		})
 	})
@@ -294,16 +294,16 @@ var _ = Describe("Defaults", func() {
 		It("should default the controller installation required controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ControllerInstallationRequired.ConcurrentSyncs).To(PointTo(Equal(1)))
+			Expect(obj.Controllers.ControllerInstallationRequired.ConcurrentSyncs).To(PointTo(Equal(int32(1))))
 		})
 
 		It("should not overwrite already set values for the controller installation required controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				ControllerInstallationRequired: &ControllerInstallationRequiredControllerConfiguration{ConcurrentSyncs: new(10)},
+				ControllerInstallationRequired: &ControllerInstallationRequiredControllerConfiguration{ConcurrentSyncs: new(int32(10))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ControllerInstallationRequired.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.ControllerInstallationRequired.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 		})
 	})
 
@@ -375,7 +375,7 @@ var _ = Describe("Defaults", func() {
 		It("should default the shoot controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.Shoot.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.Shoot.ConcurrentSyncs).To(PointTo(Equal(int32(20))))
 			Expect(obj.Controllers.Shoot.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
 			Expect(obj.Controllers.Shoot.RespectSyncPeriodOverwrite).To(PointTo(Equal(false)))
 			Expect(obj.Controllers.Shoot.ReconcileInMaintenanceOnly).To(PointTo(Equal(false)))
@@ -387,7 +387,7 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Hour}
 			obj.Controllers = &GardenletControllerConfiguration{
 				Shoot: &ShootControllerConfiguration{
-					ConcurrentSyncs:            new(10),
+					ConcurrentSyncs:            new(int32(10)),
 					SyncPeriod:                 &v,
 					RespectSyncPeriodOverwrite: new(true),
 					ReconcileInMaintenanceOnly: new(true),
@@ -397,7 +397,7 @@ var _ = Describe("Defaults", func() {
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.Shoot.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.Shoot.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 			Expect(obj.Controllers.Shoot.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
 			Expect(obj.Controllers.Shoot.RespectSyncPeriodOverwrite).To(PointTo(Equal(true)))
 			Expect(obj.Controllers.Shoot.ReconcileInMaintenanceOnly).To(PointTo(Equal(true)))
@@ -411,7 +411,7 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Controllers.ShootCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
-			Expect(obj.Controllers.ShootCare.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.Controllers.ShootCare.ConcurrentSyncs).To(PointTo(Equal(int32(20))))
 			Expect(obj.Controllers.ShootCare.StaleExtensionHealthChecks.Enabled).To(BeTrue())
 			Expect(obj.Controllers.ShootCare.StaleExtensionHealthChecks.Threshold).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 		})
@@ -421,14 +421,14 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				ShootCare: &ShootCareControllerConfiguration{
 					SyncPeriod:                 &syncPeriod,
-					ConcurrentSyncs:            new(10),
+					ConcurrentSyncs:            new(int32(10)),
 					StaleExtensionHealthChecks: &StaleExtensionHealthChecks{Enabled: false},
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Controllers.ShootCare.SyncPeriod).To(PointTo(Equal(syncPeriod)))
-			Expect(obj.Controllers.ShootCare.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.ShootCare.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 			Expect(obj.Controllers.ShootCare.StaleExtensionHealthChecks.Enabled).To(BeFalse())
 		})
 	})
@@ -458,7 +458,7 @@ var _ = Describe("Defaults", func() {
 		It("should default the shoot state controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ShootState.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.ShootState.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			Expect(obj.Controllers.ShootState.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 		})
 
@@ -467,13 +467,13 @@ var _ = Describe("Defaults", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				ShootState: &ShootStateControllerConfiguration{
 					SyncPeriod:      &syncPeriod,
-					ConcurrentSyncs: new(10),
+					ConcurrentSyncs: new(int32(10)),
 				},
 			}
 
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ShootState.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.ShootState.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 			Expect(obj.Controllers.ShootState.SyncPeriod).To(PointTo(Equal(syncPeriod)))
 		})
 	})
@@ -482,16 +482,16 @@ var _ = Describe("Defaults", func() {
 		It("should default the network policy controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 		})
 
 		It("should not overwrite already set values for the network policy controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				NetworkPolicy: &NetworkPolicyControllerConfiguration{ConcurrentSyncs: new(10)},
+				NetworkPolicy: &NetworkPolicyControllerConfiguration{ConcurrentSyncs: new(int32(10))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 		})
 	})
 
@@ -510,7 +510,7 @@ var _ = Describe("Defaults", func() {
 			v := metav1.Duration{Duration: 2 * time.Minute}
 			obj.Controllers = &GardenletControllerConfiguration{
 				ManagedSeed: &ManagedSeedControllerConfiguration{
-					ConcurrentSyncs:  new(10),
+					ConcurrentSyncs:  new(int32(10)),
 					SyncPeriod:       &v,
 					WaitSyncPeriod:   &v,
 					SyncJitterPeriod: &v,
@@ -519,7 +519,7 @@ var _ = Describe("Defaults", func() {
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ManagedSeed.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.ManagedSeed.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 			Expect(obj.Controllers.ManagedSeed.SyncPeriod).To(PointTo(Equal(v)))
 			Expect(obj.Controllers.ManagedSeed.WaitSyncPeriod).To(PointTo(Equal(v)))
 			Expect(obj.Controllers.ManagedSeed.SyncJitterPeriod).To(PointTo(Equal(v)))
@@ -531,16 +531,16 @@ var _ = Describe("Defaults", func() {
 		It("should default the token requestor service account controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 		})
 
 		It("should not overwrite already set values for the token requestor controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				TokenRequestorServiceAccount: &TokenRequestorServiceAccountControllerConfiguration{ConcurrentSyncs: new(10)},
+				TokenRequestorServiceAccount: &TokenRequestorServiceAccountControllerConfiguration{ConcurrentSyncs: new(int32(10))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 		})
 	})
 
@@ -548,20 +548,20 @@ var _ = Describe("Defaults", func() {
 		It("should default the token requestor workload identity controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 		})
 
 		It("should not overwrite already set values for the token requestor controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
 				TokenRequestorWorkloadIdentity: &TokenRequestorWorkloadIdentityControllerConfiguration{
-					ConcurrentSyncs:         new(10),
+					ConcurrentSyncs:         new(int32(10)),
 					TokenExpirationDuration: &metav1.Duration{Duration: 12 * time.Hour},
 				},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.TokenExpirationDuration).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
 		})
 	})
@@ -570,16 +570,16 @@ var _ = Describe("Defaults", func() {
 		It("should default the VPA eviction requirements controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.VPAEvictionRequirements.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.VPAEvictionRequirements.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 		})
 
 		It("should not overwrite already set values for the VPA eviction requirements controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				VPAEvictionRequirements: &VPAEvictionRequirementsControllerConfiguration{ConcurrentSyncs: new(10)},
+				VPAEvictionRequirements: &VPAEvictionRequirementsControllerConfiguration{ConcurrentSyncs: new(int32(10))},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.VPAEvictionRequirements.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.VPAEvictionRequirements.ConcurrentSyncs).To(PointTo(Equal(int32(10))))
 		})
 	})
 
@@ -636,9 +636,9 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
-			Expect(obj.Server.HealthProbes.Port).To(Equal(2728))
+			Expect(obj.Server.HealthProbes.Port).To(Equal(int32(2728)))
 			Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Metrics.Port).To(Equal(2729))
+			Expect(obj.Server.Metrics.Port).To(Equal(int32(2729)))
 		})
 
 		It("should not overwrite already set values for the HTTP server configuration", func() {
@@ -655,9 +655,9 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.Server.HealthProbes.BindAddress).To(Equal("127.0.0.0"))
-			Expect(obj.Server.HealthProbes.Port).To(Equal(1010))
+			Expect(obj.Server.HealthProbes.Port).To(Equal(int32(1010)))
 			Expect(obj.Server.Metrics.BindAddress).To(Equal("127.0.0.1"))
-			Expect(obj.Server.Metrics.Port).To(Equal(1011))
+			Expect(obj.Server.Metrics.Port).To(Equal(int32(1011)))
 		})
 	})
 

@@ -171,7 +171,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&bastion.Reconciler{
 		Config: gardenletconfigv1alpha1.BastionControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		Clock: fakeClock,
 		// limit exponential backoff in tests

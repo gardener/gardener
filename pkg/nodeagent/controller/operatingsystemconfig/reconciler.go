@@ -427,7 +427,7 @@ var (
 func getFilePermissions(file extensionsv1alpha1.File) os.FileMode {
 	permissions := defaultFilePermissions
 	if file.Permissions != nil {
-		permissions = fs.FileMode(*file.Permissions)
+		permissions = fs.FileMode(uint32(*file.Permissions)) // #nosec G115 -- permissions are non-negative, enforced by +kubebuilder:validation:Minimum=0
 	}
 	return permissions
 }

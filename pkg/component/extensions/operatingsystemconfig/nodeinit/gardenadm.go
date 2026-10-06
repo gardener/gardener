@@ -69,7 +69,7 @@ func GardenadmConfig(sshPublicKey string) ([]extensionsv1alpha1.Unit, []extensio
 	files = append(files, []extensionsv1alpha1.File{
 		{
 			Path:        GardenadmPathDownloadScript,
-			Permissions: new(uint32(0755)),
+			Permissions: new(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -82,7 +82,7 @@ func GardenadmConfig(sshPublicKey string) ([]extensionsv1alpha1.Unit, []extensio
 			// Later on, when the node-agent-authorizer is enabled, gardener-node-agent's user will need to correspond to
 			// a machine object name, which might be different from the node/host name.
 			Path:        nodeagentconfigv1alpha1.MachineNameFilePath,
-			Permissions: new(uint32(0640)),
+			Permissions: new(int32(0640)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: machinecontroller.MachineNamePlaceholder,

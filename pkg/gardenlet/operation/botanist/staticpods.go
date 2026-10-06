@@ -290,7 +290,7 @@ func (b *Botanist) appendStaticAdminKubeconfigToFiles(files []extensionsv1alpha1
 
 	return append(files, extensionsv1alpha1.File{
 		Path:        PathKubeconfig,
-		Permissions: new(uint32(0600)),
+		Permissions: new(int32(0600)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(userKubeconfigSecret.Data[secretsutils.DataKeyKubeconfig])}},
 	}), nil
 }
@@ -315,7 +315,7 @@ func (b *Botanist) appendDynamicAdminKubeconfigToFiles(files []extensionsv1alpha
 
 	return append(files, extensionsv1alpha1.File{
 		Path:        PathKubeconfig,
-		Permissions: new(uint32(0600)),
+		Permissions: new(int32(0600)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(rawKubeconfig)}},
 	}), nil
 }

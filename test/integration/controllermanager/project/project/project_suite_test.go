@@ -130,7 +130,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&project.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{{
 				Config:          defaultResourceQuota,
 				ProjectSelector: &metav1.LabelSelector{},
@@ -145,14 +145,14 @@ var _ = BeforeSuite(func() {
 	By("Register CloudProfile controller")
 	Expect((&cloudprofile.Reconciler{
 		Config: controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Register NamespacedCloudProfile controller")
 	Expect((&namespacedcloudprofile.Reconciler{
 		Config: controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

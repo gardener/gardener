@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = &testclock.FakeClock{}
 	Expect((&quota.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootQuotaControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock: fakeClock,

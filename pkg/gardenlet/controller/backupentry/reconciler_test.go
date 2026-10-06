@@ -45,7 +45,7 @@ var _ = Describe("Controller", func() {
 		reconciler   reconcile.Reconciler
 
 		fakeClock                *testclock.FakeClock
-		deletionGracePeriodHours = 24
+		deletionGracePeriodHours = int32(24)
 
 		gardenSecret         *corev1.Secret
 		workloadIdentity     *securityv1alpha1.WorkloadIdentity
@@ -135,8 +135,8 @@ var _ = Describe("Controller", func() {
 			SeedClient:   seedClient,
 			Recorder:     &events.FakeRecorder{},
 			Config: gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
-				ConcurrentSyncs:                  new(5),
-				DeletionGracePeriodHours:         new(deletionGracePeriodHours),
+				ConcurrentSyncs:                  new(int32(5)),
+				DeletionGracePeriodHours:         &deletionGracePeriodHours,
 				DeletionGracePeriodShootPurposes: []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeProduction},
 			},
 			Clock:           fakeClock,

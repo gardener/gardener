@@ -55,7 +55,7 @@ func AddToManager(mgr manager.Manager, config controllermanagerconfigv1alpha1.Co
 		Named(ControllerName).
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(controllerinstallation.ShootPredicate(controllerinstallation.ShootKind))).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(config.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Watches(

@@ -78,7 +78,7 @@ ExecStart=/opt/bin/opentelemetry-collector --config=` + PathConfig
 
 			otelConfigFile := extensionsv1alpha1.File{
 				Path:        "/var/lib/opentelemetry-collector/config/config",
-				Permissions: new(uint32(0400)),
+				Permissions: new(int32(0400)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -240,7 +240,7 @@ service:
 
 			otelBinaryFile := extensionsv1alpha1.File{
 				Path:        "/opt/bin/opentelemetry-collector",
-				Permissions: new(uint32(0700)),
+				Permissions: new(int32(0700)),
 				Content: extensionsv1alpha1.FileContent{
 					ImageRef: &extensionsv1alpha1.FileContentImageRef{
 						Image:           ctx.Images["opentelemetry-collector"].String(),
@@ -251,7 +251,7 @@ service:
 
 			caBundleFile := extensionsv1alpha1.File{
 				Path:        "/var/lib/opentelemetry-collector/ca.crt",
-				Permissions: new(uint32(0400)),
+				Permissions: new(int32(0400)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -261,7 +261,7 @@ service:
 			}
 			kubeconfig := extensionsv1alpha1.File{
 				Path:        "/var/lib/opentelemetry-collector/kubeconfig",
-				Permissions: new(uint32(0600)),
+				Permissions: new(int32(0600)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "",

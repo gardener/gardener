@@ -141,7 +141,7 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&requiredruntime.RequeueExtensionKindNotCalculated, 10*time.Millisecond))
 
 	Expect((&requiredruntime.Reconciler{
-		Config: operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: new(5)},
+		Config: operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: new(int32(5))},
 	}).AddToManager(mgr)).Should(Succeed())
 
 	By("Start manager")

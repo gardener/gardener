@@ -118,9 +118,9 @@ var _ = Describe("Defaults", func() {
 				SetDefaults_ServerConfiguration(obj)
 
 				Expect(obj.HealthProbes.BindAddress).To(BeEmpty())
-				Expect(obj.HealthProbes.Port).To(Equal(2751))
+				Expect(obj.HealthProbes.Port).To(Equal(int32(2751)))
 				Expect(obj.Metrics.BindAddress).To(BeEmpty())
-				Expect(obj.Metrics.Port).To(Equal(2752))
+				Expect(obj.Metrics.Port).To(Equal(int32(2752)))
 			})
 
 			It("should not overwrite existing values", func() {
@@ -132,9 +132,9 @@ var _ = Describe("Defaults", func() {
 				SetDefaults_ServerConfiguration(obj)
 
 				Expect(obj.HealthProbes.BindAddress).To(Equal("1"))
-				Expect(obj.HealthProbes.Port).To(Equal(2345))
+				Expect(obj.HealthProbes.Port).To(Equal(int32(2345)))
 				Expect(obj.Metrics.BindAddress).To(Equal("6"))
-				Expect(obj.Metrics.Port).To(Equal(7890))
+				Expect(obj.Metrics.Port).To(Equal(int32(7890)))
 			})
 		})
 	})
