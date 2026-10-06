@@ -237,7 +237,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.etcdDruid, err = r.newEtcdDruid(secretsManager, runtimeIsSelfHostedShoot)
+	c.etcdDruid, err = r.newEtcdDruid(garden, secretsManager, runtimeIsSelfHostedShoot)
 	if err != nil {
 		return
 	}
@@ -513,7 +513,7 @@ func (r *Reconciler) newPVCAutoscaler(garden *operatorv1alpha1.Garden) (componen
 	)
 }
 
-func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface, runtimeIsSelfHostedShoot bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newEtcdDruid(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, runtimeIsSelfHostedShoot bool) (component.DeployWaiter, error) {
 	return sharedcomponent.NewEtcdDruid(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -525,6 +525,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface, runti
 		v1beta1constants.PriorityClassNameGardenSystem300,
 		true,
 		runtimeIsSelfHostedShoot,
+		garden.Spec.RuntimeCluster.Networking.Nodes,
 	)
 }
 

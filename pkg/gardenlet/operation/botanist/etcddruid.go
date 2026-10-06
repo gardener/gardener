@@ -12,6 +12,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 // DefaultEtcdDruid creates a new deployer for etcd-druid.
@@ -40,5 +41,6 @@ func (b *Botanist) DefaultEtcdDruid() (component.DeployWaiter, error) {
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		false,
 		true,
+		netutils.ToCIDRStrings(b.Shoot.Networks.Nodes...),
 	)
 }

@@ -953,6 +953,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (comp
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		false,
 		false,
+		nil,
 	)
 }
 

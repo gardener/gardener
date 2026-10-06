@@ -19,6 +19,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -64,6 +65,7 @@ var _ = Describe("Etcd", func() {
 
 		featureGates      map[string]bool
 		isSelfHostedShoot bool
+		nodeCIDRs         []string
 
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -135,6 +137,7 @@ webhooks:
 
 	BeforeEach(func() {
 		isSelfHostedShoot = false
+		nodeCIDRs = nil
 	})
 
 	JustBeforeEach(func() {
@@ -162,7 +165,7 @@ webhooks:
 		// Create CA secret for etcd-components webhook handler
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretNameCA, Namespace: namespace}})).To(Succeed())
 
-		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot)
+		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot, nodeCIDRs)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -862,7 +865,7 @@ webhooks:
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot)
+				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName, false, isSelfHostedShoot, nodeCIDRs)
 
 				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,
@@ -874,14 +877,45 @@ webhooks:
 		Context("managed by self-hosted shoot", func() {
 			BeforeEach(func() {
 				isSelfHostedShoot = true
+				nodeCIDRs = []string{"172.18.0.0/24", "fd00:10::/64"}
 			})
 
-			It("should successfully deploy all the resources with node selector", func() {
+			It("should successfully deploy all the resources with node selector and egress to static etcd client ports", func() {
 				deploymentForSelfHostedShoot := deploymentWithoutImageVectorOverwriteFor.DeepCopy()
 				deploymentForSelfHostedShoot.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 
-				expectedResources = append(expectedResources, deploymentForSelfHostedShoot)
+				expectedResources = append(expectedResources, deploymentForSelfHostedShoot, &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "egress-from-etcd-druid-to-static-etcd",
+						Namespace: namespace,
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"gardener.cloud/role": "etcd-druid"}},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+						Egress: []networkingv1.NetworkPolicyEgressRule{{
+							To: []networkingv1.NetworkPolicyPeer{
+								{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/24"}},
+								{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:10::/64"}},
+							},
+							Ports: []networkingv1.NetworkPolicyPort{
+								{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(2379))},
+								{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(2382))},
+							},
+						}},
+					},
+				})
 			})
+		})
+	})
+
+	Context("self-hosted shoot without node CIDRs", func() {
+		BeforeEach(func() {
+			isSelfHostedShoot = true
+		})
+
+		It("should reject deployment instead of allowing egress to every IP", func() {
+			Expect(bootstrapper.Deploy(ctx)).To(MatchError("node CIDRs are required for the etcd-druid network policy in self-hosted shoot clusters"))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 		})
 	})
 
