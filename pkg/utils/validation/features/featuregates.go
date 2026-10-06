@@ -161,6 +161,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"ImageVolumeWithDigest":                                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.36"}},
 	"InformerResourceVersion":                              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.30"}},
 	"InOrderInformers":                                     {VersionRange: versionutils.VersionRange{AddedInVersion: "1.33"}},
+	"InOrderInformersBatchProcess":                         {VersionRange: versionutils.VersionRange{AddedInVersion: "1.35"}},
 	"InPlacePodLevelResourcesVerticalScaling":              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.35"}},
 	"InPlacePodVerticalScaling":                            {LockedValue: true, LockedToDefaultInVersion: "1.35", VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 	"InPlacePodVerticalScalingAllocatedStatus":             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32", RemovedInVersion: "1.36"}},
