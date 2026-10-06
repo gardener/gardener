@@ -726,13 +726,13 @@ spec:
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(secretList)
 		}).Should(ContainElements(
-			ContainSubstring("shoot-access-gardener-resource-manager-bootstrap-"),
+			ContainSubstring("garden-access-gardener-resource-manager-bootstrap-"),
 		))
 
 		// virtual-garden-gardener-resource manager usually sets the token-renew-timestamp when it reconciled the secret.
 		// It is not running here, so we have to patch the secret by ourselves.
 		Eventually(func(g Gomega) {
-			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-gardener-resource-manager", Namespace: testNamespace.Name}}
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "garden-access-gardener-resource-manager", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
 			patch := client.MergeFrom(secret.DeepCopy())
