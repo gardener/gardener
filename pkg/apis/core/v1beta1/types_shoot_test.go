@@ -71,6 +71,34 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
+	Describe("ClusterAutoscaler", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(ClusterAutoscaler{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "12" {
+					Fail("protobuf 12 in ClusterAutoscaler is reserved for removed maxEmptyBulkDelete field")
+				}
+			}
+		})
+	})
+
+	Describe("KubeControllerManagerConfig", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(KubeControllerManagerConfig{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "4" {
+					Fail("protobuf 4 in KubeControllerManagerConfig is reserved for removed podEvictionTimeout field")
+				}
+			}
+		})
+	})
+
 	Describe("KubeletConfig", func() {
 		It("should not allow to reuse protobuf numbers of already removed fields", func() {
 			obj := reflect.ValueOf(KubeletConfig{}).Type()
