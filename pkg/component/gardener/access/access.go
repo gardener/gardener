@@ -89,7 +89,7 @@ func (g *gardener) Deploy(ctx context.Context) error {
 
 	for _, v := range accessNamesToServers {
 		var (
-			shootAccessSecret = accessSecretFn(v.name, g.namespace).WithNameOverride(v.name).WithServiceAccountNamespace(metav1.NamespaceSystem)
+			shootAccessSecret = accessSecretFn(v.name, g.namespace).WithNameOverride(v.name)
 			kubeconfig        = kubernetesutils.NewKubeconfig(
 				g.namespace,
 				clientcmdv1.Cluster{Server: v.server, CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle]},
