@@ -82,3 +82,18 @@ The `pod-security.kubernetes.io/enforce` namespace label enforces the [Pod Secur
 You can set the `pod-security.kubernetes.io/enforce` label for extension namespace by adding the `security.gardener.cloud/pod-security-enforce` annotation to your `ControllerRegistration`. The value of the annotation would be the value set for the `pod-security.kubernetes.io/enforce` label. It is advised to set the annotation with the most restrictive pod security standard that your extension pods comply with.
 
 If you are using the `./hack/generate-controller-registration.sh` script to generate your `ControllerRegistration` you can use the -e, --pod-security-enforce option to set the `security.gardener.cloud/pod-security-enforce` annotation. If the option is not set, it defaults to `baseline`.
+
+## Do extension APIs need an internal version?
+
+No.
+An internal API version is only needed for APIs served by an (aggregated) API server, e.g., to convert between multiple external versions and to store objects in etcd.
+Extensions neither run an API server nor need to persist their own API types.
+Their APIs are either CRDs or "wire-only" APIs like the `providerConfig` and `providerStatus` of extension resources and the extension's component configuration.
+
+Hence, extensions should define their API types in a single external version (e.g., `v1alpha1`) and use these types directly in the code.
+Maintaining an additional internal version only causes duplicated types and conversion code without any benefit.
+For example, [`provider-local`](./provider-local.md) uses the `v1alpha1` types of its `local.provider.extensions.gardener.cloud` API directly.
+
+If an extension ever needs to support multiple external versions of an API, it should designate one of the external versions as the hub (storage) version and convert the other versions to and from it.
+Also in this case, no internal version is needed.
+For CRDs, this is supported natively by `controller-gen` and `controller-runtime` (see [Kubebuilder: Implementing Conversion](https://book.kubebuilder.io/multiversion-tutorial/conversion.html#implementing-conversion)).
