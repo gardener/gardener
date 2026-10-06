@@ -98,7 +98,7 @@ type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
-	Port int `json:"port"`
+	Port int32 `json:"port"`
 }
 
 // HTTPSServer is the configuration for the HTTPSServer server.

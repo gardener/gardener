@@ -142,8 +142,9 @@ type File struct {
 	Path string `json:"path"`
 	// Permissions describes with which permissions the file should get written to the file system.
 	// If no permissions are set, the operating system's defaults are used.
+	// +kubebuilder:validation:Minimum=0
 	// +optional
-	Permissions *uint32 `json:"permissions,omitempty"`
+	Permissions *int32 `json:"permissions,omitempty"`
 	// Content describe the file's content.
 	Content FileContent `json:"content"`
 	// HostName contains the name of the host for host-specific configurations.
