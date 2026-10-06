@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/operator/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -33,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/operator/controller/virtual"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // AddToManager adds all controllers to the given manager.
@@ -99,8 +101,8 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			{
 				Name: gardenlet.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
-					if virtualCluster == nil {
-						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Gardenlet reconciler")
+					if !gardenIsReady(virtualCluster, garden) {
+						logf.FromContext(ctx).Info("Garden cluster is not ready yet, cannot add Gardenlet reconciler")
 						return false, nil
 					}
 
@@ -113,10 +115,16 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			},
 			{
 				Name: requiredvirtual.ControllerName,
-				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-					if virtualCluster == nil {
-						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add RequiredVirtual reconciler")
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
+					log := logf.FromContext(ctx)
+					if !gardenIsReady(virtualCluster, garden) {
+						logf.FromContext(ctx).Info("Garden cluster is not ready yet, cannot add RequiredVirtual reconciler")
 						return false, nil
+					}
+
+					log.Info("Adding ControllerInstallation field index to informers")
+					if err := indexer.AddControllerInstallationRegistrationRefName(ctx, virtualCluster.GetFieldIndexer()); err != nil {
+						return false, err
 					}
 
 					return true, (&requiredvirtual.Reconciler{
@@ -126,9 +134,9 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			},
 			{
 				Name: care.ControllerName,
-				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-					if virtualCluster == nil {
-						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Care reconciler")
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
+					if !gardenIsReady(virtualCluster, garden) {
+						logf.FromContext(ctx).Info("Garden cluster is not ready yet, cannot add Care reconciler")
 						return false, nil
 					}
 
@@ -168,4 +176,8 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 	}
 
 	return nil
+}
+
+func gardenIsReady(virtualCluster cluster.Cluster, garden *operatorv1alpha1.Garden) bool {
+	return virtualCluster != nil && operator.IsGardenSuccessfullyReconciled(garden)
 }
