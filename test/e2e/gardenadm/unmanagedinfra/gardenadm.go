@@ -262,11 +262,11 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			}, SpecTimeout(time.Minute))
 
 			It("should wait for the hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
-				Eventually(ctx, func(g Gomega) bool {
+				Eventually(ctx, func(g Gomega) {
 					g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
-					completed, _ := shootoperation.ReconciliationSuccessful(s.Shoot)
-					return completed
-				}).WithPolling(30 * time.Second).Should(BeTrue())
+					completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
+					g.Expect(completed).To(BeTrue(), reason)
+				}).WithPolling(30 * time.Second).Should(Succeed())
 			}, SpecTimeout(30*time.Minute))
 
 			It("should initialize the shoot client", func(ctx SpecContext) {

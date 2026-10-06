@@ -200,12 +200,12 @@ func ItShouldBeReconciledByGardenlet(
 		})
 
 		It("should wait for the self-hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) bool {
+			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
 				g.Expect(s.Shoot.Status.Gardener.Name).To(ContainSubstring("gardenlet"))
-				completed, _ := shootoperation.ReconciliationSuccessful(s.Shoot)
-				return completed
-			}).WithPolling(30 * time.Second).Should(BeTrue())
+				completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
+				g.Expect(completed).To(BeTrue(), reason)
+			}).WithPolling(30 * time.Second).Should(Succeed())
 
 			By("Verifying ShootTaskUpdateGardenerNodeAgentSecretName task annotation has been removed")
 			Expect(controllerutils.HasTask(s.Shoot.Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName)).To(BeFalse())
