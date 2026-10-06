@@ -684,6 +684,10 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			deployAlertmanager,
 			deploySeedLogging,
 			waitUntilEtcdScaledAfterRestore,
+			// Hibernating the control plane destroys the kube-apiserver SNI resources, so it must not run concurrently
+			// with the task deploying and waiting for them. Otherwise, the deploy task fails waiting for the
+			// ManagedResource that is deleted in the meantime.
+			deployKubeAPIServerServiceSNISettings,
 		))
 		_ = g.Add(flow.Task{
 			Name: "Restarting control plane pods",
