@@ -22,7 +22,7 @@ func (in *BackupBucketControllerConfiguration) DeepCopyInto(out *BackupBucketCon
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncJitterPeriod != nil {
@@ -94,12 +94,12 @@ func (in *BackupEntryControllerConfiguration) DeepCopyInto(out *BackupEntryContr
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.DeletionGracePeriodHours != nil {
 		in, out := &in.DeletionGracePeriodHours, &out.DeletionGracePeriodHours
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.DeletionGracePeriodShootPurposes != nil {
@@ -135,7 +135,7 @@ func (in *BastionControllerConfiguration) DeepCopyInto(out *BastionControllerCon
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -173,7 +173,7 @@ func (in *ControllerInstallationCareControllerConfiguration) DeepCopyInto(out *C
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -199,7 +199,7 @@ func (in *ControllerInstallationControllerConfiguration) DeepCopyInto(out *Contr
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -220,7 +220,7 @@ func (in *ControllerInstallationRequiredControllerConfiguration) DeepCopyInto(ou
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -795,7 +795,7 @@ func (in *ManagedSeedControllerConfiguration) DeepCopyInto(out *ManagedSeedContr
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -857,7 +857,7 @@ func (in *NetworkPolicyControllerConfiguration) DeepCopyInto(out *NetworkPolicyC
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.AdditionalNamespaceSelectors != nil {
@@ -1154,7 +1154,7 @@ func (in *ShootCareControllerConfiguration) DeepCopyInto(out *ShootCareControlle
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -1217,7 +1217,7 @@ func (in *ShootControllerConfiguration) DeepCopyInto(out *ShootControllerConfigu
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.ProgressReportPeriod != nil {
@@ -1343,7 +1343,7 @@ func (in *ShootStateControllerConfiguration) DeepCopyInto(out *ShootStateControl
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -1369,7 +1369,7 @@ func (in *ShootStatusControllerConfiguration) DeepCopyInto(out *ShootStatusContr
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -1411,7 +1411,7 @@ func (in *TokenRequestorServiceAccountControllerConfiguration) DeepCopyInto(out 
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -1432,7 +1432,7 @@ func (in *TokenRequestorWorkloadIdentityControllerConfiguration) DeepCopyInto(ou
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.TokenExpirationDuration != nil {
@@ -1458,7 +1458,7 @@ func (in *VPAEvictionRequirementsControllerConfiguration) DeepCopyInto(out *VPAE
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return

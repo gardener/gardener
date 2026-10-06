@@ -70,7 +70,7 @@ type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
-	Port int `json:"port"`
+	Port int32 `json:"port"`
 }
 
 // HTTPSServer is the configuration for the HTTPSServer server.
@@ -127,7 +127,7 @@ type CSRApproverControllerConfig struct {
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
 	// +optional
 	MachineNamespace *string `json:"machineNamespace,omitempty"`
@@ -148,14 +148,14 @@ type IstioClusterConfigurationControllerConfig struct {
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // HealthControllerConfig is the configuration for the health controller.
 type HealthControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
@@ -165,7 +165,7 @@ type HealthControllerConfig struct {
 type ManagedResourceControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
@@ -186,7 +186,7 @@ type NetworkPolicyControllerConfig struct {
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// NamespaceSelectors is a list of label selectors for namespaces in which the controller shall reconcile Service
 	// objects. An empty list means all namespaces.
 	// +optional
@@ -212,7 +212,7 @@ type TokenRequestorControllerConfig struct {
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // NodeCriticalComponentsControllerConfig is the configuration for the node critical components controller.
@@ -221,7 +221,7 @@ type NodeCriticalComponentsControllerConfig struct {
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// Backoff is the duration to use as backoff when Nodes have non-ready node-critical pods (defaults to 10s).
 	// +optional
 	Backoff *metav1.Duration `json:"backoff,omitempty"`
