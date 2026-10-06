@@ -65,8 +65,6 @@ spec:
     "0_0":
       kind: Panel
       spec:
-        display:
-          name: empty
         plugin:
           kind: Markdown
           spec:
@@ -205,8 +203,6 @@ spec:
     "1_0":
       kind: Panel
       spec:
-        display:
-          name: empty
         plugin:
           kind: Markdown
           spec:

@@ -237,8 +237,6 @@ spec:
     "1_2":
       kind: Panel
       spec:
-        display:
-          name: empty
         plugin:
           kind: Markdown
           spec:
