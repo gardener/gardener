@@ -164,7 +164,7 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 
 	shoots, err := v.shootLister.Shoots(namespacedCloudProfile.Namespace).List(labels.Everything())
 	if err != nil {
-		return apierrors.NewBadRequest("shoots can not be listed")
+		return apierrors.NewInternalError(fmt.Errorf("could not list shoots: %w", err))
 	}
 
 	var referencedShoots []*gardencorev1beta1.Shoot
