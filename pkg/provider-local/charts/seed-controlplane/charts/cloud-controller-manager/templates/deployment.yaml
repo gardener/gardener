@@ -44,8 +44,8 @@ spec:
         # Needed for looking up where machine pods are running for setting up routes on the load balancer containers.
         # With managed infrastructure, the machine pods run in the infrastructure cluster referenced by the provider
         # credentials, which is not necessarily the runtime/seed cluster (e.g., for the second kind cluster).
-        networking.gardener.cloud/to-infra-cluster: allowed # Allows communication to the infrastructure cluster, see the
-                                                            # allow-to-infra-cluster NetworkPolicy in the parent chart.
+        networking.gardener.cloud/to-kind-network: allowed # Allows communication to the infrastructure cluster, see the
+                                                           # allow-to-kind-network NetworkPolicy in the parent chart.
         {{- else }}
         networking.gardener.cloud/to-runtime-apiserver: allowed # Allows communication to the kind apiserver - needed
                                                                 # for looking up where machine pods are running for

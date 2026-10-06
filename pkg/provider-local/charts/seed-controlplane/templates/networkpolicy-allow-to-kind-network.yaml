@@ -1,3 +1,4 @@
+{{- if hasPrefix "shoot-" .Release.Namespace }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -5,15 +6,16 @@ metadata:
   namespace: {{ .Release.Namespace }}
   annotations:
     gardener.cloud/description: Allows egress from pods labeled with 'networking.gardener.cloud/to-kind-network=allowed'
-      to all containers in the kind docker network. This can be used for example for allowing egress to the garden
-      cluster from the second kind cluster.
+      to all containers in the kind docker network, which includes the infrastructure cluster of provider-local (the
+      cluster hosting the machine pods). This is needed for provider-local components (e.g., cloud-controller-manager
+      and machine-controller-manager), as the infrastructure cluster is not necessarily the runtime/seed cluster (e.g.,
+      for the second seed).
 spec:
   podSelector:
     matchLabels:
       networking.gardener.cloud/to-kind-network: allowed
-  # The egress rules are the same as in the allow-to-kind-network NetworkPolicy in shoot control plane namespaces,
-  # see pkg/provider-local/charts/seed-controlplane/templates/networkpolicy-allow-to-kind-network.yaml. Keep them in
-  # sync.
+  # The egress rules are the same as in the allow-to-kind-network NetworkPolicy of the provider-local extension, see
+  # charts/gardener/provider-local/templates/networkpolicy.yaml. Keep them in sync.
   egress:
   - to:
     # kind network CIDR
@@ -31,3 +33,4 @@ spec:
         cidr: fd00:ff::/64
   policyTypes:
   - Egress
+{{- end }}

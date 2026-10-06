@@ -58,7 +58,7 @@ func (e *ensurer) EnsureMachineControllerManagerDeployment(ctx context.Context, 
 
 	// The provider sidecar talks to the infrastructure cluster hosting the machine pods, which is not necessarily the
 	// runtime cluster of the seed (e.g., for the second kind cluster).
-	metav1.SetMetaDataLabel(&newObj.Spec.Template.ObjectMeta, local.LabelNetworkPolicyToInfraCluster, v1beta1constants.LabelNetworkPolicyAllowed)
+	metav1.SetMetaDataLabel(&newObj.Spec.Template.ObjectMeta, local.LabelNetworkPolicyToKindNetwork, v1beta1constants.LabelNetworkPolicyAllowed)
 	return nil
 }
 

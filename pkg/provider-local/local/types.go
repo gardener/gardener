@@ -27,10 +27,10 @@ const (
 	// CloudControllerManagerName is a constant for the name of the cloud-controller-manager deployed by the controlplane controller.
 	CloudControllerManagerName = "cloud-controller-manager"
 
-	// LabelNetworkPolicyToInfraCluster is a constant for a label that allows egress from pods to the infrastructure
-	// cluster (the kind cluster hosting the machine pods), see the allow-to-infra-cluster NetworkPolicy in the
+	// LabelNetworkPolicyToKindNetwork is a constant for a label that allows egress from pods to the kind docker network,
+	// e.g., to the infrastructure cluster hosting the machine pods, see the allow-to-kind-network NetworkPolicy in the
 	// seed-controlplane chart.
-	LabelNetworkPolicyToInfraCluster = "networking.gardener.cloud/to-infra-cluster"
+	LabelNetworkPolicyToKindNetwork = "networking.gardener.cloud/to-kind-network"
 )
 
 var (
