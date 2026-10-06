@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/ptr"
@@ -357,6 +358,9 @@ func validateRuntimeClusterSettings(runtimeCluster operatorv1alpha1.RuntimeClust
 			if !validPolicies.Has(string(*policy)) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("loadBalancerServices", "externalTrafficPolicy"), *policy, sets.List(validPolicies)))
 			}
+		}
+		for i, sourceRange := range runtimeCluster.Settings.LoadBalancerServices.LoadBalancerSourceRanges {
+			allErrs = append(allErrs, validation.IsValidCIDR(fldPath.Child("loadBalancerServices", "loadBalancerSourceRanges").Index(i), sourceRange)...)
 		}
 	}
 

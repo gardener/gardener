@@ -933,6 +933,10 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 }
 
 func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Garden) (istio.Interface, error) {
+	var lbSourceRanges []string
+	if garden.Spec.RuntimeCluster.Settings != nil && garden.Spec.RuntimeCluster.Settings.LoadBalancerServices != nil {
+		lbSourceRanges = garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.LoadBalancerSourceRanges
+	}
 	return sharedcomponent.NewIstio(
 		ctx,
 		r.RuntimeClientSet.Client(),
@@ -950,6 +954,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 		},
 		getLoadBalancerServiceAnnotations(garden),
 		nil,
+		lbSourceRanges,
 		getLoadBalancerServiceExternalTrafficPolicy(garden),
 		nil,
 		[]corev1.ServicePort{

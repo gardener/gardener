@@ -1435,6 +1435,45 @@ var _ = Describe("Validation Tests", func() {
 				})
 			})
 
+			Context("load balancer services", func() {
+				It("should allow valid load balancer source ranges", func() {
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						LoadBalancerServices: &operatorv1alpha1.SettingLoadBalancerServices{
+							LoadBalancerSourceRanges: []string{"192.168.123.56/32", "2001:db8::/64"},
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+				})
+
+				It("should forbid invalid load balancer source ranges", func() {
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						LoadBalancerServices: &operatorv1alpha1.SettingLoadBalancerServices{
+							LoadBalancerSourceRanges: []string{"", "invalid-source-range", "192.168.123.56/33", "2001:db.8::/64"},
+						},
+					}
+
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.settings.loadBalancerServices.loadBalancerSourceRanges[0]"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.settings.loadBalancerServices.loadBalancerSourceRanges[1]"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.settings.loadBalancerServices.loadBalancerSourceRanges[2]"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.settings.loadBalancerServices.loadBalancerSourceRanges[3]"),
+						})),
+					))
+				})
+			})
+
 			Context("Ingress", func() {
 				It("should complain about invalid ingress domain names", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: ",,,", Provider: new("primary")}}
