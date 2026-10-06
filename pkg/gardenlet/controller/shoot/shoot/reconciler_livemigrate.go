@@ -17,7 +17,6 @@ import (
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -78,61 +77,12 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 
 		sourceEtcdReadyForPeerJoin = g.Add(flow.Task{
 			Name: "Making source etcd ready for peer join",
-			Fn: r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceEtcdPreparedForPeerJoin, func(ctx context.Context, b *botanistpkg.Botanist) error {
-				if err := shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(),
-					b.Shoot.GetInfo(), b.Shoot.ControlPlaneNamespace, false); err != nil {
-					return fmt.Errorf("failed to persist shoot state: %w", err)
-				}
-				if err := b.DeployEtcdPeerExposure(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd peer exposure: %w", err)
-				}
-				if err := b.InitializeSecretsManagement(ctx); err != nil {
-					return fmt.Errorf("failed to initialize secrets management: %w", err)
-				}
-				if err := b.DeployEtcd(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd: %w", err)
-				}
-				if err := b.WaitUntilEtcdsReady(ctx); err != nil {
-					return fmt.Errorf("failed to wait until etcds are ready: %w", err)
-				}
-				if err := b.Shoot.Components.BackupEntry.Migrate(ctx); err != nil {
-					return fmt.Errorf("failed to migrate backup entry: %w", err)
-				}
-				return b.Shoot.Components.BackupEntry.WaitMigrate(ctx)
-			}),
+			Fn:   r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceEtcdPreparedForPeerJoin, botanist.SourceEtcdPreparedForPeerJoinTaskGroup()),
 		})
 
 		_ = g.Add(flow.Task{
-			Name: "Joining destination etcd to the source cluster",
-			Fn: r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined, func(ctx context.Context, b *botanistpkg.Botanist) error {
-				if err := b.DeployControlPlaneNamespace(ctx); err != nil {
-					return fmt.Errorf("failed to deploy control plane namespace: %w", err)
-				}
-				if err := b.InitializeSecretsManagement(ctx); err != nil {
-					return fmt.Errorf("failed to initialize secrets management: %w", err)
-				}
-				if err := b.DeployEtcdPeerExposure(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd peer exposure: %w", err)
-				}
-				// The source backup entry is deployed to ensure that the data in the source seed's backup bucket
-				// is properly cleaned up at a later stage of the flow.
-				if err := b.DeploySourceBackupEntry(ctx); err != nil {
-					return fmt.Errorf("failed to deploy source backup entry: %w", err)
-				}
-				if err := b.Shoot.Components.SourceBackupEntry.Wait(ctx); err != nil {
-					return fmt.Errorf("failed to wait for source backup entry: %w", err)
-				}
-				if err := b.Shoot.Components.BackupEntry.Restore(ctx, nil); err != nil {
-					return fmt.Errorf("failed to deploy backup entry: %w", err)
-				}
-				if err := b.Shoot.Components.BackupEntry.Wait(ctx); err != nil {
-					return fmt.Errorf("failed to wait for backup entry: %w", err)
-				}
-				if err := b.DeployEtcd(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd: %w", err)
-				}
-				return b.WaitUntilEtcdsReady(ctx)
-			}),
+			Name:         "Joining destination etcd to the source cluster",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined, botanist.DestinationEtcdPeersJoinedTaskGroup()),
 			Dependencies: flow.NewTaskIDs(sourceEtcdReadyForPeerJoin),
 		})
 
@@ -152,7 +102,9 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 	return nil
 }
 
-func (r *Reconciler) executeStepOrWait(botanist *botanistpkg.Botanist, role v1beta1helper.LiveMigrationRole, conditionType gardencorev1beta1.ConditionType, fn func(ctx context.Context, b *botanistpkg.Botanist) error) flow.TaskFn {
+// executeStepOrWait returns a TaskFn that either executes the tasks in the given group sequentially (if this
+// gardenlet owns the step) or waits for the peer gardenlet to complete it.
+func (r *Reconciler) executeStepOrWait(botanist *botanistpkg.Botanist, role v1beta1helper.LiveMigrationRole, conditionType gardencorev1beta1.ConditionType, group flow.TaskGroup) flow.TaskFn {
 	owner := liveMigrationStepOwners[conditionType]
 	return flow.TaskFn(func(ctx context.Context) error {
 		if role != owner {
@@ -161,13 +113,15 @@ func (r *Reconciler) executeStepOrWait(botanist *botanistpkg.Botanist, role v1be
 		if err := r.setLiveMigrationStepCondition(ctx, botanist.Shoot.GetInfo(), conditionType, false); err != nil {
 			return err
 		}
-		if fn != nil {
-			if err := fn(ctx, botanist); err != nil {
-				if conditionErr := r.setLiveMigrationStepConditionError(ctx, botanist.Shoot.GetInfo(), conditionType, err); conditionErr != nil {
-					botanist.Logger.Error(conditionErr, "Failed to set error condition for live migration step", "step", conditionType)
-				}
-				return err
+
+		g := flow.NewGraph(string(conditionType))
+		g.AddGroup(group)
+		if err := g.Compile().Run(ctx, flow.Opts{Log: botanist.Logger}); err != nil {
+			taskErr := flow.Errors(err)
+			if condErr := r.setLiveMigrationStepConditionError(ctx, botanist.Shoot.GetInfo(), conditionType, taskErr); condErr != nil {
+				botanist.Logger.Error(condErr, "Failed to set error condition for live migration step", "step", conditionType)
 			}
+			return taskErr
 		}
 		return r.setLiveMigrationStepCondition(ctx, botanist.Shoot.GetInfo(), conditionType, true)
 	}).RetryUntilTimeout(liveMigrationStepInterval, liveMigrationStepTimeout)
@@ -180,6 +134,7 @@ func (r *Reconciler) waitForLiveMigrationPeerStep(ctx context.Context, botanist 
 	}
 
 	if !v1beta1helper.IsLiveMigrationConditionTrue(shoot, conditionType) {
+		botanist.Logger.Info("Waiting for peer gardenlet to complete live migration step", "step", conditionType)
 		return fmt.Errorf("waiting for peer gardenlet to complete live migration step %q", conditionType)
 	}
 

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -1215,6 +1216,116 @@ func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 			Name:         "Destroying internal domain DNS record if hibernated",
 			Fn:           b.DestroyInternalDNSRecord,
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupSourceEtcdPreparedForPeerJoin is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupSourceEtcdPreparedForPeerJoin flow.TaskID = "TaskGroupSourceEtcdPreparedForPeerJoin"
+
+// SourceEtcdPreparedForPeerJoinTaskGroup returns the flow.TaskGroup for making the source etcd ready for peer join.
+func (b *Botanist) SourceEtcdPreparedForPeerJoinTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupSourceEtcdPreparedForPeerJoin)
+
+		deployEtcdPeerExposure = g.Add(flow.Task{
+			Name: "Deploying etcd peer exposure",
+			Fn:   b.DeployEtcdPeerExposure,
+		})
+		persistShootState = g.Add(flow.Task{
+			Name: "Persisting shoot state",
+			Fn: func(ctx context.Context) error {
+				return shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.GetInfo(), b.Shoot.ControlPlaneNamespace, false)
+			},
+			Dependencies: flow.NewTaskIDs(deployEtcdPeerExposure),
+		})
+		initSecretsManagement = g.Add(flow.Task{
+			Name:         "Initializing secrets management",
+			Fn:           b.InitializeSecretsManagement,
+			Dependencies: flow.NewTaskIDs(persistShootState),
+		})
+		deployEtcd = g.Add(flow.Task{
+			Name:         "Deploying etcd",
+			Fn:           b.DeployEtcd,
+			Dependencies: flow.NewTaskIDs(initSecretsManagement),
+		})
+		waitEtcdsReady = g.Add(flow.Task{
+			Name:         "Waiting until etcds are ready",
+			Fn:           b.WaitUntilEtcdsReady,
+			Dependencies: flow.NewTaskIDs(deployEtcd),
+		})
+		migrateBackupEntry = g.Add(flow.Task{
+			Name:         "Migrating backup entry",
+			Fn:           b.Shoot.Components.BackupEntry.Migrate,
+			Dependencies: flow.NewTaskIDs(waitEtcdsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until backup entry has been migrated",
+			Fn:           b.Shoot.Components.BackupEntry.WaitMigrate,
+			Dependencies: flow.NewTaskIDs(migrateBackupEntry),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupDestinationEtcdPeersJoined is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupDestinationEtcdPeersJoined flow.TaskID = "TaskGroupDestinationEtcdPeersJoined"
+
+// DestinationEtcdPeersJoinedTaskGroup returns the flow.TaskGroup for joining the destination etcd to the source cluster.
+func (b *Botanist) DestinationEtcdPeersJoinedTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupDestinationEtcdPeersJoined)
+
+		deployControlPlaneNamespace = g.Add(flow.Task{
+			Name: "Deploying control plane namespace",
+			Fn:   b.DeployControlPlaneNamespace,
+		})
+		deployEtcdPeerExposure = g.Add(flow.Task{
+			Name:         "Deploying etcd peer exposure",
+			Fn:           b.DeployEtcdPeerExposure,
+			Dependencies: flow.NewTaskIDs(deployControlPlaneNamespace),
+		})
+		initSecretsManagement = g.Add(flow.Task{
+			Name:         "Initializing secrets management",
+			Fn:           b.InitializeSecretsManagement,
+			Dependencies: flow.NewTaskIDs(deployEtcdPeerExposure),
+		})
+		// The source backup entry is deployed to ensure that the data in the source seed's backup bucket
+		// is properly cleaned up at a later stage of the flow.
+		deploySourceBackupEntry = g.Add(flow.Task{
+			Name:         "Deploying source backup entry",
+			Fn:           b.DeploySourceBackupEntry,
+			Dependencies: flow.NewTaskIDs(deployControlPlaneNamespace),
+		})
+		waitSourceBackupEntryReady = g.Add(flow.Task{
+			Name:         "Waiting until source backup entry is ready",
+			Fn:           b.Shoot.Components.SourceBackupEntry.Wait,
+			Dependencies: flow.NewTaskIDs(deploySourceBackupEntry),
+		})
+		restoreBackupEntry = g.Add(flow.Task{
+			Name: "Restoring backup entry",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.BackupEntry.Restore(ctx, nil)
+			},
+			Dependencies: flow.NewTaskIDs(waitSourceBackupEntryReady),
+		})
+		waitBackupEntryReady = g.Add(flow.Task{
+			Name:         "Waiting until backup entry is ready",
+			Fn:           b.Shoot.Components.BackupEntry.Wait,
+			Dependencies: flow.NewTaskIDs(restoreBackupEntry),
+		})
+		deployEtcd = g.Add(flow.Task{
+			Name:         "Deploying etcd",
+			Fn:           b.DeployEtcd,
+			Dependencies: flow.NewTaskIDs(initSecretsManagement, deployEtcdPeerExposure, waitBackupEntryReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until etcds are ready",
+			Fn:           b.WaitUntilEtcdsReady,
+			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
 	)
 
