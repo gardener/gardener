@@ -64,7 +64,7 @@ type BastionSpec struct {
 	Ingress []BastionIngressPolicy `json:"ingress" protobuf:"bytes,5,opt,name=ingress"`
 	// Machine contains information about the bastion machine type and image.
 	// +optional
-	Machine *BastionMachine `json:"machine,omitempty"`
+	Machine *BastionMachine `json:"machine,omitempty" protobuf:"bytes,6,opt,name=machine"`
 }
 
 // BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
@@ -77,20 +77,20 @@ type BastionIngressPolicy struct {
 type BastionMachine struct {
 	// Type is the machine type of the bastion.
 	// +optional
-	Type *string `json:"type,omitempty"`
+	Type *string `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
 	// Image holds information about the machine image to use for the bastion.
 	// +optional
-	Image *BastionMachineImage `json:"image,omitempty"`
+	Image *BastionMachineImage `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
 }
 
 // BastionMachineImage defines the name and the version of the bastion's machine image in any environment. Has to be
 // defined in the respective CloudProfile.
 type BastionMachineImage struct {
 	// Name is the name of the image.
-	Name string `json:"name"`
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Version is the version of the image.
 	// +optional
-	Version *string `json:"version,omitempty"`
+	Version *string `json:"version,omitempty" protobuf:"bytes,2,opt,name=version"`
 }
 
 // BastionStatus holds the most recently observed status of the Bastion.
