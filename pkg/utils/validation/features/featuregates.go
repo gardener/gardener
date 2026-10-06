@@ -56,6 +56,8 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"CBORServingAndStorage":                                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
 	"ChangeContainerStatusOnKubeletRestart":                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.35"}},
 	"ClearingNominatedNodeNameAfterBinding":                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.34"}},
+	"ClientsAllowCBOR":                                     {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
+	"ClientsPreferCBOR":                                    {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
 	"CloudControllerManagerWatchBasedRoutesReconciliation": {VersionRange: versionutils.VersionRange{AddedInVersion: "1.35"}},
 	"CloudControllerManagerWebhook":                        {},
 	"CloudDualStackNodeIPs":                                {LockedValue: true, LockedToDefaultInVersion: "1.30", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.32"}},
