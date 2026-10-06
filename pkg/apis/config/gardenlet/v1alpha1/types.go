@@ -218,7 +218,7 @@ type GardenletControllerConfiguration struct {
 type BackupBucketControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
 	// If its value is greater than 0 then the backup buckets will not be enqueued immediately but only after a random
 	// duration between 0 and the configured value. It is defaulted to 5m.
@@ -235,11 +235,11 @@ type BackupBucketControllerConfiguration struct {
 type BackupEntryControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// DeletionGracePeriodHours holds the period in number of hours to delete the BackupEntry after deletion timestamp is set.
 	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
 	// +optional
-	DeletionGracePeriodHours *int `json:"deletionGracePeriodHours,omitempty"`
+	DeletionGracePeriodHours *int32 `json:"deletionGracePeriodHours,omitempty"`
 	// DeletionGracePeriodShootPurposes is a list of shoot purposes for which the deletion grace period applies. All
 	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
 	// +optional
@@ -260,7 +260,7 @@ type BackupEntryControllerConfiguration struct {
 type BastionControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ControllerInstallationControllerConfiguration defines the configuration of the
@@ -269,7 +269,7 @@ type ControllerInstallationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ControllerInstallationCareControllerConfiguration defines the configuration of the ControllerInstallationCare
@@ -278,7 +278,7 @@ type ControllerInstallationCareControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of ControllerInstallations is performed.
 	// +optional
@@ -291,7 +291,7 @@ type ControllerInstallationRequiredControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // SeedControllerConfiguration defines the configuration of the Seed controller.
@@ -316,7 +316,7 @@ type ShootControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// ProgressReportPeriod is the period how often the progress of a shoot operation will be reported in the
 	// Shoot's `.status.lastOperation` field. By default, the progress will be reported immediately after a task of the
 	// respective flow has been completed. If you set this to a value > 0 (e.g., 5s) then it will be only reported every
@@ -350,7 +350,7 @@ type ShootCareControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of Shoot clusters is performed (only if no operation is
 	// already running on them).
@@ -390,7 +390,7 @@ type SeedCareControllerConfiguration struct {
 type ShootStateControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of Seed clusters is performed
 	// +optional
@@ -401,7 +401,7 @@ type ShootStateControllerConfiguration struct {
 type ShootStatusControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
@@ -429,7 +429,7 @@ type ConditionThreshold struct {
 type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
 	// the controller.
 	// +optional
@@ -448,7 +448,7 @@ type ManagedSeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
@@ -470,14 +470,14 @@ type ManagedSeedControllerConfiguration struct {
 type TokenRequestorServiceAccountControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // TokenRequestorWorkloadIdentityControllerConfiguration defines the configuration of the TokenRequestorWorkloadIdentity controller.
 type TokenRequestorWorkloadIdentityControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// TokenExpirationDuration is the duration for which the controller will request tokens.
 	// The Gardener API Server may still issue tokens with a shorter or longer duration based on its configuration.
 	// Defaults to 6h.
@@ -489,7 +489,7 @@ type TokenRequestorWorkloadIdentityControllerConfiguration struct {
 type VPAEvictionRequirementsControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.
@@ -596,7 +596,7 @@ type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
-	Port int `json:"port"`
+	Port int32 `json:"port"`
 }
 
 // SNI contains an optional configuration for the SNI settings used
@@ -767,10 +767,10 @@ const (
 
 	// DefaultBackupEntryDeletionGracePeriodHours is a constant for the default number of hours the Backup Entry should be kept after shoot is deleted.
 	// By default we set this to 0 so that then BackupEntryController will trigger deletion immediately.
-	DefaultBackupEntryDeletionGracePeriodHours = 0
+	DefaultBackupEntryDeletionGracePeriodHours int32 = 0
 
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
-	DefaultControllerConcurrentSyncs = 20
+	DefaultControllerConcurrentSyncs int32 = 20
 )
 
 // DefaultControllerSyncPeriod is a default value for sync period for controllers.

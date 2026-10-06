@@ -75,7 +75,7 @@ type SchedulerControllerConfiguration struct {
 type BackupBucketSchedulerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int `json:"concurrentSyncs"`
+	ConcurrentSyncs int32 `json:"concurrentSyncs"`
 }
 
 // ShootSchedulerConfiguration defines the configuration of the Shoot to Seed
@@ -83,7 +83,7 @@ type BackupBucketSchedulerConfiguration struct {
 type ShootSchedulerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int `json:"concurrentSyncs"`
+	ConcurrentSyncs int32 `json:"concurrentSyncs"`
 	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
 	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
 }
@@ -103,5 +103,5 @@ type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
-	Port int `json:"port"`
+	Port int32 `json:"port"`
 }

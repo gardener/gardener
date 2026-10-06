@@ -30,7 +30,7 @@ type RESTOptions struct {
 	QPS *float32 `json:"qps,omitempty"`
 	// Maximum burst for throttle.
 	// +optional
-	Burst *int `json:"burst,omitempty"`
+	Burst *int32 `json:"burst,omitempty"`
 	// The maximum length of time to wait before giving up on a server request. A value of zero means no timeout.
 	// +optional
 	Timeout *time.Duration `json:"timeout,omitempty"`

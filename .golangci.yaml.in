@@ -279,6 +279,7 @@ linters:
               - "*"
             enable:
               - defaultorrequired
+              - integers
               - jsontags
               - nonullable
               - optionalfields

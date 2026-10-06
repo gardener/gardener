@@ -93,7 +93,7 @@ type GardenCareControllerConfiguration struct {
 type GardenControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
@@ -107,14 +107,14 @@ type GardenControllerConfig struct {
 type GardenletDeployerControllerConfig struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy controller.
 type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
 	// the controller.
 	// +optional
@@ -125,21 +125,21 @@ type NetworkPolicyControllerConfiguration struct {
 type VPAEvictionRequirementsControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ExtensionControllerConfiguration defines the configuration of the extension controller.
 type ExtensionControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ExtensionCareControllerConfiguration defines the configuration of the ExtensionCare controller.
 type ExtensionCareControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check is performed).
 	// +optional
@@ -153,21 +153,21 @@ type ExtensionCareControllerConfiguration struct {
 type ExtensionReferenceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on extensions.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ExtensionRequiredRuntimeControllerConfiguration defines the configuration of the extension-required-runtime controller.
 type ExtensionRequiredRuntimeControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ExtensionRequiredVirtualControllerConfiguration defines the configuration of the extension-required-virtual controller.
 type ExtensionRequiredVirtualControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
@@ -187,7 +187,7 @@ type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
-	Port int `json:"port"`
+	Port int32 `json:"port"`
 }
 
 // NodeTolerationConfiguration contains information about node toleration options.

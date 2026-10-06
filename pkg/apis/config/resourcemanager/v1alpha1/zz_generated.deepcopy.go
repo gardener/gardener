@@ -37,7 +37,7 @@ func (in *CSRApproverControllerConfig) DeepCopyInto(out *CSRApproverControllerCo
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.MachineNamespace != nil {
@@ -145,7 +145,7 @@ func (in *HealthControllerConfig) DeepCopyInto(out *HealthControllerConfig) {
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -214,7 +214,7 @@ func (in *IstioClusterConfigurationControllerConfig) DeepCopyInto(out *IstioClus
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -251,7 +251,7 @@ func (in *ManagedResourceControllerConfig) DeepCopyInto(out *ManagedResourceCont
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -287,7 +287,7 @@ func (in *NetworkPolicyControllerConfig) DeepCopyInto(out *NetworkPolicyControll
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.NamespaceSelectors != nil {
@@ -372,7 +372,7 @@ func (in *NodeCriticalComponentsControllerConfig) DeepCopyInto(out *NodeCritical
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.Backoff != nil {
@@ -692,7 +692,7 @@ func (in *TokenRequestorControllerConfig) DeepCopyInto(out *TokenRequestorContro
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
