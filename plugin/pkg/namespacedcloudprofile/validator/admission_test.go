@@ -278,6 +278,27 @@ var _ = Describe("Admission", func() {
 		})
 
 		Describe("Kubernetes versions", func() {
+			DescribeTable("only allow one supported version per minor version", func(overrideBoth bool) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+				parentCloudProfile.Spec.Kubernetes.Versions = append(parentCloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{
+					Version: "1.31.1", Classification: new(gardencorev1beta1.ClassificationPreview),
+				})
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+				namespacedCloudProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{
+					{Version: "1.31.1", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}}},
+				}}
+				if overrideBoth {
+					namespacedCloudProfile.Spec.Kubernetes.Versions = append(namespacedCloudProfile.Spec.Kubernetes.Versions, gardencore.ExpirableVersion{
+						Version: "1.31.0", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}},
+					})
+				}
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("lifecycle stages must not overlap per minor version")))
+			},
+				Entry("with two lifecycle overrides", true),
+				Entry("with an inherited supported version", false),
+			)
+
 			It("should not allow creating a (Namespaced)CloudProfile if the resulting Kubernetes versions are empty", func() {
 				parentCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{}
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
