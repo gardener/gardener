@@ -167,12 +167,13 @@ func prepareRestoreInProgressMarker(fs afero.Afero) (bool, error) {
 // fail the (otherwise successful) restore over it, but log a warning so the anomaly is visible.
 func removeRestoreInProgressMarker(log logr.Logger, fs afero.Afero) error {
 	err := fs.Remove(cmd.RestoreInProgressLocation)
-	if err == nil {
-		return nil
+	if err != nil {
+		if errors.Is(err, afero.ErrFileNotFound) {
+			log.Info("Warning: restore-in-progress marker file was already absent at completion; something removed it out of band", "path", cmd.RestoreInProgressLocation)
+			return nil
+		}
+		return fmt.Errorf("failed removing restore-in-progress marker file %s: %w", cmd.RestoreInProgressLocation, err)
 	}
-	if errors.Is(err, afero.ErrFileNotFound) {
-		log.Info("Warning: restore-in-progress marker file was already absent at completion; something removed it out of band", "path", cmd.RestoreInProgressLocation)
-		return nil
-	}
-	return fmt.Errorf("failed removing restore-in-progress marker file %s: %w", cmd.RestoreInProgressLocation, err)
+
+	return nil
 }
