@@ -180,7 +180,7 @@ type LiveMigrationValues struct {
 	// AdditionalAdvertisePeerURLs are extra per-member peer URLs to advertise in addition to the in-cluster peer URLs.
 	// They are used during a live control plane migration so that members residing in a different seed can be
 	// reached across clusters. The member names must follow etcd-druid's CEL constraint (`<memberNamePrefix>-<etcd-name>-<index>`).
-	AdditionalAdvertisePeerURLs []druidcorev1alpha1.MemberPeerURLs
+	AdditionalAdvertisePeerURLs []druidcorev1alpha1.MemberURLs
 	// BootstrapWithExistingCluster, when set, configures this etcd to join an existing (source) etcd cluster instead of
 	// bootstrapping a new one. It is set on the destination etcd during a live control plane migration so its
 	// members join the source cluster to form a temporary joint cluster. It can only be set at creation time.
@@ -410,9 +410,13 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 			},
 			PeerUrlTLS: peerUrlTLS,
-			AdditionalAdvertisePeerURLs: func() []druidcorev1alpha1.MemberPeerURLs {
-				if e.values.LiveMigration != nil {
-					return e.values.LiveMigration.AdditionalAdvertisePeerURLs
+			AdditionalAdvertisedURLs: func() *druidcorev1alpha1.AdditionalAdvertiseURLsSpec {
+				if e.values.LiveMigration != nil && len(e.values.LiveMigration.AdditionalAdvertisePeerURLs) > 0 {
+					return &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+						PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+							Members: e.values.LiveMigration.AdditionalAdvertisePeerURLs,
+						},
+					}
 				}
 				return nil
 			}(),
