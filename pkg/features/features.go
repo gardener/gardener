@@ -73,6 +73,7 @@ const (
 	// CustomDNSServerInNodeLocalDNS enables custom server block support for NodeLocalDNS in the custom CoreDNS configuration of Shoot clusters.
 	// owner: @docktofuture
 	// beta: v1.133.0
+	// GA: v1.153.0
 	CustomDNSServerInNodeLocalDNS featuregate.Feature = "CustomDNSServerInNodeLocalDNS"
 
 	// VPNBondingModeRoundRobin enables the usage of the "balance-rr" bonding mode for the HA VPN setup.
@@ -178,7 +179,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DoNotCopyBackupCredentials:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	OpenTelemetryCollector:         {Default: true, PreRelease: featuregate.Beta},
 	VictoriaLogsBackend:            {Default: false, PreRelease: featuregate.Alpha},
-	CustomDNSServerInNodeLocalDNS:  {Default: true, PreRelease: featuregate.Beta},
+	CustomDNSServerInNodeLocalDNS:  {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	VPNBondingModeRoundRobin:       {Default: false, PreRelease: featuregate.Alpha},
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},

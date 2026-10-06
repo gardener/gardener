@@ -236,8 +236,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					Name: "worker-aaaa",
 				},
 			},
-			WorkerPoolNames:               []string{"worker-aaaa"},
-			CustomDNSServerInNodeLocalDNS: true,
+			WorkerPoolNames: []string{"worker-aaaa"},
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -299,10 +298,7 @@ metadata:
   namespace: kube-system
 `
 			configMapYAMLFor = func() string {
-				serverBlockImport := ""
-				if values.CustomDNSServerInNodeLocalDNS {
-					serverBlockImport = "\n    import generated-config/custom-server-block.server"
-				}
+				serverBlockImport := "\n    import generated-config/custom-server-block.server"
 				out := `apiVersion: v1
 data:
   Corefile: |
@@ -595,53 +591,51 @@ status:
 					},
 				}
 
-				if values.CustomDNSServerInNodeLocalDNS {
-					daemonSet.Spec.Template.Spec.InitContainers = append(daemonSet.Spec.Template.Spec.InitContainers, corev1.Container{
-						Name:  "coredns-config-adapter",
-						Image: values.CorednsConfigAdapterImage,
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("5m"),
-								corev1.ResourceMemory: resource.MustParse("10Mi"),
-							},
+				daemonSet.Spec.Template.Spec.InitContainers = append(daemonSet.Spec.Template.Spec.InitContainers, corev1.Container{
+					Name:  "coredns-config-adapter",
+					Image: values.CorednsConfigAdapterImage,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("5m"),
+							corev1.ResourceMemory: resource.MustParse("10Mi"),
 						},
-						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: new(false),
-							RunAsNonRoot:             new(true),
-							RunAsUser:                new(int64(65532)),
-							RunAsGroup:               new(int64(65532)),
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: new(false),
+						RunAsNonRoot:             new(true),
+						RunAsUser:                new(int64(65532)),
+						RunAsGroup:               new(int64(65532)),
+					},
+					Args: []string{
+						"-inputDir=/etc/custom",
+						"-outputDir=/etc/generated-config",
+						"-bind=bind " + bindIP(values),
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "custom-config-volume",
+							MountPath: "/etc/custom",
+							ReadOnly:  true,
 						},
-						Args: []string{
-							"-inputDir=/etc/custom",
-							"-outputDir=/etc/generated-config",
-							"-bind=bind " + bindIP(values),
+						{
+							MountPath: "/etc/generated-config",
+							Name:      "generated-config",
 						},
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "custom-config-volume",
-								MountPath: "/etc/custom",
-								ReadOnly:  true,
-							},
-							{
-								MountPath: "/etc/generated-config",
-								Name:      "generated-config",
-							},
-						},
-						RestartPolicy: new(corev1.ContainerRestartPolicyAlways),
-					})
+					},
+					RestartPolicy: new(corev1.ContainerRestartPolicyAlways),
+				})
 
-					daemonSet.Spec.Template.Spec.Volumes = append(daemonSet.Spec.Template.Spec.Volumes, corev1.Volume{
-						Name: "generated-config",
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
-					})
+				daemonSet.Spec.Template.Spec.Volumes = append(daemonSet.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "generated-config",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				})
 
-					daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-						MountPath: "/etc/generated-config",
-						Name:      "generated-config",
-					})
-				}
+				daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					MountPath: "/etc/generated-config",
+					Name:      "generated-config",
+				})
 				return daemonSet
 			}
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
@@ -935,13 +929,12 @@ import generated-config/custom-server-block.server
 				})
 			})
 
-			Context("CustomDNSServerInNodeLocalDNS=false", func() {
+			Context("ConfigMap and IPv6 variations", func() {
 				BeforeEach(func() {
 					values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}
 					ipvsAddress = "169.254.20.10"
 					values.ClusterDNS = []string{"__PILLAR__CLUSTER__DNS__"}
 					values.DNSServers = []string{"1.2.3.4", "2001:db8::1"}
-					values.CustomDNSServerInNodeLocalDNS = false
 					vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -1027,6 +1020,7 @@ ip6.arpa:53 {
     cache 30
     reload
     }
+import generated-config/custom-server-block.server
 `,
 							}
 							configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -1127,6 +1121,7 @@ ip6.arpa:53 {
     cache 30
     reload
     }
+import generated-config/custom-server-block.server
 `,
 						}
 						configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]

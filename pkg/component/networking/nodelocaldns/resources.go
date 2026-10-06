@@ -106,9 +106,7 @@ ip6.arpa:53 {
 		}
 	)
 
-	if n.values.CustomDNSServerInNodeLocalDNS {
-		configMap.Data[configDataKey] = configMap.Data[configDataKey] + "import generated-config/custom-server-block.server\n"
-	}
+	configMap.Data[configDataKey] = configMap.Data[configDataKey] + "import generated-config/custom-server-block.server\n"
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
@@ -348,53 +346,51 @@ func (n *nodeLocalDNS) computePoolResourcesData(serviceAccount *corev1.ServiceAc
 			},
 		}
 
-		if n.values.CustomDNSServerInNodeLocalDNS {
-			daemonSet.Spec.Template.Spec.InitContainers = append(daemonSet.Spec.Template.Spec.InitContainers, corev1.Container{
-				Name:  sideCarName,
-				Image: n.values.CorednsConfigAdapterImage,
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("5m"),
-						corev1.ResourceMemory: resource.MustParse("10Mi"),
-					},
+		daemonSet.Spec.Template.Spec.InitContainers = append(daemonSet.Spec.Template.Spec.InitContainers, corev1.Container{
+			Name:  sideCarName,
+			Image: n.values.CorednsConfigAdapterImage,
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("5m"),
+					corev1.ResourceMemory: resource.MustParse("10Mi"),
 				},
-				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: new(false),
-					RunAsNonRoot:             new(true),
-					RunAsUser:                new(int64(65532)),
-					RunAsGroup:               new(int64(65532)),
+			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: new(false),
+				RunAsNonRoot:             new(true),
+				RunAsUser:                new(int64(65532)),
+				RunAsGroup:               new(int64(65532)),
+			},
+			Args: []string{
+				"-inputDir=" + volumeMountPathCustomConfig,
+				"-outputDir=" + volumeMountPathGeneratedConfig,
+				"-bind=bind " + n.bindIP(),
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      volumeMountNameCustomConfig,
+					MountPath: volumeMountPathCustomConfig,
+					ReadOnly:  true,
 				},
-				Args: []string{
-					"-inputDir=" + volumeMountPathCustomConfig,
-					"-outputDir=" + volumeMountPathGeneratedConfig,
-					"-bind=bind " + n.bindIP(),
+				{
+					MountPath: volumeMountPathGeneratedConfig,
+					Name:      volumeMountNameGeneratedConfig,
 				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      volumeMountNameCustomConfig,
-						MountPath: volumeMountPathCustomConfig,
-						ReadOnly:  true,
-					},
-					{
-						MountPath: volumeMountPathGeneratedConfig,
-						Name:      volumeMountNameGeneratedConfig,
-					},
-				},
-				RestartPolicy: new(corev1.ContainerRestartPolicyAlways),
-			})
+			},
+			RestartPolicy: new(corev1.ContainerRestartPolicyAlways),
+		})
 
-			daemonSet.Spec.Template.Spec.Volumes = append(daemonSet.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeMountNameGeneratedConfig,
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			})
+		daemonSet.Spec.Template.Spec.Volumes = append(daemonSet.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeMountNameGeneratedConfig,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
 
-			daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				MountPath: volumeMountPathGeneratedConfig,
-				Name:      volumeMountNameGeneratedConfig,
-			})
-		}
+		daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts = append(daemonSet.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			MountPath: volumeMountPathGeneratedConfig,
+			Name:      volumeMountNameGeneratedConfig,
+		})
 
 		utilruntime.Must(references.InjectAnnotations(daemonSet))
 		clientObjects = append(clientObjects, daemonSet)
