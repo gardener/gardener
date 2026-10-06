@@ -345,6 +345,19 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 		oldVersionsSpec, oldVersionsMerged *gardenerutils.ImagesContext[gardencore.MachineImage, gardencore.MachineImageVersion]
 	)
 
+	// Validate the submitted fields before merging can discard a conflicting expiration date.
+	for imageIndex, image := range c.namespacedCloudProfile.Spec.MachineImages {
+		for versionIndex, version := range image.Versions {
+			if len(version.Lifecycle) > 0 && version.ExpirationDate != nil {
+				versionPath := field.NewPath("spec", "machineImages").Index(imageIndex).Child("versions").Index(versionIndex)
+				allErrs = append(allErrs, field.Forbidden(versionPath, "cannot specify `classification` or `expirationDate` in combination with `lifecycle`"))
+			}
+		}
+	}
+	if len(allErrs) > 0 {
+		return allErrs.ToAggregate()
+	}
+
 	if attr.GetOperation() == admission.Update {
 		oldVersionsSpec = gardenerutils.NewCoreImagesContext(c.oldNamespacedCloudProfile.Spec.MachineImages)
 		oldVersionsMerged = gardenerutils.NewCoreImagesContext(c.oldNamespacedCloudProfile.Status.CloudProfileSpec.MachineImages)
