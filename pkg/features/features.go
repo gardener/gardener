@@ -128,6 +128,7 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.142.0
 	// beta: v1.147.0
+	// GA: v1.153.0
 	BackupEntryForGarden featuregate.Feature = "BackupEntryForGarden"
 
 	// RemoveHTTPProxyLegacyPort removes the old HTTP proxy network infrastructure on the seed side (ingress
@@ -186,7 +187,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
-	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.Beta},
+	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
 }

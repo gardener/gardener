@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -303,7 +302,7 @@ func (r *Reconciler) delete(
 		destroyMainETCDBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying main ETCD backup entry",
 			Fn:           component.OpDestroyAndWait(c.etcdMainBackupEntry).Destroy,
-			SkipIf:       helper.GetETCDMainBackup(garden) == nil || !features.DefaultFeatureGate.Enabled(features.BackupEntryForGarden),
+			SkipIf:       helper.GetETCDMainBackup(garden) == nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyMainETCDBackupBucket = g.Add(flow.Task{

@@ -40,8 +40,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableNginxIngressInSeed      | `true`  | `Beta`  | `1.149` |         |
 | DisableNginxIngressInShoot     | `false` | `Alpha` | `1.142` |         |
 | LiveControlPlaneMigration      | `false` | `Alpha` | `1.142` |         |
-| BackupEntryForGarden           | `false` | `Alpha` | `1.142` | `1.146` |
-| BackupEntryForGarden           | `true`  | `Beta`  | `1.147` |         |
 | RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.148` |         |
 | StrictAuditPolicyValidation    | `false` | `Alpha` | `1.152` |         |
 
@@ -235,6 +233,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | VPAInPlaceUpdates                            | `true`  | `Beta`       | `1.138` | `1.145` |
 | VPAInPlaceUpdates                            | `true`  | `GA`         | `1.146` | `1.147` |
 | VPAInPlaceUpdates                            |         | `Removed`    | `1.148` |         |
+| BackupEntryForGarden                         | `false` | `Alpha`      | `1.142` | `1.146` |
+| BackupEntryForGarden                         | `true`  | `Beta`       | `1.147` | `1.152` |
+| BackupEntryForGarden                         | `true`  | `GA`         | `1.153` |         |
 
 ## Using a Feature
 
