@@ -132,7 +132,10 @@ func (o *otelCollector) WithAuthenticationProxy(b bool) {
 	o.values.WithRBACProxy = b
 }
 
-func (o *otelCollector) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
+func (o *otelCollector) newKubeRBACProxyClusterAccessSecret() *gardenerutils.AccessSecret {
+	if o.values.IsGardenCluster {
+		return gardenerutils.NewGardenAccessSecret(kubeRBACProxyName, o.namespace)
+	}
 	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, o.namespace)
 }
 
@@ -141,7 +144,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		ingressTLSSecret                 *corev1.Secret
 		loggingAgentShootAccessSecret    = o.newLoggingAgentShootAccessSecret()
-		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyShootAccessSecret()
+		kubeRBACProxyShootAccessSecret   = o.newKubeRBACProxyClusterAccessSecret()
 		shootObjects                     = []client.Object{}
 		seedObjects                      = []client.Object{}
 	)
@@ -172,7 +175,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			CertType:                    secrets.ServerCert,
 			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
+		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
 		if err != nil {
 			return err
 		}
@@ -265,7 +268,7 @@ func (o *otelCollector) Destroy(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObjects(ctx, o.client,
 		o.newLoggingAgentShootAccessSecret().Secret,
-		o.newKubeRBACProxyShootAccessSecret().Secret,
+		o.newKubeRBACProxyClusterAccessSecret().Secret,
 	)
 }
 
@@ -729,7 +732,7 @@ func (o *otelCollector) injectInsecureRBACProxy(obj *otelv1beta1.OpenTelemetryCo
 	o.injectRBACProxyContainers(obj, o.insecureValiRBACProxyArgs(), o.insecureOTLPRBACProxyArgs())
 
 	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
-	obj.Spec.Volumes = append(obj.Spec.Volumes, gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"))
+	obj.Spec.Volumes = append(obj.Spec.Volumes, gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, o.newKubeRBACProxyClusterAccessSecret().Secret.Name, "kubeconfig"))
 	obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
 	obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
 }
@@ -739,8 +742,7 @@ func (o *otelCollector) injectSecureRBACProxy(obj *otelv1beta1.OpenTelemetryColl
 
 	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
 	tlsVolumeMount := corev1.VolumeMount{Name: tlsCertificateVolumeName, MountPath: tlsMountPath, ReadOnly: true}
-	obj.Spec.Volumes = append(obj.Spec.Volumes,
-		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
+	obj.Spec.Volumes = append(obj.Spec.Volumes, gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, o.newKubeRBACProxyClusterAccessSecret().Secret.Name, "kubeconfig"),
 		corev1.Volume{
 			Name: tlsCertificateVolumeName,
 			VolumeSource: corev1.VolumeSource{

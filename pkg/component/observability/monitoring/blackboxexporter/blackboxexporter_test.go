@@ -261,7 +261,7 @@ spec:
 
 				if isGardenCluster {
 					out += `
-              name: shoot-access-prometheus-garden`
+              name: garden-access-prometheus-garden`
 				} else {
 					out += `
               name: shoot-access-prometheus-shoot`
