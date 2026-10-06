@@ -224,7 +224,7 @@ func SetDefaults_ControllerInstallationRequiredControllerConfiguration(obj *Cont
 	if obj.ConcurrentSyncs == nil {
 		// The controller actually starts one controller per extension resource per Seed.
 		// For one seed that is already 1 * 10 extension resources = 10 workers.
-		v := 1
+		v := int32(1)
 		obj.ConcurrentSyncs = &v
 	}
 }
@@ -321,7 +321,7 @@ func SetDefaults_StaleExtensionHealthChecks(obj *StaleExtensionHealthChecks) {
 // SetDefaults_ShootStateControllerConfiguration sets defaults for the shoot state controller.
 func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 6 * time.Hour}
@@ -331,7 +331,7 @@ func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConf
 // SetDefaults_NetworkPolicyControllerConfiguration sets defaults for the network policy controller.
 func SetDefaults_NetworkPolicyControllerConfiguration(obj *NetworkPolicyControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		v := 5
+		v := int32(5)
 		obj.ConcurrentSyncs = &v
 	}
 }
@@ -366,14 +366,14 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 // SetDefaults_TokenRequestorServiceAccountControllerConfiguration sets defaults for the TokenRequestorServiceAccount controller.
 func SetDefaults_TokenRequestorServiceAccountControllerConfiguration(obj *TokenRequestorServiceAccountControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 }
 
 // SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration sets defaults for the TokenRequestorWorkloadIdentity controller.
 func SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(obj *TokenRequestorWorkloadIdentityControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 
 	if obj.TokenExpirationDuration == nil {
@@ -384,7 +384,7 @@ func SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(obj *Toke
 // SetDefaults_VPAEvictionRequirementsControllerConfiguration sets defaults for the VPAEvictionRequirements controller.
 func SetDefaults_VPAEvictionRequirementsControllerConfiguration(obj *VPAEvictionRequirementsControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 }
 

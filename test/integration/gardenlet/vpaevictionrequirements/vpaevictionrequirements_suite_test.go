@@ -127,7 +127,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&vpaevictionrequirements.Reconciler{
-		ConcurrentSyncs: new(5),
+		ConcurrentSyncs: new(int32(5)),
 		Clock:           fakeClock,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 

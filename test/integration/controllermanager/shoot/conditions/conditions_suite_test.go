@@ -107,7 +107,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&conditions.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootConditionsControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

@@ -258,7 +258,7 @@ var _ = BeforeSuite(func() {
 		Config: gardenletconfigv1alpha1.GardenletConfiguration{
 			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
 				ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
-					ConcurrentSyncs: new(5),
+					ConcurrentSyncs: new(int32(5)),
 				},
 			},
 		},

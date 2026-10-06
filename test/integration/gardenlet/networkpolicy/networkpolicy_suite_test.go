@@ -161,7 +161,7 @@ var _ = BeforeSuite(func() {
 		testCancel,
 		mgr,
 		gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration{
-			ConcurrentSyncs:              new(5),
+			ConcurrentSyncs:              new(int32(5)),
 			AdditionalNamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{"custom": "namespace"}}},
 		},
 		gardencorev1beta1.SeedNetworks{

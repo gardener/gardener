@@ -36,17 +36,17 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			},
 			Controllers: operatorconfigv1alpha1.ControllerConfiguration{
 				Garden: operatorconfigv1alpha1.GardenControllerConfig{
-					ConcurrentSyncs: new(5),
+					ConcurrentSyncs: new(int32(5)),
 					SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 				},
 				GardenCare: operatorconfigv1alpha1.GardenCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: time.Minute},
 				},
 				GardenletDeployer: operatorconfigv1alpha1.GardenletDeployerControllerConfig{
-					ConcurrentSyncs: new(5),
+					ConcurrentSyncs: new(int32(5)),
 				},
 				NetworkPolicy: operatorconfigv1alpha1.NetworkPolicyControllerConfiguration{
-					ConcurrentSyncs: new(5),
+					ConcurrentSyncs: new(int32(5)),
 				},
 			},
 		}
@@ -158,7 +158,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 	Context("controller configuration", func() {
 		Context("garden", func() {
 			It("should return errors because concurrent syncs are <= 0", func() {
-				conf.Controllers.Garden.ConcurrentSyncs = new(0)
+				conf.Controllers.Garden.ConcurrentSyncs = new(int32(0))
 				conf.Controllers.Garden.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
@@ -170,7 +170,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should return errors because sync period is nil", func() {
-				conf.Controllers.Garden.ConcurrentSyncs = new(5)
+				conf.Controllers.Garden.ConcurrentSyncs = new(int32(5))
 				conf.Controllers.Garden.SyncPeriod = nil
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
@@ -182,7 +182,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 
 			It("should return errors because sync period is < 15s", func() {
-				conf.Controllers.Garden.ConcurrentSyncs = new(5)
+				conf.Controllers.Garden.ConcurrentSyncs = new(int32(5))
 				conf.Controllers.Garden.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
@@ -220,7 +220,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 		Context("network policy", func() {
 			It("should return errors because concurrent syncs are <= 0", func() {
-				conf.Controllers.NetworkPolicy.ConcurrentSyncs = new(0)
+				conf.Controllers.NetworkPolicy.ConcurrentSyncs = new(int32(0))
 
 				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{

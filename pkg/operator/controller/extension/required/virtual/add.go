@@ -42,7 +42,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, virtualCluster cluster.Cl
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).

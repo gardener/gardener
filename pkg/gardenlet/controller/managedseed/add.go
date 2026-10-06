@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   r.Config.Controllers.ManagedSeed.SyncPeriod.Duration,
 		}).
 		WatchesRawSource(source.Kind[client.Object](

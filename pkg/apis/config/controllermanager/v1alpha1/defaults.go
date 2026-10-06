@@ -90,13 +90,13 @@ func SetDefaults_ProjectControllerConfiguration(obj *ProjectControllerConfigurat
 		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.MinimumLifetimeDays == nil {
-		obj.MinimumLifetimeDays = new(30)
+		obj.MinimumLifetimeDays = new(int32(30))
 	}
 	if obj.StaleGracePeriodDays == nil {
-		obj.StaleGracePeriodDays = new(14)
+		obj.StaleGracePeriodDays = new(int32(14))
 	}
 	if obj.StaleExpirationTimeDays == nil {
-		obj.StaleExpirationTimeDays = new(90)
+		obj.StaleExpirationTimeDays = new(int32(90))
 	}
 	if obj.StaleSyncPeriod == nil {
 		obj.StaleSyncPeriod = &metav1.Duration{
@@ -311,7 +311,7 @@ func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetContro
 		obj.ConcurrentSyncs = new(DefaultControllerConcurrentSyncs)
 	}
 	if obj.MaxShootRetries == nil {
-		obj.MaxShootRetries = new(3)
+		obj.MaxShootRetries = new(int32(3))
 	}
 }
 

@@ -80,7 +80,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		mgr,
 		controller.Options{
 			Reconciler:              r,
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		},
 	)

@@ -125,7 +125,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&bastion.Reconciler{
 		Config: controllermanagerconfigv1alpha1.BastionControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
 		},
 		Clock: fakeClock,

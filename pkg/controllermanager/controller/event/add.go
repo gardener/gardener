@@ -33,7 +33,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(&eventsv1.Event{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)

@@ -137,7 +137,7 @@ var _ = BeforeSuite(func() {
 	Expect(controllerregistration.AddToManager(mgr, controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 		Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: new(5),
+				ConcurrentSyncs: new(int32(5)),
 			},
 		},
 	})).To(Succeed())

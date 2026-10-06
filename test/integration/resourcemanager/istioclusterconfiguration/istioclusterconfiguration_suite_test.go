@@ -84,7 +84,7 @@ var _ = BeforeSuite(func() {
 	Expect((&istioclusterconfiguration.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.IstioClusterConfigurationControllerConfig{
 			Enabled:         true,
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
 

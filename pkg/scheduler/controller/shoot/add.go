@@ -46,7 +46,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			predicate.Not(predicateutils.IsDeleting()),
 		)).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: r.Config.ConcurrentSyncs,
+			MaxConcurrentReconciles: int(r.Config.ConcurrentSyncs),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)
