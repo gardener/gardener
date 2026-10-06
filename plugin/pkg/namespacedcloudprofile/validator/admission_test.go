@@ -561,6 +561,98 @@ var _ = Describe("Admission", func() {
 			})
 		})
 
+		for _, target := range []string{"control plane", "worker Kubernetes", "worker image"} {
+			DescribeTable("referencing Shoot protection for "+target, func(removeOverride bool, reference string, gateEnabled bool) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, gateEnabled))
+				namespacedCloudProfile.Namespace = "garden-test"
+				shoot := &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: namespacedCloudProfile.Namespace},
+					Spec: gardencorev1beta1.ShootSpec{
+						CloudProfile: &gardencorev1beta1.CloudProfileReference{Kind: constants.CloudProfileReferenceKindNamespacedCloudProfile, Name: namespacedCloudProfile.Name},
+						Kubernetes:   gardencorev1beta1.Kubernetes{Version: "1.32.0"},
+					},
+				}
+				switch reference {
+				case "other namespaced profile":
+					shoot.Spec.CloudProfile.Name = "another-profile"
+				case "parent":
+					shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: constants.CloudProfileReferenceKindCloudProfile, Name: parentCloudProfile.Name}
+				}
+				available := gardencore.ExpirableVersion{Version: "1.31.0", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}}}
+				unavailable := []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported, StartTime: validExpirationDate}}
+				if target == "worker image" {
+					available.Version = "1.0.0"
+					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: available}}}}
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = namespacedCloudProfile.Spec.MachineImages
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "worker", Machine: gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{Name: "test-image", Version: new("1.0.0")}}}}
+					if removeOverride {
+						parentCloudProfile.Spec.MachineImages[0].Versions[0].Classification = nil
+						parentCloudProfile.Spec.MachineImages[0].Versions[0].Lifecycle = unavailable
+					}
+				} else {
+					namespacedCloudProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{available}}
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes = *namespacedCloudProfile.Spec.Kubernetes
+					if target == "control plane" {
+						shoot.Spec.Kubernetes.Version = available.Version
+					} else {
+						shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "worker", Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: new(available.Version)}}}
+					}
+					if removeOverride {
+						parentCloudProfile.Spec.Kubernetes.Versions[1].Classification = nil
+						parentCloudProfile.Spec.Kubernetes.Versions[1].Lifecycle = unavailable
+					}
+				}
+				updated := namespacedCloudProfile.DeepCopy()
+				if removeOverride {
+					updated.Spec.Kubernetes = nil
+					updated.Spec.MachineImages = nil
+				} else if target == "worker image" {
+					updated.Spec.MachineImages[0].Versions[0].Lifecycle[0].StartTime = validExpirationDate
+				} else {
+					updated.Spec.Kubernetes.Versions[0].Lifecycle[0].StartTime = validExpirationDate
+				}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				attrs := admission.NewAttributesRecord(updated, namespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), updated.Namespace, updated.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
+				switch {
+				case !gateEnabled:
+					Expect(err).To(MatchError(ContainSubstring("lifecycles are not allowed with disabled VersionClassificationLifecycle feature gate")))
+				case reference == "this profile":
+					Expect(err).To(MatchError(ContainSubstring("would become unavailable")))
+				default:
+					Expect(err).NotTo(HaveOccurred())
+				}
+			},
+				Entry("rejects removing an override needed by a Shoot", true, "this profile", true),
+				Entry("ignores another NamespacedCloudProfile when removing an override", true, "other namespaced profile", true),
+				Entry("ignores the parent CloudProfile when removing an override", true, "parent", true),
+				Entry("ignores another NamespacedCloudProfile when changing a lifecycle", false, "other namespaced profile", true),
+				Entry("ignores the parent CloudProfile when changing a lifecycle", false, "parent", true),
+				Entry("rejects lifecycle overrides with the feature gate disabled", false, "this profile", false),
+			)
+		}
+
+		It("allows legacy overrides with referencing Shoots and the lifecycle feature gate disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, false))
+			namespacedCloudProfile.Namespace = "garden-test"
+			oldProfile := namespacedCloudProfile.DeepCopy()
+			namespacedCloudProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{{Version: "1.31.0", ExpirationDate: validExpirationDate}}}
+			namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: validExpirationDate}}}}}
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: namespacedCloudProfile.Namespace},
+				Spec: gardencorev1beta1.ShootSpec{
+					CloudProfile: &gardencorev1beta1.CloudProfileReference{Kind: constants.CloudProfileReferenceKindNamespacedCloudProfile, Name: namespacedCloudProfile.Name},
+					Kubernetes:   gardencorev1beta1.Kubernetes{Version: "1.31.0"},
+					Provider:     gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{Name: "worker", Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: new("1.31.0")}, Machine: gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{Name: "test-image", Version: new("1.0.0")}}}}},
+				},
+			}
+			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+		})
+
 		Context("when a Shoot references the NamespacedCloudProfile", func() {
 			var (
 				shoot                         *gardencorev1beta1.Shoot
