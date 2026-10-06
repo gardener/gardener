@@ -56,8 +56,6 @@ spec:
           kind: StaticListVariable
           spec:
             values:
-              - label: All
-                value: $__all
               - DELETE
               - PUT
               - POST
@@ -84,8 +82,6 @@ spec:
           kind: StaticListVariable
           spec:
             values:
-              - label: All
-                value: $__all
               - CREATE
               - UPDATE
               - DELETE
@@ -114,7 +110,9 @@ spec:
           description: Shows the rate of all API server requests.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -138,6 +136,13 @@ spec:
             yAxis:
               format:
                 unit: percent
+              label: '% of requests'
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -165,7 +170,16 @@ spec:
           description: Shows the request latency of each verb for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - mean
+                - max
+                - last
+            yAxis:
+              label: latency (s)
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -213,7 +227,15 @@ spec:
           description: Raw restart and OOM kill counters for each kube-apiserver pod. Each step up on the staircase is one event. An OOM kill step always coincides with a restart step; a restart step without a matching OOM step indicates a non-OOM cause (crash, rollout, etc.).
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: event count (total)
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -269,7 +291,16 @@ spec:
           description: Shows the request rate per verb for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - mean
+                - max
+                - last
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -289,7 +320,15 @@ spec:
           description: Shows the request rate per scope for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -309,7 +348,15 @@ spec:
           description: Shows the request rate per resource for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -329,7 +376,15 @@ spec:
           description: Shows the request rate per code and resource for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -349,7 +404,15 @@ spec:
           description: Shows the request rate per verb and resource for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -369,7 +432,15 @@ spec:
           description: Shows the request rate per code, verb and resource for the API server.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -393,6 +464,13 @@ spec:
             yAxis:
               format:
                 unit: seconds
+              label: latency (s)
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -415,6 +493,13 @@ spec:
             yAxis:
               format:
                 unit: seconds
+              label: latency (s)
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -437,6 +522,13 @@ spec:
             yAxis:
               format:
                 unit: seconds
+              label: latency (s)
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -454,7 +546,13 @@ spec:
           name: Duration Per In-Tree Plugin
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -477,7 +575,13 @@ spec:
           name: Duration Per Webhook
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -501,7 +605,13 @@ spec:
           description: p$quantile admission latency broken down by admission step (VALIDATE, ADMIT, WEBHOOK). The WEBHOOK step reflects all admission webhooks collectively; use 'Duration Per Webhook' to identify which webhook is slow.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -520,7 +630,15 @@ spec:
           name: Rejection Count Per Webhook
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: rejections/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -539,7 +657,13 @@ spec:
           name: Response Sizes Per Resource
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -571,7 +695,13 @@ spec:
             High values for WATCH requests could hint at reducing the rate of change for the specific resource.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - mean
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -595,6 +725,13 @@ spec:
             yAxis:
               format:
                 unit: percent
+              label: '% of seat capacity'
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -617,6 +754,13 @@ spec:
             yAxis:
               format:
                 unit: requests/sec
+              label: rejections/s
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -639,6 +783,13 @@ spec:
             yAxis:
               format:
                 unit: seconds
+              label: wait time (s)
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -657,7 +808,15 @@ spec:
           description: Instantaneous count of in-flight requests, split by mutating vs read-only. Shown as max_over_time to capture spikes within a scrape interval. With APF enabled, APF Seat Utilization is the primary saturation signal; use this panel to correlate with pre-APF baselines.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - mean
+                - last
+            yAxis:
+              label: inflight requests
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -677,7 +836,12 @@ spec:
           description: Instantaneous count of requests waiting in APF queues, split by mutating vs read-only. Non-zero values indicate a priority level is saturated. Sustained queue depth precedes APF rejections.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              label: inqueue requests
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -697,7 +861,13 @@ spec:
           description: 'Requests the API server forcibly terminated before completion, broken down by resource type and HTTP status code. A termination differs from a normal error response: the server initiated the disconnect (e.g. due to a timeout or APF deadline). Sustained high rates indicate overload or long-running requests being killed.'
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -721,6 +891,13 @@ spec:
             yAxis:
               format:
                 unit: seconds
+              label: latency (s)
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -738,7 +915,13 @@ spec:
           name: ETCD Request Duration Per Resource
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -782,7 +965,12 @@ spec:
           description: Count of objects stored in etcd per resource type. Resource bloat (e.g. large numbers of ConfigMaps or Secrets) can cause slow LIST responses and increase etcd memory pressure.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -801,7 +989,13 @@ spec:
           name: Storage Transformation Duration By Type
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - mean
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -820,7 +1014,15 @@ spec:
           name: Total Storage Transformation Operations By Type And Prefix
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: operations/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -839,7 +1041,9 @@ spec:
           name: Total Events
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              label: events/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -858,7 +1062,9 @@ spec:
           name: Rejected Events
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              label: events/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -877,7 +1083,9 @@ spec:
           name: Total Authenticated User Requests
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            yAxis:
+              label: requests/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -896,7 +1104,15 @@ spec:
           name: Authentication Attempts By Result
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - mean
+                - last
+            yAxis:
+              label: attempts/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -916,7 +1132,12 @@ spec:
           description: Panel shows how many watches are open (including the API Server's in-tree admission plug-ins).
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -941,7 +1162,15 @@ spec:
           description: Counter of init events processed in watch cache.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: watch events/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -960,7 +1189,13 @@ spec:
           name: Event Size Per Kind
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -984,7 +1219,16 @@ spec:
           description: Shows the watch event count per kind
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - mean
+                - max
+                - last
+            yAxis:
+              label: watch events/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -1004,7 +1248,15 @@ spec:
           description: Rate of watch-cache capacity increase events per resource. An increase event means the cache reflector detected it was too small and doubled its size. Frequent increases indicate heavy watch event volume for that resource.
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: events/s
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -1024,7 +1276,15 @@ spec:
           description: Rate of watch-cache capacity decrease events per resource. A decrease event means the cache was oversized and halved its allocation. Normal housekeeping; notable only if it immediately follows increases (thrashing).
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              position: right
+              mode: table
+              values:
+                - max
+                - last
+            yAxis:
+              label: events/s
         queries:
           - kind: TimeSeriesQuery
             spec:
