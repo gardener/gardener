@@ -109,7 +109,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&secretbindingcontroller.Reconciler{
 		Config: controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

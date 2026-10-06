@@ -54,7 +54,7 @@ func Config(
 		nodeInitFiles = []extensionsv1alpha1.File{
 			{
 				Path:        nodeagentconfigv1alpha1.ClusterCAFilePath,
-				Permissions: new(uint32(0640)),
+				Permissions: new(int32(0640)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -64,7 +64,7 @@ func Config(
 			},
 			{
 				Path:        nodeagentconfigv1alpha1.BootstrapTokenFilePath,
-				Permissions: new(uint32(0640)),
+				Permissions: new(int32(0640)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: machinecontroller.BootstrapTokenPlaceholder,
@@ -74,7 +74,7 @@ func Config(
 			},
 			{
 				Path:        PathInitScript,
-				Permissions: new(uint32(0755)),
+				Permissions: new(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -84,7 +84,7 @@ func Config(
 			},
 			{
 				Path:        nodeagentconfigv1alpha1.MachineNameFilePath,
-				Permissions: new(uint32(0640)),
+				Permissions: new(int32(0640)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Data: machinecontroller.MachineNamePlaceholder,

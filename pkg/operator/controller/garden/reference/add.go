@@ -21,7 +21,7 @@ import (
 // AddToManager adds the garden-reference controller to the given manager.
 func AddToManager(mgr manager.Manager, gardenNamespace string) error {
 	return (&reference.Reconciler{
-		ConcurrentSyncs:             new(1),
+		ConcurrentSyncs:             new(int32(1)),
 		NewObjectFunc:               func() client.Object { return &operatorv1alpha1.Garden{} },
 		NewObjectListFunc:           func() client.ObjectList { return &operatorv1alpha1.GardenList{} },
 		GetNamespace:                func(client.Object) string { return gardenNamespace },

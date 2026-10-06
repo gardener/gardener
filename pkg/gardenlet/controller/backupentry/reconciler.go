@@ -307,7 +307,7 @@ func (r *Reconciler) deleteBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	gracePeriod := computeGracePeriod(*r.Config.DeletionGracePeriodHours, r.Config.DeletionGracePeriodShootPurposes, gardencorev1beta1.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
+	gracePeriod := computeGracePeriod(int(*r.Config.DeletionGracePeriodHours), r.Config.DeletionGracePeriodShootPurposes, gardencorev1beta1.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
 	present, _ := strconv.ParseBool(backupEntry.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 
 	if present || r.Clock.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {

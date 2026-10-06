@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controllers")
 	cfg := resourcemanagerconfigv1alpha1.HealthControllerConfig{
-		ConcurrentSyncs: new(5),
+		ConcurrentSyncs: new(int32(5)),
 		SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 	}
 	classFilter := resourcemanagerpredicate.NewClassFilter("")

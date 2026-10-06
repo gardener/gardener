@@ -690,20 +690,20 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 		},
 		Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration{
-				ConcurrentSyncs: new(20),
+				ConcurrentSyncs: new(int32(20)),
 			},
 			Project: &controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-				ConcurrentSyncs: new(20),
+				ConcurrentSyncs: new(int32(20)),
 				Quotas:          testValues.Quotas,
 			},
 			SecretBinding: &controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration{
-				ConcurrentSyncs: new(20),
+				ConcurrentSyncs: new(int32(20)),
 			},
 			CredentialsBinding: &controllermanagerconfigv1alpha1.CredentialsBindingControllerConfiguration{
-				ConcurrentSyncs: new(20),
+				ConcurrentSyncs: new(int32(20)),
 			},
 			Seed: &controllermanagerconfigv1alpha1.SeedControllerConfiguration{
-				ConcurrentSyncs:    new(20),
+				ConcurrentSyncs:    new(int32(20)),
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
 			SeedExtensionsCheck: &controllermanagerconfigv1alpha1.SeedExtensionsCheckControllerConfiguration{
@@ -719,14 +719,14 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 				}},
 			},
 			Event: &controllermanagerconfigv1alpha1.EventControllerConfiguration{
-				ConcurrentSyncs:   new(10),
+				ConcurrentSyncs:   new(int32(10)),
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
 			ShootMaintenance: controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration{
-				ConcurrentSyncs: new(20),
+				ConcurrentSyncs: new(int32(20)),
 			},
 			ShootReference: &controllermanagerconfigv1alpha1.ShootReferenceControllerConfiguration{
-				ConcurrentSyncs: new(20),
+				ConcurrentSyncs: new(int32(20)),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{

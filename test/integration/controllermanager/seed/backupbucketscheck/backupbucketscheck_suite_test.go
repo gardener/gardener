@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&backupbucketscheck.Reconciler{
 		Config: controllermanagerconfigv1alpha1.SeedBackupBucketsCheckControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
 			ConditionThresholds: []controllermanagerconfigv1alpha1.ConditionThreshold{{
 				Type:     string(gardencorev1beta1.SeedBackupBucketsReady),

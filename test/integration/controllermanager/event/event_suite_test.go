@@ -108,7 +108,7 @@ var _ = BeforeSuite(func() {
 	Expect((&eventcontroller.Reconciler{
 		Clock: clock.RealClock{},
 		Config: controllermanagerconfigv1alpha1.EventControllerConfiguration{
-			ConcurrentSyncs:   new(5),
+			ConcurrentSyncs:   new(int32(5)),
 			TTLNonShootEvents: &metav1.Duration{Duration: 30 * time.Minute},
 		},
 	}).AddToManager(mgr)).To(Succeed())

@@ -57,7 +57,7 @@ var _ = Describe("Reconciler", func() {
 
 		seedClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 		reconciler = &vpaevictionrequirements.Reconciler{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			Clock:           fakeClock,
 			SeedClient:      seedClient,
 		}

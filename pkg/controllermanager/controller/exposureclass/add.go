@@ -31,7 +31,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(&gardencorev1beta1.ExposureClass{}).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			RateLimiter:             r.RateLimiter,
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).

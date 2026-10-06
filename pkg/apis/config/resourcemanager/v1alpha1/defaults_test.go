@@ -147,9 +147,9 @@ var _ = Describe("ResourceManager defaulting", func() {
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
 			Expect(obj.Server.Webhooks.BindAddress).To(BeEmpty())
-			Expect(obj.Server.Webhooks.Port).To(Equal(9449))
-			Expect(obj.Server.HealthProbes.Port).To(Equal(8081))
-			Expect(obj.Server.Metrics.Port).To(Equal(8080))
+			Expect(obj.Server.Webhooks.Port).To(Equal(int32(9449)))
+			Expect(obj.Server.HealthProbes.Port).To(Equal(int32(8081)))
+			Expect(obj.Server.Metrics.Port).To(Equal(int32(8080)))
 		})
 
 		It("should not overwrite already set values for ServerConfiguration", func() {
@@ -171,9 +171,9 @@ var _ = Describe("ResourceManager defaulting", func() {
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
 			Expect(obj.Server.Webhooks.BindAddress).To(Equal("foo"))
-			Expect(obj.Server.Webhooks.Port).To(Equal(1))
-			Expect(obj.Server.HealthProbes.Port).To(Equal(2))
-			Expect(obj.Server.Metrics.Port).To(Equal(3))
+			Expect(obj.Server.Webhooks.Port).To(Equal(int32(1)))
+			Expect(obj.Server.HealthProbes.Port).To(Equal(int32(2)))
+			Expect(obj.Server.Metrics.Port).To(Equal(int32(3)))
 		})
 	})
 
@@ -219,18 +219,18 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.CSRApprover.ConcurrentSyncs).To(PointTo(Equal(1)))
+			Expect(obj.Controllers.CSRApprover.ConcurrentSyncs).To(PointTo(Equal(int32(1))))
 		})
 
 		It("should not overwrite already set values for CSRApproverControllerConfig", func() {
 			obj.Controllers.CSRApprover = CSRApproverControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: new(2),
+				ConcurrentSyncs: new(int32(2)),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.CSRApprover.ConcurrentSyncs).To(PointTo(Equal(2)))
+			Expect(obj.Controllers.CSRApprover.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 		})
 	})
 
@@ -281,18 +281,18 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 		})
 
 		It("should not overwrite already set values for NetworkPolicyConfig", func() {
 			obj.Controllers.NetworkPolicy = NetworkPolicyControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: new(6),
+				ConcurrentSyncs: new(int32(6)),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(6)))
+			Expect(obj.Controllers.NetworkPolicy.ConcurrentSyncs).To(PointTo(Equal(int32(6))))
 		})
 	})
 
@@ -302,19 +302,19 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.Health.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.Health.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			Expect(obj.Controllers.Health.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 
 		It("should not overwrite already set values for HealthControllerConfig", func() {
 			obj.Controllers.Health = HealthControllerConfig{
-				ConcurrentSyncs: new(1),
+				ConcurrentSyncs: new(int32(1)),
 				SyncPeriod:      &metav1.Duration{Duration: time.Second},
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.Health.ConcurrentSyncs).To(PointTo(Equal(1)))
+			Expect(obj.Controllers.Health.ConcurrentSyncs).To(PointTo(Equal(int32(1))))
 			Expect(obj.Controllers.Health.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 		})
 	})
@@ -325,7 +325,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.ManagedResource.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.ManagedResource.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			Expect(obj.Controllers.ManagedResource.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			Expect(obj.Controllers.ManagedResource.AlwaysUpdate).To(PointTo(BeFalse()))
 			Expect(obj.Controllers.ManagedResource.ManagedByLabelValue).To(PointTo(Equal("gardener")))
@@ -333,7 +333,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 		It("should not overwrite already set values for ManagedResourceControllerConfig", func() {
 			obj.Controllers.ManagedResource = ManagedResourceControllerConfig{
-				ConcurrentSyncs:     new(1),
+				ConcurrentSyncs:     new(int32(1)),
 				SyncPeriod:          &metav1.Duration{Duration: time.Second},
 				AlwaysUpdate:        new(true),
 				ManagedByLabelValue: new("foo"),
@@ -341,7 +341,7 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.ManagedResource.ConcurrentSyncs).To(PointTo(Equal(1)))
+			Expect(obj.Controllers.ManagedResource.ConcurrentSyncs).To(PointTo(Equal(int32(1))))
 			Expect(obj.Controllers.ManagedResource.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 			Expect(obj.Controllers.ManagedResource.AlwaysUpdate).To(PointTo(BeTrue()))
 			Expect(obj.Controllers.ManagedResource.ManagedByLabelValue).To(PointTo(Equal("foo")))
@@ -364,18 +364,18 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 		})
 
 		It("should not overwrite already set values for TokenRequestorControllerConfig", func() {
 			obj.Controllers.TokenRequestor = TokenRequestorControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: new(2),
+				ConcurrentSyncs: new(int32(2)),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(2)))
+			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 		})
 	})
 
@@ -395,20 +395,20 @@ var _ = Describe("ResourceManager defaulting", func() {
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.NodeCriticalComponents.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.NodeCriticalComponents.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			Expect(obj.Controllers.NodeCriticalComponents.Backoff).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
 		})
 
 		It("should not overwrite already set values for NodeCriticalComponentsControllerConfig", func() {
 			obj.Controllers.NodeCriticalComponents = NodeCriticalComponentsControllerConfig{
 				Enabled:         true,
-				ConcurrentSyncs: new(2),
+				ConcurrentSyncs: new(int32(2)),
 				Backoff:         &metav1.Duration{Duration: time.Minute},
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.NodeCriticalComponents.ConcurrentSyncs).To(PointTo(Equal(2)))
+			Expect(obj.Controllers.NodeCriticalComponents.ConcurrentSyncs).To(PointTo(Equal(int32(2))))
 			Expect(obj.Controllers.NodeCriticalComponents.Backoff).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 	})

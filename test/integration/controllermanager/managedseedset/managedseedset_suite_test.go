@@ -109,7 +109,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&managedseedsetcontroller.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 	}).AddToManager(ctx, mgr)).To(Succeed())

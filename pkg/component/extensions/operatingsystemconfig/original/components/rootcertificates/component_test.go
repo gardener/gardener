@@ -63,7 +63,7 @@ WantedBy=multi-user.target`),
 			updateCACertsFiles := []extensionsv1alpha1.File{
 				{
 					Path:        "/var/lib/ssl/update-local-ca-certificates.sh",
-					Permissions: new(uint32(0744)),
+					Permissions: new(int32(0744)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -93,7 +93,7 @@ fi
 				},
 				{
 					Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
-					Permissions: new(uint32(0644)),
+					Permissions: new(int32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -103,7 +103,7 @@ fi
 				},
 				{
 					Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-					Permissions: new(uint32(0644)),
+					Permissions: new(int32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -132,7 +132,7 @@ fi
 				Expect(files).To(ContainElements(
 					extensionsv1alpha1.File{
 						Path:        "/var/lib/ca-certificates-local/ROOTcerts.crt",
-						Permissions: new(uint32(0644)),
+						Permissions: new(int32(0644)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",
@@ -142,7 +142,7 @@ fi
 					},
 					extensionsv1alpha1.File{
 						Path:        PathLocalSSLRegistryCACerts,
-						Permissions: new(uint32(0644)),
+						Permissions: new(int32(0644)),
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
 								Encoding: "b64",

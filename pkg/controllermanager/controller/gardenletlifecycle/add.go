@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Watches(&gardencorev1beta1.Seed{}, r.EventHandler(), builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		Watches(&gardencorev1beta1.Shoot{}, r.EventHandler(), builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create), shootIsSelfHostedPredicate)).
 		WithOptions(controller.TypedOptions[Request]{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   r.Config.SyncPeriod.Duration,
 		}).
 		Complete(r)

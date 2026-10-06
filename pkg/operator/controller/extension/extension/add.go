@@ -96,7 +96,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			operatorpredicate.ExtensionRequirementsChanged(),
 		))).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Extension.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.Controllers.Extension.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Watches(

@@ -38,7 +38,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   r.Config.SyncPeriod.Duration,
 		}).
 		Watches(

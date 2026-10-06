@@ -59,15 +59,15 @@ var _ = Describe("ResourceManager", func() {
 		It("should apply the defaults for new runtime resource managers", func() {
 			resourceManager, err := NewRuntimeGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
 				ClusterIdentity: new("foo"),
-				ConcurrentSyncs: new(21),
+				ConcurrentSyncs: new(int32(21)),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
 				ClusterIdentity:                   new("foo"),
-				ConcurrentSyncs:                   new(21),
+				ConcurrentSyncs:                   new(int32(21)),
 				HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
 				Image:                             "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-				MaxConcurrentNetworkPolicyWorkers: new(20),
+				MaxConcurrentNetworkPolicyWorkers: new(int32(20)),
 				NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 					Namespace: "garden",
 					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -91,11 +91,11 @@ var _ = Describe("ResourceManager", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
 				ClusterIdentity:                      new("foo"),
-				ConcurrentSyncs:                      new(20),
+				ConcurrentSyncs:                      new(int32(20)),
 				SystemComponentsConfigWebhookEnabled: true,
 				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-				MaxConcurrentNetworkPolicyWorkers:    new(20),
+				MaxConcurrentNetworkPolicyWorkers:    new(int32(20)),
 				NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 					Namespace: "garden",
 					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -120,12 +120,12 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
 				AlwaysUpdate:                         new(true),
 				ClusterIdentity:                      new("foo"),
-				ConcurrentSyncs:                      new(20),
+				ConcurrentSyncs:                      new(int32(20)),
 				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-				MaxConcurrentCSRApproverWorkers:      new(5),
-				MaxConcurrentHealthWorkers:           new(10),
-				MaxConcurrentTokenRequestorWorkers:   new(5),
+				MaxConcurrentCSRApproverWorkers:      new(int32(5)),
+				MaxConcurrentHealthWorkers:           new(int32(10)),
+				MaxConcurrentTokenRequestorWorkers:   new(int32(5)),
 				ResponsibilityMode:                   resourcemanager.ForShootOrVirtualGarden,
 				TargetNamespaces:                     []string{},
 				WatchedNamespace:                     &namespace,
@@ -147,12 +147,12 @@ var _ = Describe("ResourceManager", func() {
 				Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
 					AlwaysUpdate:                         new(true),
 					ClusterIdentity:                      new("foo"),
-					ConcurrentSyncs:                      new(20),
+					ConcurrentSyncs:                      new(int32(20)),
 					HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 					Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
-					MaxConcurrentCSRApproverWorkers:      new(5),
-					MaxConcurrentHealthWorkers:           new(10),
-					MaxConcurrentTokenRequestorWorkers:   new(5),
+					MaxConcurrentCSRApproverWorkers:      new(int32(5)),
+					MaxConcurrentHealthWorkers:           new(int32(10)),
+					MaxConcurrentTokenRequestorWorkers:   new(int32(5)),
 					ResponsibilityMode:                   resourcemanager.ForShootOrVirtualGarden,
 					TargetNamespaces:                     []string{},
 					WatchedNamespace:                     &namespace,
