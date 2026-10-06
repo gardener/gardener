@@ -283,7 +283,8 @@ func (r *Reconciler) reconcile(
 	} else {
 		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
 			WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
-			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name}).
+			WithServiceAccountNamespace(gardenerutils.ComputeGardenNamespace(seed.Name))
 	}
 
 	featureToEnabled := make(map[featuregate.Feature]bool)

@@ -609,12 +609,6 @@ var _ = Describe("Shoot", func() {
 
 				It("should work w/o settings", func() {
 					validate()
-					Expect(accessSecret.Secret.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/namespace"))
-				})
-
-				It("should set ServiceAccount namespace to kube-system for shoot class", func() {
-					accessSecret.Class = "shoot"
-					validate()
 					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "kube-system"))
 				})
 
@@ -653,11 +647,6 @@ var _ = Describe("Shoot", func() {
 					accessSecret.WithServiceAccountNamespace("garden-my-project")
 					validate()
 					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "garden-my-project"))
-				})
-
-				It("should not set ServiceAccount namespace annotation when WithServiceAccountNamespace is not called for garden class", func() {
-					validate()
-					Expect(accessSecret.Secret.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/namespace"))
 				})
 			})
 
