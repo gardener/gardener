@@ -863,6 +863,65 @@ var _ = Describe("OpenTelemetry Collector", func() {
 				vpa,
 			))
 		})
+
+		It("should use garden-access secret when IsGardenCluster is true", func() {
+			values.ClusterType = "seed"
+			values.ShootNodeLoggingEnabled = false
+			values.IsGardenCluster = true
+			component = New(c, namespace, values, fakeSecretManager)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+			gardenCollector := openTelemetryCollector.DeepCopy()
+			gardenVolumeMount := corev1.VolumeMount{
+				Name:      "kubeconfig",
+				MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+				ReadOnly:  true,
+			}
+			gardenCollector.Spec.AdditionalContainers = []corev1.Container{getInsecureValiKubeRBACContainer(gardenVolumeMount), getInsecureOtlpKubeRBACContainer(gardenVolumeMount)}
+			gardenCollector.Spec.Volumes = []corev1.Volume{{
+				Name: "kubeconfig",
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: new(int32(420)),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: ""},
+									Items:                []corev1.KeyToPath{{Key: secrets.DataKeyKubeconfig, Path: secrets.DataKeyKubeconfig}},
+									Optional:             new(false),
+								},
+							},
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: "garden-access-rbac-proxy"},
+									Items:                []corev1.KeyToPath{{Key: resourcesv1alpha1.DataKeyToken, Path: resourcesv1alpha1.DataKeyToken}},
+									Optional:             new(false),
+								},
+							},
+						},
+					},
+				},
+			}}
+			gardenCollector.Annotations = map[string]string{
+				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
+					v1beta1constants.LabelNetworkPolicyGardenScrapeTargets +
+					resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"protocol":"TCP","port":8888}]`,
+			}
+			metav1.SetMetaDataLabel(&gardenCollector.ObjectMeta, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443", "allowed")
+
+			gardenServiceMonitor := serviceMonitor.DeepCopy()
+			gardenServiceMonitor.Name = "garden-opentelemetry-collector"
+			gardenServiceMonitor.Labels = map[string]string{"prometheus": "garden"}
+
+			Expect(customResourcesManagedResource).To(consistOf(
+				gardenCollector,
+				gardenServiceMonitor,
+				serviceAccount,
+				vpa,
+			))
+		})
 	})
 
 	Describe("#Destroy", func() {

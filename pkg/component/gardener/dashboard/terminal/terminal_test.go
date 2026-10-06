@@ -136,11 +136,11 @@ var _ = Describe("Terminal", func() {
 
 		virtualGardenAccessSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "shoot-access-terminal-controller-manager",
+				Name:      "garden-access-terminal-controller-manager",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
-					"resources.gardener.cloud/class":   "shoot",
+					"resources.gardener.cloud/class":   "garden",
 				},
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "terminal-controller-manager",
@@ -317,7 +317,7 @@ var _ = Describe("Terminal", func() {
 			},
 		}
 
-		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-terminal-controller-manager"))
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "garden-access-terminal-controller-manager"))
 		utilruntime.Must(references.InjectAnnotations(deployment))
 
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{

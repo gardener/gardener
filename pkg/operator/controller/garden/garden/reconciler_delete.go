@@ -599,7 +599,7 @@ func (r *Reconciler) destroyGardenPrometheus(ctx context.Context, prometheus pro
 		return err
 	}
 
-	if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Secret); err != nil {
+	if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), gardenerutils.NewGardenAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Secret); err != nil {
 		return err
 	}
 

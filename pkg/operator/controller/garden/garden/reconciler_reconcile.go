@@ -1224,7 +1224,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 }
 
 func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusHost string, dashboardDomain string, discoveryServerEnabled bool) error {
-	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
+	if err := gardenerutils.NewGardenAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
 

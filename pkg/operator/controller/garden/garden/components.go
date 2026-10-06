@@ -45,7 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	pvcautoscaler "github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
@@ -457,6 +457,7 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1a
 	}
 
 	return sharedcomponent.NewTargetGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
+		IsGardenCluster:          true,
 		IsWorkerless:             true,
 		LogLevel:                 r.Config.LogLevel,
 		LogFormat:                r.Config.LogFormat,
@@ -906,6 +907,7 @@ func (r *Reconciler) newKubeControllerManager(
 		operatorv1alpha1.VirtualGardenNamePrefix,
 		config,
 		v1beta1constants.PriorityClassNameGardenSystem300,
+		true,
 		true,
 		false,
 		certificateSigningDuration,

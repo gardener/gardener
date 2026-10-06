@@ -406,18 +406,18 @@ func verifyResourcesGone(ctx context.Context, fakeClient client.Client, namespac
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: managedResourceNameRuntime}, &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "managedresource-" + managedResourceNameVirtual}, &corev1.Secret{})).To(BeNotFoundError())
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: managedResourceNameVirtual}, &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
-	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-admission-controller"}, &corev1.Secret{})).To(BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "garden-access-gardener-admission-controller"}, &corev1.Secret{})).To(BeNotFoundError())
 }
 
 func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf func(...client.Object) types.GomegaMatcher, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values) {
 	By("Check Gardener Access Secret")
 	accessSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "shoot-access-gardener-admission-controller",
+			Name:      "garden-access-gardener-admission-controller",
 			Namespace: namespace,
 			Labels: map[string]string{
 				"resources.gardener.cloud/purpose": "token-requestor",
-				"resources.gardener.cloud/class":   "shoot",
+				"resources.gardener.cloud/class":   "garden",
 			},
 			Annotations: map[string]string{
 				"serviceaccount.resources.gardener.cloud/name":      "gardener-admission-controller",
@@ -675,7 +675,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 										{
 											Secret: &corev1.SecretProjection{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: "shoot-access-gardener-admission-controller",
+													Name: "garden-access-gardener-admission-controller",
 												},
 												Items: []corev1.KeyToPath{{
 													Key:  "token",

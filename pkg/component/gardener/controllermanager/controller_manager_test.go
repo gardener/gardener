@@ -370,11 +370,11 @@ var _ = Describe("GardenerControllerManager", func() {
 			It("should successfully deploy the access secret for the virtual garden", func() {
 				accessSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shoot-access-gardener-controller-manager",
+						Name:      "garden-access-gardener-controller-manager",
 						Namespace: namespace,
 						Labels: map[string]string{
 							"resources.gardener.cloud/purpose": "token-requestor",
-							"resources.gardener.cloud/class":   "shoot",
+							"resources.gardener.cloud/class":   "garden",
 						},
 						Annotations: map[string]string{
 							"serviceaccount.resources.gardener.cloud/name":      "gardener-controller-manager",
@@ -886,7 +886,7 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 										{
 											Secret: &corev1.SecretProjection{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: "shoot-access-gardener-controller-manager",
+													Name: "garden-access-gardener-controller-manager",
 												},
 												Items: []corev1.KeyToPath{{
 													Key:  "token",
