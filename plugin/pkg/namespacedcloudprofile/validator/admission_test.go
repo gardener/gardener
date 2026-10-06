@@ -160,6 +160,48 @@ var _ = Describe("Admission", func() {
 			)
 		}
 
+		for _, scenario := range []string{"override", "new version", "new image", "added to parent"} {
+			DescribeTable("machine image lifecycle fields: "+scenario, func(operation admission.Operation, fields string) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+				image := gardencore.MachineImage{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0"}}}}
+				if scenario == "new version" {
+					image.Versions[0].Version = "2.0.0"
+				}
+				if scenario == "new image" {
+					image.Name = "new-image"
+					image.UpdateStrategy = new(gardencore.UpdateStrategyPatch)
+				}
+				if scenario != "override" {
+					image.Versions[0].CRI = []gardencore.CRI{{Name: "containerd"}}
+					image.Versions[0].Architectures = []string{"amd64"}
+				}
+				oldProfile := namespacedCloudProfile.DeepCopy()
+				if scenario == "added to parent" {
+					operation = admission.Update
+					oldProfile.Spec.MachineImages = []gardencore.MachineImage{*image.DeepCopy()}
+				}
+				if fields != "expirationDate" {
+					image.Versions[0].Lifecycle = []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}}
+				}
+				if fields != "lifecycle" {
+					image.Versions[0].ExpirationDate = validExpirationDate
+				}
+				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{image}
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", operation, nil, false, nil)
+				if fields == "both" {
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("spec.machineImages[0].versions[0]: Forbidden: cannot specify `classification` or `expirationDate` in combination with `lifecycle`")))
+				} else {
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				}
+			},
+				Entry("rejects both fields on create", admission.Create, "both"),
+				Entry("rejects both fields on update", admission.Update, "both"),
+				Entry("allows lifecycle alone", admission.Update, "lifecycle"),
+				Entry("allows expirationDate alone", admission.Update, "expirationDate"),
+			)
+		}
+
 		Describe("parent", func() {
 			It("should not allow creating a NamespacedCloudProfile with an invalid parent reference", func() {
 				namespacedCloudProfile.Spec.Parent = gardencore.CloudProfileReference{Kind: "CloudProfile", Name: "idontexist"}
