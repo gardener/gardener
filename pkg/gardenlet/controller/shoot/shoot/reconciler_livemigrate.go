@@ -78,61 +78,37 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 
 		sourceEtcdReadyForPeerJoin = g.Add(flow.Task{
 			Name: "Making source etcd ready for peer join",
-			Fn: r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceEtcdPreparedForPeerJoin, func(ctx context.Context, b *botanistpkg.Botanist) error {
-				if err := shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(),
-					b.Shoot.GetInfo(), b.Shoot.ControlPlaneNamespace, false); err != nil {
-					return fmt.Errorf("failed to persist shoot state: %w", err)
-				}
-				if err := b.DeployEtcdPeerExposure(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd peer exposure: %w", err)
-				}
-				if err := b.InitializeSecretsManagement(ctx); err != nil {
-					return fmt.Errorf("failed to initialize secrets management: %w", err)
-				}
-				if err := b.DeployEtcd(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd: %w", err)
-				}
-				if err := b.WaitUntilEtcdsReady(ctx); err != nil {
-					return fmt.Errorf("failed to wait until etcds are ready: %w", err)
-				}
-				if err := b.Shoot.Components.BackupEntry.Migrate(ctx); err != nil {
-					return fmt.Errorf("failed to migrate backup entry: %w", err)
-				}
-				return b.Shoot.Components.BackupEntry.WaitMigrate(ctx)
-			}),
+			Fn: r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceEtcdPreparedForPeerJoin, flow.Sequential(
+				func(ctx context.Context) error {
+					return shootstate.Deploy(ctx, botanist.Clock, botanist.GardenClient, botanist.SeedClientSet.Client(),
+						botanist.Shoot.GetInfo(), botanist.Shoot.ControlPlaneNamespace, false)
+				},
+				botanist.DeployEtcdPeerExposure,
+				botanist.InitializeSecretsManagement,
+				botanist.DeployEtcd,
+				botanist.WaitUntilEtcdsReady,
+				botanist.Shoot.Components.BackupEntry.Migrate,
+				botanist.Shoot.Components.BackupEntry.WaitMigrate,
+			)),
 		})
 
 		_ = g.Add(flow.Task{
 			Name: "Joining destination etcd to the source cluster",
-			Fn: r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined, func(ctx context.Context, b *botanistpkg.Botanist) error {
-				if err := b.DeployControlPlaneNamespace(ctx); err != nil {
-					return fmt.Errorf("failed to deploy control plane namespace: %w", err)
-				}
-				if err := b.InitializeSecretsManagement(ctx); err != nil {
-					return fmt.Errorf("failed to initialize secrets management: %w", err)
-				}
-				if err := b.DeployEtcdPeerExposure(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd peer exposure: %w", err)
-				}
+			Fn: r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined, flow.Sequential(
+				botanist.DeployControlPlaneNamespace,
+				botanist.InitializeSecretsManagement,
+				botanist.DeployEtcdPeerExposure,
 				// The source backup entry is deployed to ensure that the data in the source seed's backup bucket
 				// is properly cleaned up at a later stage of the flow.
-				if err := b.DeploySourceBackupEntry(ctx); err != nil {
-					return fmt.Errorf("failed to deploy source backup entry: %w", err)
-				}
-				if err := b.Shoot.Components.SourceBackupEntry.Wait(ctx); err != nil {
-					return fmt.Errorf("failed to wait for source backup entry: %w", err)
-				}
-				if err := b.Shoot.Components.BackupEntry.Restore(ctx, nil); err != nil {
-					return fmt.Errorf("failed to deploy backup entry: %w", err)
-				}
-				if err := b.Shoot.Components.BackupEntry.Wait(ctx); err != nil {
-					return fmt.Errorf("failed to wait for backup entry: %w", err)
-				}
-				if err := b.DeployEtcd(ctx); err != nil {
-					return fmt.Errorf("failed to deploy etcd: %w", err)
-				}
-				return b.WaitUntilEtcdsReady(ctx)
-			}),
+				botanist.DeploySourceBackupEntry,
+				botanist.Shoot.Components.SourceBackupEntry.Wait,
+				func(ctx context.Context) error {
+					return botanist.Shoot.Components.BackupEntry.Restore(ctx, nil)
+				},
+				botanist.Shoot.Components.BackupEntry.Wait,
+				botanist.DeployEtcd,
+				botanist.WaitUntilEtcdsReady,
+			)),
 			Dependencies: flow.NewTaskIDs(sourceEtcdReadyForPeerJoin),
 		})
 
@@ -152,7 +128,7 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 	return nil
 }
 
-func (r *Reconciler) executeStepOrWait(botanist *botanistpkg.Botanist, role v1beta1helper.LiveMigrationRole, conditionType gardencorev1beta1.ConditionType, fn func(ctx context.Context, b *botanistpkg.Botanist) error) flow.TaskFn {
+func (r *Reconciler) executeStepOrWait(botanist *botanistpkg.Botanist, role v1beta1helper.LiveMigrationRole, conditionType gardencorev1beta1.ConditionType, fn flow.TaskFn) flow.TaskFn {
 	owner := liveMigrationStepOwners[conditionType]
 	return flow.TaskFn(func(ctx context.Context) error {
 		if role != owner {
@@ -162,7 +138,7 @@ func (r *Reconciler) executeStepOrWait(botanist *botanistpkg.Botanist, role v1be
 			return err
 		}
 		if fn != nil {
-			if err := fn(ctx, botanist); err != nil {
+			if err := fn(ctx); err != nil {
 				if conditionErr := r.setLiveMigrationStepConditionError(ctx, botanist.Shoot.GetInfo(), conditionType, err); conditionErr != nil {
 					botanist.Logger.Error(conditionErr, "Failed to set error condition for live migration step", "step", conditionType)
 				}
