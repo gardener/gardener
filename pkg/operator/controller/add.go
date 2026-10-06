@@ -140,6 +140,16 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			{
 				Name: tokenrequestor.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+					isSelfHostedShootCluster, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, mgr.GetAPIReader())
+					if err != nil {
+						return false, fmt.Errorf("failed checking whether the cluster is a self-hosted shoot cluster: %w", err)
+					}
+					// The Gardenlet of
+					if isSelfHostedShootCluster {
+						logf.FromContext(ctx).Info("Garden cluster is a self-hosted shoot cluster, skip adding TokenRequestor reconciler")
+						return true, nil
+					}
+
 					if virtualCluster == nil {
 						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add TokenRequestor reconciler")
 						return false, nil
