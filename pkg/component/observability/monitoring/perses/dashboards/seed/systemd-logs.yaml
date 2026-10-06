@@ -1,0 +1,314 @@
+kind: Dashboard
+metadata:
+  name: systemd-logs
+  project: garden
+spec:
+  display:
+    name: Systemd Logs
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Systemd Component
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        sort: alphabetical-asc
+        plugin:
+          kind: VictoriaLogsFieldValuesVariable
+          spec:
+            datasource:
+              kind: VictoriaLogsDatasource
+              name: victorialogs
+            field: unit
+            query: '*'
+        name: systemd_component
+    - kind: TextVariable
+      spec:
+        display:
+          name: Search
+          hidden: false
+        value: ""
+        name: search
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Ready Nodes
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: seed:kube_node_status_condition:sum_by_condition{condition="Ready",status="true"}
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Non-Ready Nodes
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: sum(seed:kube_node_status_condition:sum_by_condition{condition!="Ready",status="true"})
+    "0_2":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Utilisation
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: 1 - avg(rate(seed:node_cpu_seconds_total:sum[$__rate_interval]))
+    "0_3":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Utilisation
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: 1 - seed:node_memory_Active_bytes:sum / seed:kube_node_status_allocatable_memory_bytes:sum
+    "0_4":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Requests Commitment
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: seed:kube_pod_container_resource_requests_cpu_cores:sum / seed:kube_node_status_allocatable_cpu_cores:sum
+    "0_5":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Requests Commitment
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: seed:kube_pod_container_resource_requests_memory_bytes:sum / seed:kube_node_status_allocatable_memory_bytes:sum
+    "0_6":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Limits Commitment
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: seed:kube_pod_container_resource_limits_cpu_cores:sum / seed:kube_node_status_allocatable_cpu_cores:sum
+    "0_7":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Limits Commitment
+        plugin:
+          kind: StatChart
+          spec:
+            calculation: last
+            format:
+              unit: percent-decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-aggregate
+                  query: seed:kube_pod_container_resource_limits_memory_bytes:sum / seed:kube_node_status_allocatable_memory_bytes:sum
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Log Volume
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: VictoriaLogsTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: VictoriaLogsDatasource
+                    name: victorialogs
+                  query: '{unit=~"$systemd_component"} $search | stats count() logs'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Logs Panel
+        plugin:
+          kind: LogsTable
+          spec:
+            showTime: true
+            enableDetails: true
+        queries:
+          - kind: LogQuery
+            spec:
+              plugin:
+                kind: VictoriaLogsLogQuery
+                spec:
+                  datasource:
+                    kind: VictoriaLogsDatasource
+                    name: victorialogs
+                  query: '{unit=~"$systemd_component"} $search'
+  layouts:
+    - kind: Grid
+      spec:
+        items:
+          - x: 0
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 3
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 6
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_2'
+          - x: 9
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_3'
+          - x: 12
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_4'
+          - x: 15
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_5'
+          - x: 18
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_6'
+          - x: 21
+            "y": 0
+            width: 3
+            height: 2
+            content:
+              $ref: '#/spec/panels/0_7'
+          - x: 0
+            "y": 2
+            width: 24
+            height: 3
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 0
+            "y": 5
+            width: 24
+            height: 19
+            content:
+              $ref: '#/spec/panels/2_0'
+        display:
+          title: ""
+          collapse:
+            open: true
+  duration: 1h
+  annotations: []
+  refreshInterval: 0s
+  links: []
