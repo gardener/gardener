@@ -26,8 +26,8 @@ function detect_scenario() {
   zones=$(kubectl get nodes -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr ' ' '\n' | sort -u)
   provider_ids=$(kubectl get nodes -o jsonpath='{.items[*].spec.providerID}' | tr ' ' '\n')
 
-  # Check if all providerIDs have a scheme (contain "://") but none start with kind://
-  if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -c '://') -eq $(echo "$provider_ids" | wc -l) && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
+  # Check if all nodes have a (cloud) providerID but none start with kind://.
+  if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -c .) -eq $(echo "$provider_ids" | wc -l) && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
     export SCENARIO="remote"
   elif [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
     export SCENARIO="single-node"
