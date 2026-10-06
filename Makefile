@@ -289,6 +289,11 @@ kind-single-node2-% kind-multi-node2-%: export CLUSTER_NAME = gardener-local2
 # e.g., `kind-single-node-up` -> `single-node`, `kind-multi-zone-down` -> `multi-zone`.
 kind-%: export KUSTOMIZE_OVERLAY = $(subst kind-,,$(subst -up,,$(subst -down,,$@)))
 
+# E2E_JUNIT_REPORT_NAME (the file name of the JUnit report that the e2e tests write to $ARTIFACTS in CI)
+# Derived from the target name, so that CI jobs running multiple e2e test targets keep the report of every target,
+# e.g., `test-e2e-local-gardenadm-unmanaged-infra-connect` -> `junit-test-e2e-local-gardenadm-unmanaged-infra-connect.xml`.
+test-e2e-%: export E2E_JUNIT_REPORT_NAME = junit-$@.xml
+
 # kind*-{up,down}
 kind-single-node-up kind-single-node-down \
 kind-single-node2-up kind-single-node2-down \
