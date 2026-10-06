@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,17 +105,50 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccess
 		components []staticControlPlaneComponent
 
 		mutateETCDPodFn = func(pod *corev1.Pod) {
-			// TODO(CaptainIRS): Remove this mutation once https://github.com/gardener/etcd-druid/issues/1317 is resolved,
-			//  as the kubeconfig volume and env var can then be specified directly via the Etcd CR API.
-			const endpointsVolumeName = "controlplane-nodes-endpoints"
+			// Both .spec.etcd.clientUrlTls.serverTLSSecretRef and .spec.etcd.peerUrlTls.serverTLSSecretRef are not yet
+			// optional in the `Etcd` API, so let's simulate their optionality by removing the corresponding
+			// etcd-druid-generated volumes and volume mounts from the pod spec. This is how it would look like in the
+			// future when etcd-druid supports this.
+			// TODO(rfranzke): Remove this entire block once the fields became optional.
+			{
+				volumeNamesToRemove := sets.New(etcdconstants.VolumeNameServerTLS, etcdconstants.VolumeNamePeerTLS, "backup-restore-server-tls")
+				utilruntime.Must(kubernetesutils.VisitPodSpec(pod, func(podSpec *corev1.PodSpec) {
+					podSpec.Volumes = slices.DeleteFunc(podSpec.Volumes, func(volume corev1.Volume) bool {
+						return volumeNamesToRemove.Has(volume.Name)
+					})
+					kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+						container.VolumeMounts = slices.DeleteFunc(container.VolumeMounts, func(volumeMount corev1.VolumeMount) bool {
+							return volumeNamesToRemove.Has(volumeMount.Name)
+						})
+					})
+				}))
+			}
+
+			// TODO(CaptainIRS): Remove these mutations from here once https://github.com/gardener/etcd-druid/issues/1317
+			//  is resolved, as the volume, volume mounts, and env vars can then be specified directly via the Etcd CR
+			//  API (should be done directly in the ETCD component in pkg/component/etcd/etcd).
+			const (
+				endpointsVolumeName = "controlplane-nodes-endpoints"
+				serverTLSVolumeName = etcdconstants.VolumeNameServerTLS
+				peerTLSVolumeName   = etcdconstants.VolumeNamePeerTLS
+			)
 
 			genericTokenKubeconfigSecret, _ := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(pod, genericTokenKubeconfigSecret.Name, gardenerutils.NewShootAccessSecret(pod.Name, pod.Namespace).Secret.Name, etcdconstants.ContainerNameBackupRestore))
 
 			utilruntime.Must(kubernetesutils.VisitPodSpec(pod, func(podSpec *corev1.PodSpec) {
 				kubernetesutils.AddVolume(podSpec, corev1.Volume{Name: endpointsVolumeName, VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints}}}, true)
+				kubernetesutils.AddVolume(podSpec, corev1.Volume{Name: serverTLSVolumeName, VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: staticpod.HostPath(pod.Name, etcdconstants.VolumeNameServerTLS)}}}, true)
+				kubernetesutils.AddVolume(podSpec, corev1.Volume{Name: peerTLSVolumeName, VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: staticpod.HostPath(pod.Name, etcdconstants.VolumeNamePeerTLS)}}}, true)
+
+				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+					kubernetesutils.AddVolumeMount(container, corev1.VolumeMount{Name: serverTLSVolumeName, MountPath: "/var/etcd/ssl/server", ReadOnly: true}, true)
+					kubernetesutils.AddVolumeMount(container, corev1.VolumeMount{Name: peerTLSVolumeName, MountPath: "/var/etcd/ssl/peer/server", ReadOnly: true}, true)
+				}, etcdconstants.ContainerNameEtcd)
+
 				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
 					kubernetesutils.AddVolumeMount(container, corev1.VolumeMount{Name: endpointsVolumeName, MountPath: v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints, ReadOnly: true}, true)
+					kubernetesutils.AddVolumeMount(container, corev1.VolumeMount{Name: serverTLSVolumeName, MountPath: "/var/etcdbr/ssl/server", ReadOnly: true}, true)
 					kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "ENDPOINTS", Value: v1beta1constants.OperatingSystemConfigFilePathControlPlaneNodesEndpoints}, true)
 					kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "KUBECONFIG", Value: gardenerutils.PathGenericKubeconfig}, true)
 				}, etcdconstants.ContainerNameBackupRestore)
