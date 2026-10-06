@@ -12,8 +12,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 )
 
 var (
@@ -25,16 +24,16 @@ var (
 
 func init() {
 	Scheme = runtime.NewScheme()
-	utilruntime.Must(install.AddToScheme(Scheme))
+	utilruntime.Must(localv1alpha1.AddToScheme(Scheme))
 
 	decoder = serializer.NewCodecFactory(Scheme, serializer.EnableStrict).UniversalDecoder()
 }
 
 // CloudProfileConfigFromCluster decodes the provider specific cloud profile configuration for a cluster
-func CloudProfileConfigFromCluster(cluster *controller.Cluster) (*api.CloudProfileConfig, error) {
-	var cloudProfileConfig *api.CloudProfileConfig
+func CloudProfileConfigFromCluster(cluster *controller.Cluster) (*localv1alpha1.CloudProfileConfig, error) {
+	var cloudProfileConfig *localv1alpha1.CloudProfileConfig
 	if cluster != nil && cluster.CloudProfile != nil && cluster.CloudProfile.Spec.ProviderConfig != nil && cluster.CloudProfile.Spec.ProviderConfig.Raw != nil {
-		cloudProfileConfig = &api.CloudProfileConfig{}
+		cloudProfileConfig = &localv1alpha1.CloudProfileConfig{}
 		if _, _, err := decoder.Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
 			return nil, fmt.Errorf("could not decode providerConfig of cloudProfile for '%s': %w", cluster.CloudProfile.Name, err)
 		}

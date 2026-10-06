@@ -33,7 +33,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	localbackupbucket "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
 	localbackupentry "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
@@ -188,7 +188,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			if err := controller.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
-			if err := localinstall.AddToScheme(scheme); err != nil {
+			if err := localv1alpha1.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 			if err := vpaautoscalingv1.AddToScheme(scheme); err != nil {

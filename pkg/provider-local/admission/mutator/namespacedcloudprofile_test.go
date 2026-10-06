@@ -18,13 +18,10 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/provider-local/admission/mutator"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -43,7 +40,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 
 	BeforeEach(func() {
 		scheme := runtime.NewScheme()
-		utilruntime.Must(install.AddToScheme(scheme))
+		utilruntime.Must(localv1alpha1.AddToScheme(scheme))
 		utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		fakeManager = &test.FakeManager{
@@ -64,32 +61,32 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 
 	Describe("TransformProviderConfigToParentFormat", func() {
 		var parentCloudProfile *gardencorev1beta1.CloudProfile
-		var cpConfig *v1alpha1.CloudProfileConfig
-		var capabilityMachineImage v1alpha1.MachineImages
-		var legacyMachineImage v1alpha1.MachineImages
+		var cpConfig *localv1alpha1.CloudProfileConfig
+		var capabilityMachineImage localv1alpha1.MachineImages
+		var legacyMachineImage localv1alpha1.MachineImages
 
 		BeforeEach(func() {
 			parentCloudProfile = &gardencorev1beta1.CloudProfile{
 				Spec: gardencorev1beta1.CloudProfileSpec{},
 			}
-			cpConfig = &v1alpha1.CloudProfileConfig{
+			cpConfig = &localv1alpha1.CloudProfileConfig{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "CloudProfileConfig",
 					APIVersion: "local.provider.extensions.gardener.cloud/v1alpha1",
 				},
 			}
-			capabilityMachineImage = v1alpha1.MachineImages{
+			capabilityMachineImage = localv1alpha1.MachineImages{
 				Name: "image-1",
-				Versions: []v1alpha1.MachineImageVersion{{
+				Versions: []localv1alpha1.MachineImageVersion{{
 					Version: "1.0",
-					CapabilityFlavors: []v1alpha1.MachineImageFlavor{{
+					CapabilityFlavors: []localv1alpha1.MachineImageFlavor{{
 						Image: "local/image:1.0-amd64",
 					}},
 				}},
 			}
-			legacyMachineImage = v1alpha1.MachineImages{
+			legacyMachineImage = localv1alpha1.MachineImages{
 				Name: "image-1",
-				Versions: []v1alpha1.MachineImageVersion{{
+				Versions: []localv1alpha1.MachineImageVersion{{
 					Version: "1.0",
 					Image:   "local/image:1.0-amd64",
 				}},
@@ -104,7 +101,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			})
 
 			It("should do nothing if the NamespacedCloudProfile spec is in capability format", func() {
-				machineImages := []v1alpha1.MachineImages{capabilityMachineImage}
+				machineImages := []localv1alpha1.MachineImages{capabilityMachineImage}
 				cpConfig.MachineImages = machineImages
 
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
@@ -113,7 +110,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			})
 
 			It("should transform the status to capability format if the NamespacedCloudProfile spec is in old format", func() {
-				cpConfig.MachineImages = []v1alpha1.MachineImages{legacyMachineImage}
+				cpConfig.MachineImages = []localv1alpha1.MachineImages{legacyMachineImage}
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages[0]).To(Equal(capabilityMachineImage))
 			})
@@ -121,7 +118,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 
 		When("the parentCloudProfile has NO machineCapabilities defined", func() {
 			It("should do nothing if the NamespacedCloudProfile spec is in legacy format", func() {
-				machineImages := []v1alpha1.MachineImages{legacyMachineImage}
+				machineImages := []localv1alpha1.MachineImages{legacyMachineImage}
 				cpConfig.MachineImages = machineImages
 
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
@@ -130,7 +127,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 			})
 
 			It("should transform the status to legacy format if the NamespacedCloudProfile spec is in capability format", func() {
-				cpConfig.MachineImages = []v1alpha1.MachineImages{capabilityMachineImage}
+				cpConfig.MachineImages = []localv1alpha1.MachineImages{capabilityMachineImage}
 				uniformSpecConfig := mutator.TransformProviderConfigToParentFormat(cpConfig, parentCloudProfile.Spec.MachineCapabilities)
 				Expect(uniformSpecConfig.MachineImages[0]).To(Equal(legacyMachineImage))
 			})
@@ -174,13 +171,13 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				MatchFields(IgnoreExtras, Fields{
 					"Name": Equal("image-1"),
 					"Versions": ContainElements(
-						api.MachineImageVersion{Version: "1.0", Image: "local/image:1.0"},
-						api.MachineImageVersion{Version: "1.1", Image: "local/image:1.1"},
+						localv1alpha1.MachineImageVersion{Version: "1.0", Image: "local/image:1.0"},
+						localv1alpha1.MachineImageVersion{Version: "1.1", Image: "local/image:1.1"},
 					),
 				}),
 				MatchFields(IgnoreExtras, Fields{
 					"Name":     Equal("image-2"),
-					"Versions": ContainElements(api.MachineImageVersion{Version: "2.0", Image: "local/image:2.0"}),
+					"Versions": ContainElements(localv1alpha1.MachineImageVersion{Version: "2.0", Image: "local/image:2.0"}),
 				}),
 			))
 		})
@@ -209,7 +206,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				MatchFields(IgnoreExtras, Fields{
 					"Name": Equal("image-1"),
 					"Versions": ContainElements(
-						api.MachineImageVersion{Version: "1.0", Image: "local/image:1.0-nscpfl"},
+						localv1alpha1.MachineImageVersion{Version: "1.0", Image: "local/image:1.0-nscpfl"},
 					),
 				}),
 			))
@@ -217,9 +214,9 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 	})
 })
 
-func decodeCloudProfileConfig(decoder runtime.Decoder, config *runtime.RawExtension) (*api.CloudProfileConfig, error) {
-	cloudProfileConfig := &api.CloudProfileConfig{}
-	if err := util.Decode(decoder, config.Raw, cloudProfileConfig); err != nil {
+func decodeCloudProfileConfig(decoder runtime.Decoder, config *runtime.RawExtension) (*localv1alpha1.CloudProfileConfig, error) {
+	cloudProfileConfig := &localv1alpha1.CloudProfileConfig{}
+	if err := runtime.DecodeInto(decoder, config.Raw, cloudProfileConfig); err != nil {
 		return nil, err
 	}
 	return cloudProfileConfig, nil

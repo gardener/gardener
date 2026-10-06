@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/provider-local/admission"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/validation"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1/validation"
 )
 
 // NewCloudProfileValidator returns a new instance of a cloud profile validator.

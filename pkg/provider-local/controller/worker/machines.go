@@ -22,7 +22,7 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	machineproviderlocal "github.com/gardener/gardener/pkg/provider-local/machine-provider/local"
@@ -65,7 +65,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	var (
 		machineClassSecrets []*corev1.Secret
 		machineClasses      []*machinev1alpha1.MachineClass
-		machineImages       []api.MachineImage
+		machineImages       []localv1alpha1.MachineImage
 		machineDeployments  worker.MachineDeployments
 	)
 

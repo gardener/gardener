@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/provider-local/admission/validator"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -40,7 +40,7 @@ var _ = Describe("NamespacedCloudProfile Validator", func() {
 
 	BeforeEach(func() {
 		scheme := runtime.NewScheme()
-		utilruntime.Must(install.AddToScheme(scheme))
+		utilruntime.Must(localv1alpha1.AddToScheme(scheme))
 		utilruntime.Must(v1beta1.AddToScheme(scheme))
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		fakeManager = &test.FakeManager{
