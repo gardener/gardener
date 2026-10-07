@@ -24,7 +24,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -103,7 +102,6 @@ var _ = Describe("Shoot Care Control", func() {
 					Name:        "internal-domain-secret",
 					Namespace:   gardenerutils.ComputeGardenNamespace(seedName),
 					Annotations: map[string]string{gardenerutils.DNSProvider: "fooDNS", gardenerutils.DNSDomain: "foo.bar"},
-					Labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 				},
 			}}
 
@@ -120,6 +118,20 @@ var _ = Describe("Shoot Care Control", func() {
 			seed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
+				},
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						Internal: &gardencorev1beta1.SeedDNSProviderConfig{
+							Type:   "fooDNS",
+							Domain: "foo.bar",
+							CredentialsRef: corev1.ObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       "internal-domain-secret",
+								Namespace:  gardenerutils.ComputeGardenNamespace(seedName),
+							},
+						},
+					},
 				},
 			}
 		})
@@ -235,7 +247,7 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 
 					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).To(MatchError("error reading Garden internal domain secret: need an internal domain secret but found none"))
+					Expect(err).To(MatchError(ContainSubstring("cannot fetch internal domain credentials from reference")))
 				})
 			})
 		})

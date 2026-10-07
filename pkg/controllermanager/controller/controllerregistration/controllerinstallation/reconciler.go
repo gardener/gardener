@@ -294,8 +294,6 @@ func computeKindTypesForHostedShoots(
 	internalDomain, err := gardenerutils.ReadGardenInternalDomain(
 		ctx,
 		reader,
-		gardenerutils.ComputeGardenNamespace(seed.Name),
-		false,
 		seed.Spec.DNS.Internal,
 	)
 	if err != nil {
