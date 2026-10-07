@@ -2258,6 +2258,42 @@ var _ = Describe("Etcd", func() {
 		})
 	})
 
+	Describe("#RemovePeerCARolledOut", func() {
+		It("should not return an error when the etcd resource does not exist", func() {
+			Expect(etcd.RemovePeerCARolledOut(ctx)).To(Succeed())
+		})
+
+		It("should remove the annotation when the etcd resource exists and annotation is present", func() {
+			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+				Name:      etcdName,
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					secretsrotation.AnnotationKeyPeerCARolledOut: "true",
+					"foo": "bar",
+				},
+			}}
+			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+			Expect(etcd.RemovePeerCARolledOut(ctx)).To(Succeed())
+
+			updated := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
+			Expect(updated.Annotations).NotTo(HaveKey(secretsrotation.AnnotationKeyPeerCARolledOut))
+			Expect(updated.Annotations).To(HaveKeyWithValue("foo", "bar"))
+		})
+
+		It("should be idempotent when the annotation is already absent", func() {
+			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace}}
+			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+			Expect(etcd.RemovePeerCARolledOut(ctx)).To(Succeed())
+
+			updated := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
+			Expect(updated.Annotations).NotTo(HaveKey(secretsrotation.AnnotationKeyPeerCARolledOut))
+		})
+	})
+
 	Describe("#Name", func() {
 		It("should return the expected name", func() {
 			Expect(Name("foo")).To(Equal("etcd-foo"))

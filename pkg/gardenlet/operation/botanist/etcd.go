@@ -180,6 +180,17 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 				return nil
 			}
 		}
+	} else if !b.Shoot.IsSelfHosted() {
+		// Clear the peer-CA-rollout marker on both etcds, so that a subsequent CA rotation re-runs the peer CA bundle
+		// rollout (RolloutPeerCA). This is the counterpart to setting the marker via `MarkAsPeerCARolloutCompleted` during
+		// the `Preparing` phase above.
+		// TODO(timuthy): Change this phase to `RotationCompleting` after Gardener v1.155.0 has been released. Due to an earlier regression, all phases but `Preparing` must be considered at the moment.
+		if err := flow.Parallel(
+			b.Shoot.Components.ControlPlane.EtcdMain.RemovePeerCARolledOut,
+			b.Shoot.Components.ControlPlane.EtcdEvents.RemovePeerCARolledOut,
+		)(ctx); err != nil {
+			return err
+		}
 	}
 
 	return b.deployOrRestoreEtcd(ctx)

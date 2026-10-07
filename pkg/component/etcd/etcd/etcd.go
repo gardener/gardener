@@ -100,6 +100,8 @@ type Interface interface {
 	IsPeerCARolledOut(context.Context) (bool, error)
 	// MarkAsPeerCARolloutCompleted annotates the Etcd resources with credentials.gardener.cloud/peer-ca-rolled-out=true.
 	MarkAsPeerCARolloutCompleted(context.Context) error
+	// RemovePeerCARolledOut removes the credentials.gardener.cloud/peer-ca-rolled-out annotation from the Etcd resource.
+	RemovePeerCARolledOut(context.Context) error
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// GetReplicas gets the Replicas field in the Values.
@@ -1058,6 +1060,23 @@ func (e *etcd) MarkAsPeerCARolloutCompleted(ctx context.Context) error {
 
 	patch := client.MergeFrom(e.etcd.DeepCopy())
 	metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, secretsrotation.AnnotationKeyPeerCARolledOut, "true")
+	return e.client.Patch(ctx, e.etcd, patch)
+}
+
+func (e *etcd) RemovePeerCARolledOut(ctx context.Context) error {
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	if !metav1.HasAnnotation(e.etcd.ObjectMeta, secretsrotation.AnnotationKeyPeerCARolledOut) {
+		return nil
+	}
+
+	patch := client.MergeFrom(e.etcd.DeepCopy())
+	delete(e.etcd.Annotations, secretsrotation.AnnotationKeyPeerCARolledOut)
 	return e.client.Patch(ctx, e.etcd, patch)
 }
 
