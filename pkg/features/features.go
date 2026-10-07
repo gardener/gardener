@@ -123,15 +123,6 @@ const (
 	// alpha: v1.142.0
 	LiveControlPlaneMigration featuregate.Feature = "LiveControlPlaneMigration"
 
-	// BackupEntryForGarden enables deploying a BackupEntry extension object in the garden controller
-	// alongside the BackupBucket when etcd backup is configured. The generic actuator then creates the
-	// etcd-backup secret, aligning the garden with the same extension contract that shoot clusters use.
-	// owner: @rfranzke
-	// alpha: v1.142.0
-	// beta: v1.147.0
-	// GA: v1.153.0
-	BackupEntryForGarden featuregate.Feature = "BackupEntryForGarden"
-
 	// RemoveHTTPProxyLegacyPort removes the old HTTP proxy network infrastructure on the seed side (ingress
 	// gateway port tls-tunnel, Gateway, EnvoyFilter, etc.) through the gardenlet, as described in GEP-0030.
 	// owner: @jamand @timebertt
@@ -188,7 +179,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
-	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
 }
