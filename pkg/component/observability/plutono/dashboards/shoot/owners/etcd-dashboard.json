@@ -2352,6 +2352,15 @@
           "metric": "process_resident_memory_bytes",
           "refId": "A",
           "step": 4
+        },
+        {
+          "exemplar": true,
+          "expr": "kube_pod_container_resource_requests{resource=\"memory\", pod=~\"etcd-(${role:pipe}).*\", container=\"etcd\"}",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{pod}} Requests",
+          "refId": "B",
+          "step": 4
         }
       ],
       "thresholds": [],
@@ -2451,11 +2460,20 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"shoot-control-plane\", pod=~\"etcd-(${role:pipe}).*\", container=\"etcd\"}[$__rate_interval])) by (pod)",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-etcd3-$role\"}[$__rate_interval])",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{pod}}",
           "refId": "A",
+          "step": 4
+        },
+        {
+          "exemplar": true,
+          "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"etcd-(${role:pipe}).*\", container=\"etcd\"}",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{pod}} Requests",
+          "refId": "B",
           "step": 4
         }
       ],
