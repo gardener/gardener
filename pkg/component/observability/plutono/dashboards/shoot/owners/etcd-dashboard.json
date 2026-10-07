@@ -227,7 +227,7 @@
           "refId": "A"
         }
       ],
-      "title": "RPC Rate",
+      "title": "gRPC Rate",
       "type": "stat"
     },
     {
@@ -292,7 +292,7 @@
           "refId": "A"
         }
       ],
-      "title": "RPC Error %",
+      "title": "gRPC Error %",
       "type": "stat"
     },
     {
@@ -647,7 +647,7 @@
       "timeRegions": [],
       "timeShift": null,
       "description": "Rate of unary gRPC requests started and failed on the etcd server.",
-      "title": "RPC Rate",
+      "title": "gRPC Rate",
       "tooltip": {
         "msResolution": false,
         "shared": true,
