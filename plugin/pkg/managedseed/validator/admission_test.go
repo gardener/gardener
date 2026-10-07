@@ -994,6 +994,11 @@ var _ = Describe("ManagedSeed", func() {
 				var newManagedSeed *seedmanagement.ManagedSeed
 
 				BeforeEach(func() {
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					gardenletConfig.SeedConfig.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+						Domain: "internal.example.com",
+					}
+
 					newManagedSeed = managedSeed.DeepCopy()
 				})
 
