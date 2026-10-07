@@ -796,6 +796,28 @@ webhooks:
 					},
 				},
 			}
+
+			networkPolicyForSelfHostedShoot = &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "egress-from-etcd-druid-to-static-etcd",
+					Namespace: namespace,
+					Labels:    map[string]string{"gardener.cloud/role": "etcd-druid"},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"gardener.cloud/role": "etcd-druid"}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+					Egress: []networkingv1.NetworkPolicyEgressRule{{
+						To: []networkingv1.NetworkPolicyPeer{
+							{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/24"}},
+							{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:10::/64"}},
+						},
+						Ports: []networkingv1.NetworkPolicyPort{
+							{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(2379))},
+							{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(2382))},
+						},
+					}},
+				},
+			}
 		)
 
 		BeforeEach(func() {
@@ -884,26 +906,7 @@ webhooks:
 				deploymentForSelfHostedShoot := deploymentWithoutImageVectorOverwriteFor.DeepCopy()
 				deploymentForSelfHostedShoot.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 
-				expectedResources = append(expectedResources, deploymentForSelfHostedShoot, &networkingv1.NetworkPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "egress-from-etcd-druid-to-static-etcd",
-						Namespace: namespace,
-					},
-					Spec: networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"gardener.cloud/role": "etcd-druid"}},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{
-								{IPBlock: &networkingv1.IPBlock{CIDR: "172.18.0.0/24"}},
-								{IPBlock: &networkingv1.IPBlock{CIDR: "fd00:10::/64"}},
-							},
-							Ports: []networkingv1.NetworkPolicyPort{
-								{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(2379))},
-								{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(2382))},
-							},
-						}},
-					},
-				})
+				expectedResources = append(expectedResources, deploymentForSelfHostedShoot, networkPolicyForSelfHostedShoot)
 			})
 		})
 	})

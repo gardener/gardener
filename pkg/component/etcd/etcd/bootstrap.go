@@ -554,6 +554,7 @@ func (b *bootstrapper) getNetworkPolicyForSelfHostedShoot() *networkingv1.Networ
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      staticEtcdEgressNetworkPolicyName,
 			Namespace: b.namespace,
+			Labels:    b.labels(),
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: b.labels()},
