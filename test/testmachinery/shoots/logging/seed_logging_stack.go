@@ -513,12 +513,15 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			),
 		)
 
+		// The loki exporter may receive HTTP 400 "entry out of order" which is non-retryable.
+		// This seems to not affect the per-shoot OTel Collectors. This is a known limitation
+		// that will disappear once VictoriaLogs replaces Vali.
 		ginkgo.By("Verify vali received logger application logs for garden namespace")
 		framework.ExpectNoError(
 			WaitUntilValiReceivesLogs(ctx, 30*time.Second,
 				shootFramework, gardenValiLabels, v1beta1constants.GardenNamespace,
-				"pod_name", loggerRegex, logsCount*numberOfSimulatedClusters,
-				numberOfSimulatedClusters, shootFramework.ShootClient,
+				"pod_name", loggerRegex, logsCount*numberOfSimulatedClusters*75/100,
+				logsCount*numberOfSimulatedClusters*25/100+numberOfSimulatedClusters, shootFramework.ShootClient,
 			),
 		)
 
