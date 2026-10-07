@@ -306,7 +306,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		deployKubeAPIServerServiceSNISettings = g.Add(flow.Task{
 			Name:         "Deploying and waiting for Kubernetes API server service SNI settings in the Seed cluster",
 			Fn:           flow.TaskFn(b.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsSelfHosted(),
+			SkipIf:       b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
