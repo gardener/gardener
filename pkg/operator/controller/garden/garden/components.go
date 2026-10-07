@@ -606,7 +606,6 @@ func (r *Reconciler) newEtcd(
 			StorageCapacity:             storageCapacity,
 			StorageClassName:            storageClassName,
 			DefragmentationSchedule:     &defragmentationSchedule,
-			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 			EvictionRequirement:         evictionRequirement,

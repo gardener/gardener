@@ -318,6 +318,8 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail when the deploy function fails for etcd-main", func() {
+			etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
+			etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 			etcdMain.EXPECT().Deploy(ctx).Return(fakeErr)
 			etcdEvents.EXPECT().Deploy(ctx)
 
@@ -328,6 +330,8 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail when the deploy function fails for etcd-events", func() {
+			etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
+			etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 			etcdMain.EXPECT().Deploy(ctx)
 			etcdEvents.EXPECT().Deploy(ctx).Return(fakeErr)
 
@@ -343,6 +347,8 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should set the secrets and deploy", func() {
+				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
+				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
 
@@ -402,6 +408,8 @@ var _ = Describe("Etcd", func() {
 				Expect(fakeClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 
 				expectSetBackupConfig()
+				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
+				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
 
@@ -436,6 +444,8 @@ var _ = Describe("Etcd", func() {
 					}
 
 					expectSetBackupConfig()
+					etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
+					etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 					Expect(fakeClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 				})
 
@@ -505,6 +515,47 @@ var _ = Describe("Etcd", func() {
 
 					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 				})
+			})
+		})
+
+		Context("peer CA rolled-out marker", func() {
+			BeforeEach(func() {
+				botanist.Seed.GetInfo().Spec.Backup = nil
+			})
+
+			It("should remove the peer-ca-rolled-out marker when the CA rotation phase is not `Preparing`", func() {
+				botanist.Shoot.GetInfo().Status.Credentials = &gardencorev1beta1.ShootCredentials{
+					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+						CertificateAuthorities: &gardencorev1beta1.CARotation{
+							Phase: gardencorev1beta1.RotationCompleting,
+						},
+					},
+				}
+
+				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
+				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
+				etcdMain.EXPECT().Deploy(ctx)
+				etcdEvents.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+			})
+
+			It("should not remove the peer-ca-rolled-out marker when the CA rotation phase is `Preparing`", func() {
+				botanist.Shoot.GetInfo().Status.Credentials = &gardencorev1beta1.ShootCredentials{
+					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+						CertificateAuthorities: &gardencorev1beta1.CARotation{
+							Phase: gardencorev1beta1.RotationPreparing,
+						},
+					},
+				}
+
+				// During `Preparing`, the peer CA bundle is rolled out and the marker is set (not removed).
+				etcdMain.EXPECT().IsPeerCARolledOut(ctx).Return(true, nil)
+				etcdEvents.EXPECT().IsPeerCARolledOut(ctx).Return(true, nil)
+				etcdMain.EXPECT().Deploy(ctx)
+				etcdEvents.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 			})
 		})
 	})
