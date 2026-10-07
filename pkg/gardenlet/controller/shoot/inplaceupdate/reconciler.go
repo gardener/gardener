@@ -30,6 +30,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Reconciler orchestrates in-place updates for all nodes in a worker pool.
@@ -91,6 +92,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	if needsRequeue {
 		return reconcile.Result{RequeueAfter: r.Config.PodEvictionRetryInterval.Duration}, nil
+	}
+
+	// If all nodes in the pool have been updated, remove it from PendingWorkerUpdates in the shoot status.
+	if !slices.ContainsFunc(nodeList.Items, func(node corev1.Node) bool {
+		return node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] == "true" || NodeInPlaceUpdateOngoingOrFailed(&node)
+	}) {
+		if err := r.updateShootPoolHashAndClearAutoInPlaceUpdate(ctx, log, nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool]); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	return r.requeueForUpdateTimeout(nodeList), nil
@@ -295,17 +305,15 @@ func ShouldEvictPod(pod corev1.Pod) bool {
 }
 
 func (r *Reconciler) cordonNodesForUpdate(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) error {
-	var (
-		inProgress     int
-		workers        = []gardencorev1beta1.Worker{}
-		poolName       = nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool]
-		maxUnavailable = MaxUnavailableForPool(workers, poolName, len(nodeList.Items))
-	)
-
 	workers, err := r.workersFromCluster(ctx)
 	if err != nil {
 		return err
 	}
+
+	var (
+		inProgress     int
+		maxUnavailable = MaxUnavailableForPool(workers, nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool], len(nodeList.Items))
+	)
 
 	for _, node := range nodeList.Items {
 		if NodeInPlaceUpdateOngoingOrFailed(&node) {
@@ -407,6 +415,74 @@ func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, no
 	}
 
 	log.Info("Marked in-place update as failed due to timeout")
+	return nil
+}
+
+func (r *Reconciler) updateShootPoolHashAndClearAutoInPlaceUpdate(ctx context.Context, log logr.Logger, poolName string) error {
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := r.GardenClient.Get(ctx, r.ShootNamespacedName, shoot); err != nil {
+		return fmt.Errorf("failed to fetch shoot: %w", err)
+	}
+
+	idx := slices.IndexFunc(shoot.Spec.Provider.Workers, func(w gardencorev1beta1.Worker) bool {
+		return w.Name == poolName
+	})
+	if idx < 0 {
+		log.Info("Pool not found in shoot spec, skipping hash update", "pool", poolName)
+		return nil
+	}
+
+	var (
+		pool                 = &shoot.Spec.Provider.Workers[idx]
+		kubernetesVersion    = shoot.Spec.Kubernetes.Version
+		kubeletConfiguration = shoot.Spec.Kubernetes.Kubelet
+	)
+
+	if pool.Kubernetes != nil {
+		if pool.Kubernetes.Version != nil {
+			kubernetesVersion = *pool.Kubernetes.Version
+		}
+		if pool.Kubernetes.Kubelet != nil {
+			kubeletConfiguration = pool.Kubernetes.Kubelet
+		}
+	}
+
+	currentHash, err := gardenerutils.CalculateWorkerPoolHashForInPlaceUpdate(
+		poolName,
+		&kubernetesVersion,
+		kubeletConfiguration,
+		"",
+		shoot.Status.Credentials,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to calculate pool hash: %w", err)
+	}
+
+	patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if shoot.Status.InPlaceUpdates == nil {
+		shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{}
+	}
+	if shoot.Status.InPlaceUpdates.WorkerPoolToHashMap == nil {
+		shoot.Status.InPlaceUpdates.WorkerPoolToHashMap = make(map[string]string)
+	}
+	shoot.Status.InPlaceUpdates.WorkerPoolToHashMap[poolName] = currentHash
+
+	if shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = slices.DeleteFunc(
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate,
+			func(name string) bool { return name == poolName },
+		)
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 {
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+		}
+	}
+
+	if err := r.GardenClient.Status().Patch(ctx, shoot, patch); err != nil {
+		return fmt.Errorf("failed to patch shoot status: %w", err)
+	}
+
+	log.Info("Updated pool hash and cleared AutoInPlaceUpdate", "pool", poolName, "hash", currentHash)
 	return nil
 }
 
