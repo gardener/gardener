@@ -84,6 +84,6 @@ spec:
             info: null
           commonLabels: {}
           labelsFromPath: {}
-          errorLogV: 0          
+          errorLogV: 0
       errorLogV: 0
       resourcePlural: ""
