@@ -29,7 +29,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | OpenTelemetryCollector         | `false` | `Alpha` | `1.124` | `1.135` |
 | OpenTelemetryCollector         | `true`  | `Beta`  | `1.136` |         |
 | VictoriaLogsBackend            | `false` | `Alpha` | `1.137` |         |
-| CustomDNSServerInNodeLocalDNS  | `true`  | `Beta`  | `1.133` |         |
 | VPNBondingModeRoundRobin       | `false` | `Alpha` | `1.135` |         |
 | PrometheusHealthChecks         | `false` | `Alpha` | `1.135` |         |
 | RemoveVali                     | `false` | `Alpha` | `1.140` |         |
@@ -236,6 +235,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | BackupEntryForGarden                         | `false` | `Alpha`      | `1.142` | `1.146` |
 | BackupEntryForGarden                         | `true`  | `Beta`       | `1.147` | `1.152` |
 | BackupEntryForGarden                         | `true`  | `GA`         | `1.153` |         |
+| CustomDNSServerInNodeLocalDNS                | `true`  | `Beta`       | `1.133` | `1.152` |
+| CustomDNSServerInNodeLocalDNS                | `true`  | `GA`         | `1.153` |         |
 
 ## Using a Feature
 

@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
-	"github.com/gardener/gardener/pkg/features"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -51,15 +50,14 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		nodelocaldns.Values{
-			Image:                         image.String(),
-			AlpineImage:                   imageAlpine.String(),
-			CorednsConfigAdapterImage:     imageCorednsConfigAdapter.String(),
-			VPAEnabled:                    b.Shoot.WantsVerticalPodAutoscaler,
-			Config:                        v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
-			Workers:                       b.Shoot.GetInfo().Spec.Provider.Workers,
-			KubeProxyConfig:               b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
-			Log:                           b.Logger,
-			CustomDNSServerInNodeLocalDNS: features.DefaultFeatureGate.Enabled(features.CustomDNSServerInNodeLocalDNS),
+			Image:                     image.String(),
+			AlpineImage:               imageAlpine.String(),
+			CorednsConfigAdapterImage: imageCorednsConfigAdapter.String(),
+			VPAEnabled:                b.Shoot.WantsVerticalPodAutoscaler,
+			Config:                    v1beta1helper.GetNodeLocalDNS(b.Shoot.GetInfo().Spec.SystemComponents),
+			Workers:                   b.Shoot.GetInfo().Spec.Provider.Workers,
+			KubeProxyConfig:           b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy,
+			Log:                       b.Logger,
 		},
 	), nil
 }

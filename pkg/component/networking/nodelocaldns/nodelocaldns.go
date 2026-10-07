@@ -131,8 +131,6 @@ type Values struct {
 	WorkerPoolNames []string
 	// KubeProxyConfig is the kube-proxy configuration for the shoot.
 	KubeProxyConfig *gardencorev1beta1.KubeProxyConfig
-	// CustomDNSServerInNodeLocalDNS indicates whether server block support is enabled for node-local-dns.
-	CustomDNSServerInNodeLocalDNS bool
 }
 
 // New creates a new instance of DeployWaiter for node-local-dns.
