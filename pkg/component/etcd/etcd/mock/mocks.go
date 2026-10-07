@@ -226,6 +226,20 @@ func (mr *MockInterfaceMockRecorder) Snapshot(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockInterface)(nil).Snapshot), arg0, arg1)
 }
 
+// UnmarkAsPeerCARolloutCompleted mocks base method.
+func (m *MockInterface) UnmarkAsPeerCARolloutCompleted(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnmarkAsPeerCARolloutCompleted", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UnmarkAsPeerCARolloutCompleted indicates an expected call of UnmarkAsPeerCARolloutCompleted.
+func (mr *MockInterfaceMockRecorder) UnmarkAsPeerCARolloutCompleted(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarkAsPeerCARolloutCompleted", reflect.TypeOf((*MockInterface)(nil).UnmarkAsPeerCARolloutCompleted), arg0)
+}
+
 // Wait mocks base method.
 func (m *MockInterface) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
