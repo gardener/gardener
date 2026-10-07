@@ -93,7 +93,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: r.Config.PodEvictionRetryInterval.Duration}, nil
 	}
 
-	return reconcile.Result{}, nil
+	return r.requeueForUpdateTimeout(nodeList), nil
+}
+
+// requeueForUpdateTimeout returns a Result that requeues just before the earliest ReadyForUpdate
+// timeout across all nodes, so the next reconcile can detect a stuck GNA in time.
+func (r *Reconciler) requeueForUpdateTimeout(nodeList *corev1.NodeList) reconcile.Result {
+	var requeueAfter time.Duration
+	for _, node := range nodeList.Items {
+		for _, cond := range node.Status.Conditions {
+			if cond.Type != machinev1alpha1.NodeInPlaceUpdate || cond.Status != corev1.ConditionTrue || cond.Reason != machinev1alpha1.ReadyForUpdate {
+				continue
+			}
+
+			// Requeue instantly for nodes whose in-place update has already timed out.
+			remaining := max(r.Config.UpdateTimeout.Duration-r.Clock.Since(cond.LastTransitionTime.Time), time.Second)
+			if requeueAfter == 0 || remaining < requeueAfter {
+				requeueAfter = remaining
+			}
+			break
+		}
+	}
+	return reconcile.Result{RequeueAfter: requeueAfter}
 }
 
 func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) (bool, error) {
