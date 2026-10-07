@@ -1043,9 +1043,11 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 
 			if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
 				shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
-				shoot.Status.InPlaceUpdates = nil
+				if len(shoot.Status.InPlaceUpdates.WorkerPoolToHashMap) == 0 {
+					shoot.Status.InPlaceUpdates = nil
+				}
 			}
-		} else {
+		} else if len(shoot.Status.InPlaceUpdates.WorkerPoolToHashMap) == 0 {
 			shoot.Status.InPlaceUpdates = nil
 		}
 	}
