@@ -98,10 +98,10 @@ type Interface interface {
 	RolloutPeerCA(context.Context) error
 	// IsPeerCARolledOut checks if the Etcd resource was annotated with credentials.gardener.cloud/peer-ca-rolled-out.
 	IsPeerCARolledOut(context.Context) (bool, error)
-	// MarkAsPeerCARolloutCompleted annotates the Etcd resources with credentials.gardener.cloud/peer-ca-rolled-out=true.
+	// MarkAsPeerCARolloutCompleted annotates the Etcd resource with credentials.gardener.cloud/peer-ca-rolled-out=true.
 	MarkAsPeerCARolloutCompleted(context.Context) error
-	// RemovePeerCARolledOut removes the credentials.gardener.cloud/peer-ca-rolled-out annotation from the Etcd resource.
-	RemovePeerCARolledOut(context.Context) error
+	// UnmarkAsPeerCARolloutCompleted removes the credentials.gardener.cloud/peer-ca-rolled-out annotation from the Etcd resource.
+	UnmarkAsPeerCARolloutCompleted(context.Context) error
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// GetReplicas gets the Replicas field in the Values.
@@ -1062,11 +1062,8 @@ func (e *etcd) MarkAsPeerCARolloutCompleted(ctx context.Context) error {
 	return e.client.Patch(ctx, e.etcd, patch)
 }
 
-func (e *etcd) RemovePeerCARolledOut(ctx context.Context) error {
-	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
+func (e *etcd) UnmarkAsPeerCARolloutCompleted(ctx context.Context) error {
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

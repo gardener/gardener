@@ -53,7 +53,7 @@ import (
 	"github.com/gardener/gardener/third_party/mock/client-go/rest"
 )
 
-var _ = FDescribe("Etcd", func() {
+var _ = Describe("Etcd", func() {
 	Describe("#ServiceName", func() {
 		It("should return the expected service name", func() {
 			Expect(constants.ServiceName(testRole)).To(Equal("etcd-" + testRole + "-client"))
@@ -2229,9 +2229,9 @@ var _ = FDescribe("Etcd", func() {
 		})
 	})
 
-	Describe("#RemovePeerCARolledOut", func() {
+	Describe("#UnmarkAsPeerCARolloutCompleted", func() {
 		It("should not return an error when the etcd resource does not exist", func() {
-			Expect(etcd.RemovePeerCARolledOut(ctx)).To(Succeed())
+			Expect(etcd.UnmarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
 		})
 
 		It("should remove the annotation when the etcd resource exists and annotation is present", func() {
@@ -2245,7 +2245,7 @@ var _ = FDescribe("Etcd", func() {
 			}}
 			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
 
-			Expect(etcd.RemovePeerCARolledOut(ctx)).To(Succeed())
+			Expect(etcd.UnmarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
 
 			updated := &druidcorev1alpha1.Etcd{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
@@ -2257,7 +2257,7 @@ var _ = FDescribe("Etcd", func() {
 			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace}}
 			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
 
-			Expect(etcd.RemovePeerCARolledOut(ctx)).To(Succeed())
+			Expect(etcd.UnmarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
 
 			updated := &druidcorev1alpha1.Etcd{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
