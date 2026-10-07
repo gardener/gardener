@@ -80,7 +80,7 @@ func NodeInternalIP(node corev1.Node, preferIPv6 bool) (net.IP, error) {
 		}
 	}
 
-	if ip := utils.IPv4OrIPv6(preferIPv6, addrs...); ip != nil {
+	if ip := utils.PreferredIPAddress(preferIPv6, addrs...); ip != nil {
 		return ip, nil
 	}
 

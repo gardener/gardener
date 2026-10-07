@@ -222,8 +222,8 @@ func SplitAndTrimString(s, sep string) []string {
 	return result
 }
 
-// IPv4OrIPv6 returns the IPv4 or IPv6 address for the given IP addresses. If no IP could be found, nil is returned.
-func IPv4OrIPv6(preferIPv6 bool, addrs ...net.IP) net.IP {
+// PreferredIPAddress returns the IPv4 or IPv6 address for the given IP addresses. If no IP could be found, nil is returned.
+func PreferredIPAddress(preferIPv6 bool, addrs ...net.IP) net.IP {
 	var fallback net.IP
 
 	for _, addr := range addrs {

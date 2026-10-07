@@ -343,7 +343,7 @@ baz`, spaces)).To(Equal(`foo
 
 	DescribeTable("#IPv4OrIPv6",
 		func(preferIPv6 bool, addrs []net.IP, expected net.IP) {
-			Expect(IPv4OrIPv6(preferIPv6, addrs...)).To(Equal(expected))
+			Expect(PreferredIPAddress(preferIPv6, addrs...)).To(Equal(expected))
 		},
 		Entry("no addresses → nil", false, nil, nil),
 		Entry("prefer IPv4, only IPv4 → returns it", false, []net.IP{net.ParseIP("1.2.3.4")}, net.ParseIP("1.2.3.4")),

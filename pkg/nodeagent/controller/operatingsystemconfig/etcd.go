@@ -107,7 +107,7 @@ func (r *Reconciler) rawCADataFromOperatingSystemConfig(ctx context.Context, osc
 		return nil, nil, nil, nil, fmt.Errorf("failed looking up ETCD CA key at %s: %w", dirOld, err)
 	}
 
-	return
+	return currentCert, currentKey, oldCert, oldKey, nil
 }
 
 func (r *Reconciler) fileContentForPath(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, path string) ([]byte, bool, error) {
@@ -141,7 +141,7 @@ func (r *Reconciler) machineIP() (net.IP, error) {
 		return nil, fmt.Errorf("failed to lookup IPs for hostname %s: %w", r.HostName, err)
 	}
 
-	if ip := utils.IPv4OrIPv6(ptr.Deref(r.Config.PreferIPv6, false), addrs...); ip != nil {
+	if ip := utils.PreferredIPAddress(ptr.Deref(r.Config.PreferIPv6, false), addrs...); ip != nil {
 		return ip, nil
 	}
 

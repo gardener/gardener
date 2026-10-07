@@ -36,10 +36,14 @@ type filesystemSecretsManagerClient struct {
 	fs afero.Afero
 }
 
-const secretsDir = "/var/lib/etcd" // #nosec G101 -- No credential.
+const (
+	secretsDir       = "/var/lib/etcd" // #nosec G101 -- No credential.
+	secretFilePrefix = "secret--"
+	secretFileSuffix = ".yaml"
+)
 
 func secretFilePath(namespace, name string) string {
-	return filepath.Join(secretsDir, fmt.Sprintf("secret-%s-%s.yaml", namespace, name))
+	return filepath.Join(secretsDir, fmt.Sprintf("%s%s-%s%s", secretFilePrefix, namespace, name, secretFileSuffix))
 }
 
 // NewFilesystemSecretsManagerClient returns a client.Client that persists Secret objects to the filesystem at
@@ -59,11 +63,11 @@ func (c *filesystemSecretsManagerClient) Get(_ context.Context, key client.Objec
 		if errors.Is(err, fs.ErrNotExist) {
 			return apierrors.NewNotFound(corev1.Resource("secrets"), key.Name)
 		}
-		return fmt.Errorf("failed reading secret file for %s/%s: %w", key.Namespace, key.Name, err)
+		return fmt.Errorf("failed reading secret file for %s: %w", key, err)
 	}
 
 	if _, _, err := kubernetes.ShootCodec.UniversalDeserializer().Decode(data, nil, secret); err != nil {
-		return fmt.Errorf("failed decoding secret %s/%s: %w", key.Namespace, key.Name, err)
+		return fmt.Errorf("failed decoding secret %s: %w", key, err)
 	}
 	return nil
 }
@@ -104,7 +108,7 @@ func (c *filesystemSecretsManagerClient) List(_ context.Context, list client.Obj
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") || !strings.HasPrefix(entry.Name(), "secret-") {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), secretFileSuffix) || !strings.HasPrefix(entry.Name(), secretFilePrefix) {
 			continue
 		}
 
