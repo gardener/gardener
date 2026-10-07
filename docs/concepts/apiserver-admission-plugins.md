@@ -30,6 +30,8 @@ It validates that the `Shoot` referenced in the `Bastion`:
 - is assigned to a `Seed`.
 - does not disable SSH access for the worker Nodes.
 
+If set, it validates the `Bastion` `.spec.machine` override against the `Shoot`'s `CloudProfile`.
+
 It mutates the `Bastion` in the following way:
 - it sets`.spec.seedName` to the `Shoot` `.spec.seedName`.
 - it sets `.spec.providerType` to the `Shoot` `.spec.provider.type`.
