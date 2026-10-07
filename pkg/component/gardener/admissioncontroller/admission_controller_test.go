@@ -922,7 +922,6 @@ func clusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func validatingWebhookConfiguration(namespace string, caBundle []byte, testValues Values) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	var (
 		failurePolicyFail     = admissionregistrationv1.Fail
-		failurePolicyIgnore   = admissionregistrationv1.Ignore
 		sideEffectsNone       = admissionregistrationv1.SideEffectClassNone
 		matchPolicyEquivalent = admissionregistrationv1.Equivalent
 	)
@@ -1187,7 +1186,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{gardencorev1beta1.GroupName},
 							APIVersions: []string{"*"},
-							Resources:   []string{"shoots", "shoots/finalizers", "secretbindings", "quotas", "namespacedcloudprofiles"},
+							Resources:   []string{"shoots", "secretbindings", "quotas", "namespacedcloudprofiles"},
 						},
 					},
 					{
@@ -1231,7 +1230,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 							"(oldObject != null && has(oldObject.metadata.finalizers) && oldObject.metadata.finalizers.size() > 0)",
 					},
 				},
-				FailurePolicy: &failurePolicyIgnore,
+				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/finalizer-restriction"),
