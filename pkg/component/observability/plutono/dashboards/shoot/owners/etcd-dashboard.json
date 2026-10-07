@@ -1950,7 +1950,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Container Disk Read Operations (2m rate)",
+      "title": "Container Disk Read Throughput (2m rate)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2050,7 +2050,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Container Disk Write Operations (2m rate)",
+      "title": "Container Disk Write Throughput (2m rate)",
       "tooltip": {
         "shared": true,
         "sort": 0,
