@@ -980,30 +980,6 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				SideEffects: &sideEffectsNone,
 			},
 			{
-				Name:                    "internal-domain-secret.gardener.cloud",
-				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				TimeoutSeconds:          new(int32(10)),
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update, admissionregistrationv1.Delete},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"secrets"},
-					},
-				}},
-				FailurePolicy: &failurePolicyFail,
-				ObjectSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"role": "internal-domain",
-					},
-				},
-				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      new("https://gardener-admission-controller." + namespace + "/webhooks/admission/validate-internal-domain"),
-					CABundle: caBundle,
-				},
-				SideEffects: &sideEffectsNone,
-			},
-			{
 				Name:                    "audit-policies.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          new(int32(10)),
