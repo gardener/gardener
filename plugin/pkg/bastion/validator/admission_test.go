@@ -24,29 +24,36 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 )
 
 const (
-	bastionName = "foo"
-	shootName   = "foo"
-	seedName    = "foo"
-	workerName  = "foo"
-	namespace   = "garden"
-	provider    = "foo-provider"
-	region      = "foo-region"
-	userName    = "ginkgo"
+	bastionName         = "foo"
+	shootName           = "foo"
+	seedName            = "foo"
+	workerName          = "foo"
+	namespace           = "garden"
+	provider            = "foo-provider"
+	region              = "foo-region"
+	userName            = "ginkgo"
+	cloudProfileName    = "foo-cloudprofile"
+	machineType         = "foo-machine"
+	machineImage        = "foo-image"
+	machineImageVersion = "1.2.3"
 )
 
 var _ = Describe("Bastion", func() {
 	Describe("#Admit", func() {
 		var (
-			bastion          *operations.Bastion
-			shoot            *gardencorev1beta1.Shoot
-			coreClient       *corefake.Clientset
-			dummyOwnerRef    *metav1.OwnerReference
-			admissionHandler *Bastion
+			bastion             *operations.Bastion
+			shoot               *gardencorev1beta1.Shoot
+			cloudProfile        *gardencorev1beta1.CloudProfile
+			coreClient          *corefake.Clientset
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			dummyOwnerRef       *metav1.OwnerReference
+			admissionHandler    *Bastion
 		)
 
 		BeforeEach(func() {
@@ -57,7 +64,8 @@ var _ = Describe("Bastion", func() {
 					UID:       "shoot-uid",
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: new(seedName),
+					SeedName:         new(seedName),
+					CloudProfileName: new(cloudProfileName),
 					Provider: gardencorev1beta1.Provider{
 						Type: provider,
 						Workers: []gardencorev1beta1.Worker{
@@ -67,6 +75,35 @@ var _ = Describe("Bastion", func() {
 						},
 					},
 					Region: region,
+				},
+			}
+
+			cloudProfile = &gardencorev1beta1.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: cloudProfileName,
+				},
+				Spec: gardencorev1beta1.CloudProfileSpec{
+					Type: provider,
+					MachineTypes: []gardencorev1beta1.MachineType{
+						{
+							Name:         machineType,
+							Architecture: new(v1beta1constants.ArchitectureAMD64),
+						},
+					},
+					MachineImages: []gardencorev1beta1.MachineImage{
+						{
+							Name: machineImage,
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version:        machineImageVersion,
+										Classification: new(gardencorev1beta1.ClassificationSupported),
+									},
+									Architectures: []string{v1beta1constants.ArchitectureAMD64},
+								},
+							},
+						},
+					},
 				},
 			}
 
@@ -96,6 +133,10 @@ var _ = Describe("Bastion", func() {
 
 			coreClient = &corefake.Clientset{}
 			admissionHandler.SetCoreClientSet(coreClient)
+
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
+			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
 		})
 
 		It("should do nothing if the resource is not a Bastion", func() {
@@ -277,6 +318,105 @@ var _ = Describe("Bastion", func() {
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
 		})
+
+		Context("machine", func() {
+			BeforeEach(func() {
+				coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, shoot, nil
+				})
+			})
+
+			It("should allow a known machine type", func() {
+				bastion.Spec.Machine = &operations.BastionMachine{Type: new(machineType)}
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				Expect(err).To(Succeed())
+			})
+
+			It("should allow a known machine image without a version", func() {
+				bastion.Spec.Machine = &operations.BastionMachine{
+					Image: &operations.BastionMachineImage{Name: machineImage},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				Expect(err).To(Succeed())
+			})
+
+			It("should allow a known machine image with a known version", func() {
+				bastion.Spec.Machine = &operations.BastionMachine{
+					Image: &operations.BastionMachineImage{Name: machineImage, Version: new(machineImageVersion)},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				Expect(err).To(Succeed())
+			})
+
+			It("should allow a known machine type and image together", func() {
+				bastion.Spec.Machine = &operations.BastionMachine{
+					Type:  new(machineType),
+					Image: &operations.BastionMachineImage{Name: machineImage, Version: new(machineImageVersion)},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				Expect(err).To(Succeed())
+			})
+
+			It("should forbid an unknown machine type", func() {
+				bastion.Spec.Machine = &operations.BastionMachine{Type: new("unknown-machine")}
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				Expect(err).To(BeInvalidError())
+				Expect(getErrorList(err)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machine.type.name"),
+					})),
+				))
+			})
+
+			It("should forbid an unknown machine image name", func() {
+				bastion.Spec.Machine = &operations.BastionMachine{
+					Image: &operations.BastionMachineImage{Name: "unknown-image"},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				Expect(err).To(BeInvalidError())
+				Expect(getErrorList(err)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machine.image.name"),
+					})),
+				))
+			})
+
+			It("should forbid an unknown machine image version", func() {
+				bastion.Spec.Machine = &operations.BastionMachine{
+					Image: &operations.BastionMachineImage{Name: machineImage, Version: new("6.6.6")},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				Expect(err).To(BeInvalidError())
+				Expect(getErrorList(err)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machine.image.version"),
+					})),
+				))
+			})
+
+			It("should not validate the machine against the CloudProfile when the Bastion is in deletion", func() {
+				now := metav1.Now()
+				bastion.DeletionTimestamp = &now
+				bastion.Spec.Machine = &operations.BastionMachine{Type: new("unknown-machine")}
+
+				oldBastion := bastion.DeepCopy()
+				oldBastion.Finalizers = []string{"foo"}
+				bastion.Finalizers = nil
+
+				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
+				Expect(err).To(Succeed())
+			})
+		})
 	})
 
 	Describe("#Register", func() {
@@ -312,6 +452,7 @@ var _ = Describe("Bastion", func() {
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
 			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
+			admissionHandler.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
