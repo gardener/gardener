@@ -7,10 +7,13 @@ package inplaceupdate
 import (
 	"context"
 	"fmt"
+	"io"
 	"slices"
+	"sync"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,10 +24,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // Reconciler orchestrates in-place updates for all nodes in a worker pool.
@@ -80,7 +85,51 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
+	needsRequeue, err := r.drainPendingNodes(ctx, log, nodeList)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if needsRequeue {
+		return reconcile.Result{RequeueAfter: r.Config.PodEvictionRetryInterval.Duration}, nil
+	}
+
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) (bool, error) {
+	var (
+		drainFns     []flow.TaskFn
+		requeueMu    sync.Mutex
+		needsRequeue bool
+	)
+
+	for i := range nodeList.Items {
+		node := &nodeList.Items[i]
+		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] == "" || !node.Spec.Unschedulable {
+			continue
+		}
+
+		drainFns = append(drainFns, func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, time.Minute)
+			defer cancel()
+			if err := r.drainAndMarkReady(ctx, log, node); err != nil {
+				if ctx.Err() != nil {
+					return fmt.Errorf("context cancelled while draining node %s: %w", node.Name, ctx.Err())
+				}
+				log.Info("Drain not complete yet, will retry", "node", node.Name, "reason", err.Error())
+				requeueMu.Lock()
+				needsRequeue = true
+				requeueMu.Unlock()
+			}
+			return nil
+		})
+	}
+
+	if err := flow.Parallel(drainFns...)(ctx); err != nil {
+		return false, err
+	}
+
+	return needsRequeue, nil
 }
 
 // NodeInPlaceUpdateOngoingOrFailed returns true if the node is currently unavailable for
@@ -108,6 +157,120 @@ func MaxUnavailableForPool(workers []gardencorev1beta1.Worker, poolName string, 
 		}
 	}
 	return 1
+}
+
+// drainAndMarkReady drains the node and, on success, marks it ready for the in-place update (sets the ReadyForUpdate
+// condition and removes the drain annotations).
+func (r *Reconciler) drainAndMarkReady(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	alreadyDrained := slices.ContainsFunc(node.Status.Conditions, func(cond corev1.NodeCondition) bool {
+		return cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Reason == machinev1alpha1.ReadyForUpdate
+	})
+
+	if !alreadyDrained {
+		if err := r.drainNode(ctx, node); err != nil {
+			return err
+		}
+
+		patch := client.MergeFrom(node.DeepCopy())
+		r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.ReadyForUpdate, "Node drained and ready for in-place update")
+		if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
+			return fmt.Errorf("failed to set NodeInPlaceUpdate condition on node %s: %w", node.Name, err)
+		}
+	}
+
+	patch := client.MergeFrom(node.DeepCopy())
+	delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain)
+	delete(node.Annotations, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime)
+	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to remove drain annotations from node %s: %w", node.Name, err)
+	}
+
+	log.Info("Drain complete, node ready for in-place update", "node", node.Name)
+	return nil
+}
+
+// drainNode drains the node using the machine-controller-manager drain library's RunDrain. It gracefully evicts
+// pods honoring PodDisruptionBudgets, retrying for up to DrainTimeout, and then force-deletes any pods still
+// remaining.
+//
+// Volume attach/detach/reattach handling is skipped via SkipVolumeDetach: self-hosted shoots with
+// unmanaged infrastructure run their own CSI drivers, so gardener cannot generically track volumes.
+func (r *Reconciler) drainNode(ctx context.Context, node *corev1.Node) error {
+	forceDeletePods := r.drainTimedOut(node)
+	maxEvictRetries := int32(r.Config.DrainTimeout.Duration / r.Config.PodEvictionRetryInterval.Duration) // #nosec: G115
+
+	drainOptions := drain.NewDrainOptions(
+		r.ShootClientSet,
+		nil,
+		r.Config.DrainTimeout.Duration,
+		maxEvictRetries,
+		r.Config.DrainTimeout.Duration,
+		r.Config.DrainTimeout.Duration,
+		node.Name,
+		-1,
+		forceDeletePods,
+		true,
+		true,
+		true,
+		io.Discard,
+		io.Discard,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+	drainOptions.SkipVolumeDetach = true
+	drainOptions.AdditionalPodFilters = []drain.AdditionalPodFilter{ShouldEvictPod}
+	drainOptions.SetPodProvider(&podProvider{client: r.ShootClient})
+
+	return drainOptions.RunDrain(ctx)
+}
+
+func (r *Reconciler) drainTimedOut(node *corev1.Node) bool {
+	startStr := node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime]
+	if startStr == "" {
+		return false
+	}
+	startTime, err := time.Parse(time.RFC3339, startStr)
+	if err != nil {
+		return true
+	}
+	return r.Clock.Since(startTime) > r.Config.DrainTimeout.Duration
+}
+
+type podProvider struct {
+	client client.Client
+}
+
+// PodsForNode returns all pods scheduled on the given node.
+func (p *podProvider) PodsForNode(ctx context.Context, nodeName string) ([]corev1.Pod, error) {
+	podList := &corev1.PodList{}
+	if err := p.client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: nodeName}); err != nil {
+		return nil, fmt.Errorf("failed to list pods on node %s: %w", nodeName, err)
+	}
+	return podList.Items, nil
+}
+
+// ShouldEvictPod returns true if the pod should be evicted during a node drain.
+func ShouldEvictPod(pod corev1.Pod) bool {
+	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+		return false
+	}
+	if pod.Labels[v1beta1constants.LabelRole] == v1beta1constants.DeploymentNameGardenlet {
+		return false
+	}
+	if pod.Labels[v1beta1constants.LabelApp] == v1beta1constants.DeploymentNameGardenerResourceManager {
+		return false
+	}
+	return !slices.ContainsFunc(pod.Spec.Tolerations, func(t corev1.Toleration) bool {
+		return t.Effect == corev1.TaintEffectNoSchedule &&
+			(t.Key == corev1.TaintNodeUnschedulable || t.Key == "") &&
+			t.Operator == corev1.TolerationOpExists
+	})
 }
 
 func (r *Reconciler) cordonNodesForUpdate(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) error {
