@@ -6,7 +6,6 @@ metadata:
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":9443,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"extension"}},{"matchLabels":{"gardener.cloud/role":"shoot"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
-    foo: bar
   labels:
     app.kubernetes.io/version: 1.29.1
     app: istio-ingressgateway
