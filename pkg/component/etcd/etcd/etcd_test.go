@@ -90,7 +90,6 @@ var _ = Describe("Etcd", func() {
 		highAvailabilityEnabled bool
 		staticPodConfig         *StaticPodConfig
 		role                    string
-		caRotationPhase         gardencorev1beta1.CredentialsRotationPhase
 		autoscalingConfig       AutoscalingConfig
 		backupConfig            *BackupConfig
 		now                     = time.Time{}
@@ -731,7 +730,6 @@ var _ = Describe("Etcd", func() {
 	)
 
 	BeforeEach(func() {
-		caRotationPhase = ""
 		s := runtime.NewScheme()
 		Expect(kubernetesscheme.AddToScheme(s)).To(Succeed())
 		Expect(druidcorev1alpha1.AddToScheme(s)).To(Succeed())
@@ -769,7 +767,6 @@ var _ = Describe("Etcd", func() {
 			StorageCapacity:         storageCapacity,
 			StorageClassName:        &storageClassName,
 			DefragmentationSchedule: &defragmentationSchedule,
-			CARotationPhase:         caRotationPhase,
 			PriorityClassName:       priorityClassName,
 			MaintenanceTimeWindow:   maintenanceTimeWindow,
 			HighAvailabilityEnabled: highAvailabilityEnabled,
@@ -797,8 +794,8 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role: role, Class: class, Replicas: replicas, Autoscaling: autoscalingConfig,
 				StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
-				DefragmentationSchedule: &defragmentationSchedule, CARotationPhase: caRotationPhase,
-				PriorityClassName: priorityClassName, MaintenanceTimeWindow: maintenanceTimeWindow,
+				DefragmentationSchedule: &defragmentationSchedule,
+				PriorityClassName:       priorityClassName, MaintenanceTimeWindow: maintenanceTimeWindow,
 				HighAvailabilityEnabled: highAvailabilityEnabled, BackupConfig: backupConfig, StaticPodConfig: staticPodConfig,
 			})
 			Expect(etcd.Deploy(ctx)).To(MatchError(fakeErr))
@@ -818,8 +815,8 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{
 				Role: role, Class: class, Replicas: replicas, Autoscaling: autoscalingConfig,
 				StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
-				DefragmentationSchedule: &defragmentationSchedule, CARotationPhase: caRotationPhase,
-				PriorityClassName: priorityClassName, MaintenanceTimeWindow: maintenanceTimeWindow,
+				DefragmentationSchedule: &defragmentationSchedule,
+				PriorityClassName:       priorityClassName, MaintenanceTimeWindow: maintenanceTimeWindow,
 				HighAvailabilityEnabled: highAvailabilityEnabled, BackupConfig: backupConfig, StaticPodConfig: staticPodConfig,
 			})
 			Expect(etcd.Deploy(ctx)).To(MatchError(fakeErr))
@@ -864,7 +861,6 @@ var _ = Describe("Etcd", func() {
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         "",
 				PriorityClassName:       priorityClassName,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 			})
@@ -910,7 +906,6 @@ var _ = Describe("Etcd", func() {
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         "",
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				PriorityClassName:       priorityClassName,
 			})
@@ -982,7 +977,6 @@ var _ = Describe("Etcd", func() {
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         caRotationPhase,
 				PriorityClassName:       priorityClassName,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				HighAvailabilityEnabled: highAvailabilityEnabled,
@@ -1027,7 +1021,6 @@ var _ = Describe("Etcd", func() {
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         caRotationPhase,
 				PriorityClassName:       priorityClassName,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				HighAvailabilityEnabled: highAvailabilityEnabled,
@@ -1060,7 +1053,6 @@ var _ = Describe("Etcd", func() {
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         caRotationPhase,
 				PriorityClassName:       priorityClassName,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				HighAvailabilityEnabled: highAvailabilityEnabled,
@@ -1121,7 +1113,6 @@ var _ = Describe("Etcd", func() {
 					StorageCapacity:         storageCapacity,
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
-					CARotationPhase:         "",
 					MaintenanceTimeWindow:   maintenanceTimeWindow,
 					PriorityClassName:       priorityClassName,
 					EvictionRequirement:     new(evictionRequirement),
@@ -1285,7 +1276,6 @@ var _ = Describe("Etcd", func() {
 						StorageCapacity:         storageCapacity,
 						StorageClassName:        &storageClassName,
 						DefragmentationSchedule: &defragmentationSchedule,
-						CARotationPhase:         caRotationPhase,
 						PriorityClassName:       priorityClassName,
 						MaintenanceTimeWindow:   maintenanceTimeWindow,
 						StaticPodConfig:         &StaticPodConfig{},
@@ -1345,6 +1335,48 @@ var _ = Describe("Etcd", func() {
 				highAvailabilityEnabled = true
 				replicas = new(int32(3))
 				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
+
+				secretNamesToTimes := map[string]time.Time{}
+
+				// A "real" SecretsManager is needed here because in further tests we want to differentiate
+				// between what was issued by the old and new CAs.
+				var err error
+				sm, err = secretsmanager.New(
+					ctx,
+					logr.New(logf.NullLogSink{}),
+					testclock.NewFakeClock(time.Now()),
+					c,
+					"",
+					secretsmanager.WithSecretNamesToTimes(secretNamesToTimes),
+					secretsmanager.WithNamespaces(testNamespace),
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Create new etcd CA
+				_, err = sm.Generate(ctx,
+					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert})
+				Expect(err).ToNot(HaveOccurred())
+
+				// Create new peer CA
+				_, err = sm.Generate(ctx,
+					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
+				Expect(err).ToNot(HaveOccurred())
+
+				// Set time to trigger CA rotation
+				secretNamesToTimes[v1beta1constants.SecretNameCAETCDPeer] = now
+
+				// Rotate CA
+				_, err = sm.Generate(ctx,
+					&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert},
+					secretsmanager.Rotate(secretsmanager.KeepOld))
+				Expect(err).ToNot(HaveOccurred())
+
+				var ok bool
+				clientCASecret, ok = sm.Get(v1beta1constants.SecretNameCAETCD)
+				Expect(ok).To(BeTrue())
+
+				peerCASecret, ok = sm.Get(v1beta1constants.SecretNameCAETCDPeer)
+				Expect(ok).To(BeTrue())
 			})
 
 			createExpectations := func(caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
@@ -1371,109 +1403,57 @@ var _ = Describe("Etcd", func() {
 				Expect(pr).To(DeepEqual(prometheusRule("shoot", class, *replicas, false)))
 			}
 
-			Context("when CA rotation phase is in `Preparing` state", func() {
-				BeforeEach(func() {
-					caRotationPhase = gardencorev1beta1.RotationPreparing
+			It("should successfully deploy", func() {
+				peerServerSecret, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{
+					Name:       "etcd-peer-server-" + testRole,
+					CommonName: "etcd-server",
+					DNSNames: []string{
+						"etcd-" + testRole + "-peer",
+						"etcd-" + testRole + "-peer.shoot--test--test",
+						"etcd-" + testRole + "-peer.shoot--test--test.svc",
+						"etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
+						"*.etcd-" + testRole + "-peer",
+						"*.etcd-" + testRole + "-peer.shoot--test--test",
+						"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
+						"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
+					},
+					IPAddresses:                 []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+					CertType:                    secretsutils.ServerClientCert,
+					SkipPublishingCACertificate: true,
+				}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
+				Expect(err).ToNot(HaveOccurred())
 
-					secretNamesToTimes := map[string]time.Time{}
+				clientSecret, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{
+					Name:                        SecretNameClient,
+					CommonName:                  "etcd-client",
+					CertType:                    secretsutils.ClientCert,
+					SkipPublishingCACertificate: true,
+				}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+				Expect(err).ToNot(HaveOccurred())
 
-					// A "real" SecretsManager is needed here because in further tests we want to differentiate
-					// between what was issued by the old and new CAs.
-					var err error
-					sm, err = secretsmanager.New(
-						ctx,
-						logr.New(logf.NullLogSink{}),
-						testclock.NewFakeClock(time.Now()),
-						c,
-						"",
-						secretsmanager.WithSecretNamesToTimes(secretNamesToTimes),
-						secretsmanager.WithNamespaces(testNamespace),
-					)
-					Expect(err).ToNot(HaveOccurred())
+				serverSecret, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{
+					Name:       "etcd-server-" + testRole,
+					CommonName: "etcd-server",
+					DNSNames: []string{
+						"etcd-" + testRole + "-local",
+						"etcd-" + testRole + "-client",
+						"etcd-" + testRole + "-client.shoot--test--test",
+						"etcd-" + testRole + "-client.shoot--test--test.svc",
+						"etcd-" + testRole + "-client.shoot--test--test.svc.cluster.local",
+						"*.etcd-" + testRole + "-peer",
+						"*.etcd-" + testRole + "-peer.shoot--test--test",
+						"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
+						"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
+					},
+					IPAddresses:                 []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+					CertType:                    secretsutils.ServerClientCert,
+					SkipPublishingCACertificate: true,
+				}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+				Expect(err).ToNot(HaveOccurred())
 
-					// Create new etcd CA
-					_, err = sm.Generate(ctx,
-						&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert})
-					Expect(err).ToNot(HaveOccurred())
+				Expect(etcd.Deploy(ctx)).To(Succeed())
 
-					// Create new peer CA
-					_, err = sm.Generate(ctx,
-						&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
-					Expect(err).ToNot(HaveOccurred())
-
-					// Set time to trigger CA rotation
-					secretNamesToTimes[v1beta1constants.SecretNameCAETCDPeer] = now
-
-					// Rotate CA
-					_, err = sm.Generate(ctx,
-						&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert},
-						secretsmanager.Rotate(secretsmanager.KeepOld))
-					Expect(err).ToNot(HaveOccurred())
-
-					var ok bool
-					clientCASecret, ok = sm.Get(v1beta1constants.SecretNameCAETCD)
-					Expect(ok).To(BeTrue())
-
-					peerCASecret, ok = sm.Get(v1beta1constants.SecretNameCAETCDPeer)
-					Expect(ok).To(BeTrue())
-
-					DeferCleanup(func() {
-						caRotationPhase = ""
-					})
-				})
-
-				It("should successfully deploy", func() {
-					peerServerSecret, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{
-						Name:       "etcd-peer-server-" + testRole,
-						CommonName: "etcd-server",
-						DNSNames: []string{
-							"etcd-" + testRole + "-peer",
-							"etcd-" + testRole + "-peer.shoot--test--test",
-							"etcd-" + testRole + "-peer.shoot--test--test.svc",
-							"etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
-							"*.etcd-" + testRole + "-peer",
-							"*.etcd-" + testRole + "-peer.shoot--test--test",
-							"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
-							"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
-						},
-						IPAddresses:                 []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
-						CertType:                    secretsutils.ServerClientCert,
-						SkipPublishingCACertificate: true,
-					}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
-					Expect(err).ToNot(HaveOccurred())
-
-					clientSecret, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{
-						Name:                        SecretNameClient,
-						CommonName:                  "etcd-client",
-						CertType:                    secretsutils.ClientCert,
-						SkipPublishingCACertificate: true,
-					}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
-					Expect(err).ToNot(HaveOccurred())
-
-					serverSecret, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{
-						Name:       "etcd-server-" + testRole,
-						CommonName: "etcd-server",
-						DNSNames: []string{
-							"etcd-" + testRole + "-local",
-							"etcd-" + testRole + "-client",
-							"etcd-" + testRole + "-client.shoot--test--test",
-							"etcd-" + testRole + "-client.shoot--test--test.svc",
-							"etcd-" + testRole + "-client.shoot--test--test.svc.cluster.local",
-							"*.etcd-" + testRole + "-peer",
-							"*.etcd-" + testRole + "-peer.shoot--test--test",
-							"*.etcd-" + testRole + "-peer.shoot--test--test.svc",
-							"*.etcd-" + testRole + "-peer.shoot--test--test.svc.cluster.local",
-						},
-						IPAddresses:                 []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
-						CertType:                    secretsutils.ServerClientCert,
-						SkipPublishingCACertificate: true,
-					}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(etcd.Deploy(ctx)).To(Succeed())
-
-					createExpectations(clientCASecret.Name, clientSecret.Name, serverSecret.Name, peerCASecret.Name, peerServerSecret.Name)
-				})
+				createExpectations(clientCASecret.Name, clientSecret.Name, serverSecret.Name, peerCASecret.Name, peerServerSecret.Name)
 			})
 		})
 
@@ -1481,7 +1461,6 @@ var _ = Describe("Etcd", func() {
 			BeforeEach(func() {
 				secretNamesToTimes := map[string]time.Time{}
 				replicas = new(int32(0))
-				caRotationPhase = gardencorev1beta1.RotationCompleted
 
 				var err error
 				sm, err = secretsmanager.New(
@@ -1594,7 +1573,6 @@ var _ = Describe("Etcd", func() {
 						StorageCapacity:             storageCapacity,
 						StorageClassName:            &storageClassName,
 						DefragmentationSchedule:     &defragmentationSchedule,
-						CARotationPhase:             "",
 						RuntimeKubernetesVersion:    runtimeKubernetesVersion,
 						PriorityClassName:           priorityClassName,
 						MaintenanceTimeWindow:       maintenanceTimeWindow,
@@ -1629,7 +1607,6 @@ var _ = Describe("Etcd", func() {
 					StorageCapacity:         storageCapacity,
 					StorageClassName:        &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule,
-					CARotationPhase:         "",
 					PriorityClassName:       priorityClassName,
 					NamePrefix:              "virtual-garden-",
 				})
@@ -1712,7 +1689,6 @@ var _ = Describe("Etcd", func() {
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         "",
 				PriorityClassName:       priorityClassName,
 			})
 		})
@@ -1879,7 +1855,6 @@ var _ = Describe("Etcd", func() {
 				StorageCapacity:         storageCapacity,
 				StorageClassName:        &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         "",
 				PriorityClassName:       priorityClassName,
 				HighAvailabilityEnabled: highAvailability,
 			})
@@ -2130,6 +2105,42 @@ var _ = Describe("Etcd", func() {
 			etcd = New(log, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
 
 			Expect(etcd.MarkAsPeerCARolloutCompleted(ctx)).To(MatchError(fakeErr))
+		})
+	})
+
+	Describe("#UnmarkAsPeerCARolloutCompleted", func() {
+		It("should not return an error when the etcd resource does not exist", func() {
+			Expect(etcd.UnmarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
+		})
+
+		It("should remove the annotation when the etcd resource exists and annotation is present", func() {
+			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+				Name:      etcdName,
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					secretsrotation.AnnotationKeyPeerCARolledOut: "true",
+					"foo": "bar",
+				},
+			}}
+			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+			Expect(etcd.UnmarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
+
+			updated := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
+			Expect(updated.Annotations).NotTo(HaveKey(secretsrotation.AnnotationKeyPeerCARolledOut))
+			Expect(updated.Annotations).To(HaveKeyWithValue("foo", "bar"))
+		})
+
+		It("should be idempotent when the annotation is already absent", func() {
+			existingEtcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace}}
+			Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+			Expect(etcd.UnmarkAsPeerCARolloutCompleted(ctx)).To(Succeed())
+
+			updated := &druidcorev1alpha1.Etcd{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(existingEtcd), updated)).To(Succeed())
+			Expect(updated.Annotations).NotTo(HaveKey(secretsrotation.AnnotationKeyPeerCARolledOut))
 		})
 	})
 
