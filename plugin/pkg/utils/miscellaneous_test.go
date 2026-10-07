@@ -208,16 +208,6 @@ var _ = Describe("Miscellaneous", func() {
 			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
 		})
 
-		It("should do nothing if old or new internal domain is nil", func() {
-			oldSeedSpec.DNS.Internal = nil
-			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
-
-			// TODO(dimityrmirchev): Remove this test after 1.134 release
-			oldSeedSpec.DNS.Internal = &core.SeedDNSProviderConfig{Domain: "foo.internal"}
-			newSeedSpec.DNS.Internal = nil
-			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
-		})
-
 		It("should do nothing if internal domain changed but no shoots exist", func() {
 			newSeedSpec.DNS.Internal.Domain = "bar.internal"
 			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
