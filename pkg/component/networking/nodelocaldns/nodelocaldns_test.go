@@ -226,6 +226,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 	BeforeEach(func() {
 		expectedManifests = nil
+		ipvsAddress = "169.254.20.10"
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			Image:       image,
@@ -927,6 +928,109 @@ import generated-config/custom-server-block.server
 					Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 				})
 			})
+
+			Context("With IPv6", func() {
+				BeforeEach(func() {
+					values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+					ipvsAddress = "fd30:1319:f1e:230b::1"
+				})
+
+				DescribeTable("should successfully deploy all resources with different VPA settings",
+					func(vpaEnabled bool) {
+						values.Config = &gardencorev1beta1.NodeLocalDNS{
+							Enabled:                     true,
+							ForceTCPToClusterDNS:        new(false),
+							ForceTCPToUpstreamDNS:       new(false),
+							DisableForwardToUpstreamDNS: new(false),
+						}
+						values.VPAEnabled = vpaEnabled
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "prefer_udp"
+
+						configMapData := map[string]string{
+							"Corefile": `cluster.local:53 {
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
+            ` + forceTcpToClusterDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
+    import custom/*.override
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
+    }
+in-addr.arpa:53 {
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
+            ` + forceTcpToClusterDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
+ip6.arpa:53 {
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
+            ` + forceTcpToClusterDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
+.:53 {
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
+            ` + forceTcpToUpstreamDNS + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    import custom/*.override
+    errors
+    cache 30
+    reload
+    }
+import generated-config/custom-server-block.server
+`,
+						}
+						configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
+
+						component = New(c, namespace, values)
+						Expect(component.Deploy(ctx)).To(Succeed())
+
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+						managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+						var err error
+						manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+						Expect(err).NotTo(HaveOccurred())
+
+						expectedManifests = nil
+						expectedManifests = append(expectedManifests, configMapYAMLFor())
+						if vpaEnabled {
+							expectedManifests = append(expectedManifests, vpaYAML)
+						}
+						Expect(manifests).To(ContainElements(expectedManifests))
+
+						managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+						Expect(err).ToNot(HaveOccurred())
+						daemonset := daemonSetFor()
+						utilruntime.Must(references.InjectAnnotations(daemonset))
+						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+					},
+					Entry("w/o VPA", false),
+					Entry("w/ VPA", true),
+				)
+			})
 		})
 
 		Context("NodeLocalDNS with ipvsEnabled=true", func() {
@@ -1285,12 +1389,8 @@ import generated-config/custom-server-block.server
 func healthAddress(values Values) string {
 	if values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
 		return "169.254.20.10"
-	} else {
-		if len(values.DNSServers) > 0 {
-			return "fd30:1319:f1e:230b::1 " + strings.Join(values.DNSServers, " ")
-		}
-		return "[fd30:1319:f1e:230b::1]"
 	}
+	return "[fd30:1319:f1e:230b::1]"
 }
 
 func selectIPAddress(addresses []string, preferIPv6 bool) string {
