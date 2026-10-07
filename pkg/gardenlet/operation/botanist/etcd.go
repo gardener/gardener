@@ -34,7 +34,6 @@ func (b *Botanist) DefaultEtcd(ctx context.Context, role string, class etcd.Clas
 	values := etcd.Values{
 		Role:                        role,
 		Class:                       class,
-		CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
 		RuntimeKubernetesVersion:    b.Shoot.RuntimeKubernetesVersion,
 		MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
 		EvictionRequirement:         getEvictionRequirement(class, b.Shoot),

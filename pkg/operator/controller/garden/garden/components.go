@@ -45,7 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/utils/timewindow"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	pvcautoscaler "github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
+	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
@@ -613,7 +613,6 @@ func (r *Reconciler) newEtcd(
 			StorageCapacity:             storageCapacity,
 			StorageClassName:            storageClassName,
 			DefragmentationSchedule:     &defragmentationSchedule,
-			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 			EvictionRequirement:         evictionRequirement,
