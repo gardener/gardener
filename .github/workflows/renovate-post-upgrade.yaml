@@ -24,6 +24,7 @@ jobs:
       has-changes: ${{ steps.diff.outputs.has-changes }}
       run-tidy: ${{ steps.tasks.outputs.run-tidy }}
       run-generate: ${{ steps.tasks.outputs.run-generate }}
+      run-envoy: ${{ steps.tasks.outputs.run-envoy }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -40,6 +41,7 @@ jobs:
         id: tasks
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CONTAINERS_FILE: imagevector/containers.yaml
         run: |
           set -euo pipefail
 
@@ -47,6 +49,7 @@ jobs:
 
           run_tidy=false
           run_generate=false
+          run_envoy=false
 
           # Run `make tidy` when any module's go.mod/go.sum changed. The repository contains multiple modules
           # wired via `go.work` that all need to stay in sync, which `gomodTidy` alone does not guarantee.
@@ -66,14 +69,43 @@ jobs:
             fi
           fi
 
+          # Run the envoy task when Renovate dropped the `distroless-` prefix from the `envoyproxy/envoy`
+          # image tag. Renovate does not support tag prefixes (see the imagevector custom manager referenced
+          # in .github/renovate.json5), so it drops the prefix when it updates the dependency.
+          # The last commit is the Renovate update. Look at the envoy entry of its diff. The envoy source
+          # repository is a context line, the new tag is the added line, e.g. `+    tag: "v1.39.2"`.
+          envoy_diff="$(git diff HEAD~1 HEAD -- "${CONTAINERS_FILE}" | grep -A3 'sourceRepository: github.com/envoyproxy/envoy' || true)"
+          if [ -n "${envoy_diff}" ]; then
+            # Extract the new tag from the added tag line (the value between the quotes).
+            new_tag="$(echo "${envoy_diff}" | grep -E '^\+[[:space:]]*tag:' | sed -E 's/.*"(.+)".*/\1/' || true)"
+
+            # Act only when Renovate updated the tag and dropped the prefix. If the tag already carries the
+            # `distroless-` prefix (e.g. a commit pushed by this Action), it is already correct and there is
+            # nothing to do.
+            if [ -n "${new_tag}" ] && [[ "${new_tag}" != distroless-* ]]; then
+              run_envoy=true
+            fi
+          fi
+
           echo "run-tidy=${run_tidy}" >> "${GITHUB_OUTPUT}"
           echo "run-generate=${run_generate}" >> "${GITHUB_OUTPUT}"
+          echo "run-envoy=${run_envoy}" >> "${GITHUB_OUTPUT}"
       - name: Run make tidy
         if: steps.tasks.outputs.run-tidy == 'true'
         run: PATH="${PATH}:$(go env GOROOT)/bin" make tidy
       - name: Run make generate
         if: steps.tasks.outputs.run-generate == 'true'
         run: PATH="${PATH}:$(go env GOROOT)/bin" make generate MODE=sequential
+      - name: Restore distroless- prefix for envoy image tag
+        if: steps.tasks.outputs.run-envoy == 'true'
+        env:
+          CONTAINERS_FILE: imagevector/containers.yaml
+        run: |
+          set -euo pipefail
+
+          # Prepend the `distroless-` prefix that Renovate dropped from the current `envoyproxy/envoy` tag.
+          current_tag="$(yq '(.images[] | select(.sourceRepository == "github.com/envoyproxy/envoy")).tag' "${CONTAINERS_FILE}")"
+          yq -i "(.images[] | select(.sourceRepository == \"github.com/envoyproxy/envoy\")).tag = \"distroless-${current_tag}\"" "${CONTAINERS_FILE}"
       - name: Capture changes
         id: diff
         run: |
@@ -117,17 +149,33 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           RUN_TIDY: ${{ needs.post-upgrade-tasks.outputs.run-tidy }}
           RUN_GENERATE: ${{ needs.post-upgrade-tasks.outputs.run-generate }}
+          RUN_ENVOY: ${{ needs.post-upgrade-tasks.outputs.run-envoy }}
         run: |
           set -euo pipefail
 
           git apply --3way --whitespace=nowarn "${RUNNER_TEMP}/post-upgrade.patch"
           git add -A
 
-          if [ "${RUN_GENERATE}" = "true" ]; then
-            message="Run make tidy and make generate"
-          else
-            message="Run make tidy"
+          # Collect a message part per task and join them with '; '.
+          parts=()
+          if [ "${RUN_TIDY}" = "true" ]; then
+            parts+=("Run make tidy")
           fi
+          if [ "${RUN_GENERATE}" = "true" ]; then
+            parts+=("Run make generate")
+          fi
+          if [ "${RUN_ENVOY}" = "true" ]; then
+            parts+=("Add distroless- prefix to envoy image tag")
+          fi
+
+          message=""
+          for part in "${parts[@]}"; do
+            if [ -z "${message}" ]; then
+              message="${part}"
+            else
+              message="${message}; ${part}"
+            fi
+          done
 
           git commit -m "${message}"
           git push origin "HEAD:${HEAD_REF}"

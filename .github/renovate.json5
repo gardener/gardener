@@ -18,9 +18,9 @@
   prFooter: '**Release note**:\n```other dependency\nNONE\n```',
   // Only rebase when there are conflicts. Prow tests against the latest state of master branch anyway before merging the PR.
   rebaseWhen: 'conflicted',
-  // Ignore the commits pushed by the `renovate-post-upgrade` GitHub Action (running `make tidy`/`make generate`)
-  // when detecting whether a branch was manually edited. Otherwise, Renovate would treat the branch as modified
-  // and stop updating the PR.
+  // Ignore the commits pushed by the `renovate-post-upgrade` GitHub Action (running `make tidy`/`make generate`
+  // and restoring the `distroless-` prefix of the envoy image tag) when detecting whether a branch was manually
+  // edited. Otherwise, Renovate would treat the branch as modified and stop updating the PR.
   gitIgnoredAuthors: [
     '41898282+github-actions[bot]@users.noreply.github.com',
   ],
@@ -348,25 +348,6 @@
         '/istio\\.io/.+/',
         '/github\\.com/fluent/.+/',
       ],
-    },
-    // Add `distroless-` prefix to tag when updating `envoyproxy`.
-    {
-      matchDatasources: [
-        'github-releases'
-      ],
-      matchPackageNames: [
-        'envoyproxy/envoy'
-      ],
-      matchFileNames: [
-        'imagevector/containers.yaml'
-      ],
-      postUpgradeTasks: {
-        commands: [
-          'go install github.com/mikefarah/yq/v4@latest',
-          'bash -c "yq -i \'(.images[] | select(.sourceRepository == \\"github.com/envoyproxy/envoy\\")).tag = \\"distroless-{{{newValue}}}\\"\' imagevector/containers.yaml"',
-        ],
-        executionMode: 'update',
-      },
     },
     {
       // Ask for manual approval to create PRs for minor and major updates of container images which most likely
