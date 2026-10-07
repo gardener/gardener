@@ -834,9 +834,9 @@
       "2d",
       "10d"
     ]
-  }
+  },
   "timezone": "utc",
   "title": "VictoriaLogs",
   "uid": "victorialogs",
-  "version": 7
+  "version": 1
 }
