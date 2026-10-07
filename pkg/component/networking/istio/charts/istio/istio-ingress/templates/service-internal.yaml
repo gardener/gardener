@@ -6,9 +6,6 @@ metadata:
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":9443,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"extension"}},{"matchLabels":{"gardener.cloud/role":"shoot"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
-{{- if .Values.annotations }}
-{{ .Values.annotations | toYaml | indent 4 }}
-{{- end }}
   labels:
     app.kubernetes.io/version: {{ .Values.ingressVersion }}
 {{ .Values.labels | toYaml | indent 4 }}
