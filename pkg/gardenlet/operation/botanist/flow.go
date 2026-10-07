@@ -757,7 +757,7 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 							shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
 						}
 
-						if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+						if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil && len(shoot.Status.InPlaceUpdates.WorkerPoolToHashMap) == 0 {
 							shoot.Status.InPlaceUpdates = nil
 						}
 
