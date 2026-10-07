@@ -145,6 +145,7 @@ func (d *localDriver) applyPod(
 		labelKeyApp:      labelValueMachine,
 		labelKeyMachine:  req.Machine.Name,
 	}
+	maps.Copy(pod.Labels, nodeTemplateLabelsForMachine(req.MachineClass))
 	pod.Spec = corev1.PodSpec{
 		Containers: []corev1.Container{
 			{
@@ -297,4 +298,27 @@ func validateProviderSpecAndSecret(machineClass *machinev1alpha1.MachineClass, s
 	}
 
 	return providerSpec, nil
+}
+
+// nodeTemplateLabelsForMachine returns the labels for the machine pod carrying the zone, region, and instance type
+// from the node template of the machine class. There is no real concept of zones, regions, or instance types in the
+// local setup. Instead, the desired values are stored as labels on the machine pod, which cloud-controller-manager-local's
+// node controller reads and applies to the corresponding Node object.
+func nodeTemplateLabelsForMachine(machineClass *machinev1alpha1.MachineClass) map[string]string {
+	labels := make(map[string]string, 3)
+	if machineClass == nil || machineClass.NodeTemplate == nil {
+		return labels
+	}
+
+	if zone := machineClass.NodeTemplate.Zone; zone != "" {
+		labels[apiv1alpha1.LabelZone] = zone
+	}
+	if region := machineClass.NodeTemplate.Region; region != "" {
+		labels[apiv1alpha1.LabelRegion] = region
+	}
+	if instanceType := machineClass.NodeTemplate.InstanceType; instanceType != "" {
+		labels[apiv1alpha1.LabelInstanceType] = instanceType
+	}
+
+	return labels
 }
