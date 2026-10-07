@@ -14,7 +14,7 @@ import (
 // To adhere to the specification, this regex matches 'upgrade' as a separate token inside a RFC conform Connection header.
 // This supports single values as well as multi-value headers (e.g. 'keep-alive, upgrade') while
 // preventing false positives from non-comma-separated words (e.g. 'no-upgrade' or words separated by spaces).
-const ConnectionUpgradeRegex = `(?i)(^|.*,)\s*upgrade\s*(,.*|$)`
+const ConnectionUpgradeRegex = `(?i)^(.*,)*\s*upgrade\s*(,.*)*$`
 
 // VirtualServiceWithSNIMatch returns a function setting the given attributes to a virtual service object.
 func VirtualServiceWithSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo []string, hosts []string, gatewayName string, port uint32, destinationHost string) func() error {
