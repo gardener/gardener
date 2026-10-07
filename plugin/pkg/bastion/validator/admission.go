@@ -16,12 +16,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 
+	gardencoreapi "github.com/gardener/gardener/pkg/api"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	corevalidation "github.com/gardener/gardener/pkg/api/core/validation"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -37,12 +43,15 @@ func Register(plugins *admission.Plugins) {
 type Bastion struct {
 	*admission.Handler
 
-	coreClient gardencoreclientset.Interface
-	readyFunc  admission.ReadyFunc
+	coreClient                   gardencoreclientset.Interface
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	readyFunc                    admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsCoreClientSet(&Bastion{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&Bastion{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -65,10 +74,31 @@ func (v *Bastion) SetCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *Bastion) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
+	v.cloudProfileLister = cloudProfileInformer.Lister()
+
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	v.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
+	readyFuncs = append(
+		readyFuncs,
+		cloudProfileInformer.Informer().HasSynced,
+		namespacedCloudProfileInformer.Informer().HasSynced,
+	)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *Bastion) ValidateInitialization() error {
 	if v.coreClient == nil {
 		return errors.New("missing garden core client")
+	}
+	if v.cloudProfileLister == nil {
+		return errors.New("missing cloudProfile lister")
+	}
+	if v.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
 	}
 	return nil
 }
@@ -147,6 +177,13 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
 	}
 
+	// validate the machine override against the shoot's CloudProfile
+	if bastion.DeletionTimestamp == nil && bastion.Spec.Machine != nil {
+		if err := v.validateMachine(bastion, shoot); err != nil {
+			return err
+		}
+	}
+
 	// update bastion
 	bastion.Spec.SeedName = shoot.Spec.SeedName
 	bastion.Spec.ProviderType = &shoot.Spec.Provider.Type
@@ -158,6 +195,48 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission
 	// ensure bastions are cleaned up when shoots are deleted
 	ownerRef := *metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 	bastion.OwnerReferences = kubernetes.MergeOwnerReferences(bastion.OwnerReferences, ownerRef)
+
+	return nil
+}
+
+// validateMachine validates the bastion's machine override against the CloudProfile referenced by the shoot.
+func (v *Bastion) validateMachine(bastion *operations.Bastion, shoot *gardencorev1beta1.Shoot) error {
+	gk := schema.GroupKind{Group: operations.GroupName, Kind: "Bastion"}
+
+	coreShoot := &core.Shoot{}
+	if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(shoot, coreShoot, nil); err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not convert shoot %s/%s: %w", shoot.Namespace, shoot.Name, err))
+	}
+
+	cloudProfileSpec, err := gardenerutils.GetCloudProfileSpec(v.cloudProfileLister, v.namespacedCloudProfileLister, coreShoot)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %w", err))
+	}
+	if cloudProfileSpec == nil {
+		return nil
+	}
+
+	coreCloudProfileSpec := &core.CloudProfileSpec{}
+	if err := gardencoreapi.Scheme.Convert(cloudProfileSpec, coreCloudProfileSpec, nil); err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not convert cloud profile spec: %w", err))
+	}
+
+	machinePath := field.NewPath("spec", "machine")
+
+	var (
+		machineType  *core.BastionMachineType
+		machineImage *core.BastionMachineImage
+	)
+	if bastion.Spec.Machine.Type != nil {
+		machineType = &core.BastionMachineType{Name: *bastion.Spec.Machine.Type}
+	}
+	if image := bastion.Spec.Machine.Image; image != nil {
+		machineImage = &core.BastionMachineImage{Name: image.Name, Version: image.Version}
+	}
+
+	if errs := corevalidation.ValidateBastionMachine(machineType, machineImage, coreCloudProfileSpec, machinePath.Child("type"), machinePath.Child("image")); len(errs) > 0 {
+		return apierrors.NewInvalid(gk, bastion.Name, errs)
+	}
 
 	return nil
 }
