@@ -12,14 +12,14 @@ set -o pipefail
 echo "> Checking Plutono dashboards"
 
 function check_dashboards {
-  find . -path './dev/local-backupbuckets' -prune -o -path '*/dashboards/*' -name '*.json' -type f -print \
+  find . -path './dev/local-backupbuckets' -prune -o -path '*/.claude/*' -prune -o -path '*/dashboards/*' -name '*.json' -type f -print \
   | while IFS= read -r file; do
 
       jq -c -r '{title: (.title // error("title is not set")),
                  uid:   (.uid   // error("uid is not set"))}
                 | if (.uid | length) > 40
                     then error("uid is too long (max length is 40 characters): \(.uid)")
-                  elif .title == "" then 
+                  elif .title == "" then
                     error("title is empty")
                   elif .uid == "" then
                     error("UID is empty")

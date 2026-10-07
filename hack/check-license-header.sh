@@ -12,6 +12,7 @@ missing_license_header_files="$(addlicense \
   -ignore ".git/**" \
   -ignore ".idea/**" \
   -ignore ".vscode/**" \
+  -ignore ".claude/**" \
   -ignore "dev/**" \
   -ignore "**/*.md" \
   -ignore "**/*.toml" \
