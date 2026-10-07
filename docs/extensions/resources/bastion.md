@@ -19,7 +19,6 @@ When SSH access is set to `false` for the `Shoot` in the workers settings (see [
 As part of the shoot flow, Gardener will create a special CRD in the seed cluster that needs to be reconciled by an extension controller, for example:
 
 ```yaml
----
 apiVersion: extensions.gardener.cloud/v1alpha1
 kind: Bastion
 metadata:
@@ -33,6 +32,11 @@ spec:
   ingress:
     - ipBlock:
         cidr: 192.88.99.0/32 # this is most likely the user's IP address
+# machine:
+#   type: m5.large
+#   image:
+#     name: <some-image-name>
+#     version: <some-image-version>
 ```
 
 Your controller is supposed to create a new instance at the given cloud provider, firewall it to only allow SSH (TCP port 22) from the given IP blocks, and then configure the firewall for the worker nodes to allow SSH from the bastion instance. When a `Bastion` is deleted, all these changes need to be reverted.
@@ -44,6 +48,17 @@ Your controller is supposed to create a new instance at the given cloud provider
 For bastion controllers, the generic `Reconciler` also delegates to a [`ConfigValidator` interface](../../../extensions/pkg/controller/bastion/configvalidator.go) that contains a single `Validate` method. This method is called by the generic `Reconciler` at the beginning of every reconciliation, and can be implemented by the extension to validate the `.spec.providerConfig` part of the `Bastion` resource with the respective cloud provider, typically the existence and validity of cloud provider resources such as VPCs, images, etc.
 
 The `Validate` method returns a list of errors. If this list is non-empty, the generic `Reconciler` will fail with an error. This error will have the error code `ERR_CONFIGURATION_PROBLEM`, unless there is at least one error in the list that has its `ErrorType` field set to `field.ErrorTypeInternal`.
+
+### Machine Type and Image Selection
+
+The machine type and machine image used for the bastion VM are determined from the following sources, in descending order of precedence (the machine type and the machine image are resolved independently):
+
+1. `Bastion` `.spec.machine`: An optional per-request override on the `Bastion` resource. It may pin the machine type (`.spec.machine.type`) and/or the machine image (`.spec.machine.image.name`, with an optional `.spec.machine.image.version`).
+1. `CloudProfile` `.spec.bastion`: An optional operator-provided default for the `CloudProfile`. It may define the machine type (`.spec.bastion.machineType.name`) and/or the machine image (`.spec.bastion.machineImage.name`, with an optional `.spec.bastion.machineImage.version`).
+1. Controller defaulting: Whatever is not pinned by either of the above is resolved automatically from the `CloudProfile`:
+    - Machine type: the usable machine type with the fewest CPUs whose architecture is supported by the selected image.
+    - Machine image: the first `CloudProfile` image that has a supported version compatible with the machine type's architecture and capabilities.
+    - Machine image version: when the image name is resolved but no version is pinned, the greatest supported version compatible with the machine type's architecture and capabilities.
 
 ## References and Additional Resources
 
