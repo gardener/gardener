@@ -39,7 +39,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableNginxIngressInSeed      | `true`  | `Beta`  | `1.149` |         |
 | DisableNginxIngressInShoot     | `false` | `Alpha` | `1.142` |         |
 | LiveControlPlaneMigration      | `false` | `Alpha` | `1.142` |         |
-| RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.148` |         |
+| RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.148` | `1.153` |
+| RemoveHTTPProxyLegacyPort      | `true`  | `Beta`  | `1.154` |         |
 | StrictAuditPolicyValidation    | `false` | `Alpha` | `1.152` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
