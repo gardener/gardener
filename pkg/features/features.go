@@ -115,6 +115,7 @@ const (
 	// If set for the gardener-controller-manager, the maintenance controller will disable the addon during the next maintenance operation.
 	// owner: @ScheererJ
 	// alpha: v1.142.0
+	// beta: v1.154.0
 	DisableNginxIngressInShoot featuregate.Feature = "DisableNginxIngressInShoot"
 
 	// LiveControlPlaneMigration enables live migration of Shoot control planes between seeds
@@ -186,7 +187,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInGarden:    {Default: true, PreRelease: featuregate.Beta},
 	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
-	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
+	DisableNginxIngressInShoot:     {Default: true, PreRelease: featuregate.Beta},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
 	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
