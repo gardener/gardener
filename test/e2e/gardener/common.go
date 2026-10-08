@@ -60,7 +60,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds, "0")
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationAuthenticationIssuer, v1beta1constants.AnnotationAuthenticationIssuerManaged)
 
-	shoot.Spec.CredentialsBindingName = new("local")
+	shoot.Spec.CredentialsBindingName = new("local-wi")
 	shoot.Spec.Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
 		SerializeImagePulls: new(false),
 		RegistryPullQPS:     new(int32(10)),
