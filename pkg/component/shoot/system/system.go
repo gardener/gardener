@@ -180,6 +180,40 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 		if err := registry.Add(networkPolicyDenyAll); err != nil {
 			return nil, err
 		}
+
+		// For self-hosted shoots, VPN is skipped so gardener.cloud--allow-from-seed is never deployed.
+		// Allow ingress from node and pod CIDRs so the host-network kube-apiserver can reach aggregated
+		// API servers (e.g., metrics-server) on any node.
+		if s.values.IsSelfHosted && (len(s.values.NodeNetworkCIDRs) > 0 || len(s.values.PodNetworkCIDRs) > 0) {
+			var peers []networkingv1.NetworkPolicyPeer
+			for _, cidr := range append(s.values.NodeNetworkCIDRs, s.values.PodNetworkCIDRs...) {
+				peers = append(peers, networkingv1.NetworkPolicyPeer{
+					IPBlock: &networkingv1.IPBlock{CIDR: cidr.String()},
+				})
+			}
+
+			networkPolicyAllowFromSeed := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud--allow-from-seed",
+					Namespace: metav1.NamespaceSystem,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from the control plane to "+
+							"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootFromSeed,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					},
+				},
+				Spec: networkingv1.NetworkPolicySpec{
+					PodSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootFromSeed: v1beta1constants.LabelNetworkPolicyAllowed},
+					},
+					Ingress:     []networkingv1.NetworkPolicyIngressRule{{From: peers}},
+					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+				},
+			}
+			if err := registry.Add(networkPolicyAllowFromSeed); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	if !s.values.IsWorkerless {
