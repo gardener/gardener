@@ -7,17 +7,18 @@ package cloudprovider
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
-	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
-	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/provider-local/local"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+
+	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
+	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
+	"github.com/gardener/gardener/pkg/provider-local/local"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // NewEnsurer creates cloudprovider ensurer.
@@ -35,7 +36,7 @@ type ensurer struct {
 
 // EnsureCloudProviderSecret ensures that cloudprovider secret contains
 // the shared credentials file.
-func (e *ensurer) EnsureCloudProviderSecret(_ context.Context, _ gcontext.GardenContext, newSecret, _ *corev1.Secret) error {
+func (e *ensurer) EnsureCloudProviderSecret(_ context.Context, _ extensionscontextwebhook.GardenContext, newSecret, _ *corev1.Secret) error {
 	if newSecret.Labels != nil && newSecret.Labels[securityv1alpha1constants.LabelWorkloadIdentityProvider] == local.Type {
 		rawKubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig("mcm",
 			clientcmdv1.Cluster{

@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("workloadIdentityRBACObjects", func() {
@@ -95,9 +94,7 @@ var _ = Describe("workloadIdentityRBACObjects", func() {
 		Expect(emptyClusterRoleBinding(shootNamespace).Name).To(Equal(clusterRoleBinding.Name))
 	})
 
-	It("should return objects implementing client.Object", func() {
-		for _, obj := range workloadIdentityRBACObjects(machineNamespace, shootNamespace, subject) {
-			var _ client.Object = obj
-		}
+	It("should return the Role, RoleBinding, ClusterRole and ClusterRoleBinding", func() {
+		Expect(workloadIdentityRBACObjects(machineNamespace, shootNamespace, subject)).To(HaveLen(4))
 	})
 })
