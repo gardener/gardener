@@ -31,6 +31,7 @@ import (
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -210,6 +211,45 @@ func (b *Builder) WithServiceAccountIssuerHostname(secret *corev1.Secret) *Build
 	return b
 }
 
+var domainMigrationPhases = sets.New(
+	gardencorev1beta1.RotationPreparing,
+	gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+	gardencorev1beta1.RotationWaitingForWorkersRollout,
+	gardencorev1beta1.RotationPrepared,
+)
+
+func priorClusterDomain(shoot *gardencorev1beta1.Shoot, priorAddressName, currentAddressName string, currentDomain *string) *string {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || currentDomain == nil ||
+		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
+		return nil
+	}
+
+	if priorDomain := domainFromAdvertisedAddress(shoot, priorAddressName); priorDomain != nil {
+		return priorDomain
+	}
+
+	// The advertised address holds the domain of the last successful reconciliation, not the one from the spec. It only
+	// differs from the spec in the first reconciliation of a migration, which is the single chance to capture the old
+	// domain. Afterwards the prior address above takes over. The comparison also separates a plain CA rotation, where
+	// both domains are equal, from a CA rotation which migrates the domain.
+	appliedDomain := domainFromAdvertisedAddress(shoot, currentAddressName)
+	if appliedDomain == nil || *appliedDomain == *currentDomain {
+		return nil
+	}
+
+	return appliedDomain
+}
+
+func domainFromAdvertisedAddress(shoot *gardencorev1beta1.Shoot, name string) *string {
+	for _, address := range shoot.Status.AdvertisedAddresses {
+		if address.Name == name {
+			return new(v1beta1helper.GetDomainFromAPIServerURL(address.URL))
+		}
+	}
+
+	return nil
+}
+
 // Build initializes a new Shoot object.
 func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface, gardenReader client.Reader) (*Shoot, error) {
 	shoot := &Shoot{}
@@ -242,6 +282,7 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
 	shoot.InternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
+	shoot.PriorExternalClusterDomain = priorClusterDomain(shootObject, v1beta1constants.AdvertisedAddressPriorExternal, v1beta1constants.AdvertisedAddressExternal, shoot.ExternalClusterDomain)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
 	shoot.WantsAlertmanager = v1beta1helper.ShootWantsAlertManager(shootObject)
 	shoot.WantsVerticalPodAutoscaler = v1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
@@ -264,6 +305,18 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 		return nil, err
 	}
 	shoot.ExternalDomain = externalDomain
+
+	if shoot.PriorExternalClusterDomain != nil {
+		// The prior domain can live in another zone, or it can use other credentials than the new domain.
+		priorShootObject := shootObject.DeepCopy()
+		priorShootObject.Spec.DNS.Domain = shoot.PriorExternalClusterDomain
+
+		priorExternalDomain, err := gardenerutils.ConstructExternalDomain(ctx, gardenReader, priorShootObject, shoot.Credentials, b.defaultDomains)
+		if err != nil {
+			return nil, err
+		}
+		shoot.PriorExternalDomain = priorExternalDomain
+	}
 
 	// Store the Kubernetes version in the format <major>.<minor> on the Shoot object.
 	kubernetesVersion, err := semver.NewVersion(shootObject.Spec.Kubernetes.Version)
@@ -490,6 +543,7 @@ func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWa
 	return []component.DeployMigrateWaiter{
 		s.Components.Extensions.IngressDNSRecord,
 		s.Components.Extensions.ExternalDNSRecord,
+		s.Components.Extensions.PriorExternalDNSRecord,
 		s.Components.Extensions.InternalDNSRecord,
 	}
 }

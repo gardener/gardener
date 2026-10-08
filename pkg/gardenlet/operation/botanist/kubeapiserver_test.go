@@ -291,6 +291,63 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DeployKubeAPIServer", func() {
+		Describe("ServerCertificateConfig", func() {
+			priorExternalClusterDomain := "prior.foo.bar.com"
+
+			DescribeTable("should have the expected server certificate config",
+				func(prepTest func(), expectedConfig kubeapiserver.ServerCertificateConfig) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer.EXPECT().AppendAuthorizationWebhook(gomock.Any(), logr.Discard())
+					kubeAPIServer.EXPECT().GetValues()
+					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+					kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
+					kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
+					kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
+					kubeAPIServer.EXPECT().SetSeedPodNetwork(gomock.Any())
+					kubeAPIServer.EXPECT().SetServerCertificateConfig(expectedConfig)
+					kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+					kubeAPIServer.EXPECT().Deploy(ctx)
+
+					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+				},
+
+				Entry("no domain migration",
+					func() {},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: apiServerNetwork,
+						ExtraDNSNames: []string{
+							controlPlaneNamespace,
+							"api." + internalClusterDomain,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+						},
+					},
+				),
+				Entry("domain migration in progress",
+					func() {
+						botanist.Shoot.PriorExternalClusterDomain = &priorExternalClusterDomain
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: apiServerNetwork,
+						ExtraDNSNames: []string{
+							controlPlaneNamespace,
+							"api." + internalClusterDomain,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+							"prior.foo.bar.com",
+							"api.prior.foo.bar.com",
+						},
+					},
+				),
+			)
+		})
+
 		Describe("SNIConfig", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
