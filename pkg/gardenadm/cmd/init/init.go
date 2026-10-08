@@ -341,7 +341,7 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 // discriminator, since Shoot.IsRestorePhase() also returns true for `gardenadm init` retries with a persisted ShootState.
 // It is exported so that the `gardenadm restore` command can reuse the same graph.
 func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath, priorNodeName string, isRestore bool) (*gardenadmbotanist.GardenadmBotanist, error) {
-	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true)
+	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +457,7 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath, p
 		return nil, flow.Errors(err)
 	}
 
-	bootstrappedBotanist, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true)
+	bootstrappedBotanist, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, true, true)
 	if err != nil {
 		return nil, err
 	}
