@@ -452,6 +452,12 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		if p.values.VPAEnabled {
 			requiredDashboards[commonVpaDashboardsPath] = commonDashboards
 		}
+		if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+			features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+			ignorePaths.Insert("vali")
+		} else {
+			ignorePaths.Insert("victorialogs")
+		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{
 			seedDashboardsPath:   seedDashboards,
@@ -467,6 +473,12 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		}
 		if !p.values.VPAEnabled {
 			ignorePaths.Insert("vpa")
+		}
+		if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+			features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+			ignorePaths.Insert("vali")
+		} else {
+			ignorePaths.Insert("victorialogs")
 		}
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		requiredDashboards = map[string]embed.FS{
@@ -490,6 +502,12 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 			} else {
 				ignorePaths.Insert("ha-vpn")
 			}
+		}
+		if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+			features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+			ignorePaths.Insert("vali")
+		} else {
+			ignorePaths.Insert("victorialogs")
 		}
 	}
 
@@ -525,6 +543,10 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 		}); err != nil {
 			return nil, err
 		}
+	}
+
+	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+		delete(dashboards, "victorialogs-dashboard.json")
 	}
 
 	// this is necessary to prevent hitting configmap size limit.
