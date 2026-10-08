@@ -101,8 +101,10 @@ type Interface interface {
 	RolloutPeerCA(context.Context) error
 	// IsPeerCARolledOut checks if the Etcd resource was annotated with credentials.gardener.cloud/peer-ca-rolled-out.
 	IsPeerCARolledOut(context.Context) (bool, error)
-	// MarkAsPeerCARolloutCompleted annotates the Etcd resources with credentials.gardener.cloud/peer-ca-rolled-out=true.
+	// MarkAsPeerCARolloutCompleted annotates the Etcd resource with credentials.gardener.cloud/peer-ca-rolled-out=true.
 	MarkAsPeerCARolloutCompleted(context.Context) error
+	// UnmarkAsPeerCARolloutCompleted removes the credentials.gardener.cloud/peer-ca-rolled-out annotation from the Etcd resource.
+	UnmarkAsPeerCARolloutCompleted(context.Context) error
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// GetReplicas gets the Replicas field in the Values.
@@ -158,7 +160,6 @@ type Values struct {
 	StorageCapacity             string
 	StorageClassName            *string
 	DefragmentationSchedule     *string
-	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
 	Autoscaling                 AutoscalingConfig
 	RuntimeKubernetesVersion    *semver.Version
 	BackupConfig                *BackupConfig
@@ -1002,6 +1003,20 @@ func (e *etcd) MarkAsPeerCARolloutCompleted(ctx context.Context) error {
 
 	patch := client.MergeFrom(e.etcd.DeepCopy())
 	metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, secretsrotation.AnnotationKeyPeerCARolledOut, "true")
+	return e.client.Patch(ctx, e.etcd, patch)
+}
+
+func (e *etcd) UnmarkAsPeerCARolloutCompleted(ctx context.Context) error {
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if !metav1.HasAnnotation(e.etcd.ObjectMeta, secretsrotation.AnnotationKeyPeerCARolledOut) {
+		return nil
+	}
+
+	patch := client.MergeFrom(e.etcd.DeepCopy())
+	delete(e.etcd.Annotations, secretsrotation.AnnotationKeyPeerCARolledOut)
 	return e.client.Patch(ctx, e.etcd, patch)
 }
 
