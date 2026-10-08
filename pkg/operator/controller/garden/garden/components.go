@@ -1091,7 +1091,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		ingressGatewayValues[0].Labels,
 		ingressGatewayValues[0].Namespace,
 		false,
-		features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInGarden),
+		true,
 	)
 }
 
