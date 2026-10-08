@@ -99,6 +99,7 @@ const (
 	// owner: @ScheererJ
 	// alpha: v1.142.0
 	// beta: v1.149.0
+	// GA: v1.155.0
 	DisableNginxIngressInGarden featuregate.Feature = "DisableNginxIngressInGarden"
 
 	// DisableNginxIngressInSeed disables the deployment of the nginx ingress controller in the Seed cluster
@@ -184,7 +185,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
-	DisableNginxIngressInGarden:    {Default: true, PreRelease: featuregate.Beta},
+	DisableNginxIngressInGarden:    {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
