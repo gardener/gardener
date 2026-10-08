@@ -4191,9 +4191,12 @@ anonymous:
 				It("should properly configure the audit settings with webhook", func() {
 					values.Audit = &apiserver.AuditConfig{
 						Webhook: &apiserver.AuditWebhook{
-							Kubeconfig:   []byte("foo"),
-							BatchMaxSize: new(int32(30)),
-							Version:      new("audit.k8s.io/v1beta1"),
+							Kubeconfig:           []byte("foo"),
+							BatchMaxSize:         new(int32(30)),
+							TruncateEnabled:      new(true),
+							TruncateMaxBatchSize: new(int64(10 * 1024 * 1024)),
+							TruncateMaxEventSize: new(int64(100 * 1024)),
+							Version:              new("audit.k8s.io/v1beta1"),
 						},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -4202,6 +4205,9 @@ anonymous:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--audit-webhook-config-file=/etc/kubernetes/webhook/audit/kubeconfig.yaml",
 						"--audit-webhook-batch-max-size=30",
+						"--audit-webhook-truncate-enabled=true",
+						"--audit-webhook-truncate-max-batch-size=10485760",
+						"--audit-webhook-truncate-max-event-size=102400",
 						"--audit-webhook-version=audit.k8s.io/v1beta1",
 					))
 					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(

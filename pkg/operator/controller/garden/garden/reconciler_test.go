@@ -16,7 +16,9 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	componentapiserver "github.com/gardener/gardener/pkg/component/apiserver"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -40,6 +42,34 @@ var _ = Describe("Reconciler", func() {
 			RuntimeClientSet: fakekubernetes.NewClientSetBuilder().WithClient(runtimeClient).Build(),
 			GardenNamespace:  gardenNamespace,
 		}
+	})
+
+	Describe("#computeAPIServerAuditWebhookConfig", func() {
+		It("should copy configured webhook settings to the component config", func() {
+			webhookEnabled := false
+			maxBatchSize := int64(10 * 1024 * 1024)
+			maxEventSize := int64(100 * 1024)
+			Expect(runtimeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "audit-webhook", Namespace: gardenNamespace},
+				Data:       map[string][]byte{"kubeconfig": []byte("config")},
+			})).To(Succeed())
+
+			config, err := reconciler.computeAPIServerAuditWebhookConfig(ctx, &operatorv1alpha1.AuditWebhook{
+				KubeconfigSecretName: "audit-webhook",
+				BatchMaxSize:         new(int32(2)),
+				TruncateEnabled:      &webhookEnabled,
+				TruncateMaxBatchSize: &maxBatchSize,
+				TruncateMaxEventSize: &maxEventSize,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config).To(Equal(&componentapiserver.AuditWebhook{
+				Kubeconfig:           []byte("config"),
+				BatchMaxSize:         new(int32(2)),
+				TruncateEnabled:      &webhookEnabled,
+				TruncateMaxBatchSize: &maxBatchSize,
+				TruncateMaxEventSize: &maxEventSize,
+			}))
+		})
 	})
 
 	Describe("#generateGlobalObservabilityIngressPassword", func() {

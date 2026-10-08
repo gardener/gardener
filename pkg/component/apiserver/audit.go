@@ -138,6 +138,18 @@ func InjectAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *co
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-batch-max-size=%d", *v))
 	}
 
+	if v := auditConfig.Webhook.TruncateEnabled; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-truncate-enabled=%t", *v))
+	}
+
+	if v := auditConfig.Webhook.TruncateMaxBatchSize; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-truncate-max-batch-size=%d", *v))
+	}
+
+	if v := auditConfig.Webhook.TruncateMaxEventSize; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-truncate-max-event-size=%d", *v))
+	}
+
 	if v := auditConfig.Webhook.Version; v != nil {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--audit-webhook-version="+*v)
 	}

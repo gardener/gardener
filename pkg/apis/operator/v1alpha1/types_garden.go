@@ -401,12 +401,24 @@ type KubeAPIServerConfig struct {
 }
 
 // AuditWebhook contains settings related to an audit webhook configuration.
+// +kubebuilder:validation:XValidation:rule="!has(self.truncateMaxBatchSize) || !has(self.truncateMaxEventSize) || self.truncateMaxBatchSize >= self.truncateMaxEventSize",message="truncateMaxBatchSize must be greater than or equal to truncateMaxEventSize when both are configured"
 type AuditWebhook struct {
 	// BatchMaxSize is the maximum size of a batch.
 	// +kubebuilder:default=30
 	// +kubebuilder:validation:Minimum=1
 	// +optional
 	BatchMaxSize *int32 `json:"batchMaxSize,omitempty"`
+	// TruncateEnabled specifies whether audit event and batch truncation is enabled.
+	// +optional
+	TruncateEnabled *bool `json:"truncateEnabled,omitempty"`
+	// TruncateMaxBatchSize is the maximum size in bytes of a batch sent to the webhook.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	TruncateMaxBatchSize *int64 `json:"truncateMaxBatchSize,omitempty"`
+	// TruncateMaxEventSize is the maximum size in bytes of an audit event sent to the webhook.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	TruncateMaxEventSize *int64 `json:"truncateMaxEventSize,omitempty"`
 	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
 	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
