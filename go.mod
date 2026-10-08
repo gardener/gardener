@@ -46,7 +46,7 @@ require (
 	github.com/perses/perses-operator v0.5.0
 	github.com/perses/spec v0.2.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1
-	github.com/prometheus/blackbox_exporter v0.28.0
+	github.com/prometheus/blackbox_exporter v0.29.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/common v0.72.0
 	github.com/robfig/cron v1.2.0
@@ -218,7 +218,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.29.2 // indirect
+	github.com/google/cel-go v0.30.0 // indirect
 	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
@@ -283,7 +283,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/alertmanager v0.33.1 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
-	github.com/prometheus/exporter-toolkit v0.17.1 // indirect
+	github.com/prometheus/exporter-toolkit v0.20.0 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/prometheus/sigv4 v0.4.1 // indirect
