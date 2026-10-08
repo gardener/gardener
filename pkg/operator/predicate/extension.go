@@ -5,6 +5,7 @@
 package predicate
 
 import (
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -40,6 +41,28 @@ func ExtensionRequirementsChanged() predicate.Predicate {
 			return false
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
+// ExtensionResourcesChanged is a predicate which returns 'true' if the extension object got created, deleted or its resources changed.
+func ExtensionResourcesChanged() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool { return true },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			ext, ok := e.ObjectNew.(*operatorv1alpha1.Extension)
+			if !ok {
+				return false
+			}
+
+			oldExt, ok := e.ObjectOld.(*operatorv1alpha1.Extension)
+			if !ok {
+				return false
+			}
+
+			return !apiequality.Semantic.DeepEqual(ext.Spec.Resources, oldExt.Spec.Resources)
+		},
+		DeleteFunc:  func(event.DeleteEvent) bool { return true },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
 }

@@ -5,14 +5,23 @@
 package garden_test
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 )
 
@@ -120,6 +129,32 @@ var _ = Describe("Add", func() {
 			It("should return false", func() {
 				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
 			})
+		})
+	})
+
+	Describe("#MapToGarden", func() {
+		var (
+			ctx           = context.Background()
+			runtimeClient client.Client
+			reconciler    *Reconciler
+		)
+
+		BeforeEach(func() {
+			runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
+
+			reconciler = &Reconciler{
+				RuntimeClientSet: fakekubernetes.NewClientSetBuilder().WithClient(runtimeClient).Build(),
+			}
+		})
+
+		It("should return no request if no Garden exists", func() {
+			Expect(reconciler.MapToGarden(logr.Discard())(ctx, nil)).To(BeEmpty())
+		})
+
+		It("should return a request with the garden name", func() {
+			Expect(runtimeClient.Create(ctx, &operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).To(Succeed())
+
+			Expect(reconciler.MapToGarden(logr.Discard())(ctx, nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: "garden"}}))
 		})
 	})
 })
