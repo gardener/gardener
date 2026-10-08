@@ -835,9 +835,9 @@ const (
 	// OperatingSystemConfigFilePathCAETCDPeer is a constant for a path to a folder containing the ETCD peer CA.
 	OperatingSystemConfigFilePathCAETCDPeer = "/var/lib/etcd/ca-peer"
 	// OperatingSystemConfigFolderCurrent is a constant for a path to a folder containing the current CA.
-	OperatingSystemConfigFolderCurrent = "/current/"
+	OperatingSystemConfigFolderCurrent = "current"
 	// OperatingSystemConfigFolderOld is a constant for a path to a folder containing the old CA.
-	OperatingSystemConfigFolderOld = "/old/"
+	OperatingSystemConfigFolderOld = "old"
 
 	// FluentBitConfigMapKubernetesFilter is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
 	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"

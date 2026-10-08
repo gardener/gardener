@@ -80,7 +80,7 @@ func (c *filesystemSecretsManagerClient) Create(_ context.Context, obj client.Ob
 
 	path := secretFilePath(secret.Namespace, secret.Name)
 	if exists, err := c.fs.Exists(path); err != nil {
-		return fmt.Errorf("failed checking existence of secret file %s: %w", path, err)
+		return fmt.Errorf("failed checking existence of secret %s: %w", client.ObjectKeyFromObject(secret), err)
 	} else if exists {
 		return apierrors.NewAlreadyExists(corev1.Resource("secrets"), secret.Name)
 	}
@@ -119,7 +119,7 @@ func (c *filesystemSecretsManagerClient) List(_ context.Context, list client.Obj
 
 		secret := &corev1.Secret{}
 		if _, _, err := kubernetes.ShootCodec.UniversalDeserializer().Decode(data, nil, secret); err != nil {
-			return fmt.Errorf("failed decoding secret from %s: %w", entry.Name(), err)
+			return fmt.Errorf("failed decoding secret from file %s: %w", entry.Name(), err)
 		}
 
 		if listOpts.Namespace != "" && secret.Namespace != listOpts.Namespace {
@@ -157,16 +157,16 @@ func (c *filesystemSecretsManagerClient) Patch(_ context.Context, obj client.Obj
 		if errors.Is(err, fs.ErrNotExist) {
 			return apierrors.NewNotFound(corev1.Resource("secrets"), secret.Name)
 		}
-		return fmt.Errorf("failed reading secret file %s for patch: %w", path, err)
+		return fmt.Errorf("failed reading secret %s for patch: %w", client.ObjectKeyFromObject(secret), err)
 	}
 
 	merged, err := applyMergePatch(existingData, patchData)
 	if err != nil {
-		return fmt.Errorf("failed applying merge patch to secret %s/%s: %w", secret.Namespace, secret.Name, err)
+		return fmt.Errorf("failed applying merge patch to secret %s: %w", client.ObjectKeyFromObject(secret), err)
 	}
 
 	if _, _, err := kubernetes.ShootCodec.UniversalDeserializer().Decode(merged, nil, secret); err != nil {
-		return fmt.Errorf("failed decoding merged secret %s/%s: %w", secret.Namespace, secret.Name, err)
+		return fmt.Errorf("failed decoding merged secret %s: %w", client.ObjectKeyFromObject(secret), err)
 	}
 
 	return c.writeSecret(secret)
@@ -183,7 +183,7 @@ func (c *filesystemSecretsManagerClient) Delete(_ context.Context, obj client.Ob
 		if errors.Is(err, fs.ErrNotExist) {
 			return apierrors.NewNotFound(corev1.Resource("secrets"), secret.Name)
 		}
-		return fmt.Errorf("failed deleting secret file %s: %w", path, err)
+		return fmt.Errorf("failed deleting secret %s: %w", client.ObjectKeyFromObject(secret), err)
 	}
 	return nil
 }
@@ -193,7 +193,7 @@ func (c *filesystemSecretsManagerClient) writeSecret(secret *corev1.Secret) erro
 
 	var buf bytes.Buffer
 	if err := encoder.Encode(secret, &buf); err != nil {
-		return fmt.Errorf("failed encoding secret %s/%s: %w", secret.Namespace, secret.Name, err)
+		return fmt.Errorf("failed encoding secret %s: %w", client.ObjectKeyFromObject(secret), err)
 	}
 
 	path := secretFilePath(secret.Namespace, secret.Name)
@@ -204,11 +204,11 @@ func (c *filesystemSecretsManagerClient) writeSecret(secret *corev1.Secret) erro
 	}
 
 	if err := c.fs.WriteFile(tmpPath, buf.Bytes(), 0640); err != nil {
-		return fmt.Errorf("failed writing secret file %s: %w", tmpPath, err)
+		return fmt.Errorf("failed writing secret %s: %w", client.ObjectKeyFromObject(secret), err)
 	}
 
 	if err := c.fs.Rename(tmpPath, path); err != nil {
-		return fmt.Errorf("failed renaming secret file %s to %s: %w", tmpPath, path, err)
+		return fmt.Errorf("failed persisting secret %s: %w", client.ObjectKeyFromObject(secret), err)
 	}
 
 	return nil

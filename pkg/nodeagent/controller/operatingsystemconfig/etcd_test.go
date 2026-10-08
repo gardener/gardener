@@ -6,16 +6,13 @@ package operatingsystemconfig
 
 import (
 	"context"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("etcd", func() {
@@ -80,8 +77,6 @@ var _ = Describe("etcd", func() {
 	})
 
 	Describe("#rawCADataFromOperatingSystemConfig", func() {
-		const caBaseDir = v1beta1constants.OperatingSystemConfigFilePathCAETCD
-
 		inlineFile := func(path, data string) extensionsv1alpha1.File {
 			return extensionsv1alpha1.File{
 				Path: path,
@@ -95,22 +90,22 @@ var _ = Describe("etcd", func() {
 		}
 
 		currentCertPath := func() string {
-			return filepath.Join(caBaseDir+v1beta1constants.OperatingSystemConfigFolderCurrent, secretsutils.DataKeyCertificateCA)
+			return "/var/lib/etcd/ca/current/ca.crt"
 		}
 		currentKeyPath := func() string {
-			return filepath.Join(caBaseDir+v1beta1constants.OperatingSystemConfigFolderCurrent, secretsutils.DataKeyPrivateKeyCA)
+			return "/var/lib/etcd/ca/current/ca.key"
 		}
 		oldCertPath := func() string {
-			return filepath.Join(caBaseDir+v1beta1constants.OperatingSystemConfigFolderOld, secretsutils.DataKeyCertificateCA)
+			return "/var/lib/etcd/ca/old/ca.crt"
 		}
 		oldKeyPath := func() string {
-			return filepath.Join(caBaseDir+v1beta1constants.OperatingSystemConfigFolderOld, secretsutils.DataKeyPrivateKeyCA)
+			return "/var/lib/etcd/ca/old/ca.key"
 		}
 
 		It("should return an error when the current cert is missing", func() {
 			osc := &extensionsv1alpha1.OperatingSystemConfig{}
 
-			_, _, _, _, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, caBaseDir)
+			_, _, _, _, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, "/var/lib/etcd/ca")
 			Expect(err).To(MatchError(ContainSubstring("current ETCD-related CA not found")))
 		})
 
@@ -123,7 +118,7 @@ var _ = Describe("etcd", func() {
 				},
 			}
 
-			_, _, _, _, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, caBaseDir)
+			_, _, _, _, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, "/var/lib/etcd/ca")
 			Expect(err).To(MatchError(ContainSubstring("current ETCD-related CA not found")))
 		})
 
@@ -137,7 +132,7 @@ var _ = Describe("etcd", func() {
 				},
 			}
 
-			currentCert, currentKey, oldCert, oldKey, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, caBaseDir)
+			currentCert, currentKey, oldCert, oldKey, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, "/var/lib/etcd/ca")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(currentCert).To(Equal([]byte("current-cert")))
 			Expect(currentKey).To(Equal([]byte("current-key")))
@@ -157,7 +152,7 @@ var _ = Describe("etcd", func() {
 				},
 			}
 
-			currentCert, currentKey, oldCert, oldKey, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, caBaseDir)
+			currentCert, currentKey, oldCert, oldKey, err := reconciler.rawCADataFromOperatingSystemConfig(ctx, osc, "/var/lib/etcd/ca")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(currentCert).To(Equal([]byte("current-cert")))
 			Expect(currentKey).To(Equal([]byte("current-key")))

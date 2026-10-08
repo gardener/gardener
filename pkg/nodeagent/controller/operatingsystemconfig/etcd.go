@@ -78,8 +78,8 @@ func (r *Reconciler) rawCADataFromOperatingSystemConfig(ctx context.Context, osc
 	err error,
 ) {
 	var (
-		dirCurrent = baseDir + v1beta1constants.OperatingSystemConfigFolderCurrent
-		dirOld     = baseDir + v1beta1constants.OperatingSystemConfigFolderOld
+		dirCurrent = filepath.Join(baseDir, v1beta1constants.OperatingSystemConfigFolderCurrent)
+		dirOld     = filepath.Join(baseDir, v1beta1constants.OperatingSystemConfigFolderOld)
 		found      bool
 	)
 

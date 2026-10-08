@@ -360,12 +360,12 @@ func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []exten
 	filesForCA := func(data map[string][]byte, path string) []extensionsv1alpha1.File {
 		return []extensionsv1alpha1.File{
 			{
-				Path:        path + secretsutils.DataKeyCertificateCA,
+				Path:        filepath.Join(path, secretsutils.DataKeyCertificateCA),
 				Permissions: new(uint32(0600)),
 				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(data[secretsutils.DataKeyCertificateCA])}},
 			},
 			{
-				Path:        path + secretsutils.DataKeyPrivateKeyCA,
+				Path:        filepath.Join(path, secretsutils.DataKeyPrivateKeyCA),
 				Permissions: new(uint32(0600)),
 				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(data[secretsutils.DataKeyPrivateKeyCA])}},
 			},
@@ -380,10 +380,10 @@ func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []exten
 		{name: v1beta1constants.SecretNameCAETCDPeer, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer},
 	} {
 		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
-			files = append(files, filesForCA(secret.Data, ca.basePath+v1beta1constants.OperatingSystemConfigFolderCurrent)...)
+			files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
 		}
 		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
-			files = append(files, filesForCA(secret.Data, ca.basePath+v1beta1constants.OperatingSystemConfigFolderOld)...)
+			files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderOld))...)
 		}
 	}
 

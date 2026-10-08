@@ -1023,7 +1023,7 @@ units: {}
 				caCert := ca.(*secretsutils.Certificate)
 
 				for _, baseDir := range []string{v1beta1constants.OperatingSystemConfigFilePathCAETCD, v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer} {
-					dir := baseDir + v1beta1constants.OperatingSystemConfigFolderCurrent
+					dir := filepath.Join(baseDir, v1beta1constants.OperatingSystemConfigFolderCurrent)
 					operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, []extensionsv1alpha1.File{
 						{Path: filepath.Join(dir, secretsutils.DataKeyCertificateCA), Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(caCert.CertificatePEM)}}},
 						{Path: filepath.Join(dir, secretsutils.DataKeyPrivateKeyCA), Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(caCert.PrivateKeyPEM)}}},
