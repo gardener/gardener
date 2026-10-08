@@ -153,11 +153,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Namespace: shootNamespace,
 				},
 				Spec: core.ShootSpec{
-					Addons: &core.Addons{
-						NginxIngress: &core.NginxIngress{
-							Addon: addon,
-						},
-					},
 					CloudProfileName:  new("test-profile"),
 					Region:            region,
 					SecretBindingName: new("my-secret"),
@@ -654,6 +649,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			DescribeTable("addons validation",
 				func(purpose core.ShootPurpose, kubernetesVersion string, allowed bool) {
 					shootCopy := shoot.DeepCopy()
+					shootCopy.Spec.Addons = &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{Addon: addon}}
 					shootCopy.Spec.Purpose = &purpose
 					shootCopy.Spec.Kubernetes.Version = kubernetesVersion
 
@@ -692,10 +688,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid unsupported addon configuration", func() {
 				shoot.Spec.Kubernetes.Version = "1.34.0"
-				shoot.Spec.Addons.KubernetesDashboard = &core.KubernetesDashboard{
+				shoot.Spec.Addons = &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{
 					Addon:              addon,
 					AuthenticationMode: new("does-not-exist"),
-				}
+				}}
 
 				errorList := ValidateShoot(shoot)
 
@@ -705,8 +701,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid nginx ingress addon if feature gate is set", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+			It("should forbid nginx ingress addon", func() {
 				shoot.Spec.Addons = &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}
 
 				errorList := ValidateShoot(shoot)
@@ -718,8 +713,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid enabling nginx ingress addon if feature gate is set", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+			It("should forbid enabling nginx ingress addon", func() {
 				shoot.Spec.Addons = nil
 
 				newShoot := prepareShootForUpdate(shoot)
@@ -734,8 +728,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should allow disabling nginx ingress addon if feature gate is set", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+			It("should allow disabling nginx ingress addon", func() {
 				shoot.Spec.Addons = &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}
 
 				newShoot := prepareShootForUpdate(shoot)
@@ -744,94 +737,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should allow valid load balancer source ranges for nginx-ingress", func() {
-				shoot.Spec.Addons.NginxIngress.LoadBalancerSourceRanges = []string{"192.168.123.56/32", "2001:db8::/64"}
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should forbid invalid load balancer source ranges for nginx-ingress", func() {
-				shoot.Spec.Addons.NginxIngress.LoadBalancerSourceRanges = []string{"", "invalid-source-range", "192.168.123.56/33", "2001:db.8::/64"}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[0]"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[1]"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[2]"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.addons.nginxIngress.loadBalancerSourceRanges[3]"),
-					})),
-				))
-			})
-
-			It("should allow valid config for nginx-ingress", func() {
-				shoot.Spec.Addons.NginxIngress.Config = map[string]string{"foo": "bar"}
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should forbid invalid config for nginx-ingress", func() {
-				shoot.Spec.Addons.NginxIngress.Config = map[string]string{
-					"$/{}|][":                "1",
-					strings.Repeat("a", 260): "2",
-					"valid-key":              strings.Repeat("b", 1024*1024),
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.addons.nginxIngress.config[$/{}|][]"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.addons.nginxIngress.config[" + strings.Repeat("a", 260) + "]"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeTooLong),
-						"Field": Equal("spec.addons.nginxIngress.config"),
-					})),
-				))
-			})
-
-			It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
-				v := corev1.ServiceExternalTrafficPolicyCluster
-				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should allow external traffic policies 'Local' for nginx-ingress", func() {
-				v := corev1.ServiceExternalTrafficPolicyLocal
-				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should forbid unsupported external traffic policies for nginx-ingress", func() {
-				v := corev1.ServiceExternalTrafficPolicy("something-else")
-				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.addons.nginxIngress.externalTrafficPolicy"),
-				}))))
 			})
 		})
 

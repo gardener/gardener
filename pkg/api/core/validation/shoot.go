@@ -4019,9 +4019,5 @@ func validateCredentialAutoRotationPeriod(rotationPeriod *metav1.Duration, fldPa
 }
 
 func allowNginxIngressAddon(oldAddons *core.Addons) bool {
-	if !features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) {
-		return true
-	}
-
 	return helper.NginxIngressEnabled(oldAddons)
 }
