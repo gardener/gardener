@@ -2050,14 +2050,14 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Addons).To(BeNil())
 		})
 
-		It("should maintain addons without feature gate enabled", func() {
+		It("should maintain addons with feature gate disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, false))
 			result := maintainAddons(shoot)
 			Expect(result).To(BeEmpty())
 			Expect(shoot.Spec.Addons.NginxIngress.Addon.Enabled).To(BeTrue())
 		})
 
 		It("should maintain addons with feature gate enabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
 			result := maintainAddons(shoot)
 			Expect(result).To(ConsistOf(
 				ContainSubstring(".spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator"),
