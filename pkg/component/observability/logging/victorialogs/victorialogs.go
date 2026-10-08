@@ -258,6 +258,7 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 	}
 
 	// Exposing both ports. The http port is left for extension compatibility reasons.
+	// For more information look up constants.VictoriaLogsHttpPort
 	vlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
 		{
 			Name:       "https",

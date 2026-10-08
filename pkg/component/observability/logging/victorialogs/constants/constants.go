@@ -6,7 +6,9 @@ package constants
 
 const (
 	// VictoriaLogsHttpPort is the HTTP port exposed by VictoriaLogs.
-	// TODO(teodordichev): Remove http port when https://github.com/gardener/oidc-apps-controller/issues/203 is fixed
+	// TODO(teodordichev): Remove http port when following issues are resolved:
+	// https://github.com/gardener/oidc-apps-controller/issues/203
+	// https://github.com/perses/perses-operator/pull/495
 	VictoriaLogsHttpPort = 9428
 	// VictoriaLogsPort is the HTTPS port exposed by VictoriaLogs.
 	VictoriaLogsPort = 9429
