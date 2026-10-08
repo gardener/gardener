@@ -45,7 +45,7 @@ func NewVictoriaLogs(
 		return nil, fmt.Errorf("failed parsing image %q from imagevector: %w", imagevector.ContainerImageNameVictoriaLogs, err)
 	}
 
-	deployer := victorialogs.New(c, namespace, victorialogs.Values{
+	deployer := victorialogs.New(c, namespace, sm, victorialogs.Values{
 		ImageRepository:    repository,
 		ImageTag:           tag,
 		Storage:            storage,
@@ -55,7 +55,7 @@ func NewVictoriaLogs(
 		PriorityClassName:  priorityClassName,
 		PVCAutoscaling:     pvcAutoscaling,
 		SecretNameServerCA: secretNameServerCA,
-	}, sm)
+	})
 
 	return deployer, nil
 }

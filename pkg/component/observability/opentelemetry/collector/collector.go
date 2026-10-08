@@ -102,8 +102,8 @@ type Values struct {
 type otelCollector struct {
 	client         client.Client
 	namespace      string
-	values         Values
 	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 // Interface is the interface for the OpenTelemetry Collector deployer.
@@ -117,14 +117,14 @@ type Interface interface {
 func New(
 	client client.Client,
 	namespace string,
-	values Values,
 	secretsManager secretsmanager.Interface,
+	values Values,
 ) Interface {
 	return &otelCollector{
 		client:         client,
 		namespace:      namespace,
-		values:         values,
 		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 

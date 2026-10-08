@@ -83,22 +83,22 @@ type PVCAutoscalingConfig struct {
 type victoriaLogs struct {
 	client         client.Client
 	namespace      string
-	values         Values
 	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 // New creates a new instance of VictoriaLogs deployer.
 func New(
 	client client.Client,
 	namespace string,
-	values Values,
 	secretsManager secretsmanager.Interface,
+	values Values,
 ) component.DeployWaiter {
 	return &victoriaLogs{
 		client:         client,
 		namespace:      namespace,
-		values:         values,
 		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 

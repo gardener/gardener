@@ -83,7 +83,7 @@ var _ = Describe("VictoriaLogs", func() {
 
 		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
-		component = New(c, namespace, values, fakeSecretManager)
+		component = New(c, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 	})
 
@@ -276,7 +276,7 @@ var _ = Describe("VictoriaLogs", func() {
 				"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
 				"sha512:ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff",
 			} {
-				component = New(c, namespace, Values{ImageRepository: imageRepository, ImageTag: digestTag}, fakeSecretManager)
+				component = New(c, namespace, fakeSecretManager, Values{ImageRepository: imageRepository, ImageTag: digestTag})
 				Expect(component.Deploy(ctx)).To(MatchError(ContainSubstring("digest-only image reference")))
 			}
 		})
@@ -334,7 +334,7 @@ var _ = Describe("VictoriaLogs", func() {
 						MaxCapacity: maxCapacity,
 					},
 				}
-				component = New(c, namespace, values, fakeSecretManager)
+				component = New(c, namespace, fakeSecretManager, values)
 
 				Expect(component.Deploy(ctx)).To(Succeed())
 
@@ -360,7 +360,7 @@ var _ = Describe("VictoriaLogs", func() {
 					SecretNameServerCA: "ca",
 					ClusterType:        componentpkg.ClusterTypeSeed,
 				}
-				component = New(c, namespace, values, fakeSecretManager)
+				component = New(c, namespace, fakeSecretManager, values)
 			})
 
 			It("should successfully deploy all resources with seed-specific configuration", func() {
@@ -409,7 +409,7 @@ var _ = Describe("VictoriaLogs", func() {
 						MaxCapacity: resource.MustParse("200Gi"),
 					},
 				}
-				component = New(c, namespace, values, fakeSecretManager)
+				component = New(c, namespace, fakeSecretManager, values)
 			})
 
 			It("should successfully deploy all resources with garden-specific configuration", func() {
@@ -452,7 +452,7 @@ var _ = Describe("VictoriaLogs", func() {
 					SecretNameServerCA: "ca",
 					ClusterType:        componentpkg.ClusterTypeShoot,
 				}
-				component = New(c, namespace, values, fakeSecretManager)
+				component = New(c, namespace, fakeSecretManager, values)
 			})
 
 			It("should successfully deploy all resources with shoot-specific configuration", func() {

@@ -107,7 +107,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			IstioIngressGatewayNamespace: "istio-ingress",
 		}
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
-		component = New(c, namespace, values, fakeSecretManager)
+		component = New(c, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c, comptest.CmpOptsForIstio()...)
 
 		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
@@ -690,7 +690,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "custom-ca-secret", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("custom-ca-bundle")}})).To(Succeed())
 
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			// The main test is that deploy succeeds with a custom CA secret name
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -704,7 +704,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCASeed, Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("seed-ca-bundle")}})).To(Succeed())
 
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			// The main test is that deploy succeeds with the seed CA secret
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -715,7 +715,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		It("should create ingress and kubeRBACProxy resources when ShootNodeLoggingEnabled is false", func() {
 			values.ShootNodeLoggingEnabled = false
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
@@ -745,7 +745,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		It("should remove the logs/vali pipeline when RemoveVali is enabled", func() {
 			values.RemoveVali = true
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
@@ -774,7 +774,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		It("should add the logs/victorialogs pipeline when VictoriaLogsBackend is enabled", func() {
 			values.VictoriaLogsBackend = true
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
@@ -809,7 +809,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		It("should create kubeRBACProxy with insecure listen and no tls volumes when TLS secret is not installed", func() {
 			values.ClusterType = "seed"
 			values.ShootNodeLoggingEnabled = false
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
