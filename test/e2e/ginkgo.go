@@ -52,6 +52,8 @@ func BeforeTestSetup(f func()) {
 }
 
 // CustomJUnitReport registers a ReportAfterSuite node that writes a JUnit XML report to $ARTIFACTS/junit.xml.
+// If $E2E_JUNIT_REPORT_NAME is set, it is used as the file name instead of junit.xml, so that CI jobs running multiple
+// test suites don't overwrite the report of the previous suite.
 // Specs that were interrupted by another parallel Ginkgo process due to --fail-fast are reported as skipped instead of
 // errored, so that only the actual failure (in the other process) is visible in the report.
 // Call this function via a top-level var in your suite file:
@@ -64,6 +66,11 @@ func CustomJUnitReport() bool {
 			return
 		}
 
+		reportName := "junit.xml"
+		if name := os.Getenv("E2E_JUNIT_REPORT_NAME"); name != "" {
+			reportName = name
+		}
+
 		for i, sr := range report.SpecReports {
 			if sr.State == types.SpecStateInterrupted &&
 				strings.Contains(sr.Failure.Message, "Interrupted by Other Ginkgo Process") {
@@ -71,6 +78,6 @@ func CustomJUnitReport() bool {
 			}
 		}
 
-		Expect(reporters.GenerateJUnitReport(report, filepath.Join(artifactsDir, "junit.xml"))).To(Succeed())
+		Expect(reporters.GenerateJUnitReport(report, filepath.Join(artifactsDir, reportName))).To(Succeed())
 	})
 }
