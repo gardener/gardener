@@ -17,12 +17,12 @@ COMMAND="${1:-up}"
 VALID_COMMANDS=("up" "dev" "debug" "down")
 
 skaffold_command="run"
-skaffold_extra_profiles=""
+skaffold_extra_profiles=()
 if [[ "$COMMAND" == "dev" ]]; then
   skaffold_command="dev"
   COMMAND="up"
 elif [[ "$COMMAND" == "debug" ]]; then
-  skaffold_extra_profiles="--profile=debug"
+  skaffold_extra_profiles+=(--profile=debug)
   COMMAND="up"
 fi
 
@@ -40,6 +40,15 @@ fi
 
 # We assume that all nodes of the cluster have the same architecture.
 SYSTEM_ARCH=$(kubectl get nodes -o yaml | yq '.items[0].status.nodeInfo.architecture')
+gardenlet_platform="linux/$SYSTEM_ARCH"
+skaffold_multi_platform_build=()
+
+if [[ "$SCENARIO" == "remote" && ( "$SYSTEM_ARCH" == "amd64" || "$SYSTEM_ARCH" == "arm64" ) ]]; then
+  gardenlet_platform="linux/amd64,linux/arm64"
+  skaffold_extra_profiles+=(--profile="remote-$SYSTEM_ARCH")
+  # Skaffold disables multi-platform builds by default for the interactive dev and debug commands.
+  skaffold_multi_platform_build+=(--disable-multi-platform-build=false)
+fi
 
 case "$COMMAND" in
   up | dev | debug)
@@ -59,10 +68,11 @@ case "$COMMAND" in
 
     skaffold $skaffold_command \
       -m gardenlet \
-      $skaffold_extra_profiles \
+      "${skaffold_extra_profiles[@]}" \
+      "${skaffold_multi_platform_build[@]}" \
       --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" \
       --cache-artifacts="$($(dirname "$0")/get-skaffold-cache-artifacts.sh)" \
-      --status-check=false --platform="linux/$SYSTEM_ARCH" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
+      --status-check=false --platform="$gardenlet_platform" # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold uses the requested architectures, see https://skaffold.dev/docs/workflows/handling-platforms/
     ;;
 
   down)
