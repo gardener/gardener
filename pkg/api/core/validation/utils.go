@@ -471,7 +471,7 @@ func ValidateMachineType(machineType core.MachineType, names sets.Set[string], c
 	return allErrs
 }
 
-// volumeTypeNameMaxLength is the maximum length of a volume type name. It matches the limit that applied when volume
+// volumeTypeNameMaxLength is the maximum length of a volume type name.
 // type names were validated as qualified names.
 const volumeTypeNameMaxLength = 63
 
