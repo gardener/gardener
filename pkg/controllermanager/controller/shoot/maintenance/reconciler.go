@@ -31,7 +31,6 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
@@ -534,7 +533,7 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpda
 }
 
 func maintainAddons(shoot *gardencorev1beta1.Shoot) []string {
-	if !features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) || !v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
+	if !v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
 		return nil
 	}
 

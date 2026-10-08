@@ -99,6 +99,7 @@ const (
 	// owner: @ScheererJ
 	// alpha: v1.142.0
 	// beta: v1.149.0
+	// GA: v1.155.0
 	DisableNginxIngressInGarden featuregate.Feature = "DisableNginxIngressInGarden"
 
 	// DisableNginxIngressInSeed disables the deployment of the nginx ingress controller in the Seed cluster
@@ -106,6 +107,7 @@ const (
 	// owner: @ScheererJ
 	// alpha: v1.142.0
 	// beta: v1.149.0
+	// GA: v1.155.0
 	DisableNginxIngressInSeed featuregate.Feature = "DisableNginxIngressInSeed"
 
 	// DisableNginxIngressInShoot disables the deployment of the nginx ingress controller in the Shoot cluster
@@ -115,6 +117,8 @@ const (
 	// If set for the gardener-controller-manager, the maintenance controller will disable the addon during the next maintenance operation.
 	// owner: @ScheererJ
 	// alpha: v1.142.0
+	// beta: v1.154.0
+	// GA: v1.155.0
 	DisableNginxIngressInShoot featuregate.Feature = "DisableNginxIngressInShoot"
 
 	// LiveControlPlaneMigration enables live migration of Shoot control planes between seeds
@@ -184,9 +188,9 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
-	DisableNginxIngressInGarden:    {Default: true, PreRelease: featuregate.Beta},
-	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
-	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
+	DisableNginxIngressInGarden:    {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	DisableNginxIngressInShoot:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
 	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},

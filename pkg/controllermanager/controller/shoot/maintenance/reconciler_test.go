@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
@@ -2043,21 +2042,14 @@ var _ = Describe("Shoot Maintenance", func() {
 			}
 		})
 
-		It("should maintain addons without addons", func() {
+		It("should maintain empty addons", func() {
 			shoot.Spec.Addons = nil
 			result := maintainAddons(shoot)
 			Expect(result).To(BeEmpty())
 			Expect(shoot.Spec.Addons).To(BeNil())
 		})
 
-		It("should maintain addons without feature gate enabled", func() {
-			result := maintainAddons(shoot)
-			Expect(result).To(BeEmpty())
-			Expect(shoot.Spec.Addons.NginxIngress.Addon.Enabled).To(BeTrue())
-		})
-
-		It("should maintain addons with feature gate enabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.DisableNginxIngressInShoot, true))
+		It("should maintain addons", func() {
 			result := maintainAddons(shoot)
 			Expect(result).To(ConsistOf(
 				ContainSubstring(".spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator"),

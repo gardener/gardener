@@ -1121,7 +1121,7 @@ func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultL
 		istioDefaultLabels,
 		istioDefaultNamespace,
 		seedIsGarden,
-		features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInSeed),
+		true,
 	)
 }
 
