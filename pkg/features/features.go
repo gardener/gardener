@@ -107,6 +107,7 @@ const (
 	// owner: @ScheererJ
 	// alpha: v1.142.0
 	// beta: v1.149.0
+	// GA: v1.155.0
 	DisableNginxIngressInSeed featuregate.Feature = "DisableNginxIngressInSeed"
 
 	// DisableNginxIngressInShoot disables the deployment of the nginx ingress controller in the Shoot cluster
@@ -186,7 +187,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},
 	DisableNginxIngressInGarden:    {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
+	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DisableNginxIngressInShoot:     {Default: false, PreRelease: featuregate.Alpha},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
 	BackupEntryForGarden:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
