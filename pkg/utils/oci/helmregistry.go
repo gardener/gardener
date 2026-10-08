@@ -33,6 +33,9 @@ const (
 // chartsCABundleFunc is an alias for imagevector.ChartsCABundle. Exposed for testing purposes.
 var chartsCABundleFunc = imagevector.ChartsCABundle
 
+// systemCertPoolFunc is an alias for x509.SystemCertPool. Exposed for testing purposes.
+var systemCertPoolFunc = x509.SystemCertPool
+
 type secretNamespace struct{}
 
 var (
@@ -83,7 +86,9 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		}
 	}
 
-	// Configure custom transport with CA bundle if provided
+	// Configure custom transport with CA bundle if provided. The custom CAs are appended on top of the system trust
+	// store (not used as a replacement) so that charts referenced by public registries (e.g. europe-docker.pkg.dev)
+	// still verify while a private/self-signed registry CA is also trusted.
 	var caCertPool *x509.CertPool
 	if oci.CABundleSecretRef != nil {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: secretNamespace, Name: oci.CABundleSecretRef.Name}}
@@ -98,7 +103,10 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 			return nil, fmt.Errorf("CA bundle secret %s has empty data for key %s", client.ObjectKeyFromObject(secret), secretsutils.DataKeyCertificateBundle)
 		}
 
-		caCertPool = x509.NewCertPool()
+		caCertPool, err = systemCertPoolFunc()
+		if err != nil {
+			return nil, fmt.Errorf("failed loading system cert pool: %w", err)
+		}
 		if !caCertPool.AppendCertsFromPEM(caBundle) {
 			return nil, errors.New("failed to append CA certificates from bundle")
 		}
@@ -106,7 +114,10 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 
 	if chartsCABundle := chartsCABundleFunc(); chartsCABundle != nil && chartsCABundle.Inline != nil {
 		if caCertPool == nil {
-			caCertPool = x509.NewCertPool()
+			caCertPool, err = systemCertPoolFunc()
+			if err != nil {
+				return nil, fmt.Errorf("failed loading system cert pool: %w", err)
+			}
 		}
 		if !caCertPool.AppendCertsFromPEM([]byte(*chartsCABundle.Inline)) {
 			return nil, errors.New("failed to append CA certificates from charts image vector bundle")

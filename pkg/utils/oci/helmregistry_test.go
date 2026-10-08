@@ -6,6 +6,7 @@ package oci
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"net"
@@ -327,6 +328,36 @@ var _ = Describe("helmregistry", func() {
 			Tag:        new("0.1.0"),
 		})
 		Expect(err).To(MatchError("failed to append CA certificates from charts image vector bundle"))
+	})
+
+	It("should append the custom CA bundle onto the system trust store rather than replacing it", func() {
+		// Regression guard for the x509 unknown-authority failure: the custom CA bundle must be ADDED to the system
+		// roots, not used as a replacement. We seed the (overridable) system pool with the registry's real CA and
+		// supply a WRONG charts bundle. With append semantics the registry's CA survives, so the pull succeeds. With
+		// the old replace semantics the pool would hold only the wrong CA and the pull would fail with x509.
+		systemPool := x509.NewCertPool()
+		Expect(systemPool.AppendCertsFromPEM(testCACert)).To(BeTrue())
+		DeferCleanup(test.WithVar(&systemCertPoolFunc, func() (*x509.CertPool, error) {
+			return systemPool.Clone(), nil
+		}))
+
+		wrongCA, err := (&secretsutils.CertificateSecretConfig{
+			Name:        "wrong-ca",
+			CommonName:  "WrongCA",
+			CertType:    secretsutils.CACert,
+			IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		}).GenerateCertificate()
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
+			return &imagevectorutils.CABundle{Inline: new(string(wrongCA.SecretData()[secretsutils.DataKeyCertificateCA]))}
+		}))
+
+		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository: new(registryAddress + "/charts/example"),
+			Tag:        new("0.1.0"),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
 	})
 })
 
