@@ -132,19 +132,12 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, infrastructure.Spec.SecretRef)
-	if err != nil {
-		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
-	}
-
-	if err := kubernetesutils.DeleteObjects(ctx, providerClient,
+	if err := kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
 		namespace(cluster.Shoot.Status.TechnicalID),
 	); err != nil {
 		return err
 	}
 
-	// The workload identity Role/RoleBinding live in the machine namespace and are removed by the namespace deletion
-	// above. Only the cluster-scoped ClusterRole/ClusterRoleBinding must be cleaned up explicitly.
 	return kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
 		emptyClusterRole(infrastructure.Namespace),
 		emptyClusterRoleBinding(infrastructure.Namespace),
