@@ -66,7 +66,7 @@ func NewTestContext() *TestContext {
 
 // Init initializes the garden clients of the TestContext. It panics if the initialization fails and should be called in
 // a setup node like BeforeAll, not during tree construction.
-func (t *TestContext) Init() *TestContext {
+func (t *TestContext) Init() {
 	gardenScheme := kubernetes.GardenScheme
 	utilruntime.Must(operatorv1alpha1.AddToScheme(gardenScheme))
 	utilruntime.Must(resourcesv1alpha1.AddToScheme(gardenScheme))
@@ -86,8 +86,6 @@ func (t *TestContext) Init() *TestContext {
 	t.GardenClientSet = gardenClientSet
 	t.GardenClient = gardenClientSet.Client()
 	t.GardenKomega = komega.New(t.GardenClient)
-
-	return t
 }
 
 // ShootContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
@@ -137,12 +135,6 @@ func NewShootContext(shoot *gardencorev1beta1.Shoot) *ShootContext {
 	return (&ShootContext{TestContext: *NewTestContext(), SeedContext: &SeedContext{}}).SetShoot(shoot)
 }
 
-// Init initializes the garden clients of the ShootContext, see TestContext.Init.
-func (t *ShootContext) Init() *ShootContext {
-	t.TestContext.Init()
-	return t
-}
-
 // SetShoot sets the Shoot of the ShootContext and adds it to the logger.
 func (t *ShootContext) SetShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
 	t.Shoot = shoot
@@ -183,12 +175,6 @@ func NewProjectContext() *ProjectContext {
 	return &ProjectContext{TestContext: *NewTestContext()}
 }
 
-// Init initializes the garden clients of the ProjectContext, see TestContext.Init.
-func (t *ProjectContext) Init() *ProjectContext {
-	t.TestContext.Init()
-	return t
-}
-
 // SetProject sets the Project of the ProjectContext and adds it to the logger.
 func (t *ProjectContext) SetProject(project *gardencorev1beta1.Project) *ProjectContext {
 	t.Project = project
@@ -225,12 +211,6 @@ type GardenContext struct {
 // node by calling Init, followed by SetGarden.
 func NewGardenContext() *GardenContext {
 	return &GardenContext{TestContext: *NewTestContext()}
-}
-
-// Init initializes the garden clients of the GardenContext, see TestContext.Init.
-func (t *GardenContext) Init() *GardenContext {
-	t.TestContext.Init()
-	return t
 }
 
 // SetGarden sets the Garden of the GardenContext and adds it to the logger.
@@ -285,12 +265,6 @@ func NewSeedContext() *SeedContext {
 	return &SeedContext{TestContext: *NewTestContext()}
 }
 
-// Init initializes the garden clients of the SeedContext, see TestContext.Init.
-func (t *SeedContext) Init() *SeedContext {
-	t.TestContext.Init()
-	return t
-}
-
 // SetSeed sets the Seed of the SeedContext and adds it to the logger.
 func (t *SeedContext) SetSeed(seed *gardencorev1beta1.Seed) *SeedContext {
 	t.Seed = seed
@@ -336,12 +310,6 @@ func NewManagedSeedContext() *ManagedSeedContext {
 		ShootContext: &ShootContext{},
 		SeedContext:  &SeedContext{},
 	}
-}
-
-// Init initializes the garden clients of the ManagedSeedContext, see TestContext.Init.
-func (t *ManagedSeedContext) Init() *ManagedSeedContext {
-	t.TestContext.Init()
-	return t
 }
 
 // SetManagedSeed sets the ManagedSeed of the ManagedSeedContext and derives the ShootContext and SeedContext from it.
