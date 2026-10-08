@@ -855,6 +855,7 @@ build:
                 kubectl --kubeconfig="$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden patch gardenlet self-hosted-shoot-root --type=merge -p "$(jq -n \
                   --arg image "$SKAFFOLD_IMAGE" \
                   --arg imagevector_overwrite "$(cat ./dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml)" \
+                  --arg charts_imagevector_overwrite "$(cat ./dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml)" \
                   '{
                     spec: {
                       deployment: {
@@ -864,6 +865,7 @@ build:
                           }
                         },
                         imageVectorOverwrite: $imagevector_overwrite,
+                        chartsImageVectorOverwrite: $charts_imagevector_overwrite,
                       }
                     }
                   }'

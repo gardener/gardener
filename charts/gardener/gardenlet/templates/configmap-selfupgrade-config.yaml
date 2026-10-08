@@ -31,6 +31,10 @@ data:
         componentImageVectorOverwrite: |
           {{- .Values.componentImageVectorOverwrite | nindent 10 }}
         {{- end }}
+        {{- if .Values.chartsImageVectorOverwrite }}
+        chartsImageVectorOverwrite: |
+          {{- .Values.chartsImageVectorOverwrite | nindent 10 }}
+        {{- end }}
         replicaCount: {{ .Values.replicaCount }}
         {{- if .Values.revisionHistoryLimit }}
         revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
