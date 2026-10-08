@@ -33,8 +33,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | PrometheusHealthChecks         | `false` | `Alpha` | `1.135` |         |
 | RemoveVali                     | `false` | `Alpha` | `1.140` |         |
 | VersionClassificationLifecycle | `false` | `Alpha` | `1.137` |         |
-| DisableNginxIngressInShoot     | `false` | `Alpha` | `1.142` | `1.153` |
-| DisableNginxIngressInShoot     | `true`  | `Beta`  | `1.154` |         |
 | LiveControlPlaneMigration      | `false` | `Alpha` | `1.142` |         |
 | RemoveHTTPProxyLegacyPort      | `false` | `Alpha` | `1.148` | `1.153` |
 | RemoveHTTPProxyLegacyPort      | `true`  | `Beta`  | `1.154` |         |
@@ -242,6 +240,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableNginxIngressInSeed                    | `false` | `Alpha`      | `1.142` | `1.148` |
 | DisableNginxIngressInSeed                    | `true`  | `Beta`       | `1.149` | `1.154` |
 | DisableNginxIngressInSeed                    | `true`  | `GA`         | `1.155` |         |
+| DisableNginxIngressInShoot                   | `false` | `Alpha`      | `1.142` | `1.153` |
+| DisableNginxIngressInShoot                   | `true`  | `Beta`       | `1.154` | `1.154` |
+| DisableNginxIngressInShoot                   | `true`  | `GA`         | `1.155` |         |
 
 ## Using a Feature
 
