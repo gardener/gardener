@@ -34,7 +34,10 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
@@ -61,6 +64,8 @@ type Values struct {
 	PriorityClassName string
 	// PVCAutoscaler configures whether and how the VictoriaLogs PVC is autoscaled.
 	PVCAutoscaling PVCAutoscalingConfig
+	// SecretNameServerCA is the name of the CA secret used to sign the server TLS cert.
+	SecretNameServerCA string
 }
 
 // PVCAutoscalingConfig configures whether and up to what capacity the VictoriaLogs PVC is autoscaled.
@@ -72,9 +77,10 @@ type PVCAutoscalingConfig struct {
 }
 
 type victoriaLogs struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	values         Values
+	secretsManager secretsmanager.Interface
 }
 
 // New creates a new instance of VictoriaLogs deployer.
@@ -82,11 +88,13 @@ func New(
 	client client.Client,
 	namespace string,
 	values Values,
+	secretsManager secretsmanager.Interface,
 ) component.DeployWaiter {
 	return &victoriaLogs{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		values:         values,
+		secretsManager: secretsManager,
 	}
 }
 
@@ -104,6 +112,21 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
+	if v.values.SecretNameServerCA == "" {
+		return fmt.Errorf("secretNameServerCA must be set")
+	}
+
+	serverTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        "victoria-logs-server-tls",
+		CommonName:                  kubernetesutils.FQDNForService(constants.ServiceName, v.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(constants.ServiceName, v.namespace),
+		CertType:                    secrets.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA))
+	if err != nil {
+		return fmt.Errorf("failed to generate victoria-logs-server-tls secret: %w", err)
+	}
 
 	resources := []client.Object{
 		v.vlSingle(),

@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewVictoriaLogs returns new VictoriaLogs deployer.
@@ -27,6 +28,8 @@ func NewVictoriaLogs(
 	storage *resource.Quantity,
 	isGardenCluster bool,
 	pvcAutoscaling victorialogs.PVCAutoscalingConfig,
+	sm secretsmanager.Interface,
+	secretNameServerCA string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -43,15 +46,16 @@ func NewVictoriaLogs(
 	}
 
 	deployer := victorialogs.New(c, namespace, victorialogs.Values{
-		ImageRepository:   repository,
-		ImageTag:          tag,
-		Storage:           storage,
-		IsGardenCluster:   isGardenCluster,
-		ClusterType:       clusterType,
-		Replicas:          replicas,
-		PriorityClassName: priorityClassName,
-		PVCAutoscaling:    pvcAutoscaling,
-	})
+		ImageRepository:    repository,
+		ImageTag:           tag,
+		Storage:            storage,
+		IsGardenCluster:    isGardenCluster,
+		ClusterType:        clusterType,
+		Replicas:           replicas,
+		PriorityClassName:  priorityClassName,
+		PVCAutoscaling:     pvcAutoscaling,
+		SecretNameServerCA: secretNameServerCA,
+	}, sm)
 
 	return deployer, nil
 }
