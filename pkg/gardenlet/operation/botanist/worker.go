@@ -238,7 +238,9 @@ var (
 
 func getTimeoutWaitOperatingSystemConfigUpdated(shoot *shootpkg.Shoot) time.Duration {
 	reconciliationTimeout := controllerutils.DefaultReconciliationTimeout
-	if shoot.IsSelfHosted() && !shoot.HasManagedInfrastructure() {
+	// In self-hosted shoots, the control plane runs as static pods on the nodes. Rolling them out (e.g., switching from
+	// the bootstrap etcd to etcd-main) restarts kube-apiserver and can take several minutes.
+	if shoot.IsSelfHosted() {
 		reconciliationTimeout = 10 * time.Minute
 	}
 	return shoot.OSCSyncJitterPeriod.Duration + reconciliationTimeout
