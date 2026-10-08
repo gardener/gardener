@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/test/e2e/gardenadm"
 )
 
 var _ = Describe("gardenadm unmanaged infrastructure control plane restoration test", Label("gardenadm", "unmanaged-infra", "restore"), func() {
@@ -32,16 +33,13 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 		var (
 			log = logf.Log.WithName("test")
 
-			shootClientSet                   kubernetes.Interface
-			gardenClientSet                  kubernetes.Interface
-			shootClusterKubeconfigPathOnHost = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "self-hosted-shoot", "kubeconfig")
+			shootClientSet  kubernetes.Interface
+			gardenClientSet kubernetes.Interface
 
 			shootNamespace        = "garden"
 			shootName             = "root"
 			controlPlaneNamespace = "kube-system"
 
-			// gardenKubeconfigPathOnHost is the virtual garden kubeconfig on the host; it is copied onto the node.
-			gardenKubeconfigPathOnHost = filepath.Join("..", "..", "..", "dev-setup", "kubeconfigs", "virtual-garden", "kubeconfig")
 			// gardenKubeconfigPathOnNode is where that kubeconfig is placed on the node for 'gardenadm discover existing'.
 			gardenKubeconfigPathOnNode = "/virtual-garden-kubeconfig"
 			// configDirOnNode holds the discovered resources consumed by 'gardenadm restore -d'.
@@ -52,16 +50,12 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			backupDataPathOnNode string
 		)
 
-		It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
-			initClientSet(ctx, &shootClientSet, shootClusterKubeconfigPathOnHost, client.Options{Scheme: kubernetes.SeedScheme})
-		}, SpecTimeout(time.Minute))
+		gardenadm.ItShouldCreateShootClient(&shootClientSet)
+		gardenadm.ItShouldCreateGardenClient(&gardenClientSet)
 
 		It("should ensure the self-hosted shoot is connected and a ShootState exists", func(ctx SpecContext) {
 			// Idempotent: skip if a ShootState already exists, otherwise connect the shoot and drive its creation.
 			// 'gardenadm discover existing' (run after the disaster) needs the Shoot and ShootState in the garden.
-			By("Create a client for the garden cluster")
-			initClientSet(ctx, &gardenClientSet, gardenKubeconfigPathOnHost, client.Options{Scheme: kubernetes.GardenScheme})
-
 			shootState := &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
 			if err := gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err == nil {
 				log.Info("ShootState already exists, skipping connect", "shootState", client.ObjectKeyFromObject(shootState))
@@ -70,15 +64,15 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 
 			By("Copy the garden cluster kubeconfig onto the node")
 			Eventually(ctx, func() error {
-				_, _, err := dockerCommand(ctx, "cp", gardenKubeconfigPathOnHost, machineContainerName(0)+":"+gardenKubeconfigPathOnNode)
+				_, _, err := dockerCommand(ctx, "cp", gardenadm.GardenClusterKubeconfigPathOnHost, machineContainerName(0)+":"+gardenKubeconfigPathOnNode)
 				return err
 			}).Should(Succeed())
 
 			By("Connect the self-hosted shoot to Gardener")
-			stdOut, _, err := execute(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenKubeconfigPathOnNode, shootNamespace, shootName))
+			stdOut, _, err := RunInMachine(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenKubeconfigPathOnNode, shootNamespace, shootName))
 			Expect(err).NotTo(HaveOccurred())
 			connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
-			stdOut, _, err = execute(ctx, 0, append(connectCommand, "--log-level=debug")...)
+			stdOut, _, err = RunInMachine(ctx, 0, append(connectCommand, "--log-level=debug")...)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 
@@ -131,7 +125,7 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			// static Pod, so the endpoint is reachable via localhost. The request blocks until the delta is uploaded.
 			By("Send an HTTP request for a delta snapshot")
 			Eventually(ctx, func() error {
-				_, _, err := execute(ctx, 0, "curl", "-sk", "--fail", "https://localhost:8080/snapshot/delta")
+				_, _, err := RunInMachine(ctx, 0, "curl", "-sk", "--fail", "https://localhost:8080/snapshot/delta")
 				return err
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
@@ -158,13 +152,13 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			// 'gardenadm discover existing' to download the resources (Shoot, ShootState, BackupBucket, BackupEntry,
 			// CloudProfile, ...) that 'gardenadm restore' consumes.
 			By("Copy the virtual garden kubeconfig onto the recreated node")
-			_, _, err := dockerCommand(ctx, "cp", gardenKubeconfigPathOnHost, machineContainerName(0)+":"+gardenKubeconfigPathOnNode)
+			_, _, err := dockerCommand(ctx, "cp", gardenadm.GardenClusterKubeconfigPathOnHost, machineContainerName(0)+":"+gardenKubeconfigPathOnNode)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Run gardenadm discover existing")
-			_, _, err = execute(ctx, 0, "mkdir", "-p", configDirOnNode)
+			_, _, err = RunInMachine(ctx, 0, "mkdir", "-p", configDirOnNode)
 			Expect(err).NotTo(HaveOccurred())
-			_, _, err = execute(ctx, 0, "gardenadm", "discover", "existing",
+			_, _, err = RunInMachine(ctx, 0, "gardenadm", "discover", "existing",
 				"--name", shootName,
 				"--namespace", shootNamespace,
 				"--kubeconfig", gardenKubeconfigPathOnNode,
@@ -173,11 +167,11 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Remove the self-hosted shoot lease that must not be restored")
-			_, _, err = execute(ctx, 0, "rm", "-f", configDirOnNode+"/lease-self-hosted-shoot-"+shootName+".yaml")
+			_, _, err = RunInMachine(ctx, 0, "rm", "-f", configDirOnNode+"/lease-self-hosted-shoot-"+shootName+".yaml")
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Verify 'gardenadm discover existing' exported the resources needed for restore")
-			stdOut, _, err := execute(ctx, 0, "ls", configDirOnNode)
+			stdOut, _, err := RunInMachine(ctx, 0, "ls", configDirOnNode)
 			Expect(err).NotTo(HaveOccurred())
 			discoveredFiles := string(stdOut.Contents())
 			for _, kind := range []string{"backupbucket", "backupentry", "shoot", "shootstate"} {
@@ -221,7 +215,7 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			Expect(backupDataPathOnNode).NotTo(BeEmpty(), "backup data must have been copied onto the node")
 
 			By("Run gardenadm restore")
-			stdOut, _, err := execute(ctx, 0, "gardenadm", "restore",
+			stdOut, _, err := RunInMachine(ctx, 0, "gardenadm", "restore",
 				"-d", configDirOnNode,
 				"--prior-node-name="+machineContainerName(0),
 				"--backup-data-path="+backupDataPathOnNode,

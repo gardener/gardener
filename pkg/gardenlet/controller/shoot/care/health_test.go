@@ -120,11 +120,26 @@ var _ = Describe("health check", func() {
 					},
 				},
 			}
+			selfHostedShoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{Name: "control-plane", ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}},
+					},
+				},
+			}
+			managedInfraSelfHostedShoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					CredentialsBindingName: new("test-binding"),
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{Name: "control-plane", ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}},
+					},
+				},
+			}
 		)
 
-		tests := func(shoot *gardencorev1beta1.Shoot, names []any, isWorkerless bool) {
+		tests := func(shoot *gardencorev1beta1.Shoot, names []any, expectVPADeployments bool) {
 			It("should return expected deployments for shoot", func() {
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot, false)
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shoot)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
@@ -132,7 +147,7 @@ var _ = Describe("health check", func() {
 
 			It("should return expected deployments for shoot with VPA", func() {
 				expectedDeploymentNames := names
-				if !isWorkerless {
+				if expectVPADeployments {
 					expectedDeploymentNames = append(expectedDeploymentNames, "vpa-admission-controller", "vpa-recommender", "vpa-updater")
 				}
 
@@ -143,37 +158,19 @@ var _ = Describe("health check", func() {
 					},
 				}
 
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithVPA, false)
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithVPA)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(expectedDeploymentNames...))
 			})
-
-			It("should not include VPA deployments when shoot is garden", func() {
-				if isWorkerless {
-					return
-				}
-
-				shootWithVPA := shoot.DeepCopy()
-				shootWithVPA.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
-						Enabled: true,
-					},
-				}
-
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithVPA, true)
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(deploymentNames.UnsortedList()).To(ConsistOf(names...))
-			})
 		}
 
 		Context("shoot without managed infrastructure", func() {
-			tests(shoot, baseWorkerDeploymentNames, false)
+			tests(shoot, baseWorkerDeploymentNames, true)
 		})
 
 		Context("shoot with managed infrastructure", func() {
-			tests(managedInfraShoot, managedInfraDeploymentNames, false)
+			tests(managedInfraShoot, managedInfraDeploymentNames, true)
 
 			It("should include cluster-autoscaler when workers have maximum > 0", func() {
 				shootWithCA := managedInfraShoot.DeepCopy()
@@ -181,7 +178,7 @@ var _ = Describe("health check", func() {
 					{Name: "worker", Minimum: 0, Maximum: 1},
 				}
 
-				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithCA, false)
+				deploymentNames, err := ComputeRequiredControlPlaneDeployments(shootWithCA)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(deploymentNames.UnsortedList()).To(ConsistOf(
@@ -190,7 +187,15 @@ var _ = Describe("health check", func() {
 		})
 
 		Context("workerless shoot", func() {
-			tests(workerlessShoot, workerlessDeploymentNames, true)
+			tests(workerlessShoot, workerlessDeploymentNames, false)
+		})
+
+		Context("self-hosted shoot without managed infrastructure", func() {
+			tests(selfHostedShoot, baseWorkerDeploymentNames, false)
+		})
+
+		Context("self-hosted shoot with managed infrastructure", func() {
+			tests(managedInfraSelfHostedShoot, managedInfraDeploymentNames, false)
 		})
 	})
 

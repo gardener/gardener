@@ -44,9 +44,6 @@ case "$COMMAND" in
         --kubeconfig-output "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" \
         ${GARDENADM_BOOTSTRAP_FLAGS}
 
-    cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig"
-    cp "$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-local/kubeconfig/kubeconfig"
-
     # Deploy Gardener into the self-hosted shoot and run `gardenadm connect` to deploy gardenlet which registers the Shoot
     if (( level >= 2 )); then
       make gardenadm-up SCENARIO=connect # deploys gardener-operator, the 'Garden' resource, and waits for reconciliation
@@ -66,7 +63,7 @@ case "$COMMAND" in
     ;;
 
   down)
-    if kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" -n garden get managedseed root &>/dev/null; then
+    if kubectl --kubeconfig "$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER" --request-timeout 1s -n garden get managedseed root &>/dev/null; then
       make seed-down KUBECONFIG="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER"
     fi
 
