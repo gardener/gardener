@@ -953,6 +953,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (comp
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		false,
 		false,
+		nil, // Node CIDRs are only needed for self-hosted shoots, for which the seed reconciliation flow skips druid deployment.
 	)
 }
 

@@ -63,12 +63,12 @@ func liveMigrationEtcdMemberName(seedName, role string, ordinal int) string {
 
 // ComputeMemberPeerURLs returns the cross-seed peer URLs for the etcd members of the given seed and role.
 // Each member is reachable via its SNI hostname on the seed's Istio ingress gateway.
-func ComputeMemberPeerURLs(seedName, shootNamespace, ingressDomain, role string, replicas int32) []druidcorev1alpha1.MemberPeerURLs {
-	memberPeerURLs := make([]druidcorev1alpha1.MemberPeerURLs, 0, replicas)
+func ComputeMemberPeerURLs(seedName, shootNamespace, ingressDomain, role string, replicas int32) []druidcorev1alpha1.MemberURLs {
+	memberPeerURLs := make([]druidcorev1alpha1.MemberURLs, 0, replicas)
 	for i := 0; i < int(replicas); i++ {
-		memberPeerURLs = append(memberPeerURLs, druidcorev1alpha1.MemberPeerURLs{
-			MemberName: liveMigrationEtcdMemberName(seedName, role, i),
-			URLs:       []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, i), etcdconstants.PortEtcdPeerExternal+int32(i))}, // #nosec G115 -- Port constants are positive values well within int32 range.
+		memberPeerURLs = append(memberPeerURLs, druidcorev1alpha1.MemberURLs{
+			Name: liveMigrationEtcdMemberName(seedName, role, i),
+			URLs: []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, i), etcdconstants.PortEtcdPeerExternal+int32(i))}, // #nosec G115 -- Port constants are positive values well within int32 range.
 		})
 	}
 	return memberPeerURLs
@@ -217,7 +217,7 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 		sourcePeerURLs := ComputeMemberPeerURLs(sourceSeedName, shootNamespace, sourceIngressDomain, role, replicas)
 		members := make([]druidcorev1alpha1.BootstrapExistingMember, 0, len(sourcePeerURLs))
 		for _, m := range sourcePeerURLs {
-			members = append(members, druidcorev1alpha1.BootstrapExistingMember{Name: m.MemberName, PeerURLs: m.URLs})
+			members = append(members, druidcorev1alpha1.BootstrapExistingMember{Name: m.Name, PeerURLs: m.URLs})
 		}
 
 		values.LiveMigration = &etcd.LiveMigrationValues{

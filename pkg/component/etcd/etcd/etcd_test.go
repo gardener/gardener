@@ -1071,9 +1071,9 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should set spec.etcd.additionalAdvertisePeerURLs from the values", func() {
-			additionalPeerURLs := []druidcorev1alpha1.MemberPeerURLs{
-				{MemberName: "src-etcd-main-0", URLs: []string{"https://src-etcd-main-0.example.com:2380"}},
-				{MemberName: "src-etcd-main-1", URLs: []string{"https://src-etcd-main-1.example.com:2380"}},
+			additionalPeerURLs := []druidcorev1alpha1.MemberURLs{
+				{Name: "src-etcd-main-0", URLs: []string{"https://src-etcd-main-0.example.com:2380"}},
+				{Name: "src-etcd-main-1", URLs: []string{"https://src-etcd-main-1.example.com:2380"}},
 			}
 
 			etcd = New(log, c, testNamespace, sm, Values{
@@ -1096,7 +1096,9 @@ var _ = Describe("Etcd", func() {
 
 			actual := &druidcorev1alpha1.Etcd{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
-			Expect(actual.Spec.Etcd.AdditionalAdvertisePeerURLs).To(Equal(additionalPeerURLs))
+			Expect(actual.Spec.Etcd.AdditionalAdvertisedURLs).To(Equal(&druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+				PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{Members: additionalPeerURLs},
+			}))
 		})
 
 		It("should set spec.etcd.bootstrapWithExistingCluster when the Etcd resource does not yet exist", func() {

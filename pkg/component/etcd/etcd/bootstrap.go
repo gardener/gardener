@@ -38,6 +38,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -80,6 +81,10 @@ const (
 	druidConfigMapOperatorConfigDataKey          = "config.yaml"
 	druidDeploymentVolumeMountPathOperatorConfig = "/operator_config"
 	druidDeploymentVolumeNameOperatorConfig      = "operator-config"
+
+	// staticEtcdEgressNetworkPolicyName is the name of the NetworkPolicy allowing etcd-druid egress to the static etcd
+	// pods in self-hosted shoot clusters.
+	staticEtcdEgressNetworkPolicyName = "egress-from-etcd-druid-to-static-etcd"
 )
 
 var druidConfigEncoder runtime.Encoder
@@ -107,6 +112,7 @@ func NewBootstrapper(
 	priorityClassName string,
 	clusterIsGarden bool,
 	clusterIsSelfHostedShoot bool,
+	nodeCIDRs []string,
 ) component.DeployWaiter {
 	return &bootstrapper{
 		client:                   c,
@@ -119,6 +125,7 @@ func NewBootstrapper(
 		priorityClassName:        priorityClassName,
 		clusterIsGarden:          clusterIsGarden,
 		clusterIsSelfHostedShoot: clusterIsSelfHostedShoot,
+		nodeCIDRs:                nodeCIDRs,
 	}
 }
 
@@ -133,9 +140,14 @@ type bootstrapper struct {
 	priorityClassName        string
 	clusterIsGarden          bool
 	clusterIsSelfHostedShoot bool
+	nodeCIDRs                []string
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
+	if b.clusterIsSelfHostedShoot && len(b.nodeCIDRs) == 0 {
+		return errors.New("node CIDRs are required for the etcd-druid network policy in self-hosted shoot clusters")
+	}
+
 	caSecret, found := b.secretsManager.Get(b.secretNameServerCA)
 	if !found {
 		return fmt.Errorf("secret %q not found", b.secretNameServerCA)
@@ -177,10 +189,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		deployment.Spec.Template.Labels["networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080"] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
-	if b.clusterIsSelfHostedShoot {
-		deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
-	}
-
 	resourcesToAdd := []client.Object{
 		operatorConfigConfigMap,
 		serviceAccount,
@@ -191,6 +199,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		validatingWebhookConfiguration,
 		service,
 		podDisruptionBudget,
+	}
+
+	if b.clusterIsSelfHostedShoot {
+		deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
+		resourcesToAdd = append(resourcesToAdd, b.getNetworkPolicyForSelfHostedShoot())
 	}
 
 	if b.imageVectorOverwrite != nil {
@@ -525,6 +538,34 @@ func (b *bootstrapper) getService() *corev1.Service {
 					TargetPort: intstr.FromInt32(webhookServerPort),
 				},
 			},
+		},
+	}
+}
+
+func (b *bootstrapper) getNetworkPolicyForSelfHostedShoot() *networkingv1.NetworkPolicy {
+	// Static etcd pods run with host networking, so their IPs are node IPs that cannot be matched by a pod selector.
+	// Egress must therefore be allowed via IPBlock CIDRs covering the nodes.
+	var peers []networkingv1.NetworkPolicyPeer
+	for _, cidr := range b.nodeCIDRs {
+		peers = append(peers, networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: cidr}})
+	}
+
+	return &networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      staticEtcdEgressNetworkPolicyName,
+			Namespace: b.namespace,
+			Labels:    b.labels(),
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: b.labels()},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			Egress: []networkingv1.NetworkPolicyEgressRule{{
+				To: peers,
+				Ports: []networkingv1.NetworkPolicyPort{
+					{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(etcdconstants.PortEtcdClient))},
+					{Protocol: new(corev1.ProtocolTCP), Port: new(intstr.FromInt32(etcdconstants.StaticPodPortEtcdEventsClient))},
+				},
+			}},
 		},
 	}
 }

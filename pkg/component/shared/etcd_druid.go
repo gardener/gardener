@@ -28,6 +28,7 @@ func NewEtcdDruid(
 	priorityClassName string,
 	clusterIsGarden bool,
 	clusterIsSelfHostedShoot bool,
+	nodeCIDRs []string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -53,5 +54,6 @@ func NewEtcdDruid(
 		priorityClassName,
 		clusterIsGarden,
 		clusterIsSelfHostedShoot,
+		nodeCIDRs,
 	), nil
 }

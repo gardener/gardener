@@ -466,10 +466,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 
 	Describe("#ComputeMemberPeerURLs", func() {
 		It("should compute one entry per member with distinct peer port URLs", func() {
-			Expect(ComputeMemberPeerURLs("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 3)).To(Equal([]druidcorev1alpha1.MemberPeerURLs{
-				{MemberName: "src-seed-etcd-main-0", URLs: []string{fmt.Sprintf("https://etcd-main-peer-0-9bd85b.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal)}},
-				{MemberName: "src-seed-etcd-main-1", URLs: []string{fmt.Sprintf("https://etcd-main-peer-1-18879a.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal+1)}},
-				{MemberName: "src-seed-etcd-main-2", URLs: []string{fmt.Sprintf("https://etcd-main-peer-2-26b70e.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal+2)}},
+			Expect(ComputeMemberPeerURLs("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 3)).To(Equal([]druidcorev1alpha1.MemberURLs{
+				{Name: "src-seed-etcd-main-0", URLs: []string{fmt.Sprintf("https://etcd-main-peer-0-9bd85b.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal)}},
+				{Name: "src-seed-etcd-main-1", URLs: []string{fmt.Sprintf("https://etcd-main-peer-1-18879a.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal+1)}},
+				{Name: "src-seed-etcd-main-2", URLs: []string{fmt.Sprintf("https://etcd-main-peer-2-26b70e.ingress.seed.example.com:%d", etcdconstants.PortEtcdPeerExternal+2)}},
 			}))
 		})
 
