@@ -5,6 +5,8 @@
 package validation_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -859,7 +861,7 @@ var _ = Describe("Utils tests", func() {
 								"Type":     Equal(field.ErrorTypeInvalid),
 								"Field":    Equal("spec.volumeTypes[0].name"),
 								"BadValue": Equal(name),
-								"Detail":   ContainSubstring("volume type name must match the regex"),
+								"Detail":   ContainSubstring("volume type name must consist of alphanumeric characters"),
 							})),
 						))
 				} else {
@@ -888,7 +890,27 @@ var _ = Describe("Utils tests", func() {
 			))
 		})
 
-		It("should forbid duplicate volume type names that are not qualified names", func() {
+		It("should allow a volume type name with the maximum length", func() {
+			spec := specTemplate.DeepCopy()
+			spec.VolumeTypes[0].Name = strings.Repeat("a", 63)
+
+			Expect(ValidateCloudProfileSpec(spec, field.NewPath("spec"))).To(BeEmpty())
+		})
+
+		It("should forbid a volume type name that is too long", func() {
+			spec := specTemplate.DeepCopy()
+			spec.VolumeTypes[0].Name = strings.Repeat("a", 64)
+
+			Expect(ValidateCloudProfileSpec(spec, field.NewPath("spec"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.volumeTypes[0].name"),
+					"Detail": ContainSubstring("volume type name must be no more than 63 bytes"),
+				})),
+			))
+		})
+
+		It("should forbid duplicate volume type names", func() {
 			spec := specTemplate.DeepCopy()
 			spec.VolumeTypes = []core.VolumeType{
 				{Name: "__DEFAULT__", Class: "standard"},
