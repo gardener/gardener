@@ -48,12 +48,14 @@ case "$COMMAND" in
     if (( level >= 2 )); then
       make gardenadm-up SCENARIO=connect # deploys gardener-operator, the 'Garden' resource, and waits for reconciliation
       connect_command="$(KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER "$(dirname "$0")/../bin/gardenadm" token create --print-connect-command --shoot-namespace garden --shoot-name root)"
-      # The connect command must run inside the control plane machine pod (mirroring how gind.sh runs it in machine-0
-      # via docker exec). The machine pod has gardenadm installed in /opt/bin/gardenadm.
-      technical_id="shoot--garden--root"
-      machine_namespace="infra-${technical_id}"
-      machine_pod="$(kubectl --kubeconfig "$KUBECONFIG_RUNTIME_CLUSTER" -n "$machine_namespace" get pods -l app=machine --sort-by=.metadata.name -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n' | grep "${technical_id}-control-plane-" | head -1)"
-      kubectl --kubeconfig "$KUBECONFIG_RUNTIME_CLUSTER" exec -n "$machine_namespace" "$machine_pod" -c node -- bash -c "IMAGEVECTOR_OVERWRITE=/var/lib/gardenadm/imagevector-overwrite.yaml IMAGEVECTOR_OVERWRITE_CHARTS=/var/lib/gardenadm/imagevector-overwrite-charts.yaml /opt/bin/${connect_command}"
+      # In contrast to gind.sh (which runs the connect command inside a machine), run it from the host against the
+      # self-hosted shoot's API server, using the same resources as for `gardenadm bootstrap`.
+      # The generated command starts with 'gardenadm', so we prefix it with the path to the locally built binary.
+      KUBECONFIG="$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER" \
+      IMAGEVECTOR_OVERWRITE="$GARDENADM_GENERATED_DIR/.imagevector-overwrite.yaml" \
+      IMAGEVECTOR_OVERWRITE_COMPONENTS="$GARDENADM_RESOURCES_DIR/imagevector-overwrite-components.yaml" \
+      IMAGEVECTOR_OVERWRITE_CHARTS="$GARDENADM_GENERATED_DIR/.imagevector-overwrite-charts.yaml" \
+        bash -c "$(dirname "$0")/../bin/${connect_command} -d $GARDENADM_GENERATED_DIR/managed-infra"
     fi
 
     # Register the self-hosted shoot as a seed via a ManagedSeed

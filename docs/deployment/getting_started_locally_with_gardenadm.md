@@ -277,7 +277,21 @@ $ KUBECONFIG=./dev-setup/kubeconfigs/virtual-garden/kubeconfig ./bin/gardenadm t
 gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud
 ```
 
-Copy the full output, exec once again into one of the control-plane machines of your self-hosted shoot cluster, and paste and run the generated `gardenadm connect` command there:
+The generated `gardenadm connect` command can either be executed on one of the control-plane machines of your self-hosted shoot cluster, or from anywhere else (e.g., your local machine).
+
+When running it from your local machine, point the `KUBECONFIG` environment variable to the self-hosted shoot cluster and pass the directory containing the resources that were used for creating it via `--config-dir`.
+For example, in the [managed infrastructure scenario](#managed-infrastructure-scenario), run (this is what `make gink-up SCENARIO=connect` does):
+
+```shell
+KUBECONFIG=./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig \
+IMAGEVECTOR_OVERWRITE=./dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml \
+IMAGEVECTOR_OVERWRITE_COMPONENTS=./dev-setup/gardenadm/resources/imagevector-overwrite-components.yaml \
+IMAGEVECTOR_OVERWRITE_CHARTS=./dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml \
+  ./bin/gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud \
+    --config-dir ./dev-setup/gardenadm/resources/generated/managed-infra
+```
+
+Alternatively, copy the full output, exec once again into one of the control-plane machines of your self-hosted shoot cluster, and paste and run the generated `gardenadm connect` command there (this is what `make gind-up SCENARIO=connect` does):
 
 ```shell
 root@gind-machine-0:/# gardenadm connect --bootstrap-token ... --ca-certificate ... https://api.virtual-garden.local.gardener.cloud

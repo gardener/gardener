@@ -43,9 +43,9 @@ var _ = Describe("Options", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a bootstrap token")))
 		})
 
-		It("should fail when it cannot read the default config dir location file", func() {
+		It("should fail when no config dir is provided and the default config dir location file does not exist", func() {
 			options.BootstrapToken = "some-token"
-			Expect(options.Validate()).To(MatchError(ContainSubstring("error reading config dir location file")))
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a config directory via --config-dir when not running on a control plane machine")))
 		})
 	})
 
