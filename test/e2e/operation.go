@@ -17,11 +17,9 @@ import (
 )
 
 // EventuallyNotHaveOperationAnnotation waits for the gardener operation annotation to be removed from the given object.
-// It must be called from within a spec, e.g.:
-//
-//	It("Should start the reconciliation", func(ctx SpecContext) {
-//	  EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Seed)
-//	}, SpecTimeout(2*time.Minute))
+// It must only be called inside a running Ginkgo node (e.g., an It node), never during tree construction: the komega
+// instance and object are typically fields of a test context that is only initialized in a BeforeAll node. Passing them
+// to a helper during tree construction would capture their zero values instead.
 func EventuallyNotHaveOperationAnnotation(ctx context.Context, komega komega.Komega, obj client.Object) {
 	GinkgoHelper()
 
