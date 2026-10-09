@@ -383,8 +383,6 @@ spec:
 
 This will evict pods on unreachable or not-ready nodes immediately, but be cautious: `0` is very aggressive and may lead to unnecessary disruptions. Again, you must decide for your own workload and balance out the pros and cons (e.g. long startup time).
 
-Please note, these settings replace `spec.kubernetes.kubeControllerManager.podEvictionTimeout` that was deprecated with Kubernetes `v1.26` (and acted as an upper bound).
-
 #### On `spec.kubernetes.kubeScheduler.featureGates.MinDomainsInPodTopologySpread`
 
 Required to be enabled for `minDomains` to work with PTSCs (beta since Kubernetes `v1.25`, but off by default). See [above](#pod-topology-spread-constraints) and the [docs](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#topologyspreadconstraints-field). This tells the scheduler, how many topology domains to expect (=zones in the context of this document).
