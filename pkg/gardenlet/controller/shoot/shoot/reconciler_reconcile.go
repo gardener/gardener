@@ -384,7 +384,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		rewriteResourcesAddLabel = g.Add(flow.Task{
-			Name: "Creating StorageVersionMigration objects/ Labeling resources after modification of encryption config or to encrypt them with new ETCD encryption key",
+			Name: "Rewriting encrypted resources after modification of encryption config or to encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RewriteEncryptedData(ctx, b.Logger, b.SeedClientSet.Client(), b.ShootClientSet, b.SecretsManager, b.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.ResourcesToEncrypt, b.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption(), gardenerutils.DefaultGroupResourcesForEncryption(), b.Shoot.StorageVersionMigratorEnabled)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
@@ -406,7 +406,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(rewriteResourcesAddLabel),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Cleaning up StorageVersionMigration objects/ Removing label from resources after modification of encryption config or rotation of ETCD encryption key",
+			Name: "Finalizing encrypted data rewrite after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := secretsrotation.CompleteEncryptedDataRewrite(ctx, b.Logger, b.SeedClientSet.Client(), b.ShootClientSet, b.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.ResourcesToEncrypt, b.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption(), b.Shoot.StorageVersionMigratorEnabled); err != nil {
 					return err

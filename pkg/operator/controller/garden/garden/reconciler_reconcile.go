@@ -637,7 +637,7 @@ func (r *Reconciler) reconcile(
 		})
 
 		rewriteResourcesAddLabel = g.Add(flow.Task{
-			Name: "Creating StorageVersionMigration objects/ Labeling encrypted resources after modification of encryption config or to re-encrypt them with new ETCD encryption key",
+			Name: "Rewriting encrypted resources after modification of encryption config or to re-encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RewriteEncryptedData(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs, defaultEncryptedGRs, storageVersionMigratorEnabled)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
@@ -658,7 +658,7 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(rewriteResourcesAddLabel),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Cleaning up StorageVersionMigration objects/ Removing label from re-encrypted resources after modification of encryption config or rotation of ETCD encryption key",
+			Name: "Finalizing encrypted data rewrite after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := secretsrotation.CompleteEncryptedDataRewrite(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs, storageVersionMigratorEnabled); err != nil {
 					return err

@@ -314,6 +314,17 @@ var _ = Describe("ETCD", func() {
 	})
 
 	Describe("#CleanupStorageVersionMigrationObjects", func() {
+		BeforeEach(func() {
+			Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        kubeAPIServerDeploymentName,
+					Namespace:   kubeAPIServerNamespace,
+					Annotations: map[string]string{"credentials.gardener.cloud/storage-version-migrated": "true"},
+				},
+			})).To(Succeed())
+		})
+
 		It("should delete SVMs with the rotation label and preserve SVMs without it", func() {
 			svmWithLabel := &storagemigrationv1.StorageVersionMigration{
 				ObjectMeta: metav1.ObjectMeta{
@@ -327,10 +338,14 @@ var _ = Describe("ETCD", func() {
 			Expect(targetClient.Create(ctx, svmWithLabel)).To(Succeed())
 			Expect(targetClient.Create(ctx, svmWithoutLabel)).To(Succeed())
 
-			Expect(CleanupStorageVersionMigrationObjects(ctx, fakeTargetInterface)).To(Succeed())
+			Expect(CleanupStorageVersionMigrationObjects(ctx, runtimeClient, fakeTargetInterface, kubeAPIServerNamespace, kubeAPIServerDeploymentName)).To(Succeed())
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(svmWithLabel), svmWithLabel)).To(BeNotFoundError())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(svmWithoutLabel), svmWithoutLabel)).To(Succeed())
+
+			apiServerDeployment := &appsv1.Deployment{}
+			Expect(runtimeClient.Get(ctx, client.ObjectKey{Namespace: kubeAPIServerNamespace, Name: kubeAPIServerDeploymentName}, apiServerDeployment)).To(Succeed())
+			Expect(apiServerDeployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/storage-version-migrated"))
 		})
 	})
 
@@ -345,6 +360,11 @@ var _ = Describe("ETCD", func() {
 		)
 
 		BeforeEach(func() {
+			Expect(runtimeClient.Create(ctx, &appsv1.Deployment{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
+				ObjectMeta: metav1.ObjectMeta{Name: kubeAPIServerDeploymentName, Namespace: kubeAPIServerNamespace},
+			})).To(Succeed())
+
 			defaultGRs = []schema.GroupResource{corev1.Resource("secrets")}
 			StorageVersionMigrationWaitTimeout = 2 * time.Second
 			StorageVersionMigrationRetryInterval = 10 * time.Millisecond
@@ -356,7 +376,7 @@ var _ = Describe("ETCD", func() {
 		})
 
 		It("should return error when ETCD encryption key secret is not found", func() {
-			err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)
+			err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGRs)
 			Expect(err).To(MatchError(ContainSubstring("not found")))
 		})
 
@@ -367,8 +387,24 @@ var _ = Describe("ETCD", func() {
 			}})).To(Succeed())
 			fakeDiscoveryClient.err = fmt.Errorf("connection refused")
 
-			err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)
-			Expect(err).To(MatchError(ContainSubstring("error discovering server preferred resources")))
+			err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGRs)
+			Expect(err).To(MatchError(ContainSubstring("error discovering server groups and resources")))
+		})
+
+		It("should skip creating SVMs when the API server deployment is already annotated as storage-version-migrated", func() {
+			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      etcdKeySecretName,
+				Namespace: kubeAPIServerNamespace,
+			}})).To(Succeed())
+			Expect(PatchAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, kubeAPIServerDeploymentName, func(meta *metav1.PartialObjectMetadata) {
+				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, "credentials.gardener.cloud/storage-version-migrated", "true")
+			})).To(Succeed())
+
+			Expect(CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGRs)).To(Succeed())
+
+			svmList := &storagemigrationv1.StorageVersionMigrationList{}
+			Expect(targetClient.List(ctx, svmList)).To(Succeed())
+			Expect(svmList.Items).To(BeEmpty())
 		})
 
 		Context("with ETCD encryption key secret present", func() {
@@ -395,7 +431,7 @@ var _ = Describe("ETCD", func() {
 					Expect(targetClient.Create(ctx, svm)).To(Succeed())
 				}
 
-				Expect(CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)).To(Succeed())
+				Expect(CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGRs)).To(Succeed())
 			})
 
 			It("should create SVMs with rotation label and succeed when migrations complete", func() {
@@ -412,20 +448,24 @@ var _ = Describe("ETCD", func() {
 				}).Build()
 				fakeTargetInterface = fakekubernetes.NewClientSetBuilder().WithKubernetes(test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)).WithClient(targetClient).Build()
 
-				Expect(CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)).To(Succeed())
+				Expect(CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGRs)).To(Succeed())
 
 				for _, name := range svmNames {
 					svm := &storagemigrationv1.StorageVersionMigration{}
 					Expect(targetClient.Get(ctx, client.ObjectKey{Name: name}, svm)).To(Succeed())
 					Expect(svm.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", etcdKeySecretName))
 				}
+
+				apiServerDeployment := &appsv1.Deployment{}
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Namespace: kubeAPIServerNamespace, Name: kubeAPIServerDeploymentName}, apiServerDeployment)).To(Succeed())
+				Expect(apiServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/storage-version-migrated", "true"))
 			})
 
 			It("should return error when migration does not complete before context deadline", func() {
 				timeoutCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
 				defer cancel()
 
-				err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(timeoutCtx, logger, fakeTargetInterface, fakeSecretsManager, resources, resources, defaultGRs)
+				err := CreateStorageVersionMigrationResourcesAndWaitForCompletion(timeoutCtx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGRs)
 				Expect(err).To(MatchError(ContainSubstring("error while waiting for StorageVersionMigration")))
 			})
 		})
@@ -584,17 +624,6 @@ var _ = Describe("ETCD", func() {
 					return name[:57] + "-" + gardenerutils.ComputeSHA256Hex([]byte(name))[:5]
 				}(),
 			),
-		)
-	})
-
-	Describe("#GetStorageVersionMigrationNameForGVK", func() {
-		DescribeTable("should format the name correctly",
-			func(gvk schema.GroupVersionKind, expected string) {
-				Expect(GetStorageVersionMigrationNameForGVK(gvk)).To(Equal(expected))
-			},
-			Entry("core group (empty)", schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}, "rewrite-v1-Secret"),
-			Entry("apps group", schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}, "rewrite-apps-v1-Deployment"),
-			Entry("custom group", schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"}, "rewrite-stable.example.com-v1-CronTab"),
 		)
 	})
 })
