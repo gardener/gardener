@@ -15,7 +15,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -24,7 +23,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -37,7 +35,6 @@ import (
 // Reconciler reconciles NamespacedCloudProfiles.
 type Reconciler struct {
 	Client   client.Client
-	Clock    clock.Clock
 	Config   controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration
 	Recorder events.EventRecorder
 }
@@ -79,13 +76,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{
-		RequeueAfter: v1beta1helper.DurationUntilNextVersionTransition(&namespacedCloudProfile.Status.CloudProfileSpec, r.Clock.Now()),
-	}, nil
+	return reconcile.Result{}, nil
 }
 
 // delete deletes the NamespacedCloudProfile as intended by its deletionTimestamp. Before deletion, it has to be ensured that
-// no Shoots are assigned to the CloudProfile anymore.
+// no Shoots are assigned to the NamespacedCloudProfile anymore.
 // If this is the case, the controller will remove the finalizers from the NamespacedCloudProfile so that it can be garbage collected.
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) (reconcile.Result, error) {
 	if !sets.New(namespacedCloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
@@ -227,7 +222,7 @@ func ApplyExpirableVersionOverrides(base, override gardencorev1beta1.ExpirableVe
 	overrideUsesLifecycle := len(override.Lifecycle) > 0
 
 	if !overrideUsesLifecycle && override.ExpirationDate == nil {
-		// Removal of expiration in legacy classification is not allowed.
+		// No override specified, inherit the parent version unchanged.
 		return base
 	}
 

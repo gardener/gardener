@@ -464,7 +464,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 
 			var (
-				now    = fakeClock.Now()
+				now    = time.Now().Truncate(time.Second)
 				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
 				past   = &metav1.Time{Time: now.Add(-24 * time.Hour)}
 			)
@@ -583,7 +583,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 
 			var (
-				now                = fakeClock.Now()
+				now                = time.Now().Truncate(time.Second)
 				deprecatedStart    = &metav1.Time{Time: now.Add(12 * time.Hour)}
 				parentExpiration   = &metav1.Time{Time: now.Add(24 * time.Hour)}
 				overrideExpiration = &metav1.Time{Time: now.Add(48 * time.Hour)}
@@ -735,7 +735,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 
 			var (
-				now              = fakeClock.Now()
+				now              = time.Now().Truncate(time.Second)
 				parentExpiration = &metav1.Time{Time: now.Add(24 * time.Hour)}
 				deprecatedStart  = &metav1.Time{Time: now.Add(48 * time.Hour)}
 				deprecated       = gardencorev1beta1.ClassificationDeprecated
@@ -873,7 +873,7 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 
 			var (
-				now    = fakeClock.Now()
+				now    = time.Now().Truncate(time.Second)
 				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
 			)
 
