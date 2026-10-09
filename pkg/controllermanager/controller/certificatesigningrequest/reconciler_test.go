@@ -483,5 +483,136 @@ var _ = Describe("Reconciler", func() {
 				Expect(updatedCSR.Status.Conditions[0].Reason).To(Equal("AutoApproved"))
 			})
 		})
+
+		When("CSR is requested by the self-hosted shoot itself (certificate renewal)", func() {
+			var shootUsername string
+
+			BeforeEach(func() {
+				shootUsername = v1beta1constants.ShootUserNamePrefix + shootNamespace + ":" + shootName
+			})
+
+			It("should approve the csr when user has authorization for shootclient subresource", func() {
+				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = shootUsername
+				csrObj.Spec.Groups = []string{v1beta1constants.ShootsGroup, "system:authenticated"}
+
+				c = buildClientWithSAR(shootUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
+
+				updatedCSR, err := fakeCertificatesClient.Get(ctx, csr.Name, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(updatedCSR.Status.Conditions).To(HaveLen(1))
+				Expect(updatedCSR.Status.Conditions[0].Type).To(Equal(certificatesv1.CertificateApproved))
+			})
+
+			It("should result an error when user does not have authorization for shootclient subresource", func() {
+				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = shootUsername
+				csrObj.Spec.Groups = []string{v1beta1constants.ShootsGroup}
+
+				c = buildClientWithSAR("someone-else")
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(ContainSubstring("SubjectAccessReview was not allowed")))
+
+				updatedCSR, err := fakeCertificatesClient.Get(ctx, csr.Name, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(updatedCSR.Status.Conditions).To(BeEmpty())
+			})
+
+			It("should deny the csr when it is requested by another shoot", func() {
+				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				otherShootUsername := v1beta1constants.ShootUserNamePrefix + shootNamespace + ":other-shoot"
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = otherShootUsername
+				csrObj.Spec.Groups = []string{v1beta1constants.ShootsGroup}
+
+				c = buildClientWithSAR(otherShootUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
+
+				updatedCSR, err := fakeCertificatesClient.Get(ctx, csr.Name, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(updatedCSR.Status.Conditions).To(HaveLen(1))
+				Expect(updatedCSR.Status.Conditions[0].Type).To(Equal(certificatesv1.CertificateDenied))
+			})
+
+			It("should deny the csr when the requester is not in the shoots group", func() {
+				_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = shootUsername
+				csrObj.Spec.Groups = []string{"system:authenticated"}
+
+				c = buildClientWithSAR(shootUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
+
+				updatedCSR, err := fakeCertificatesClient.Get(ctx, csr.Name, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(updatedCSR.Status.Conditions).To(HaveLen(1))
+				Expect(updatedCSR.Status.Conditions[0].Type).To(Equal(certificatesv1.CertificateDenied))
+			})
+
+			It("should deny a gardenadm client csr even if requested with the same identity", func() {
+				gardenadmUsername := v1beta1constants.GardenadmUserNamePrefix + shootNamespace + ":" + shootName
+				csrData, err := certutil.MakeCSR(privateKey, &pkix.Name{
+					Organization: []string{v1beta1constants.ShootsGroup},
+					CommonName:   gardenadmUsername,
+				}, nil, nil)
+				Expect(err).NotTo(HaveOccurred())
+				csr.Spec.Request = csrData
+
+				_, err = fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				csrObj := csr.DeepCopy()
+				csrObj.Spec.Username = gardenadmUsername
+				csrObj.Spec.Groups = []string{v1beta1constants.ShootsGroup}
+
+				c = buildClientWithSAR(gardenadmUsername)
+				Expect(c.Create(ctx, csrObj)).To(Succeed())
+
+				reconciler = &Reconciler{Client: c, CertificatesClient: fakeCertificatesClient}
+
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
+
+				updatedCSR, err := fakeCertificatesClient.Get(ctx, csr.Name, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(updatedCSR.Status.Conditions).To(HaveLen(1))
+				Expect(updatedCSR.Status.Conditions[0].Type).To(Equal(certificatesv1.CertificateDenied))
+			})
+		})
 	})
 })
