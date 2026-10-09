@@ -25,9 +25,12 @@ function detect_scenario() {
   nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n')
   zones=$(kubectl get nodes -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr ' ' '\n' | sort -u)
   provider_ids=$(kubectl get nodes -o jsonpath='{.items[*].spec.providerID}' | tr ' ' '\n')
+  gardener_role=$(kubectl get namespace kube-system -o jsonpath='{.metadata.labels.gardener\.cloud/role}')
 
   # Check if all nodes have a (cloud) providerID but none start with kind://.
-  if [[ -n "$provider_ids" ]] && ! echo "$provider_ids" | grep -qE '^$|^kind://'; then
+  # Self-hosted shoots (GinK) also have non-kind providerIDs, but are detected via
+  # the kube-system role below instead, so exclude them from the remote scenario.
+  if [[ "$gardener_role" != "shoot" && -n "$provider_ids" ]] && ! echo "$provider_ids" | grep -qE '^$|^kind://'; then
     export SCENARIO="remote"
   elif [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
     export SCENARIO="single-node"
@@ -50,7 +53,7 @@ function detect_scenario() {
     export SCENARIO="${SCENARIO}-dual"
   fi
 
-  if [[ "$(kubectl get namespace kube-system -o jsonpath='{.metadata.labels.gardener\.cloud/role}')" == "shoot" ]]; then
+  if [[ "$gardener_role" == "shoot" ]]; then
     if [[ "$(kubectl get cluster -o yaml 2>/dev/null | yq '.items[].spec.shoot.spec.credentialsBindingName != null or .items[].spec.shoot.spec.secretBindingName != null')" == "true" ]]; then
       export SCENARIO="${SCENARIO}-gink"
     else
