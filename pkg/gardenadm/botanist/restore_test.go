@@ -5,24 +5,31 @@
 package botanist
 
 import (
+	"crypto/rand"
+	"crypto/x509/pkix"
+
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -179,107 +186,6 @@ var _ = Describe("Restore", func() {
 		})
 	})
 
-	Describe("#ScaleDownGardenlet", func() {
-		const gardenletName = "gardenlet"
-
-		gardenletDeployment := func(replicas int32) *appsv1.Deployment {
-			return &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      gardenletName,
-					Namespace: oscSecretNamespace,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &replicas,
-					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "gardener", "role": "gardenlet"}},
-						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "gardenlet", Image: "gardenlet:latest"}}},
-					},
-				},
-			}
-		}
-
-		gardenletPod := func(name string) *corev1.Pod {
-			return &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: oscSecretNamespace,
-					Labels:    map[string]string{"app": "gardener", "role": "gardenlet"},
-				},
-			}
-		}
-
-		It("should be a no-op when the gardenlet Deployment does not exist", func(ctx SpecContext) {
-			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
-		})
-
-		It("should scale down the gardenlet Deployment to zero replicas", func(ctx SpecContext) {
-			Expect(fakeClient.Create(ctx, gardenletDeployment(2))).To(Succeed())
-
-			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
-
-			dep := &appsv1.Deployment{}
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, dep)).To(Succeed())
-			Expect(dep.Spec.Replicas).To(Equal(new(int32(0))))
-		})
-
-		It("should force-delete gardenlet Pods", func(ctx SpecContext) {
-			Expect(fakeClient.Create(ctx, gardenletDeployment(2))).To(Succeed())
-			pod1 := gardenletPod("gardenlet-abc")
-			pod2 := gardenletPod("gardenlet-def")
-			otherPod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{Name: "other-pod", Namespace: oscSecretNamespace, Labels: map[string]string{"app": "other"}},
-			}
-			Expect(fakeClient.Create(ctx, pod1)).To(Succeed())
-			Expect(fakeClient.Create(ctx, pod2)).To(Succeed())
-			Expect(fakeClient.Create(ctx, otherPod)).To(Succeed())
-
-			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
-
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod1), &corev1.Pod{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod2), &corev1.Pod{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(otherPod), &corev1.Pod{})).To(Succeed())
-		})
-	})
-
-	Describe("#ScaleUpGardenlet", func() {
-		const gardenletName = "gardenlet"
-
-		It("should be a no-op when the Deployment does not exist", func(ctx SpecContext) {
-			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
-		})
-
-		It("should scale up the gardenlet Deployment to 2 replicas", func(ctx SpecContext) {
-			dep := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       gardenletName,
-					Namespace:  oscSecretNamespace,
-					Generation: 1,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: new(int32(0)),
-					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "gardener", "role": "gardenlet"}},
-						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "gardenlet", Image: "gardenlet:latest"}}},
-					},
-				},
-				Status: appsv1.DeploymentStatus{
-					ObservedGeneration: 1,
-					Replicas:           2,
-					AvailableReplicas:  2,
-				},
-			}
-			Expect(fakeClient.Create(ctx, dep)).To(Succeed())
-
-			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
-
-			got := &appsv1.Deployment{}
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, got)).To(Succeed())
-			Expect(got.Spec.Replicas).To(Equal(new(int32(2))))
-		})
-	})
-
 	Describe("#DeleteStaleEtcdMemberLeases", func() {
 		var (
 			etcdClient client.Client
@@ -404,6 +310,183 @@ var _ = Describe("Restore", func() {
 			Expect(b.DeleteStaleEtcdMemberLeases(ctx, etcdClient)).To(Succeed())
 
 			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(otherLease), &coordinationv1.Lease{})).To(Succeed())
+		})
+	})
+
+	Describe("#DeleteNodeAgentCertificateSigningRequests", func() {
+		csrWithCommonName := func(name, signerName, commonName string) *certificatesv1.CertificateSigningRequest {
+			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
+			Expect(err).NotTo(HaveOccurred())
+
+			csrData, err := certutil.MakeCSR(privateKey, &pkix.Name{CommonName: commonName}, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			return &certificatesv1.CertificateSigningRequest{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Spec: certificatesv1.CertificateSigningRequestSpec{
+					Request:    csrData,
+					SignerName: signerName,
+				},
+			}
+		}
+
+		It("should succeed when there are no CertificateSigningRequests", func(ctx SpecContext) {
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should delete the gardener-node-agent CertificateSigningRequest", func(ctx SpecContext) {
+			csr := csrWithCommonName("node-agent-csr", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			Expect(fakeClient.Create(ctx, csr)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+		})
+
+		It("should delete all gardener-node-agent CertificateSigningRequests", func(ctx SpecContext) {
+			csr1 := csrWithCommonName("node-agent-csr-1", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			csr2 := csrWithCommonName("node-agent-csr-2", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-2")
+			Expect(fakeClient.Create(ctx, csr1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, csr2)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr1), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr2), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+		})
+
+		It("should not delete a CertificateSigningRequest with a different signer", func(ctx SpecContext) {
+			csr := csrWithCommonName("other-signer-csr", "example.com/other-signer", v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			Expect(fakeClient.Create(ctx, csr)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
+		})
+
+		It("should not delete a CertificateSigningRequest whose CommonName lacks the gardener-node-agent prefix", func(ctx SpecContext) {
+			csr := csrWithCommonName("foreign-csr", certificatesv1.KubeAPIServerClientSignerName, "gardener.cloud:system:some-other-user")
+			Expect(fakeClient.Create(ctx, csr)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
+		})
+
+		It("should delete only the matching CertificateSigningRequests and keep the others", func(ctx SpecContext) {
+			nodeAgentCSR := csrWithCommonName("node-agent-csr", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			otherSignerCSR := csrWithCommonName("other-signer-csr", "example.com/other-signer", v1beta1constants.NodeAgentUserNamePrefix+"machine-2")
+			foreignCSR := csrWithCommonName("foreign-csr", certificatesv1.KubeAPIServerClientSignerName, "gardener.cloud:system:some-other-user")
+			Expect(fakeClient.Create(ctx, nodeAgentCSR)).To(Succeed())
+			Expect(fakeClient.Create(ctx, otherSignerCSR)).To(Succeed())
+			Expect(fakeClient.Create(ctx, foreignCSR)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(nodeAgentCSR), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(otherSignerCSR), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(foreignCSR), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
+		})
+	})
+
+	Describe("#ScaleDownGardenlet", func() {
+		const gardenletName = "gardenlet"
+
+		gardenletDeployment := func(replicas int32) *appsv1.Deployment {
+			return &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gardenletName,
+					Namespace: oscSecretNamespace,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "gardenlet", Image: "gardenlet:latest"}}},
+					},
+				},
+			}
+		}
+
+		gardenletPod := func(name string) *corev1.Pod {
+			return &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: oscSecretNamespace,
+					Labels:    map[string]string{"app": "gardener", "role": "gardenlet"},
+				},
+			}
+		}
+
+		It("should be a no-op when the gardenlet Deployment does not exist", func(ctx SpecContext) {
+			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should scale down the gardenlet Deployment to zero replicas", func(ctx SpecContext) {
+			Expect(fakeClient.Create(ctx, gardenletDeployment(2))).To(Succeed())
+
+			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
+
+			dep := &appsv1.Deployment{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, dep)).To(Succeed())
+			Expect(dep.Spec.Replicas).To(Equal(new(int32(0))))
+		})
+
+		It("should force-delete gardenlet Pods", func(ctx SpecContext) {
+			Expect(fakeClient.Create(ctx, gardenletDeployment(2))).To(Succeed())
+			pod1 := gardenletPod("gardenlet-abc")
+			pod2 := gardenletPod("gardenlet-def")
+			otherPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "other-pod", Namespace: oscSecretNamespace, Labels: map[string]string{"app": "other"}},
+			}
+			Expect(fakeClient.Create(ctx, pod1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, pod2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, otherPod)).To(Succeed())
+
+			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod1), &corev1.Pod{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod2), &corev1.Pod{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(otherPod), &corev1.Pod{})).To(Succeed())
+		})
+	})
+
+	Describe("#ScaleUpGardenlet", func() {
+		const gardenletName = "gardenlet"
+
+		It("should be a no-op when the Deployment does not exist", func(ctx SpecContext) {
+			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should scale up the gardenlet Deployment to 2 replicas", func(ctx SpecContext) {
+			dep := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       gardenletName,
+					Namespace:  oscSecretNamespace,
+					Generation: 1,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(0)),
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "gardenlet", Image: "gardenlet:latest"}}},
+					},
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: 1,
+					Replicas:           2,
+					AvailableReplicas:  2,
+				},
+			}
+			Expect(fakeClient.Create(ctx, dep)).To(Succeed())
+
+			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
+
+			got := &appsv1.Deployment{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, got)).To(Succeed())
+			Expect(got.Spec.Replicas).To(Equal(new(int32(2))))
 		})
 	})
 })
