@@ -127,9 +127,9 @@ func AddToManager(
 		//     runs the controller, see (c)), or
 		// (c) the gardenlet is responsible for a self-hosted shoot
 		if err := (&tokenrequestor.Reconciler{
-			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
-			Class:           new(resourcesv1alpha1.ResourceManagerClassGarden),
-			TargetNamespace: targetNamespaceForTokenRequestorController(cfg),
+			ConcurrentSyncs:        ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
+			Class:                  new(resourcesv1alpha1.ResourceManagerClassGarden),
+			TargetDefaultNamespace: targetNamespaceForTokenRequestorController(cfg),
 		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)
 		}
@@ -172,14 +172,18 @@ func seedName(cfg *gardenletconfigv1alpha1.GardenletConfiguration) string {
 	return cfg.SeedConfig.Name
 }
 
-func targetNamespaceForTokenRequestorController(cfg *gardenletconfigv1alpha1.GardenletConfiguration) string {
+func targetNamespaceForTokenRequestorController(cfg *gardenletconfigv1alpha1.GardenletConfiguration) tokenrequestor.TargetDefaultNamespaceFn {
 	if gardenletutils.IsResponsibleForSelfHostedShoot() {
 		// TargetNamespace is intentionally left empty when gardenlet is responsible for a self-hosted shoot: the
 		// ServiceAccount namespace is provided via the serviceaccount.resources.gardener.cloud/namespace annotation on the
 		// access token Secrets set by the AccessSecret.Reconcile() function.
-		return ""
+		return func(_ context.Context, _ client.Client) (string, error) {
+			return "", nil
+		}
 	}
-	return gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name)
+	return func(_ context.Context, _ client.Client) (string, error) {
+		return gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name), nil
+	}
 }
 
 func networkConfigForNetworkPolicyController(cfg *gardenletconfigv1alpha1.GardenletConfiguration, selfHostedShoot *gardencorev1beta1.Shoot) gardencorev1beta1.SeedNetworks {

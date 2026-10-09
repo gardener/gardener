@@ -34,6 +34,9 @@ const (
 	maxExpirationDuration     = 24 * time.Hour
 )
 
+// TargetDefaultNamespaceFn is a function that returns the namespace that requested ServiceAccounts should be created in
+type TargetDefaultNamespaceFn func(context.Context, client.Client) (string, error)
+
 // Reconciler requests and refreshes tokens via the TokenRequest API.
 type Reconciler struct {
 	SourceClient    client.Client
@@ -44,10 +47,9 @@ type Reconciler struct {
 	Class           *string
 	APIAudiences    []string
 	CAData          []byte
-	// TargetNamespace is the namespace that requested ServiceAccounts should be created in.
-	// If TargetNamespace is empty, the controller uses the namespace specified in the
-	// serviceaccount.resources.gardener.cloud/namespace annotation.
-	TargetNamespace string
+	// TargetDefaultNamespace is the namespace that requested ServiceAccounts should be created in
+	// if the serviceaccount.resources.gardener.cloud/namespace annotation is not set.
+	TargetDefaultNamespace TargetDefaultNamespaceFn
 }
 
 // Reconcile requests and populates tokens.
@@ -104,7 +106,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
-	serviceAccount := r.getServiceAccountFromAnnotations(secret.Annotations)
+	serviceAccount, err := r.getServiceAccountFromAnnotations(ctx, secret.Annotations)
+	if err != nil {
+		return nil, err
+	}
 
 	var labels map[string]string
 	if labelsJSON := secret.Annotations[resourcesv1alpha1.ServiceAccountLabels]; labelsJSON != "" {
@@ -286,10 +291,14 @@ func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {
 	return int64(expirationDuration / time.Second), nil
 }
 
-func (r *Reconciler) getServiceAccountFromAnnotations(annotations map[string]string) *corev1.ServiceAccount {
-	namespace := r.TargetNamespace
+func (r *Reconciler) getServiceAccountFromAnnotations(ctx context.Context, annotations map[string]string) (*corev1.ServiceAccount, error) {
+	namespace := annotations[resourcesv1alpha1.ServiceAccountNamespace]
 	if namespace == "" {
-		namespace = annotations[resourcesv1alpha1.ServiceAccountNamespace]
+		var err error
+		namespace, err = r.TargetDefaultNamespace(ctx, r.TargetClient)
+		if err != nil {
+			return nil, fmt.Errorf("could not determine target namespace for service account: %w", err)
+		}
 	}
 
 	return &corev1.ServiceAccount{
@@ -297,7 +306,7 @@ func (r *Reconciler) getServiceAccountFromAnnotations(annotations map[string]str
 			Name:      annotations[resourcesv1alpha1.ServiceAccountName],
 			Namespace: namespace,
 		},
-	}
+	}, nil
 }
 
 func (r *Reconciler) isCABundleUpdated(data map[string][]byte) (bool, error) {
