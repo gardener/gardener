@@ -2632,7 +2632,7 @@ ControlPlaneAutoscaling contains auto-scaling configuration options for control-
 </p>
 
 <p>
-ControlPlaneLoadBalancerServices controls certain settings for the load balancer service of the istio ingress gateway.
+ControlPlaneLoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.
 </p>
 
 <table>

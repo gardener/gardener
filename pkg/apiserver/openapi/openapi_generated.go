@@ -2932,7 +2932,7 @@ func schema_pkg_apis_core_v1beta1_ControlPlaneLoadBalancerServices(ref common.Re
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ControlPlaneLoadBalancerServices controls certain settings for the load balancer service of the istio ingress gateway.",
+				Description: "ControlPlaneLoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"annotations": {

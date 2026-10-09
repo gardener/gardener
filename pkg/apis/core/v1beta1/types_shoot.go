@@ -1890,7 +1890,7 @@ type ExtensionExposure struct {
 // There is no specific configuration currently, for future extendability.
 type DNSExposure struct{}
 
-// ControlPlaneLoadBalancerServices controls certain settings for the load balancer service of the istio ingress gateway.
+// ControlPlaneLoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.
 type ControlPlaneLoadBalancerServices struct {
 	// Annotations is a map of annotations that will be injected/merged into the load balancer service object.
 	// +optional

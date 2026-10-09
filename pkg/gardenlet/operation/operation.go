@@ -465,6 +465,11 @@ func (o *Operation) IsShootMonitoringEnabled() bool {
 	return helper.IsMonitoringEnabled(o.Config) && o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
 }
 
+// IsShootLoggingEnabled returns true if shoot logging is enabled.
+func (o *Operation) IsShootLoggingEnabled() bool {
+	return helper.IsLoggingEnabled(o.Config)
+}
+
 // WantsObservabilityComponents returns true if shoot is not of purpose testing and either shoot monitoring or vali is enabled.
 func (o *Operation) WantsObservabilityComponents() bool {
 	return !o.Shoot.IsSelfHosted() && // TODO(rfranzke): Remove this once the observability components are ready for self-hosted shoots.

@@ -206,7 +206,7 @@ const TaskGroupReconcileIstio flow.TaskID = "TaskGroupReconcileIstio"
 func (b *Botanist) ReconcileIstioTaskGroup(skipReadiness bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(TaskGroupReconcileIstio).
-			SkipIf(!b.Shoot.IsSelfHosted()).
+			SkipIf(!b.Shoot.IsSelfHosted() || (!b.IsShootMonitoringEnabled() && !b.IsShootLoggingEnabled())).
 			WithDependencies(
 				TaskGroupReconcileCustomResourceDefinitions,
 				TaskGroupReconcileRuntimeGardenerResourceManager,

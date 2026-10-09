@@ -712,7 +712,7 @@ message ControlPlaneAutoscaling {
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> minAllowed = 1;
 }
 
-// ControlPlaneLoadBalancerServices controls certain settings for the load balancer service of the istio ingress gateway.
+// ControlPlaneLoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.
 message ControlPlaneLoadBalancerServices {
   // Annotations is a map of annotations that will be injected/merged into the load balancer service object.
   // +optional
