@@ -66,17 +66,13 @@ type RuntimeNetworkConfig struct {
 	BlockCIDRs []string
 }
 
-// getBlockedNetworkPeers returns a list of CIDRs to exclude from a NetworkPolicy IPBlock. `ipFamily` should match the
-// IP family of the IPBlock.CIDR value. The resulting list still needs to be filtered for subsets of IPBlock.CIDR.
-func (r RuntimeNetworkConfig) getBlockedNetworkPeers(ipFamily gardencorev1beta1.IPFamily) []string {
-	// NB: BlockCIDRs can contain both IPv4 and IPv6 CIDRs.
-	var peers = append([]string(nil), r.BlockCIDRs...)
+// getBlockedNetworkPeers returns a list of CIDRs to exclude from a NetworkPolicy IPBlock.
+func (r RuntimeNetworkConfig) getBlockedNetworkPeers() []string {
+	peers := append([]string(nil), r.BlockCIDRs...)
 
-	if len(r.IPFamilies) == 1 && r.IPFamilies[0] == ipFamily {
-		peers = append(peers, r.Pods...)
-		peers = append(peers, r.Services...)
-		peers = append(peers, r.Nodes...)
-	}
+	peers = append(peers, r.Pods...)
+	peers = append(peers, r.Services...)
+	peers = append(peers, r.Nodes...)
 
 	return peers
 }
@@ -285,23 +281,24 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 	})
 }
 
+// The allow-to-public-networks NetworkPolicy allows traffic to all networks except for private, blocked and seed networks.
 func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	peersV4, err := networkPolicyPeersWithExceptions([]string{"0.0.0.0/0"}, append(
-		netutils.ToCIDRStrings(AllPrivateNetworkBlocksV4()...),
-		r.RuntimeNetworks.BlockCIDRs...,
-	)...)
-	if err != nil {
-		return err
-	}
+	// In IPv4, all cluster networks are contained in the private IPv4 block.
+	// These are then removed when building the NetworkPolicyPeers.
+	// In IPv6 however, cluster networks might be "public" (e.g., if using prefix
+	// delegation from provider). As this NetworkPolicy should only allow
+	// communication with public networks *outside* the cluster, we exclude the
+	// cluster networks.
+	blockedNetworks := r.RuntimeNetworks.getBlockedNetworkPeers()
+	exceptions := append(
+		blockedNetworks,
+		PrivateNetworks()...,
+	)
 
-	peersV6, err := networkPolicyPeersWithExceptions([]string{"::/0"}, append(
-		netutils.ToCIDRStrings(AllPrivateNetworkBlocksV6()...),
-		// In IPv4, all cluster networks are contained in the private IPv4 blocks.
-		// In IPv6 however, cluster networks might be "public" (e.g., if using prefix delegation from provider).
-		// As this NetworkPolicy should only allow communication with public networks *outside* the cluster,
-		// we exclude the cluster networks.
-		r.RuntimeNetworks.getBlockedNetworkPeers(gardencorev1beta1.IPFamilyIPv6)...,
-	)...)
+	peers, err := GetNetworkPolicyPeersWithExceptions(
+		AllNetworks(),
+		exceptions,
+	)
 	if err != nil {
 		return err
 	}
@@ -316,7 +313,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 		policy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
 			Egress: []networkingv1.NetworkPolicyEgressRule{{
-				To: append(peersV4, peersV6...),
+				To: peers,
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -349,9 +346,9 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 	})
 }
 
+// The allow-to-private-networks NetworkPolicy allows traffic to all private networks except for blocked, seed and shoot networks
 func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	blockedNetworkPeersV4 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencorev1beta1.IPFamilyIPv4)
-	blockedNetworkPeersV6 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencorev1beta1.IPFamilyIPv6)
+	exceptions := r.RuntimeNetworks.getBlockedNetworkPeers()
 
 	if strings.HasPrefix(networkPolicy.Namespace, v1beta1constants.TechnicalIDPrefix) {
 		cluster := &extensionsv1alpha1.Cluster{}
@@ -383,21 +380,14 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 				networks.Insert(shoot.Status.Networking.Services...)
 				shootNetworks = networks.UnsortedList()
 			}
-
-			if gardencorev1beta1.IsIPv4SingleStack(shoot.Spec.Networking.IPFamilies) {
-				blockedNetworkPeersV4 = append(blockedNetworkPeersV4, shootNetworks...)
-			} else {
-				blockedNetworkPeersV6 = append(blockedNetworkPeersV6, shootNetworks...)
-			}
+			exceptions = append(exceptions, shootNetworks...)
 		}
 	}
 
-	privateNetworkPeersV4, err := toNetworkPolicyPeersWithExceptions(AllPrivateNetworkBlocksV4(), blockedNetworkPeersV4...)
-	if err != nil {
-		return err
-	}
-
-	privateNetworkPeersV6, err := toNetworkPolicyPeersWithExceptions(AllPrivateNetworkBlocksV6(), blockedNetworkPeersV6...)
+	peers, err := GetNetworkPolicyPeersWithExceptions(
+		PrivateNetworks(),
+		exceptions,
+	)
 	if err != nil {
 		return err
 	}
@@ -411,8 +401,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 		policy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
 			Egress: []networkingv1.NetworkPolicyEgressRule{
-				{To: privateNetworkPeersV4},
-				{To: privateNetworkPeersV6},
+				{To: peers},
 			},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},

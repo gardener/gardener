@@ -386,18 +386,18 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							CIDR: "0.0.0.0/0",
 							Except: []string{
 								"10.0.0.0/8",
-								"172.16.0.0/12",
-								"192.168.0.0/16",
 								"100.64.0.0/10",
 								blockedCIDR,
+								"172.16.0.0/12",
+								"192.168.0.0/16",
 							},
 						},
 					}, {
 						IPBlock: &networkingv1.IPBlock{
 							CIDR: "::/0",
 							Except: []string{
-								"fe80::/10",
 								"fc00::/7",
+								"fe80::/10",
 							},
 						},
 					}},
@@ -426,22 +426,19 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					Egress: []networkingv1.NetworkPolicyEgressRule{{
 						To: []networkingv1.NetworkPolicyPeer{
 							{IPBlock: &networkingv1.IPBlock{CIDR: "10.0.0.0/8", Except: []string{"10.0.0.0/16", "10.1.0.0/16", "10.2.0.0/16"}}},
+							{IPBlock: &networkingv1.IPBlock{CIDR: "100.64.0.0/10"}},
 							{IPBlock: &networkingv1.IPBlock{CIDR: "172.16.0.0/12"}},
 							{IPBlock: &networkingv1.IPBlock{CIDR: "192.168.0.0/16"}},
-							{IPBlock: &networkingv1.IPBlock{CIDR: "100.64.0.0/10"}},
-						},
-					}, {
-						To: []networkingv1.NetworkPolicyPeer{
-							{IPBlock: &networkingv1.IPBlock{CIDR: "fe80::/10"}},
 							{IPBlock: &networkingv1.IPBlock{CIDR: "fc00::/7"}},
+							{IPBlock: &networkingv1.IPBlock{CIDR: "fe80::/10"}},
 						},
 					}},
 				}
 
 				if strings.HasPrefix(namespaceName, "shoot--") {
 					out.Egress[0].To[0].IPBlock.Except = append(out.Egress[0].To[0].IPBlock.Except, "10.150.0.0/16")
-					out.Egress[0].To[1].IPBlock.Except = append(out.Egress[0].To[1].IPBlock.Except, "172.16.0.0/18")
-					out.Egress[0].To[2].IPBlock.Except = append(out.Egress[0].To[2].IPBlock.Except, "192.168.0.0/17")
+					out.Egress[0].To[2].IPBlock.Except = append(out.Egress[0].To[2].IPBlock.Except, "172.16.0.0/18")
+					out.Egress[0].To[3].IPBlock.Except = append(out.Egress[0].To[3].IPBlock.Except, "192.168.0.0/17")
 				}
 
 				return out
