@@ -137,10 +137,10 @@ var _ = Describe("Restore", func() {
 			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(Succeed())
 		})
 
-		It("should error when the OperatingSystemConfig Secret was not computed yet", func(ctx SpecContext) {
+		It("should do nothing when the OperatingSystemConfig Secret was not computed yet", func(ctx SpecContext) {
 			b.operatingSystemConfigSecret = nil
 
-			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(MatchError(ContainSubstring("operating system config secret is nil")))
+			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(Succeed())
 		})
 	})
 
