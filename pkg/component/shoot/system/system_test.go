@@ -474,10 +474,10 @@ var _ = Describe("ShootSystem", func() {
 						values.IsSelfHosted = true
 					})
 
-					It("should deploy allow-from-seed using node and pod network CIDRs", func() {
+					It("should deploy allow-from-control-plane-components using node and pod network CIDRs", func() {
 						networkPolicyAllowFromSeed := &networkingv1.NetworkPolicy{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gardener.cloud--allow-from-seed",
+								Name:      "gardener.cloud--allow-from-control-plane-components",
 								Namespace: "kube-system",
 								Annotations: map[string]string{
 									"gardener.cloud/description": "Allows Ingress from the control plane to pods labeled with 'networking.gardener.cloud/from-seed=allowed'.",
