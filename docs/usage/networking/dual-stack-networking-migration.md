@@ -35,7 +35,7 @@ If you are on a Kubernetes-managed CIDR allocation infrastructure and leave `nod
 
 The derived value is not written to the spec. You can determine it from the IPv6 pod CIDR reported in `.status.networking.pods` by applying the formula above.
 
-> :warning: `nodeCIDRMaskSizeIPv6` can only be set in the update that adds IPv6 to `spec.networking.ipFamilies` (i.e. the migration step below) or at shoot creation. Once the cluster is already dual-stack, the field is immutable, because IPv6 pod CIDRs are already allocated to nodes and changing the mask would break those allocations. If you set it explicitly, make sure the value is `>= podCIDRMaskSize` and `<= podCIDRMaskSize + 16`, otherwise kube-controller-manager will not be able to allocate node CIDRs.
+> :warning: `nodeCIDRMaskSizeIPv6` can only be set in the update that adds IPv6 to `spec.networking.ipFamilies` (i.e. the migration step below) or at shoot creation. Once the cluster is already dual-stack, the field is immutable, because IPv6 pod CIDRs are already allocated to nodes and changing the mask would break those allocations.
 
 ## Preconditions
 

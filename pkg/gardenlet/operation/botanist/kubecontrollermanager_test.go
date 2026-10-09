@@ -115,7 +115,7 @@ var _ = Describe("KubeControllerManager", func() {
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}})
 				kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
 				kubeControllerManager.EXPECT().SetServiceNetworks(botanist.Shoot.Networks.Services)
-				kubeControllerManager.EXPECT().SetPodNetworks(botanist.Shoot.Networks.Pods)
+				kubeControllerManager.EXPECT().SetPodNetworks([]net.IPNet(nil))
 			})
 
 			Context("kube-apiserver is already scaled down", func() {
@@ -286,7 +286,7 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 			kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
 			kubeControllerManager.EXPECT().SetServiceNetworks(botanist.Shoot.Networks.Services)
-			kubeControllerManager.EXPECT().SetPodNetworks(botanist.Shoot.Networks.Pods)
+			kubeControllerManager.EXPECT().SetPodNetworks([]net.IPNet(nil))
 			kubeControllerManager.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.DeployKubeControllerManager(ctx)).To(Equal(fakeErr))

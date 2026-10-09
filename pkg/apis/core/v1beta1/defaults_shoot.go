@@ -92,15 +92,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
 		}
 
-		if IsIPv6SingleStack(obj.Spec.Networking.IPFamilies) &&
-			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil &&
-			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6 == nil {
-			// For IPv6 don't be stingy and allocate larger pod CIDRs per node.
-			// The default is mostly only relevant for the local setup.
-			// For most providers, the values is dependent on the infrastructure.
-			// Either this value is ignored or should be set explicitly by the user.
-			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = new(int32(64))
-		}
+		// For IPv6 single-stack, NodeCIDRMaskSize and NodeCIDRMaskSizeIPv6 are intentionally not defaulted
+		// here: the usable value depends on the infrastructure-allocated pod CIDR. Gardenlet derives a
+		// suitable value from the actual pod CIDR at deploy time.
 
 		if IsDualStack(obj.Spec.Networking.IPFamilies) {
 			if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
