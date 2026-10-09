@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
-	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -29,9 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	namespacedcloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
-	testutils "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -43,9 +40,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		fakeClient client.Client
 		reconciler reconcile.Reconciler
 
-		fakeErr   error
-		fakeClock *testclock.FakeClock
-		now       time.Time
+		fakeErr error
+		now     time.Time
 
 		namespaceName              string
 		cloudProfileName           string
@@ -61,8 +57,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		ctx = context.Background()
 
 		fakeErr = errors.New("fake err")
-		fakeClock = testclock.NewFakeClock(time.Now().Truncate(time.Second))
-		now = fakeClock.Now()
+		now = time.Now().Truncate(time.Second)
 
 		namespaceName = "test-namespace"
 		cloudProfileName = "test-cloudprofile"
@@ -95,7 +90,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 			).
 			Build()
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 		newExpiryDate = metav1.NewTime(now.Truncate(time.Second))
 	})
@@ -115,7 +110,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}).
 			Build()
-		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
+		reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -155,7 +150,6 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 			reconciler = &namespacedcloudprofilecontroller.Reconciler{
 				Client:   fakeClient,
-				Clock:    fakeClock,
 				Recorder: &events.FakeRecorder{},
 			}
 
@@ -245,7 +239,6 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 	Context("merge Kubernetes versions", func() {
 		BeforeEach(func() {
-			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			cloudProfile.Spec.Kubernetes = gardencorev1beta1.KubernetesSettings{
 				Versions: []gardencorev1beta1.ExpirableVersion{
 					{Version: "1.0.0"},
@@ -317,7 +310,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
-			Expect(result.RequeueAfter).To(BeNumerically("~", 2*time.Hour, time.Second))
+			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
 
 			updated := &gardencorev1beta1.NamespacedCloudProfile{}
@@ -351,7 +344,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
-			Expect(result.RequeueAfter).To(BeNumerically("~", time.Until(firstExpiryDate.Time), time.Second))
+			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
 
 			updated := &gardencorev1beta1.NamespacedCloudProfile{}
@@ -363,7 +356,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			}))
 		})
 
-		It("should reconcile lifecycle classifications and requeue due to upcoming stage without initial start time", func() {
+		It("should reconcile lifecycle classifications with an upcoming stage and no initial start time", func() {
 			future := metav1.NewTime(newExpiryDate.Add(24 * time.Hour))
 			moreFuture := metav1.NewTime(newExpiryDate.Add(48 * time.Hour))
 
@@ -391,8 +384,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result.Requeue).To(BeFalse())
-			Expect(result.RequeueAfter).To(BeNumerically("~", 24*time.Hour, time.Second))
+			Expect(result).To(Equal(reconcile.Result{}))
 
 			updated := &gardencorev1beta1.NamespacedCloudProfile{}
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, updated)).To(Succeed())
@@ -408,7 +400,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			}))
 		})
 
-		It("should reconcile lifecycle classifications but not requeue without upcoming stage and initial start time", func() {
+		It("should reconcile lifecycle classifications without an upcoming stage or initial start time", func() {
 			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{
 					Version: "1.0.0",
@@ -506,7 +498,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}).
 					Build()
-				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 				ncp := namespacedCloudProfile.DeepCopy()
 				ncp.Finalizers = []string{finalizerName}
@@ -539,7 +531,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 						},
 					}).
 					Build()
-				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
+				reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 				Expect(fakeClient.Create(ctx, namespacedCloudProfile.DeepCopy())).To(Succeed())
 
@@ -628,7 +620,6 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		})
 
 		It("should merge MachineImages correctly and migrate an additional ExpirationDate", func() {
-			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			newExpiryDate := metav1.NewTime(now.Truncate(time.Second))
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
@@ -695,7 +686,6 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		})
 
 		It("should fully replace a MachineImage version's lifecycle with a NamespacedCloudProfile override", func() {
-			DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			newExpiryDate := metav1.NewTime(now.Truncate(time.Second))
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
@@ -839,7 +829,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					core.NamespacedCloudProfileParentRefName,
 					indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
 				).Build()
-			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}, Clock: fakeClock}
+			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &events.FakeRecorder{}}
 
 			namespaceName = "garden-test"
 
@@ -1071,7 +1061,6 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				})
 
 				It("should add new elements and apply overrides consistently while keeping the existing elements ordered", func() {
-					DeferCleanup(testutils.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 					expirationDate := metav1.NewTime(now.Add(time.Hour))
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
