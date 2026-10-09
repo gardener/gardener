@@ -101,7 +101,7 @@ var (
 	// ServiceCleanOption is the delete selector for Services.
 	ServiceCleanOption = utilclient.ListWith{
 		client.MatchingLabelsSelector{
-			Selector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent, NoCleanupPrevention),
+			Selector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent, NoCleanupPrevention, NotManagedByGardener),
 		},
 	}
 
