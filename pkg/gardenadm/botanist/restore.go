@@ -73,14 +73,10 @@ func (b *GardenadmBotanist) ForceDeletePriorNodePods(ctx context.Context, realCl
 // managed content.
 func (b *GardenadmBotanist) DeleteStaleOperatingSystemConfigSecret(ctx context.Context, realClient client.Client) error {
 	if b.operatingSystemConfigSecret == nil {
-		return fmt.Errorf("operating system config secret is nil, make sure to call createOperatingSystemConfigSecretForNodeAgent() first")
+		return nil
 	}
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      b.operatingSystemConfigSecret.Name,
-		Namespace: b.operatingSystemConfigSecret.Namespace,
-	}}
-	return client.IgnoreNotFound(realClient.Delete(ctx, secret))
+	return client.IgnoreNotFound(realClient.Delete(ctx, b.operatingSystemConfigSecret))
 }
 
 // FinalizeGardenerNodeAgentManagedResource removes the finalizers from the shoot-gardener-node-agent ManagedResource
