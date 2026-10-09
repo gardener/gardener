@@ -184,6 +184,15 @@ var _ = Describe("shoot", func() {
 				}
 			})
 
+			It("returns nil for workerless shoot with nil Networking", func() {
+				shoot.Spec.Networking = nil
+
+				result, err := ToKCMPodNetworks(shoot)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(BeNil())
+			})
+
 			It("returns only spec pod CIDR when status networking is nil", func() {
 				result, err := ToKCMPodNetworks(shoot)
 

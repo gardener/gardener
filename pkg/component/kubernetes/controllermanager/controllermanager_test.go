@@ -976,6 +976,50 @@ namespace: kube-system
 		})
 	})
 
+	Describe("single-stack IPv6 node CIDR mask derivation", func() {
+		It("should derive --node-cidr-mask-size from the IPv6 pod CIDR when NodeCIDRMaskSizeIPv6 is unset", func() {
+			_, ipv6Only, _ := net.ParseCIDR("2001:db8::/64")
+			values = Values{
+				RuntimeVersion:    runtimeKubernetesVersion,
+				TargetVersion:     semverVersion,
+				Image:             image,
+				Config:            &gardencorev1beta1.KubeControllerManagerConfig{},
+				PriorityClassName: priorityClassName,
+				IsWorkerless:      false,
+				PodNetworks:       []net.IPNet{*ipv6Only},
+				ServiceNetworks:   serviceCIDRs,
+			}
+			kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
+
+			Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
+			Expect(actualDeployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement("--node-cidr-mask-size=80"))
+		})
+
+		It("should use NodeCIDRMaskSizeIPv6 when explicitly set for single-stack IPv6", func() {
+			_, ipv6Only, _ := net.ParseCIDR("2001:db8::/64")
+			values = Values{
+				RuntimeVersion:    runtimeKubernetesVersion,
+				TargetVersion:     semverVersion,
+				Image:             image,
+				Config:            &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSizeIPv6: new(int32(96))},
+				PriorityClassName: priorityClassName,
+				IsWorkerless:      false,
+				PodNetworks:       []net.IPNet{*ipv6Only},
+				ServiceNetworks:   serviceCIDRs,
+			}
+			kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
+
+			Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
+			Expect(actualDeployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement("--node-cidr-mask-size=96"))
+		})
+	})
+
 	Describe("#WaitCleanup", func() {
 		It("should return nil as it's not implemented as of now", func() {
 			Expect(kubeControllerManager.WaitCleanup(ctx)).To(Succeed())

@@ -841,10 +841,10 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskNew, nodeCIDRMaskOld, fldPath.Child("nodeCIDRMaskSize"))...)
-	// nodeCIDRMaskSizeIPv6 may be set in the update that migrates the shoot to dual-stack (i.e. while the
-	// cluster is not yet dual-stack). Once dual-stack is active it is immutable, because IPv6 pod CIDRs are
-	// already allocated to nodes and changing the mask would break those allocations.
-	if oldIsDualStack {
+	// nodeCIDRMaskSizeIPv6 may be set in the update that migrates the shoot to dual-stack (IPv4-only old spec,
+	// nodeCIDRMaskIPv6Old == nil). Once active (dual-stack or single-stack IPv6 with the value already set),
+	// it is immutable because IPv6 pod CIDRs are already allocated to nodes.
+	if oldIsDualStack || nodeCIDRMaskIPv6Old != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskIPv6New, nodeCIDRMaskIPv6Old, fldPath.Child("nodeCIDRMaskSizeIPv6"))...)
 	}
 
