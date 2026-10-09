@@ -16,7 +16,6 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -41,14 +40,12 @@ var _ = Describe("Restore", func() {
 			WithScheme(kubernetes.SeedScheme).
 			WithIndex(&corev1.Pod{}, indexer.PodNodeName, indexer.PodNodeNameIndexerFunc).
 			Build()
-		fakeClientSet := fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
 		b = &GardenadmBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
-					Logger:        logr.Discard(),
-					SeedClientSet: fakeClientSet,
-					Shoot:         &shootpkg.Shoot{ControlPlaneNamespace: oscSecretNamespace},
+					Logger: logr.Discard(),
+					Shoot:  &shootpkg.Shoot{ControlPlaneNamespace: oscSecretNamespace},
 				},
 			},
 		}
@@ -137,10 +134,10 @@ var _ = Describe("Restore", func() {
 			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(Succeed())
 		})
 
-		It("should do nothing when the OperatingSystemConfig Secret was not computed yet", func(ctx SpecContext) {
+		It("should error when the OperatingSystemConfig Secret was not computed yet", func(ctx SpecContext) {
 			b.operatingSystemConfigSecret = nil
 
-			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(Succeed())
+			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(MatchError(ContainSubstring("operating system config secret is nil")))
 		})
 	})
 

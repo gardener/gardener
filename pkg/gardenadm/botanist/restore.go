@@ -73,7 +73,7 @@ func (b *GardenadmBotanist) ForceDeletePriorNodePods(ctx context.Context, realCl
 // managed content.
 func (b *GardenadmBotanist) DeleteStaleOperatingSystemConfigSecret(ctx context.Context, realClient client.Client) error {
 	if b.operatingSystemConfigSecret == nil {
-		return nil
+		return fmt.Errorf("operating system config secret is nil, make sure to call createOperatingSystemConfigSecretForNodeAgent() first")
 	}
 
 	return client.IgnoreNotFound(realClient.Delete(ctx, b.operatingSystemConfigSecret))

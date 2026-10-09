@@ -430,7 +430,7 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath, p
 		// before the bootstrap secrets are imported. They are skipped for `gardenadm init` (nothing was restored, so
 		// b.IsRestore is false even on an init retry) and when a kubeconfig already exists locally (a retried restore,
 		// where the OperatingSystemConfig Secret was not recomputed).
-		cleanupStaleRestoreResources = g.AddGroup(b.CleanupStaleRestoreResourcesTaskGroup(&clientSet, priorNodeName).
+		cleanUpStaleRestoredResources = g.AddGroup(b.CleanUpStaleRestoredResourcesTaskGroup(&clientSet, priorNodeName).
 						WithDependencies(initializeClientSet).
 						SkipIf(kubeconfigFileExists || !b.IsRestore))
 		importSecrets = g.Add(flow.Task{
@@ -439,7 +439,7 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath, p
 				return b.MigrateSecrets(ctx, b.SeedClientSet.Client(), clientSet.Client())
 			},
 			SkipIf:       kubeconfigFileExists && !b.Shoot.IsRestorePhase(),
-			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet, cleanupStaleRestoreResources),
+			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet, cleanUpStaleRestoredResources),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deleting temporary ShootState containing bootstrap secrets",
