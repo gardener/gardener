@@ -37,7 +37,7 @@ var _ = Describe("resources", func() {
 		)
 
 		BeforeEach(func() {
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &fake.Clientset{}
@@ -162,9 +162,8 @@ var _ = Describe("resources", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE or UPDATE operations", func() {
-			dr, err := New()
+			dr := New()
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).NotTo(BeTrue())
@@ -174,7 +173,7 @@ var _ = Describe("resources", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return no error", func() {
-			dr, _ := New()
+			dr := New()
 
 			err := dr.ValidateInitialization()
 

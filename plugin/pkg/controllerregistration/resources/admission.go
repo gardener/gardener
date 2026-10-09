@@ -27,7 +27,7 @@ func Register(plugins *admission.Plugins) {
 
 // NewFactory creates a new PluginFactory.
 func NewFactory(_ io.Reader) (admission.Interface, error) {
-	return New()
+	return New(), nil
 }
 
 // Resources contains an admission handler and listers.
@@ -45,10 +45,10 @@ var (
 )
 
 // New creates a new Resources admission plugin.
-func New() (*Resources, error) {
+func New() *Resources {
 	return &Resources{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

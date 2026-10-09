@@ -432,7 +432,7 @@ var _ = Describe("resourcereferencemanager", func() {
 		)
 
 		BeforeEach(func() {
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
@@ -4331,9 +4331,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE, UPDATE and DELETE operations", func() {
-			rm, err := New()
+			rm := New()
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(rm.Handles(admission.Create)).To(BeTrue())
 			Expect(rm.Handles(admission.Update)).To(BeTrue())
 			Expect(rm.Handles(admission.Connect)).NotTo(BeTrue())
@@ -4343,7 +4342,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should not return error if everything is set", func() {
-			rm, _ := New()
+			rm := New()
 
 			internalGardenClient := &internalclientset.Clientset{}
 			rm.SetCoreClientSet(internalGardenClient)

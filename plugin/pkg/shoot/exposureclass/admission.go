@@ -26,7 +26,7 @@ import (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameShootExposureClass, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -45,10 +45,10 @@ var (
 )
 
 // New creates a new ExposureClass admission plugin.
-func New() (*ExposureClass, error) {
+func New() *ExposureClass {
 	return &ExposureClass{
 		Handler: admission.NewHandler(admission.Create),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.
