@@ -7,15 +7,19 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -116,6 +120,38 @@ func (b *GardenadmBotanist) FinalizeGardenerNodeAgentManagedResource(ctx context
 	b.Logger.Info("Waiting for ManagedResource to be cleaned up", "managedResource", client.ObjectKeyFromObject(managedResource))
 	if err := kubernetesutils.WaitUntilResourceDeleted(ctxWithTimeout, realClient, managedResource, 10*time.Second); err != nil {
 		return fmt.Errorf("failed waiting until ManagedResource %s is cleaned up: %w", client.ObjectKeyFromObject(managedResource), err)
+	}
+
+	return nil
+}
+
+// DeleteNodeAgentCertificateSigningRequests deletes the gardener-node-agent client CSRs restored from the etcd
+// snapshot. A CSR is considered a gardener-node-agent CSR if it targets the kube-apiserver-client signer and its
+// embedded x509 CommonName carries the gardener-node-agent user-name prefix (the same predicate the init flow's
+// approval step uses). Removing them ensures the approval step only ever sees the CSR created during the current run.
+func (b *GardenadmBotanist) DeleteNodeAgentCertificateSigningRequests(ctx context.Context, realClient client.Client) error {
+	csrList := &certificatesv1.CertificateSigningRequestList{}
+	if err := realClient.List(ctx, csrList); err != nil {
+		return fmt.Errorf("failed listing CertificateSigningRequests: %w", err)
+	}
+
+	for _, csr := range csrList.Items {
+		if csr.Spec.SignerName != certificatesv1.KubeAPIServerClientSignerName {
+			continue
+		}
+
+		x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
+		if err != nil {
+			return fmt.Errorf("failed decoding CertificateSigningRequest %s: %w", client.ObjectKeyFromObject(&csr), err)
+		}
+		if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix) {
+			continue
+		}
+
+		b.Logger.Info("Deleting gardener-node-agent CertificateSigningRequest", "certificateSigningRequest", client.ObjectKeyFromObject(&csr))
+		if err := realClient.Delete(ctx, &csr); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed deleting CertificateSigningRequest %s: %w", client.ObjectKeyFromObject(&csr), err)
+		}
 	}
 
 	return nil

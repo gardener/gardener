@@ -5,21 +5,28 @@
 package botanist
 
 import (
+	"crypto/rand"
+	"crypto/x509/pkix"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -175,6 +182,82 @@ var _ = Describe("Restore", func() {
 			Expect(b.FinalizeGardenerNodeAgentManagedResource(ctx, fakeClient)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+		})
+	})
+
+	Describe("#DeleteNodeAgentCertificateSigningRequests", func() {
+		csrWithCommonName := func(name, signerName, commonName string) *certificatesv1.CertificateSigningRequest {
+			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
+			Expect(err).NotTo(HaveOccurred())
+
+			csrData, err := certutil.MakeCSR(privateKey, &pkix.Name{CommonName: commonName}, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			return &certificatesv1.CertificateSigningRequest{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Spec: certificatesv1.CertificateSigningRequestSpec{
+					Request:    csrData,
+					SignerName: signerName,
+				},
+			}
+		}
+
+		It("should succeed when there are no CertificateSigningRequests", func(ctx SpecContext) {
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should delete the gardener-node-agent CertificateSigningRequest", func(ctx SpecContext) {
+			csr := csrWithCommonName("node-agent-csr", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			Expect(fakeClient.Create(ctx, csr)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+		})
+
+		It("should delete all gardener-node-agent CertificateSigningRequests", func(ctx SpecContext) {
+			csr1 := csrWithCommonName("node-agent-csr-1", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			csr2 := csrWithCommonName("node-agent-csr-2", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-2")
+			Expect(fakeClient.Create(ctx, csr1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, csr2)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr1), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr2), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+		})
+
+		It("should not delete a CertificateSigningRequest with a different signer", func(ctx SpecContext) {
+			csr := csrWithCommonName("other-signer-csr", "example.com/other-signer", v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			Expect(fakeClient.Create(ctx, csr)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
+		})
+
+		It("should not delete a CertificateSigningRequest whose CommonName lacks the gardener-node-agent prefix", func(ctx SpecContext) {
+			csr := csrWithCommonName("foreign-csr", certificatesv1.KubeAPIServerClientSignerName, "gardener.cloud:system:some-other-user")
+			Expect(fakeClient.Create(ctx, csr)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
+		})
+
+		It("should delete only the matching CertificateSigningRequests and keep the others", func(ctx SpecContext) {
+			nodeAgentCSR := csrWithCommonName("node-agent-csr", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
+			otherSignerCSR := csrWithCommonName("other-signer-csr", "example.com/other-signer", v1beta1constants.NodeAgentUserNamePrefix+"machine-2")
+			foreignCSR := csrWithCommonName("foreign-csr", certificatesv1.KubeAPIServerClientSignerName, "gardener.cloud:system:some-other-user")
+			Expect(fakeClient.Create(ctx, nodeAgentCSR)).To(Succeed())
+			Expect(fakeClient.Create(ctx, otherSignerCSR)).To(Succeed())
+			Expect(fakeClient.Create(ctx, foreignCSR)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(nodeAgentCSR), &certificatesv1.CertificateSigningRequest{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(otherSignerCSR), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(foreignCSR), &certificatesv1.CertificateSigningRequest{})).To(Succeed())
 		})
 	})
 })
