@@ -89,9 +89,7 @@ var _ = Describe("Bastion", func() {
 				},
 			}
 
-			var err error
-			admissionHandler, err = New()
-			Expect(err).ToNot(HaveOccurred())
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &corefake.Clientset{}
@@ -292,8 +290,7 @@ var _ = Describe("Bastion", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE and UPDATE operations", func() {
-			admissionHandler, err := New()
-			Expect(err).ToNot(HaveOccurred())
+			admissionHandler := New()
 			Expect(admissionHandler.Handles(admission.Create)).To(BeTrue())
 			Expect(admissionHandler.Handles(admission.Update)).To(BeTrue())
 			Expect(admissionHandler.Handles(admission.Connect)).To(BeFalse())
@@ -303,14 +300,14 @@ var _ = Describe("Bastion", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should fail if the required clients are not set", func() {
-			admissionHandler, _ := New()
+			admissionHandler := New()
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not fail if the required clients are set", func() {
-			admissionHandler, _ := New()
+			admissionHandler := New()
 			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()

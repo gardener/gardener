@@ -37,7 +37,7 @@ func Register(plugins *admission.Plugins) {
 
 // NewFactory creates a new PluginFactory.
 func NewFactory(_ io.Reader) (admission.Interface, error) {
-	return New()
+	return New(), nil
 }
 
 // ExtensionValidator contains listers and admission handler.
@@ -56,10 +56,10 @@ var (
 )
 
 // New creates a new ExtensionValidator admission plugin.
-func New() (*ExtensionValidator, error) {
+func New() *ExtensionValidator {
 	return &ExtensionValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

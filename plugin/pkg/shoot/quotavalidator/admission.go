@@ -47,7 +47,7 @@ var (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameShootQuotaValidator, func(_ io.Reader) (admission.Interface, error) {
-		return New(clock.RealClock{})
+		return New(clock.RealClock{}), nil
 	})
 }
 
@@ -73,11 +73,11 @@ var (
 )
 
 // New creates a new QuotaValidator admission plugin.
-func New(clock clock.Clock) (*QuotaValidator, error) {
+func New(clock clock.Clock) *QuotaValidator {
 	return &QuotaValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 		clock:   clock,
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.
