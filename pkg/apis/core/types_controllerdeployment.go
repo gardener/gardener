@@ -86,7 +86,8 @@ type OCIRepository struct {
 	// The CA bundle is used to verify the TLS certificate of the OCI registry.
 	// The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.
 	// For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.
-	// If not provided, the system's default certificate pool is used.
+	// If provided, the CA bundle is used as the sole trust anchor for verifying the registry's TLS certificate.
+	// Otherwise the system's default certificate pool is used.
 	CABundleSecretRef *corev1.LocalObjectReference
 }
 

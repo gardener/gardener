@@ -6,6 +6,7 @@ package oci
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"net"
@@ -231,7 +232,7 @@ var _ = Describe("helmregistry", func() {
 		Expect(authProvider.receivedAuthorization).To(Equal(fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("foo:bar")))))
 	})
 
-	It("should include ChartsCABundle certs in the TLS cert pool", func() {
+	It("should ignore the ChartsCABundle when a CABundleSecretRef is provided", func() {
 		wrongCA, err := (&secretsutils.CertificateSecretConfig{
 			Name:        "wrong-ca",
 			CommonName:  "WrongCA",
@@ -253,21 +254,22 @@ var _ = Describe("helmregistry", func() {
 
 		Expect(fakeClient.Create(ctx, wrongCASecret)).To(Succeed())
 
+		// The charts CA bundle carries the registry's correct CA, but it must be disregarded because the
+		// CABundleSecretRef (a wrong CA) is used as the sole trust anchor. Hence, the pull must fail.
 		inline := string(testCACert)
 		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
 			return &imagevectorutils.CABundle{Inline: &inline}
 		}))
 
-		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+		_, err = hr.Pull(ctx, &gardencorev1.OCIRepository{
 			Repository:        new(registryAddress + "/charts/example"),
 			Tag:               new("0.1.0"),
 			CABundleSecretRef: &corev1.LocalObjectReference{Name: "wrong-ca-bundle"},
 		})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(out).NotTo(BeEmpty())
+		Expect(err).To(MatchError(ContainSubstring("tls: failed to verify certificate: x509")))
 	})
 
-	It("should not break the pull when ChartsCABundle contains a wrong CA alongside the correct secret CA", func() {
+	It("should pull using the CABundleSecretRef even when the ChartsCABundle holds a wrong CA", func() {
 		wrongCA, err := (&secretsutils.CertificateSecretConfig{
 			Name:        "wrong-ca",
 			CommonName:  "WrongCA",
@@ -327,6 +329,36 @@ var _ = Describe("helmregistry", func() {
 			Tag:        new("0.1.0"),
 		})
 		Expect(err).To(MatchError("failed to append CA certificates from charts image vector bundle"))
+	})
+
+	It("should append the custom ChartsCABundle onto the system trust store rather than replacing it", func() {
+		// Regression guard for the x509 unknown-authority failure: the custom charts CA bundle must be ADDED to the system
+		// roots, not used as a replacement. We seed the (overridable) system pool with the registry's real CA and
+		// supply a WRONG charts bundle. With append semantics the registry's CA survives, so the pull succeeds. With
+		// the old replace semantics the pool would hold only the wrong CA and the pull would fail with x509.
+		systemPool := x509.NewCertPool()
+		Expect(systemPool.AppendCertsFromPEM(testCACert)).To(BeTrue())
+		DeferCleanup(test.WithVar(&systemCertPoolFunc, func() (*x509.CertPool, error) {
+			return systemPool.Clone(), nil
+		}))
+
+		wrongCA, err := (&secretsutils.CertificateSecretConfig{
+			Name:        "wrong-ca",
+			CommonName:  "WrongCA",
+			CertType:    secretsutils.CACert,
+			IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		}).GenerateCertificate()
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(test.WithVar(&chartsCABundleFunc, func() *imagevectorutils.CABundle {
+			return &imagevectorutils.CABundle{Inline: new(string(wrongCA.SecretData()[secretsutils.DataKeyCertificateCA]))}
+		}))
+
+		out, err := hr.Pull(ctx, &gardencorev1.OCIRepository{
+			Repository: new(registryAddress + "/charts/example"),
+			Tag:        new("0.1.0"),
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
 	})
 })
 
