@@ -130,6 +130,7 @@ Token files are written with `0640` permissions (rather than `0600`) because sta
 This mechanism is used to download its own access token for the shoot cluster, but also the access tokens of other `systemd` components (e.g., `valitail`) and of control plane components running as static pods on self-hosted shoot nodes (e.g., `kube-apiserver`, `kube-controller-manager`, `kube-scheduler`).
 Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without the necessity of explicit configuration or code changes.
 This procedure ensures that the most up-to-date tokens are always present on the host and used by the `gardener-node-agent` and the other `systemd` components.
+The tokens are synced periodically (`.controllers.token.syncPeriod`): every `12h` on regular nodes, whose synced tokens are valid for `30d`, and every hour on control plane nodes of self-hosted shoots, since the tokens of the control plane components are only valid for `12h`.
 
 The controller is also triggered via a source channel by the `Operating System Config` controller in two situations:
 

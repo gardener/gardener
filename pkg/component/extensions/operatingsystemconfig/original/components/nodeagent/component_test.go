@@ -209,12 +209,11 @@ WantedBy=multi-user.target`))
 			}))
 		})
 
-		It("should set bootstrap.controlPlaneNodesEndpoints.enabled for a control plane pool", func() {
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, additionalTokenSyncConfigs, true, false)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
-				APIServer: nodeagentconfigv1alpha1.APIServer{
-					Server: apiServerURL,
-					CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
-				},
+		It("should set bootstrap.controlPlaneNodesEndpoints.enabled and a shorter token sync period for a control plane pool", func() {
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, additionalTokenSyncConfigs, true, false)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{APIServer: nodeagentconfigv1alpha1.APIServer{
+				Server: apiServerURL,
+				CAFile: nodeagentconfigv1alpha1.ClusterCAFilePath,
+			},
 				Bootstrap: &nodeagentconfigv1alpha1.BootstrapConfiguration{
 					ControlPlaneNodesEndpoints: &nodeagentconfigv1alpha1.ControlPlaneNodesEndpoints{Enabled: true},
 				},
@@ -256,7 +255,7 @@ WantedBy=multi-user.target`))
 								Path:       "/var/lib/valitail/auth-token",
 							},
 						},
-						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
+						SyncPeriod: &metav1.Duration{Duration: time.Hour},
 					},
 				},
 			}))
