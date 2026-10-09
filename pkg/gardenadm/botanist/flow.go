@@ -53,6 +53,12 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 			return b.ForceDeletePriorNodePods(ctx, (*clientSet).Client(), priorNodeName)
 		},
 	})
+	_ = g.Add(flow.Task{
+		Name: "Deleting stale gardener-node-agent CertificateSigningRequests",
+		Fn: func(ctx context.Context) error {
+			return b.DeleteNodeAgentCertificateSigningRequests(ctx, (*clientSet).Client())
+		},
+	})
 
 	return g
 }
