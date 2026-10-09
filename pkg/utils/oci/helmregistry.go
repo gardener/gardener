@@ -87,10 +87,24 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 		}
 	}
 
-	// Configure custom transport with CA bundle if provided. The custom CAs are appended on top of the system trust
-	// store (not used as a replacement) so that charts referenced by public registries (e.g. europe-docker.pkg.dev)
-	// still verify while a private/self-signed registry CA is also trusted.
+	// Configure custom transport with CA bundle if provided.
 	var caCertPool *x509.CertPool
+
+	// The charts CA bundle (from the image vector overwrite) is appended on top of the system trust store rather than
+	// replacing it, so that charts referenced by public registries (e.g. europe-docker.pkg.dev) still verify while a
+	// private/self-signed registry CA is also trusted.
+	if chartsCABundle := chartsCABundleFunc(); chartsCABundle != nil && chartsCABundle.Inline != nil {
+		caCertPool, err = systemCertPoolFunc()
+		if err != nil {
+			return nil, fmt.Errorf("failed loading system cert pool: %w", err)
+		}
+		if !caCertPool.AppendCertsFromPEM([]byte(*chartsCABundle.Inline)) {
+			return nil, errors.New("failed to append CA certificates from charts image vector bundle")
+		}
+	}
+
+	// A CABundleSecretRef is specified particularly for this OCIRepository, so it is used as the sole trust anchor
+	// (overriding the system and charts CA bundles).
 	if oci.CABundleSecretRef != nil {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: secretNamespace, Name: oci.CABundleSecretRef.Name}}
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
@@ -104,24 +118,9 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 			return nil, fmt.Errorf("CA bundle secret %s has empty data for key %s", client.ObjectKeyFromObject(secret), secretsutils.DataKeyCertificateBundle)
 		}
 
-		caCertPool, err = systemCertPoolFunc()
-		if err != nil {
-			return nil, fmt.Errorf("failed loading system cert pool: %w", err)
-		}
+		caCertPool = x509.NewCertPool()
 		if !caCertPool.AppendCertsFromPEM(caBundle) {
 			return nil, errors.New("failed to append CA certificates from bundle")
-		}
-	}
-
-	if chartsCABundle := chartsCABundleFunc(); chartsCABundle != nil && chartsCABundle.Inline != nil {
-		if caCertPool == nil {
-			caCertPool, err = systemCertPoolFunc()
-			if err != nil {
-				return nil, fmt.Errorf("failed loading system cert pool: %w", err)
-			}
-		}
-		if !caCertPool.AppendCertsFromPEM([]byte(*chartsCABundle.Inline)) {
-			return nil, errors.New("failed to append CA certificates from charts image vector bundle")
 		}
 	}
 

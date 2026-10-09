@@ -285,7 +285,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.<br />The CA bundle is used to verify the TLS certificate of the OCI registry.<br />The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.<br />For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.<br />If provided, the CA bundle is appended to the system's default certificate pool.<br />Otherwise only the system's default certificate pool is used.</p>
+<p>CABundleSecretRef is a reference to a secret containing a PEM-encoded certificate authority bundle.<br />The CA bundle is used to verify the TLS certificate of the OCI registry.<br />The secret must have a data key `bundle.crt` and must be located in the `garden` namespace.<br />For usage in the gardenlet, the secret must have the label `gardener.cloud/role=oci-ca-bundle`.<br />If provided, the CA bundle is used as the sole trust anchor for verifying the registry's TLS certificate.<br />Otherwise the system's default certificate pool is used.</p>
 </td>
 </tr>
 
