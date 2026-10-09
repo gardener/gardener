@@ -194,7 +194,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 
 			networkPolicyAllowFromSeed := &networkingv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener.cloud--allow-from-seed",
+					Name:      "gardener.cloud--allow-from-control-plane-components",
 					Namespace: metav1.NamespaceSystem,
 					Annotations: map[string]string{
 						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from the control plane to "+
