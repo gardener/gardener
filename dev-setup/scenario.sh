@@ -27,7 +27,7 @@ function detect_scenario() {
   provider_ids=$(kubectl get nodes -o jsonpath='{.items[*].spec.providerID}' | tr ' ' '\n')
 
   # Check if all nodes have a (cloud) providerID but none start with kind://.
-  if [[ -n "$provider_ids" && $(echo "$provider_ids" | grep -c .) -eq $(echo "$provider_ids" | wc -l) && $(echo "$provider_ids" | grep -cv '^kind://') -eq $(echo "$provider_ids" | wc -l) ]]; then
+  if [[ -n "$provider_ids" ]] && ! echo "$provider_ids" | grep -qE '^$|^kind://'; then
     export SCENARIO="remote"
   elif [[ $(echo "$nodes" | wc -l) -eq 1 ]]; then
     export SCENARIO="single-node"
