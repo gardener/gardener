@@ -394,18 +394,21 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				continue
 			}
 
+			numberOfAwakeMachines += deployment.Status.Replicas
+
+			// Skip further checks if cluster is hibernated because machine-controller-manager is usually scaled down during hibernation.
+			// During hibernation all machines are being deleted, so a transient machine failure (e.g. a cloud-provider delete
+			// that fails once and is retried by machine-controller-manager) must not abort the flow with a severe error.
+			// We only wait until the sum of `.Status.Replicas` over all machine deployments equals 0.
+			if extensionscontroller.IsHibernationEnabled(cluster) {
+				continue
+			}
+
 			// We want to wait until all wanted machine deployments have as many
 			// available replicas as desired (specified in the .spec.replicas).
 			// However, if we see any error in the status of the deployment then we return it.
 			if machineErrs := extensionsworkerhelper.ReportFailedMachines(deployment.Status); machineErrs != nil {
 				return retryutils.SevereError(machineErrs)
-			}
-
-			numberOfAwakeMachines += deployment.Status.Replicas
-
-			// Skip further checks if cluster is hibernated because machine-controller-manager is usually scaled down during hibernation.
-			if extensionscontroller.IsHibernationEnabled(cluster) {
-				continue
 			}
 
 			// we only care about rolling updates when the cluster is not hibernated
