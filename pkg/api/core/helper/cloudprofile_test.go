@@ -223,26 +223,6 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
-	Context("UsesLegacyClassifications", func() {
-		It("returns false when version only has version field", func() {
-			Expect(UsesLegacyClassifications(core.ExpirableVersion{Version: "1.28.0"})).To(BeFalse())
-		})
-
-		It("returns true when classification is set without lifecycle", func() {
-			Expect(UsesLegacyClassifications(core.ExpirableVersion{
-				Version:        "1.28.0",
-				Classification: new(core.ClassificationPreview),
-			})).To(BeTrue())
-		})
-
-		It("returns true when expiration date is set without lifecycle", func() {
-			Expect(UsesLegacyClassifications(core.ExpirableVersion{
-				Version:        "1.28.0",
-				ExpirationDate: new(metav1.NewTime(time.Now().Add(3 * time.Hour))),
-			})).To(BeTrue())
-		})
-	})
-
 	Context("ToLifecycleStages", func() {
 		var now = time.Now()
 

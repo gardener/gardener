@@ -18,11 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// UsesLegacyClassifications reports whether the given version uses legacy Classifications instead of a Lifecycle.
-func UsesLegacyClassifications(version core.ExpirableVersion) bool {
-	return len(version.Lifecycle) == 0 && (version.Classification != nil || version.ExpirationDate != nil)
-}
-
 // ToLifecycleStages converts the legacy classification fields of an ExpirableVersion to lifecycle stages.
 // If the version already defines lifecycle stages, they are returned unchanged.
 func ToLifecycleStages(version core.ExpirableVersion) []core.LifecycleStage {
