@@ -30,11 +30,12 @@ const (
 	mediaTypeHelm = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
 )
 
-// chartsCABundleFunc is an alias for imagevector.ChartsCABundle. Exposed for testing purposes.
-var chartsCABundleFunc = imagevector.ChartsCABundle
-
-// systemCertPoolFunc is an alias for x509.SystemCertPool. Exposed for testing purposes.
-var systemCertPoolFunc = x509.SystemCertPool
+var (
+	// chartsCABundleFunc is an alias for imagevector.ChartsCABundle. Exposed for testing purposes.
+	chartsCABundleFunc = imagevector.ChartsCABundle
+	// systemCertPoolFunc is an alias for x509.SystemCertPool. Exposed for testing purposes.
+	systemCertPoolFunc = x509.SystemCertPool
+)
 
 type secretNamespace struct{}
 
