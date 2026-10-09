@@ -25,6 +25,12 @@ const TaskGroupCleanupStaleRestoreResources flow.TaskID = "TaskGroupCleanupStale
 func (b *GardenadmBotanist) CleanupStaleRestoreResourcesTaskGroup(clientSet *kubernetes.Interface, priorNodeName string) flow.TaskGroup {
 	g := flow.NewTaskGroup(TaskGroupCleanupStaleRestoreResources)
 
+	finalizeGNAManagedResource := g.Add(flow.Task{
+		Name: "Finalize gardener-node-agent ManagedResource",
+		Fn: func(ctx context.Context) error {
+			return b.FinalizeGardenerNodeAgentManagedResource(ctx, (*clientSet).Client())
+		},
+	})
 	// The whole group must run before importSecrets so that the following MigrateSecrets task reinstalls the
 	// bootstrap-content OperatingSystemConfig Secret under the same name (see DeleteStaleOperatingSystemConfigSecret).
 	// This ordering is enforced by the group's consumer (BootstrapControlPlane), which makes importSecrets depend on it.
@@ -33,6 +39,7 @@ func (b *GardenadmBotanist) CleanupStaleRestoreResourcesTaskGroup(clientSet *kub
 		Fn: func(ctx context.Context) error {
 			return b.DeleteStaleOperatingSystemConfigSecret(ctx, (*clientSet).Client())
 		},
+		Dependencies: flow.NewTaskIDs(finalizeGNAManagedResource),
 	})
 	_ = g.Add(flow.Task{
 		Name: "Deleting prior control plane Node",

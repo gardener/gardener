@@ -7,12 +7,15 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -78,4 +81,46 @@ func (b *GardenadmBotanist) DeleteStaleOperatingSystemConfigSecret(ctx context.C
 		Namespace: b.operatingSystemConfigSecret.Namespace,
 	}}
 	return client.IgnoreNotFound(realClient.Delete(ctx, secret))
+}
+
+// FinalizeGardenerNodeAgentManagedResource removes the finalizers from the shoot-gardener-node-agent ManagedResource
+// restored from the ETCD snapshot and deletes it. During the restore bootstrap no gardener-resource-manager is running
+// to remove its finalizer, so a plain delete would leave the ManagedResource stuck in Terminating. It is a no-op if the
+// ManagedResource is absent. The ManagedResource must be gone before DeleteStaleOperatingSystemConfigSecret deletes the
+// Secret, otherwise a later gardener-resource-manager reconciliation would recreate the stale Secret.
+func (b *GardenadmBotanist) FinalizeGardenerNodeAgentManagedResource(ctx context.Context, realClient client.Client) error {
+	managedResource := &resourcesv1alpha1.ManagedResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      botanist.GardenerNodeAgentManagedResourceName,
+			Namespace: b.Shoot.ControlPlaneNamespace,
+		},
+	}
+	if err := realClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	if len(managedResource.Finalizers) > 0 {
+		patch := client.MergeFrom(managedResource.DeepCopy())
+		managedResource.SetFinalizers(nil)
+
+		b.Logger.Info("Removing ManagedResource finalizers", "managedResource", client.ObjectKeyFromObject(managedResource))
+		if err := realClient.Patch(ctx, managedResource, patch); err != nil {
+			return fmt.Errorf("failed removing finalizers from ManagedResource %s: %w", client.ObjectKeyFromObject(managedResource), err)
+		}
+	}
+
+	b.Logger.Info("Deleting ManagedResource", "managedResource", client.ObjectKeyFromObject(managedResource))
+	if err := realClient.Delete(ctx, managedResource); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("failed deleting ManagedResource %s: %w", client.ObjectKeyFromObject(managedResource), err)
+	}
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer cancel()
+
+	b.Logger.Info("Waiting for ManagedResource to be cleaned up", "managedResource", client.ObjectKeyFromObject(managedResource))
+	if err := kubernetesutils.WaitUntilResourceDeleted(ctxWithTimeout, realClient, managedResource, 10*time.Second); err != nil {
+		return fmt.Errorf("failed waiting until ManagedResource %s is cleaned up: %w", client.ObjectKeyFromObject(managedResource), err)
+	}
+
+	return nil
 }
