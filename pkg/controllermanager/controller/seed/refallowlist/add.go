@@ -77,10 +77,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 // reconcile requests for every credential/resource object referenced in their embedded `SeedSpec`.
 // On update events only refs that actually changed are enqueued: dropped refs are marked for
 // removal and newly added refs are marked for addition.
-func SeedEventHandler[T any, PT interface {
-	*T
-	client.Object
-}](getConfig func(PT) *runtime.RawExtension) handler.TypedEventHandler[client.Object, Request] {
+func SeedEventHandler[PT client.Object](getConfig func(PT) *runtime.RawExtension) handler.TypedEventHandler[client.Object, Request] {
 	refsFor := func(obj client.Object) []ref {
 		typed, ok := obj.(PT)
 		if !ok {
@@ -115,15 +112,11 @@ func SeedEventHandler[T any, PT interface {
 			newRefs := refsFor(e.ObjectNew)
 			newSet := sets.New(newRefs...)
 			oldSet := sets.New(oldRefs...)
-			for _, r := range oldRefs {
-				if !newSet.Has(r) {
-					enqueue(q, e.ObjectOld.GetName(), []ref{r}, true)
-				}
+			for r := range oldSet.Difference(newSet) {
+				enqueue(q, e.ObjectOld.GetName(), []ref{r}, true)
 			}
-			for _, r := range newRefs {
-				if !oldSet.Has(r) {
-					enqueue(q, e.ObjectNew.GetName(), []ref{r}, false)
-				}
+			for r := range newSet.Difference(oldSet) {
+				enqueue(q, e.ObjectNew.GetName(), []ref{r}, false)
 			}
 		},
 		DeleteFunc: func(_ context.Context, e event.TypedDeleteEvent[client.Object], q workqueue.TypedRateLimitingInterface[Request]) {
