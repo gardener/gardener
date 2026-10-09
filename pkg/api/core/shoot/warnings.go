@@ -106,7 +106,7 @@ func GetKubeAPIServerWarnings(kubeAPIServer *core.KubeAPIServerConfig, fldPath *
 
 	var warnings []string
 	if kubeAPIServer.EnableAnonymousAuthentication != nil {
-		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field is deprecated. Using Kubernetes v1.32 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration", fldPath.Child("enableAnonymousAuthentication").String()))
+		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field is deprecated. Please use anonymous authentication configuration instead. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration", fldPath.Child("enableAnonymousAuthentication").String()))
 	}
 	if kubeAPIServer.WatchCacheSizes != nil && kubeAPIServer.WatchCacheSizes.Default != nil {
 		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.", fldPath.Child("watchCacheSizes", "default").String()))
