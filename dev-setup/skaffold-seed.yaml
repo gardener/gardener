@@ -723,6 +723,37 @@ profiles:
       - op: replace
         path: /deploy/kubectl/hooks/after/0/host/command/2
         value: "KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER hack/usage/wait-for.sh seed remote GardenletReady SeedSystemComponentsHealthy ExtensionsReady"
+  # These profiles pin the seed-resident artifacts to the seed architecture, leaving gardener-node-agent to be built multi-arch.
+  # The paths are positional: 0 = gardenlet, 1 = gardenlet/chart, 2 = gardener-resource-manager (gardener-node-agent is index 3).
+  # Re-verify these indices whenever artifacts are added, removed or reordered in the gardenlet module above.
+  - name: remote-amd64
+    patches:
+      - op: add
+        path: /build/artifacts/0/platforms
+        value:
+          - linux/amd64
+      - op: add
+        path: /build/artifacts/1/platforms
+        value:
+          - linux/amd64
+      - op: add
+        path: /build/artifacts/2/platforms
+        value:
+          - linux/amd64
+  - name: remote-arm64
+    patches:
+      - op: add
+        path: /build/artifacts/0/platforms
+        value:
+          - linux/arm64
+      - op: add
+        path: /build/artifacts/1/platforms
+        value:
+          - linux/arm64
+      - op: add
+        path: /build/artifacts/2/platforms
+        value:
+          - linux/arm64
 deploy:
   kubectl:
     hooks:
