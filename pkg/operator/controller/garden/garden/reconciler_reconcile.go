@@ -412,9 +412,15 @@ func (r *Reconciler) reconcile(
 		renewVirtualClusterAccess = g.Add(flow.Task{
 			Name: "Renewing virtual garden access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
+				// TODO(timuthy): Drop renewing secrets with class `shoot` when the TokenRequestor controller is disabled in GRM, after release v1.62.0
+				if err := tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
 					client.InNamespace(r.GardenNamespace),
 					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
+				); err != nil {
+					return err
+				}
+				return tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
+					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden},
 				)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
