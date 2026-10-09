@@ -14,10 +14,12 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -46,6 +48,7 @@ var _ = Describe("Restore", func() {
 				Operation: &operation.Operation{
 					Logger:        logr.Discard(),
 					SeedClientSet: fakeClientSet,
+					Shoot:         &shootpkg.Shoot{ControlPlaneNamespace: oscSecretNamespace},
 				},
 			},
 		}
@@ -138,6 +141,40 @@ var _ = Describe("Restore", func() {
 			b.operatingSystemConfigSecret = nil
 
 			Expect(b.DeleteStaleOperatingSystemConfigSecret(ctx, fakeClient)).To(MatchError(ContainSubstring("operating system config secret is nil")))
+		})
+	})
+
+	Describe("#FinalizeGardenerNodeAgentManagedResource", func() {
+		managedResource := func(finalizers ...string) *resourcesv1alpha1.ManagedResource {
+			return &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       botanistpkg.GardenerNodeAgentManagedResourceName,
+					Namespace:  oscSecretNamespace,
+					Finalizers: finalizers,
+				},
+			}
+		}
+
+		It("should succeed when the ManagedResource is absent", func(ctx SpecContext) {
+			Expect(b.FinalizeGardenerNodeAgentManagedResource(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should delete the ManagedResource without finalizers", func(ctx SpecContext) {
+			mr := managedResource()
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(b.FinalizeGardenerNodeAgentManagedResource(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+		})
+
+		It("should remove the finalizer so the ManagedResource is deleted even without a running gardener-resource-manager", func(ctx SpecContext) {
+			mr := managedResource("resources.gardener.cloud/gardener-resource-manager")
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(b.FinalizeGardenerNodeAgentManagedResource(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		})
 	})
 })
