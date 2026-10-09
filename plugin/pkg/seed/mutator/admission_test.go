@@ -31,9 +31,7 @@ var _ = Describe("mutator", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
-		handler, err = New()
-		Expect(err).NotTo(HaveOccurred())
+		handler = New()
 
 		coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 		seedManagementInformerFactory = seedmanagementinformers.NewSharedInformerFactory(nil, 0)

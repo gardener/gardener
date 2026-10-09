@@ -47,7 +47,7 @@ var _ = Describe("deleteconfirmation", func() {
 		)
 
 		BeforeEach(func() {
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
@@ -692,9 +692,8 @@ var _ = Describe("deleteconfirmation", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE,UPDATE,DELETE operations", func() {
-			dr, err := New()
+			dr := New()
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).NotTo(BeTrue())
@@ -704,7 +703,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if no ShootLister or ProjectLister is set", func() {
-			dr, _ := New()
+			dr := New()
 
 			err := dr.ValidateInitialization()
 
@@ -712,7 +711,7 @@ var _ = Describe("deleteconfirmation", func() {
 		})
 
 		It("should not return error if lister and core clients are set", func() {
-			dr, _ := New()
+			dr := New()
 			gardenClient := &internalClientSet.Clientset{}
 			dr.SetCoreClientSet(gardenClient)
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))

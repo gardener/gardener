@@ -38,7 +38,7 @@ var _ = Describe("finalizerremoval", func() {
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			finalizers = []string{core.GardenerName}

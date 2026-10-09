@@ -37,7 +37,7 @@ import (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameShootDNS, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -59,10 +59,10 @@ var (
 )
 
 // New creates a new DNS admission plugin.
-func New() (*DNS, error) {
+func New() *DNS {
 	return &DNS{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

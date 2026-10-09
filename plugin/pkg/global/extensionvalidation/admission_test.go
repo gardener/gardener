@@ -28,7 +28,7 @@ var _ = Describe("ExtensionValidator", func() {
 	)
 
 	BeforeEach(func() {
-		admissionHandler, _ = New()
+		admissionHandler = New()
 		admissionHandler.AssignReadyFunc(func() bool { return true })
 
 		coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
@@ -521,9 +521,8 @@ var _ = Describe("ExtensionValidator", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE + UPDATE operations", func() {
-			dr, err := New()
+			dr := New()
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).NotTo(BeTrue())
@@ -533,13 +532,13 @@ var _ = Describe("ExtensionValidator", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if no ControllerRegistrationLister and BackupBucketLister are set", func() {
-			dr, _ := New()
+			dr := New()
 			err := dr.ValidateInitialization()
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not return error if ControllerRegistrationLister, BackupBucketLister and core client are set", func() {
-			dr, _ := New()
+			dr := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			err := dr.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())
