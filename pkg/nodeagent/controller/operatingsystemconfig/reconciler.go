@@ -59,6 +59,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -153,11 +154,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
+	isControlPlaneNode := slices.ContainsFunc(osc.Spec.Files, func(file extensionsv1alpha1.File) bool {
+		return file.Path == filepath.Join(kubeletcomponent.FilePathKubernetesManifests, "kube-apiserver.yaml")
+	})
+
 	if node != nil {
 		nodeRole := "worker"
-		if slices.ContainsFunc(osc.Spec.Files, func(file extensionsv1alpha1.File) bool {
-			return file.Path == filepath.Join(kubeletcomponent.FilePathKubernetesManifests, "kube-apiserver.yaml")
-		}) {
+		if isControlPlaneNode {
 			nodeRole = "control-plane"
 		}
 
@@ -213,6 +216,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Applying containerd configuration")
 	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
+	}
+
+	var secretsManager secretsmanager.Interface
+	if isControlPlaneNode {
+		secretsManager, err = secretsmanager.New(
+			ctx,
+			log.WithName("secretsmanager"),
+			r.Clock,
+			NewFilesystemSecretsManagerClient(r.FS),
+			v1beta1constants.SecretManagerIdentityPrefixNodeAgent+r.HostName,
+			secretsmanager.WithNamespaces(metav1.NamespaceSystem),
+			secretsmanager.WithoutAutomaticSecretRenewal(),
+		)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to instantiate a new secrets manager: %w", err)
+		}
+
+		log.Info("Generating node-specific ETCD certificates if needed")
+		if err := r.generateNodeSpecificETCDCertificates(ctx, secretsManager, osc); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed generating node-specific ETCD certificates: %w", err)
+		}
 	}
 
 	osVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
@@ -390,6 +414,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	metav1.SetMetaDataAnnotation(&node.ObjectMeta, nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig, oscChecksum)
 	if err := r.Client.Patch(ctx, node, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed patching Node annotations after OSC was applied: %w", err)
+	}
+
+	if isControlPlaneNode {
+		if err := secretsManager.Cleanup(ctx); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed cleaning up no longer required secrets: %w", err)
+		}
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, serialReconciliationLease.release(ctx)

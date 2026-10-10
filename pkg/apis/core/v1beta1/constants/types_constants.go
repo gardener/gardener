@@ -9,13 +9,14 @@ import (
 )
 
 const (
-	// SecretManagerIdentityControllerManager is the identity for the secret manager used inside controller-manager.
-	SecretManagerIdentityControllerManager = "controller-manager" // #nosec G101 -- No credential.
 	// SecretManagerIdentityGardenlet is the identity for the secret manager used inside gardenlet.
 	SecretManagerIdentityGardenlet = "gardenlet" // #nosec G101 -- No credential.
 	// SecretManagerIdentitySelfHostedShoot is the identity for the secret manager used inside gardenadm or the shoot
 	// gardenlet.
 	SecretManagerIdentitySelfHostedShoot = "self-hosted-shoot" // #nosec G101 -- No credential.
+	// SecretManagerIdentityPrefixNodeAgent is the identity prefix for the secret manager used inside
+	// gardener-node-agents.
+	SecretManagerIdentityPrefixNodeAgent = "node-agent-" // #nosec G101 -- No credential.
 
 	// SecretNameCACluster is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of a shoot cluster.
@@ -697,8 +698,6 @@ const (
 	// LabelNodeLocalDNS is a constant for a label key, which the provider extensions set on the nodes.
 	// The value can be true or false.
 	LabelNodeLocalDNS = "networking.gardener.cloud/node-local-dns-enabled"
-	// LabelNodePreferIPv6 is a constant for a label key which indicates whether IPv6 is preferred over IPv4.
-	LabelNodePreferIPv6 = "networking.gardener.cloud/prefer-ipv6"
 
 	// LabelVPAEvictionRequirementsController is a constant for a label indicating that a VPA resource is under control
 	// of the VPAEvictionRequirementsController.
@@ -831,6 +830,14 @@ const (
 	// OperatingSystemConfigFilePathControlPlaneNodesEndpoints is a constant for a path to a file containing the
 	// endpoints of the control plane nodes in self-hosted shoot clusters.
 	OperatingSystemConfigFilePathControlPlaneNodesEndpoints = "/var/lib/etcd/control-plane-nodes-endpoints"
+	// OperatingSystemConfigFilePathCAETCD is a constant for a path to a folder containing the ETCD CA.
+	OperatingSystemConfigFilePathCAETCD = "/var/lib/etcd/ca"
+	// OperatingSystemConfigFilePathCAETCDPeer is a constant for a path to a folder containing the ETCD peer CA.
+	OperatingSystemConfigFilePathCAETCDPeer = "/var/lib/etcd/ca-peer"
+	// OperatingSystemConfigFolderCurrent is a constant for a path to a folder containing the current CA.
+	OperatingSystemConfigFolderCurrent = "current"
+	// OperatingSystemConfigFolderOld is a constant for a path to a folder containing the old CA.
+	OperatingSystemConfigFolderOld = "old"
 
 	// FluentBitConfigMapKubernetesFilter is a constant for the Fluent Bit ConfigMap's section regarding Kubernetes filters
 	FluentBitConfigMapKubernetesFilter = "filter-kubernetes.conf"

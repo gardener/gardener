@@ -24,6 +24,7 @@ func GenerateServerCertificate(
 	role string,
 	dnsNames []string,
 	ip net.IP,
+	signedByCAOptions ...secretsmanager.SignedByCAOption,
 ) (
 	*corev1.Secret,
 	error,
@@ -37,7 +38,7 @@ func GenerateServerCertificate(
 			CertType:                    secretsutils.ServerClientCert,
 			SkipPublishingCACertificate: true,
 		},
-		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD, secretsmanager.LoadMissingCAFromCluster(ctx)),
+		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD, signedByCAOptions...),
 		secretsmanager.Rotate(secretsmanager.InPlace),
 	)
 }
@@ -95,6 +96,7 @@ func GeneratePeerCertificate(
 	role string,
 	dnsNames []string,
 	ip net.IP,
+	signedByCAOptions ...secretsmanager.SignedByCAOption,
 ) (
 	*corev1.Secret,
 	error,
@@ -108,7 +110,7 @@ func GeneratePeerCertificate(
 			CertType:                    secretsutils.ServerClientCert,
 			SkipPublishingCACertificate: true,
 		},
-		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA, secretsmanager.LoadMissingCAFromCluster(ctx)),
+		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, append([]secretsmanager.SignedByCAOption{secretsmanager.UseCurrentCA}, signedByCAOptions...)...),
 		secretsmanager.Rotate(secretsmanager.InPlace),
 	)
 }

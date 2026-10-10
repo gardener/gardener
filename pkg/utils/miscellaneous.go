@@ -221,3 +221,19 @@ func SplitAndTrimString(s, sep string) []string {
 
 	return result
 }
+
+// PreferredIPAddress returns the IPv4 or IPv6 address for the given IP addresses. If no IP could be found, nil is returned.
+func PreferredIPAddress(preferIPv6 bool, addrs ...net.IP) net.IP {
+	var fallback net.IP
+
+	for _, addr := range addrs {
+		if isIPv6 := addr.To4() == nil; isIPv6 == preferIPv6 {
+			return addr
+		}
+		if fallback == nil {
+			fallback = addr
+		}
+	}
+
+	return fallback
+}

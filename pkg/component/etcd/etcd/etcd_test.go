@@ -384,6 +384,23 @@ var _ = Describe("Etcd", func() {
 					obj.Spec.Etcd.ServerPort = new(int32(2383))
 					obj.Spec.Etcd.WrapperPort = new(int32(9096))
 				}
+
+				// For self-hosted shoots, GNA generates server/peer certs per node, so the component
+				// uses dummy placeholder refs that etcd-druid requires until the fields become optional.
+				obj.Spec.Etcd.ClientUrlTLS.ServerTLSSecretRef = corev1.SecretReference{Name: "dummy-does-not-exist"}
+				obj.Spec.Backup.TLS.ServerTLSSecretRef = corev1.SecretReference{Name: "dummy-does-not-exist"}
+				obj.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.PeerTLSConfig{
+					TLSConfig: druidcorev1alpha1.TLSConfig{
+						TLSCASecretRef: druidcorev1alpha1.SecretReference{
+							SecretReference: corev1.SecretReference{
+								Name:      secretNamePeerCA,
+								Namespace: testNamespace,
+							},
+							DataKey: new("bundle.crt"),
+						},
+						ServerTLSSecretRef: corev1.SecretReference{Name: "dummy-does-not-exist"},
+					},
+				}
 			}
 
 			return obj
@@ -1325,6 +1342,7 @@ var _ = Describe("Etcd", func() {
 		When("etcd should run as static pod", func() {
 			BeforeEach(func() {
 				staticPodConfig = &StaticPodConfig{}
+				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 			})
 
 			Describe("main etcd", func() {
