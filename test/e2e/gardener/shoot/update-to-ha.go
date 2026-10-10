@@ -17,41 +17,45 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 	container := func(shootName string, failureToleranceType gardencorev1beta1.FailureToleranceType) {
-		test := func(s *ShootContext) {
-			s.Shoot.Spec.ControlPlane = nil
+		test := func(tc *ShootContext) {
+			tc.Shoot.Spec.ControlPlane = nil
 
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldGetResponsibleSeed(s)
-			seed.ItShouldInitializeSeedClient(&s.SeedContext)
-			ItShouldInitializeShootClient(s)
+			BeforeAll(func() {
+				tc.Init()
+			})
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldGetResponsibleSeed(tc)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
+			ItShouldInitializeShootClient(tc)
+
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 			}
 
-			ItShouldUpdateShootToHighAvailability(s, failureToleranceType)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			highavailability.VerifyHighAvailability(s)
+			ItShouldUpdateShootToHighAvailability(tc, failureToleranceType)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			highavailability.VerifyHighAvailability(tc)
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			if !v1beta1helper.IsWorkerless(tc.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 			}
 
-			ItShouldDeleteShoot(s)
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldDeleteShoot(tc)
+			ItShouldWaitForShootToBeDeleted(tc)
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot(shootName)))
+			test(NewShootContext(DefaultShoot(shootName)))
 		})
 
 		Context("Shoot with workers and overlapping CIDR ranges", Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultOverlappingShoot(shootName)))
+			test(NewShootContext(DefaultOverlappingShoot(shootName)))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot(shootName)))
+			test(NewShootContext(DefaultWorkerlessShoot(shootName)))
 		})
 	}
 

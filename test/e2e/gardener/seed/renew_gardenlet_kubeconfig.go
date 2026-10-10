@@ -5,11 +5,10 @@
 package seed
 
 import (
-	"context"
-	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -24,42 +23,35 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 	// increases the overall test duration.
 	Describe("Renew gardenlet kubeconfig", Ordered, Serial, PriorityFast, func() {
 		var (
-			s        *SeedContext
+			tc = NewSeedContext()
+
 			verifier rotation.GardenletKubeconfigRotationVerifier
 		)
 
-		BeforeTestSetup(func() {
-			testContext := NewTestContext()
+		BeforeAll(func(ctx SpecContext) {
+			tc.Init()
 
 			// Find the first seed which is not "e2e-managedseed". Seed name differs between test scenarios, e.g., non-ha/ha.
 			// However, this test should not use "e2e-managedseed", because it is created and deleted in a separate e2e test.
 			// This e2e test already includes tests for the "Renew gardenlet kubeconfig" functionality. Additionally,
 			// it might be already gone before the kubeconfig was renewed.
-			ctx := context.Background()
-			seedList := &gardencorev1beta1.SeedList{}
-			if err := testContext.GardenClient.List(ctx, seedList); err != nil {
-				testContext.Log.Error(err, "Failed to list seeds")
-				Fail(err.Error())
-			}
+			var seed gardencorev1beta1.Seed
+			Eventually(ctx, tc.GardenKomega.ObjectList(&gardencorev1beta1.SeedList{})).Should(
+				HaveField("Items", ContainElement(HaveField("Name", Not(Equal(DefaultManagedSeedName()))), &seed)),
+				"should find an applicable seed",
+			)
 
-			seedIndex := slices.IndexFunc(seedList.Items, func(item gardencorev1beta1.Seed) bool {
-				return item.Name != DefaultManagedSeedName()
-			})
+			tc.SetSeed(&seed)
+		}, NodeTimeout(time.Minute))
 
-			if seedIndex == -1 {
-				Fail("failed to find applicable seed")
-			}
-
-			s = testContext.ForSeed(&seedList.Items[seedIndex])
-			ItShouldInitializeSeedClient(s)
-		})
+		ItShouldInitializeSeedClient(tc)
 
 		It("Create gardenlet kubeconfig rotation verifier", func(_ SpecContext) {
 			// #nosec: G101 -- This is a secret name reference, not a hardcoded credential.
 			verifier = rotation.GardenletKubeconfigRotationVerifier{
-				GardenReader:                       s.GardenClient,
-				SeedReader:                         s.SeedClient,
-				Seed:                               s.Seed,
+				GardenReader:                       tc.GardenClient,
+				SeedReader:                         tc.SeedClient,
+				Seed:                               tc.Seed,
 				GardenletKubeconfigSecretName:      "gardenlet-kubeconfig",
 				GardenletKubeconfigSecretNamespace: "garden",
 			}
@@ -69,11 +61,13 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			verifier.Before(ctx)
 		}, SpecTimeout(time.Minute))
 
-		ItShouldAnnotateSeed(s, map[string]string{
+		ItShouldAnnotateSeed(tc, map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
 		})
 
-		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Seed)
+		It("Should remove the operation annotation after requesting the gardenlet kubeconfig renewal", func(ctx SpecContext) {
+			EventuallyNotHaveOperationAnnotation(ctx, tc.GardenKomega, tc.Seed)
+		}, SpecTimeout(2*time.Minute))
 
 		It("Verify after gardenlet kubeconfig rotation", func(ctx SpecContext) {
 			verifier.After(ctx, false)
@@ -82,6 +76,6 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		// Restarting gardenlet makes the seed unhealthy until the seed Prometheus has scraped the new gardenlet pod. Gardenlet
 		// doesn't start any shoot operation in the meantime, so wait for the seed to be fully ready again before the next
 		// specs start.
-		ItShouldWaitForSeedToBeReady(s)
+		ItShouldWaitForSeedToBeReady(tc)
 	})
 })

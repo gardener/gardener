@@ -16,30 +16,34 @@ import (
 
 var _ = Describe("Gardener Upgrade Tests", func() {
 	Describe("Create Shoot, Upgrade Gardener version, Delete Shoot", func() {
-		test := func(s *ShootContext) {
+		test := func(tc *ShootContext) {
+			BeforeAll(func() {
+				tc.Init()
+			})
+
 			zeroDowntimeValidatorJob := &zerodowntimevalidator.Job{}
 
 			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
-				ItShouldCreateShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
-				ItShouldGetResponsibleSeed(s)
-				seed.ItShouldInitializeSeedClient(&s.SeedContext)
+				ItShouldCreateShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+				ItShouldGetResponsibleSeed(tc)
+				seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
-				zeroDowntimeValidatorJob.ItShouldDeployJob(s)
-				zeroDowntimeValidatorJob.ItShouldWaitForJobToBeReady(s)
+				zeroDowntimeValidatorJob.ItShouldDeployJob(tc)
+				zeroDowntimeValidatorJob.ItShouldWaitForJobToBeReady(tc)
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
-				ItShouldGetResponsibleSeed(s)
-				seed.ItShouldInitializeSeedClient(&s.SeedContext)
+				ItShouldGetResponsibleSeed(tc)
+				seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
-				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(s)
-				zeroDowntimeValidatorJob.AfterAllDeleteJob(s)
+				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(tc)
+				zeroDowntimeValidatorJob.AfterAllDeleteJob(tc)
 
 				// This tests that we can delete a Shoot which was not yet reconciled with the current Gardener version.
-				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
-				ItShouldDeleteShoot(s)
-				ItShouldWaitForShootToBeDeleted(s)
+				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(tc)
+				ItShouldDeleteShoot(tc)
+				ItShouldWaitForShootToBeDeleted(tc)
 			})
 		}
 
@@ -52,11 +56,11 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 				DefaultWorker("manual", new(gardencorev1beta1.ManualInPlaceUpdate)),
 			)
 
-			test(NewTestContext().ForShoot(shoot))
+			test(NewShootContext(shoot))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-upgrade")))
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-upgrade")))
 		})
 	})
 })

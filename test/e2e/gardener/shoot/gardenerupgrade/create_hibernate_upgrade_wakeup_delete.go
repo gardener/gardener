@@ -13,33 +13,37 @@ import (
 
 var _ = Describe("Gardener Upgrade Tests", func() {
 	Describe("Create and Hibernate Shoot, Upgrade Gardener version, Wake Up and Delete Shoot", func() {
-		test := func(s *ShootContext) {
-			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
-				ItShouldCreateShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
+		test := func(tc *ShootContext) {
+			BeforeAll(func() {
+				tc.Init()
+			})
 
-				ItShouldHibernateShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
+			Describe("Pre-Upgrade"+gardenerInfoPreUpgrade, Label("pre-upgrade"), func() {
+				ItShouldCreateShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+
+				ItShouldHibernateShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
 				// This tests that we can wake-up a Shoot which was hibernated with the previous Gardener version.
-				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
-				ItShouldWakeUpShoot(s)
-				ItShouldWaitForShootToBeReconciledAndHealthy(s)
-				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s)
+				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(tc)
+				ItShouldWakeUpShoot(tc)
+				ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(tc)
 
-				ItShouldDeleteShoot(s)
-				ItShouldWaitForShootToBeDeleted(s)
+				ItShouldDeleteShoot(tc)
+				ItShouldWaitForShootToBeDeleted(tc)
 			})
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-upg-hib")))
+			test(NewShootContext(DefaultShoot("e2e-upg-hib")))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-upg-hib")))
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-upg-hib")))
 		})
 	})
 })
