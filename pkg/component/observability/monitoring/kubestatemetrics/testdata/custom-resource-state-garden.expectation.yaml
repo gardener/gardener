@@ -61,5 +61,29 @@ spec:
           commonLabels: {}
           labelsFromPath: {}
           errorLogV: 0
+        - name: garden_constraint
+          help: represents a constraint on a Garden object
+          each:
+            type: stateset
+            gauge: null
+            stateSet:
+              labelsFromPath:
+                constraint:
+                  - type
+              path:
+                - status
+                - constraints
+              list:
+                - Progressing
+                - "True"
+                - "False"
+                - Unknown
+              labelName: status
+              valueFrom:
+                - status
+            info: null
+          commonLabels: {}
+          labelsFromPath: {}
+          errorLogV: 0
       errorLogV: 0
       resourcePlural: ""

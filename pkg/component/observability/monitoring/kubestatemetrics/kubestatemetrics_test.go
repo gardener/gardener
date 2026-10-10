@@ -346,7 +346,8 @@ var _ = Describe("KubeStateMetrics", func() {
 							"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$," +
 							"^garden_garden_condition$," +
 							"^garden_garden_last_operation$," +
-							"^garden_extension_condition$",
+							"^garden_extension_condition$," +
+							"^garden_garden_constraint$",
 						"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 					}
 				}
