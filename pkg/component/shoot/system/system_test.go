@@ -468,6 +468,47 @@ var _ = Describe("ShootSystem", func() {
 						networkPolicyDenyAll,
 					))
 				})
+
+				Context("self-hosted", func() {
+					BeforeEach(func() {
+						values.IsSelfHosted = true
+					})
+
+					It("should deploy allow-from-control-plane-components using node and pod network CIDRs", func() {
+						networkPolicyAllowFromSeed := &networkingv1.NetworkPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "gardener.cloud--allow-from-control-plane-components",
+								Namespace: "kube-system",
+								Annotations: map[string]string{
+									"gardener.cloud/description": "Allows Ingress from the control plane to pods labeled with 'networking.gardener.cloud/from-seed=allowed'.",
+								},
+							},
+							Spec: networkingv1.NetworkPolicySpec{
+								PodSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"networking.gardener.cloud/from-seed": "allowed",
+									},
+								},
+								Ingress: []networkingv1.NetworkPolicyIngressRule{{
+									From: []networkingv1.NetworkPolicyPeer{
+										{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[0].String()}},
+										{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[1].String()}},
+										{IPBlock: &networkingv1.IPBlock{CIDR: podCIDRs[0].String()}},
+										{IPBlock: &networkingv1.IPBlock{CIDR: podCIDRs[1].String()}},
+									},
+								}},
+								PolicyTypes: []networkingv1.PolicyType{
+									networkingv1.PolicyTypeIngress,
+								},
+							},
+						}
+
+						Expect(managedResource).To(contain(
+							networkPolicyDenyAll,
+							networkPolicyAllowFromSeed,
+						))
+					})
+				})
 			})
 		})
 
