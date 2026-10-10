@@ -1,3 +1,7 @@
+---
+title: SelfHostedShootExposure
+---
+
 # Contract: `SelfHostedShootExposure` Resource
 
 The `SelfHostedShootExposure` resource is a concept introduced to support Self-Hosted Shoot Clusters described in [GEP36](https://github.com/gardener/gardener/blob/master/docs/proposals/36-self-hosted-shoot-exposure.md). 
