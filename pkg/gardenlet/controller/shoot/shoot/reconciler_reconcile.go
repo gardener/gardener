@@ -310,6 +310,12 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Cleaning up stale Istio ingress namespaces of Kubernetes API server services in the Seed cluster",
+			Fn:           flow.TaskFn(b.CleanupStaleIstioIngressNamespacesOfKubeAPIServerServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.Shoot.IsSelfHosted(),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNISettings),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Cleaning up stale Kubernetes API server services in the Seed cluster",
 			Fn:           flow.TaskFn(b.CleanupKubeAPIServerLoadBalancingServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.ShootUsesIstioTLSTermination(),
