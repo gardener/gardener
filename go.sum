@@ -406,8 +406,8 @@ github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Z
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.1.3 h1:CVpQJjYgC4VbzxeGVHfvZrv1ctoYCAI8vbl07Fcxlyg=
 github.com/google/btree v1.1.3/go.mod h1:qOPhT0dTNdNzV6Z/lhRX0YXUafgPLFUh+gZMl761Gm4=
-github.com/google/cel-go v0.29.2 h1:ZtDxkeiMmz0mxbKDYiNkE5Lk7V5edMRcaaDf2jX002k=
-github.com/google/cel-go v0.29.2/go.mod h1:X0bD6iVNR8pkROSOoHVdgTkzmRcosof7WQqCD6wcMc8=
+github.com/google/cel-go v0.30.0 h1:ll54AkzKunWkBn9wSoiUXbFZXYZTkdJGNXTBXUoolGo=
+github.com/google/cel-go v0.30.0/go.mod h1:X0bD6iVNR8pkROSOoHVdgTkzmRcosof7WQqCD6wcMc8=
 github.com/google/gnostic-models v0.7.1 h1:SisTfuFKJSKM5CPZkffwi6coztzzeYUhc3v4yxLWH8c=
 github.com/google/gnostic-models v0.7.1/go.mod h1:whL5G0m6dmc5cPxKc5bdKdEN3UjI7OUGxBlw57miDrQ=
 github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
@@ -657,8 +657,8 @@ github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1 h
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1/go.mod h1:rZ+wRKDneCC/jJk24Mdb+6bAc6y/UjRliuMz6U20s6Y=
 github.com/prometheus/alertmanager v0.33.1 h1:PJHGvTdb8Q0ZEpJnWff120WxB2kxIScLa707AaIudTo=
 github.com/prometheus/alertmanager v0.33.1/go.mod h1:V06Uc8EZ5X5wLOJRGhtXx+EE2LgrinFIADbKWMVm1RY=
-github.com/prometheus/blackbox_exporter v0.28.0 h1:5n59xN6d4OtnwANA9nQIoBhwfG90b50cMByshvc/+zA=
-github.com/prometheus/blackbox_exporter v0.28.0/go.mod h1:F9H+UbXJsW0OaGv4uVuPFIQD8sXQRWR1tXNJMFDAN9E=
+github.com/prometheus/blackbox_exporter v0.29.0 h1:u583/TwXAqFTflpuKx63xnvgoqL2HuRbtLkNHqjXCzs=
+github.com/prometheus/blackbox_exporter v0.29.0/go.mod h1:Uaad0N1HqVV7oMZ0xXVy/WUtARZlnRzJ25DYEJtzrv4=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v1.0.0/go.mod h1:db9x61etRT2tGnBNRi70OPL5FsnadC4Ky3P0J6CfImo=
 github.com/prometheus/client_golang v1.4.0/go.mod h1:e9GMxYsXl05ICDXkRhurwBS4Q3OK1iX/F2sw+iXX5zU=
@@ -678,8 +678,8 @@ github.com/prometheus/common v0.10.0/go.mod h1:Tlit/dnDKsSWFlCLTWaA1cyBgKHSMdTB8
 github.com/prometheus/common v0.26.0/go.mod h1:M7rCNAaPfAosfx8veZJCuw84e35h3Cfd9VFqTh1DIvc=
 github.com/prometheus/common v0.72.0 h1:tAYsE+sPJxIncDAobm4H5aQjmox9ZxEIIqPbiffa8G4=
 github.com/prometheus/common v0.72.0/go.mod h1:77NWqAQ2tXT7BIK40qjJdw5Acrsrg1TlHAnsQi3i6mk=
-github.com/prometheus/exporter-toolkit v0.17.1 h1:psKN4wM7shBL/BxZkDHgm6YZJ3fAVG36+r86An/+7q0=
-github.com/prometheus/exporter-toolkit v0.17.1/go.mod h1:dabwPJvxsC5+tsp2iolQrqBWZh+QlISKlYRpj9Hh5xk=
+github.com/prometheus/exporter-toolkit v0.20.0 h1:hz3g2aPcq3mXlQSt1MGjj2rwVk1wtRalF+/FjYxFRkI=
+github.com/prometheus/exporter-toolkit v0.20.0/go.mod h1:gIIY0Mw0ci1wgYscdeMqVh6FUPYJca549eOkE39nU64=
 github.com/prometheus/otlptranslator v1.0.0 h1:s0LJW/iN9dkIH+EnhiD3BlkkP5QVIUVEoIwkU+A6qos=
 github.com/prometheus/otlptranslator v1.0.0/go.mod h1:vRYWnXvI6aWGpsdY/mOT/cbeVRBlPWtBNDb7kGR3uKM=
 github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
