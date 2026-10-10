@@ -75,6 +75,8 @@ type Interface interface {
 	SetWorkerPools([]WorkerPool)
 	// SetPodNetworkCIDRs sets the pod CIDRs of the shoot network.
 	SetPodNetworkCIDRs([]net.IPNet)
+	// WaitForControlPlanePool waits until the kube-proxy ManagedResources for the control plane worker pool are healthy.
+	WaitForControlPlanePool(context.Context) error
 }
 
 type kubeProxy struct {
@@ -267,6 +269,27 @@ func (k *kubeProxy) Wait(ctx context.Context) error {
 		}
 		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, new(true)))
 	})
+}
+
+func (k *kubeProxy) WaitForControlPlanePool(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	if err := managedresources.WaitUntilHealthy(timeoutCtx, k.client, k.namespace, managedResourceName(nil, nil)); err != nil {
+		return err
+	}
+
+	for _, pool := range k.values.WorkerPools {
+		if !pool.ControlPlane {
+			continue
+		}
+		if err := managedresources.WaitUntilHealthy(timeoutCtx, k.client, k.namespace, managedResourceName(&pool, new(false))); err != nil {
+			return err
+		}
+		return managedresources.WaitUntilHealthy(timeoutCtx, k.client, k.namespace, managedResourceName(&pool, new(true)))
+	}
+
+	return nil
 }
 
 func (k *kubeProxy) WaitCleanup(ctx context.Context) error {

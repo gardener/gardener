@@ -313,6 +313,41 @@ var _ = Describe("NodeAgent", func() {
 			})
 		})
 
+		It("should succeed and not modify the CSR when it is already approved", func() {
+			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
+
+			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
+			Expect(err).NotTo(HaveOccurred())
+			certificateSubject := &pkix.Name{
+				CommonName: "gardener.cloud:node-agent:machine:" + hostName,
+			}
+			csrData, err := certutil.MakeCSR(privateKey, certificateSubject, []string{}, []net.IP{})
+			Expect(err).NotTo(HaveOccurred())
+
+			existingCondition := certificatesv1.CertificateSigningRequestCondition{
+				Type:    certificatesv1.CertificateApproved,
+				Status:  corev1.ConditionTrue,
+				Reason:  "AlreadyApproved",
+				Message: "Approved out-of-band by a lingering gardener-resource-manager",
+			}
+			csr := &certificatesv1.CertificateSigningRequest{
+				ObjectMeta: metav1.ObjectMeta{Name: "csr"},
+				Spec: certificatesv1.CertificateSigningRequestSpec{
+					Username:   fooUsername,
+					Request:    csrData,
+					SignerName: certificatesv1.KubeAPIServerClientSignerName,
+				},
+			}
+			Expect(fakeSeedClient.Create(ctx, csr)).To(Succeed())
+			csr.Status.Conditions = []certificatesv1.CertificateSigningRequestCondition{existingCondition}
+			Expect(fakeSeedClient.SubResource("approval").Update(ctx, csr)).To(Succeed())
+
+			Expect(b.ApproveNodeAgentCertificateSigningRequest(ctx)).To(Succeed())
+
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+			Expect(csr.Status.Conditions).To(HaveExactElements(existingCondition))
+		})
+
 		It("should not approve the CSR and return an error if the CSR is not for gardener-node-agent", func() {
 			Expect(b.FS.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte(fooToken), 0o600)).To(Succeed())
 

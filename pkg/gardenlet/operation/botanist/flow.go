@@ -851,6 +851,14 @@ func (b *Botanist) ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, skipRead
 			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !kubeProxyEnabled,
 		})
 		_ = g.Add(flow.Task{
+			Name: "Waiting until kube-proxy for the control plane worker pool is ready",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.SystemComponents.KubeProxy.WaitForControlPlanePool(ctx)
+			},
+			SkipIf:       !b.Shoot.IsSelfHosted() || b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !kubeProxyEnabled || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployKubeProxy),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deleting stale kube-proxy DaemonSets",
 			Fn: func(ctx context.Context) error {
 				return b.Shoot.Components.SystemComponents.KubeProxy.DeleteStaleResources(ctx)

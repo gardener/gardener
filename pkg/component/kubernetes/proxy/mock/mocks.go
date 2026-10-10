@@ -161,3 +161,17 @@ func (mr *MockInterfaceMockRecorder) WaitCleanupStaleResources(arg0 any) *gomock
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanupStaleResources", reflect.TypeOf((*MockInterface)(nil).WaitCleanupStaleResources), arg0)
 }
+
+// WaitForControlPlanePool mocks base method.
+func (m *MockInterface) WaitForControlPlanePool(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForControlPlanePool", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForControlPlanePool indicates an expected call of WaitForControlPlanePool.
+func (mr *MockInterfaceMockRecorder) WaitForControlPlanePool(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForControlPlanePool", reflect.TypeOf((*MockInterface)(nil).WaitForControlPlanePool), arg0)
+}
