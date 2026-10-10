@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -20,33 +19,53 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 )
 
-// Checks whether required logging resources are present.
-// If not, probably the logging feature gate is not enabled.
-func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
-	if _, err := getFluentBitDaemonSet(ctx, k8sSeedClient); err != nil {
+func getFluentBitDaemonSet(ctx context.Context, k8sSeedClient kubernetes.Interface) (*appsv1.DaemonSet, error) {
+	daemonSetList := &appsv1.DaemonSetList{}
+	err := k8sSeedClient.Client().List(ctx,
+		daemonSetList,
+		client.InNamespace(garden),
+		client.MatchingLabels{
+			v1beta1constants.LabelApp:   v1beta1constants.DaemonSetNameFluentBit,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
+		})
+	if err != nil {
+		return nil, err
+	}
+	if len(daemonSetList.Items) == 0 {
+		return nil, fmt.Errorf("fluent-bit daemonset not found")
+	}
+	return daemonSetList.Items[0].DeepCopy(), nil
+}
+
+func isFluentBitPresent(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
+	_, err := getFluentBitDaemonSet(ctx, k8sSeedClient)
+	if err != nil {
 		return false, err
 	}
-
-	vali := &appsv1.StatefulSet{}
-	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
-		return false, err
-	}
-
 	return true, nil
 }
 
-func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) {
-	enabled, err := hasRequiredResources(ctx, k8sSeedClient)
-	if !enabled {
-		message := fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error())
-		ginkgo.Fail(message)
+func isValiPresent(ctx context.Context, seedClient client.Client) (bool, error) {
+	vali := &appsv1.StatefulSet{}
+	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
+		return false, err
 	}
+	return true, nil
+}
+
+func isOtelCollectorPresent(ctx context.Context, seedClient client.Client) (bool, error) {
+	otelDeploy := &appsv1.Deployment{}
+	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: garden, Name: otelCollectorDeploymentName}, otelDeploy); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
