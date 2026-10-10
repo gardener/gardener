@@ -29,6 +29,10 @@ spec:
 {{- with .Values.loadBalancerClass }}
   loadBalancerClass: {{ . | quote }}
 {{- end }}
+{{- with .Values.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+{{ toYaml . | indent 2 }}
+{{- end }}
 {{- if .Values.externalTrafficPolicy }}
   externalTrafficPolicy: {{ .Values.externalTrafficPolicy }}
 {{- end }}
