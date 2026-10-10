@@ -285,6 +285,37 @@ var _ = Describe("Helper", func() {
 		Entry("no live migration in progress", liveMigratingShoot("source", "destination", false), "source", LiveMigrationRoleNone),
 	)
 
+	Describe("live migration conditions", func() {
+		var (
+			condition = gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootLiveMigrationSourceEtcdPreparedForPeerJoin,
+				Status: gardencorev1beta1.ConditionTrue,
+			}
+			shootWithCondition = &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LiveMigration: &gardencorev1beta1.LiveMigration{
+						Conditions: []gardencorev1beta1.Condition{condition},
+					},
+				},
+			}
+		)
+
+		It("should return nil conditions when status.liveMigration is unset", func() {
+			Expect(GetLiveMigrationConditions(&gardencorev1beta1.Shoot{})).To(BeNil())
+			Expect(GetLiveMigrationCondition(&gardencorev1beta1.Shoot{}, condition.Type)).To(BeNil())
+			Expect(IsLiveMigrationConditionTrue(&gardencorev1beta1.Shoot{}, condition.Type)).To(BeFalse())
+		})
+
+		It("should return the requested condition", func() {
+			Expect(GetLiveMigrationCondition(shootWithCondition, condition.Type)).To(Equal(&condition))
+			Expect(IsLiveMigrationConditionTrue(shootWithCondition, condition.Type)).To(BeTrue())
+		})
+
+		It("should report False for a missing or non-True condition", func() {
+			Expect(IsLiveMigrationConditionTrue(shootWithCondition, gardencorev1beta1.ShootLiveMigrationMigrationCompleted)).To(BeFalse())
+		})
+	})
+
 	var profile = gardencorev1beta1.SchedulingProfileBinPacking
 
 	DescribeTable("#ShootSchedulingProfile",
