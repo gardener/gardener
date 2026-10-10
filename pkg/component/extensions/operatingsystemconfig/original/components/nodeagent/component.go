@@ -178,6 +178,10 @@ func ComponentConfig(
 		config.Bootstrap = &nodeagentconfigv1alpha1.BootstrapConfiguration{
 			ControlPlaneNodesEndpoints: &nodeagentconfigv1alpha1.ControlPlaneNodesEndpoints{Enabled: true},
 		}
+		// On control plane nodes of self-hosted shoots, the tokens of the control plane components (e.g.,
+		// kube-controller-manager, kube-scheduler) are synced as well. These are only valid for 12h and renewed after
+		// roughly 80% of their validity, so a sync period of 12h would leave expired tokens on the disk.
+		config.Controllers.Token.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 	}
 
 	return config
