@@ -18,10 +18,14 @@ PUSH_LATEST_TAG                            := false
 
 # Use a specific Go toolchain version to ensure consistent builds across different environments.
 # renovate: datasource=golang-version depName=go
-export GOTOOLCHAIN := go1.26.8
+export GOTOOLCHAIN  := go1.27.1
+# TODO(LucaBernstein): Enable jsonv2 default support when updating to a Kubernetes API lib version that has switched to the new implementation.
+# This means that `json:",inline"` tags need to have been migrated to `json:",embed"`.
+# We then also have to apply this change to our struct fields.
+export GOEXPERIMENT := nojsonv2
 # $(GOTOOLCHAIN) is exported, but exported make variables are not propagated into the environment of $(shell ...) sub-shells.
 # By exporting it explicitly in the SHELL command, it becomes available also in sub-shells.
-SHELL=/usr/bin/env GOTOOLCHAIN=$(GOTOOLCHAIN) bash -o pipefail
+SHELL=/usr/bin/env GOTOOLCHAIN=$(GOTOOLCHAIN) GOEXPERIMENT=$(GOEXPERIMENT) bash -o pipefail
 
 VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
