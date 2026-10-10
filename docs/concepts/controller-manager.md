@@ -409,6 +409,26 @@ This reconciler inspects the following references:
 
 The checks naturally grow with the number of references that are added to the `Seed` specification.
 
+#### ["Reference Allowlist" Reconciler](../../pkg/controllermanager/controller/seed/refallowlist)
+
+This reconciler watches `Gardenlet` and `ManagedSeed` objects and automatically stamps the `seed.gardener.cloud/names` annotation on every resource they reference in their embedded `SeedSpec`.
+
+The reconciler covers all five reference paths:
+
+- `.spec.backup.credentialsRef`
+- `.spec.dns.provider.credentialsRef`
+- `.spec.dns.internal.credentialsRef`
+- `.spec.dns.defaults[].credentialsRef`
+- `.spec.resources[].resourceRef`
+
+When a `Gardenlet` or `ManagedSeed` is created, its seed name is added to the annotation of every resource it references.
+When it is updated, the seed name is removed from resources that are no longer referenced and added to newly referenced ones.
+When it is deleted, its seed name is removed from the annotation of every resource it previously referenced.
+Note that cleanup on deletion is best-effort: if `gardener-controller-manager` is not running at the time of deletion, stale annotation entries may remain.
+Operators are responsible for checking and, if necessary, removing such stale entries manually.
+
+Operators who manage `Seed` objects directly (without a `Gardenlet` or `ManagedSeed`) must annotate the referenced resources manually.
+
 ### [`Shoot` Controller](../../pkg/controllermanager/controller/shoot)
 
 #### ["Conditions" Reconciler](../../pkg/controllermanager/controller/shoot/conditions)
