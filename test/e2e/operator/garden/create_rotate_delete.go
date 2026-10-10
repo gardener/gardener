@@ -13,14 +13,17 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
@@ -93,6 +96,13 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 					return s.Garden.Status.Credentials.Rotation.ETCDEncryptionKey
 				},
+				ResourcesToEncrypt: func() []string {
+					resources := sets.List(gardenerutils.DefaultResourcesForEncryption())
+					if apiServer := s.Garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil && apiServer.KubeAPIServerConfig != nil && apiServer.EncryptionConfig != nil {
+						resources = append(resources, sharedcomponent.StringifyGroupResources(sharedcomponent.GetResourcesForEncryptionFromConfig(apiServer.EncryptionConfig))...)
+					}
+					return resources
+				}(),
 				EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
 				RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 			},
@@ -107,6 +117,13 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 					return s.Garden.Status.Credentials.Rotation.ETCDEncryptionKey
 				},
+				ResourcesToEncrypt: func() []string {
+					resources := sets.List(gardenerutils.DefaultGardenerResourcesForEncryption())
+					if apiServer := s.Garden.Spec.VirtualCluster.Gardener.APIServer; apiServer != nil && apiServer.EncryptionConfig != nil {
+						resources = append(resources, sharedcomponent.StringifyGroupResources(sharedcomponent.GetResourcesForEncryptionFromConfig(apiServer.EncryptionConfig))...)
+					}
+					return resources
+				}(),
 				EncryptionKey:  v1beta1constants.SecretNameGardenerETCDEncryptionKey,
 				RoleLabelValue: v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration,
 			},
@@ -162,7 +179,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 					{
 						NewObject: func() client.Object {
 							return &gardencorev1.ControllerDeployment{
-								ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-", Namespace: "default"},
+								ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-"},
 								Helm: &gardencorev1.HelmControllerDeployment{
 									RawChart: []byte("foo"),
 								},
@@ -175,7 +192,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 							suffix, err := utils.GenerateRandomString(5)
 							Expect(err).NotTo(HaveOccurred())
 							return &gardencorev1beta1.ControllerRegistration{
-								ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-", Namespace: "default"},
+								ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-"},
 								Spec:       gardencorev1beta1.ControllerRegistrationSpec{Resources: []gardencorev1beta1.ControllerResource{{Kind: "Infrastructure", Type: "test-foo-" + suffix}}},
 							}
 						},

@@ -13,6 +13,8 @@ import (
 	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
+	storagemigrationv1 "k8s.io/api/storagemigration/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -23,16 +25,174 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+var (
+	// StorageVersionMigrationRetryInterval is the interval at which the status of StorageVersionMigration resources is retried. Exposed for testing purposes.
+	StorageVersionMigrationRetryInterval = 30 * time.Second
+	// StorageVersionMigrationWaitTimeout is the timeout for waiting for the completion of StorageVersionMigration resources. Exposed for testing purposes.
+	StorageVersionMigrationWaitTimeout = 5 * time.Minute
+)
+
+// RewriteEncryptedData rewrites the encrypted data for the given resources. It checks if the storage version migrator is enabled and
+// creates StorageVersionMigration resources if necessary. Otherwise, it directly rewrites the encrypted data by adding the appropriate labels.
+func RewriteEncryptedData(
+	ctx context.Context,
+	log logr.Logger,
+	runtimeClient client.Client,
+	clientSet kubernetes.Interface,
+	secretsManager secretsmanager.Interface,
+	namespace string,
+	name string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
+	defaultGVKs []schema.GroupVersionKind,
+	defaultGRs []schema.GroupResource,
+	storageVersionMigratorEnabled bool,
+) error {
+	if storageVersionMigratorEnabled {
+		return CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, log, runtimeClient, clientSet, secretsManager, namespace, name, resourcesToEncrypt, encryptedResources, defaultGRs)
+	}
+
+	return RewriteEncryptedDataAddLabel(ctx, log, runtimeClient, clientSet, secretsManager, namespace, name, resourcesToEncrypt, encryptedResources, defaultGVKs)
+}
+
+// CreateStorageVersionMigrationResourcesAndWaitForCompletion creates StorageVersionMigration resources for the given
+// encrypted resources and waits for their completion.
+func CreateStorageVersionMigrationResourcesAndWaitForCompletion(
+	ctx context.Context,
+	log logr.Logger,
+	runtimeClient client.Client,
+	clientSet kubernetes.Interface,
+	secretsManager secretsmanager.Interface,
+	deploymentNamespace string,
+	deploymentName string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
+	defaultGRs []schema.GroupResource,
+) error {
+	// Check if we have already completed the StorageVersionMigration. If the annotation is present,
+	// we can skip creating the StorageVersionMigration resources. This is to avoid recreating them
+	// unnecessarily in case a later step fails and the flow is retried.
+	apiServerDeployment := &metav1.PartialObjectMetadata{}
+	apiServerDeployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: deploymentNamespace, Name: deploymentName}, apiServerDeployment); err != nil {
+		return err
+	}
+
+	if metav1.HasAnnotation(apiServerDeployment.ObjectMeta, AnnotationKeyStorageVersionMigrated) {
+		return nil
+	}
+
+	etcdEncryptionKeySecret, found := secretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Current)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameETCDEncryptionKey)
+	}
+
+	groupResources, _, encryptionConfigHasChanged := getGroupResourcesForRewrite(resourcesToEncrypt, encryptedResources)
+	if !encryptionConfigHasChanged {
+		groupResources = append(groupResources, defaultGRs...)
+	}
+
+	groupResources, err := filterServedGroupResources(clientSet.Kubernetes().Discovery(), groupResources)
+	if err != nil {
+		return err
+	}
+
+	var fns []flow.TaskFn
+	for _, gr := range groupResources {
+		name := GetStorageVersionMigrationNameForGR(gr)
+		svm := &storagemigrationv1.StorageVersionMigration{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+		fns = append(fns, func(ctx context.Context) error {
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, clientSet.Client(), svm, func() error {
+				metav1.SetMetaDataLabel(&svm.ObjectMeta, labelKeyRotationKeyName, etcdEncryptionKeySecret.Name)
+
+				svm.Spec = storagemigrationv1.StorageVersionMigrationSpec{
+					Resource: metav1.GroupResource{
+						Group:    gr.Group,
+						Resource: gr.Resource,
+					},
+				}
+				return nil
+			}); err != nil {
+				return fmt.Errorf("error while creating StorageVersionMigration object %q: %w", name, err)
+			}
+
+			log.Info("Successfully created/found existing StorageVersionMigration object, waiting for it to succeed", "StorageVersionMigration", client.ObjectKeyFromObject(svm))
+
+			timeoutCtx, cancel := context.WithTimeout(ctx, StorageVersionMigrationWaitTimeout)
+			defer cancel()
+
+			if err := retry.Until(timeoutCtx, StorageVersionMigrationRetryInterval, func(ctx context.Context) (bool, error) {
+				if err := clientSet.Client().Get(ctx, client.ObjectKeyFromObject(svm), svm); err != nil {
+					return retry.MinorError(fmt.Errorf("failed getting StorageVersionMigration object %q: %w", name, err))
+				}
+
+				if meta.IsStatusConditionTrue(svm.Status.Conditions, string(storagemigrationv1.MigrationSucceeded)) {
+					log.Info("Migration succeeded for StorageVersionMigration object", "StorageVersionMigration", client.ObjectKeyFromObject(svm))
+					return retry.Ok()
+				}
+
+				if meta.IsStatusConditionTrue(svm.Status.Conditions, string(storagemigrationv1.MigrationRunning)) {
+					return retry.MinorError(fmt.Errorf("migration still in progress for StorageVersionMigration object %q", name))
+				}
+
+				if meta.IsStatusConditionTrue(svm.Status.Conditions, string(storagemigrationv1.MigrationFailed)) {
+					return retry.SevereError(fmt.Errorf("migration failed for StorageVersionMigration object %q", name))
+				}
+
+				return retry.MinorError(fmt.Errorf("waiting for StorageVersionMigration object %q to start", name))
+			}); err != nil {
+				return fmt.Errorf("error while waiting for StorageVersionMigration object %q to succeed: %w", name, err)
+			}
+			return nil
+		})
+	}
+
+	if err := flow.Parallel(fns...)(ctx); err != nil {
+		return fmt.Errorf("error while processing StorageVersionMigration objects: %w", err)
+	}
+
+	// Mark the StorageVersionMigration as completed (via an annotation) so that we do not recreate the
+	// StorageVersionMigration resources in a future reconciliation in case the flow fails after this step.
+	return PatchAPIServerDeploymentMeta(ctx, runtimeClient, deploymentNamespace, deploymentName, func(meta *metav1.PartialObjectMetadata) {
+		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, AnnotationKeyStorageVersionMigrated, "true")
+	})
+}
+
+// CleanupStorageVersionMigrationObjects cleans up all StorageVersionMigration objects that have the rotation label and
+// removes the completion annotation from the API server deployment.
+func CleanupStorageVersionMigrationObjects(
+	ctx context.Context,
+	runtimeClient client.Client,
+	clientSet kubernetes.Interface,
+	namespace string,
+	name string,
+) error {
+	if err := clientSet.Client().DeleteAllOf(ctx, &storagemigrationv1.StorageVersionMigration{}, client.MatchingLabelsSelector{
+		Selector: labels.NewSelector().Add(utils.MustNewRequirement(labelKeyRotationKeyName, selection.Exists)),
+	}); err != nil {
+		return fmt.Errorf("error while deleting StorageVersionMigration objects: %w", err)
+	}
+
+	return PatchAPIServerDeploymentMeta(ctx, runtimeClient, namespace, name, func(meta *metav1.PartialObjectMetadata) {
+		delete(meta.Annotations, AnnotationKeyStorageVersionMigrated)
+	})
+}
 
 // RewriteEncryptedDataAddLabel patches all encrypted data in all namespaces in the target clusters and adds a label
 // whose value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption
 // key secret rotation which requires all encrypted data to be rewritten to ETCD so that they become encrypted with the
 // new key. After it's done, it snapshots ETCD so that we can restore backups in case we lose the cluster before the
 // next incremental snapshot has been taken.
+//
+// TODO (shafeeqes): Remove this function once we no longer support a kubernetes version in which the StorageVersionMigrator feature gate is not locked to true.
 func RewriteEncryptedDataAddLabel(
 	ctx context.Context,
 	log logr.Logger,
@@ -88,10 +248,38 @@ func RewriteEncryptedDataAddLabel(
 	})
 }
 
+// CompleteEncryptedDataRewrite completes the process of rewriting encrypted data by cleaning up StorageVersionMigration objects if enabled and removing labels from the encrypted data.
+func CompleteEncryptedDataRewrite(
+	ctx context.Context,
+	log logr.Logger,
+	runtimeClient client.Client,
+	targetClientSet kubernetes.Interface,
+	namespace string,
+	name string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
+	defaultGVKs []schema.GroupVersionKind,
+	storageVersionMigratorEnabled bool,
+) error {
+	if storageVersionMigratorEnabled {
+		if err := CleanupStorageVersionMigrationObjects(ctx, runtimeClient, targetClientSet, namespace, name); err != nil {
+			return fmt.Errorf("error while cleaning up StorageVersionMigration objects: %w", err)
+		}
+	}
+
+	if err := RewriteEncryptedDataRemoveLabel(ctx, log, runtimeClient, targetClientSet, namespace, name, resourcesToEncrypt, encryptedResources, defaultGVKs); err != nil {
+		return fmt.Errorf("error while removing labels from encrypted data: %w", err)
+	}
+
+	return nil
+}
+
 // RewriteEncryptedDataRemoveLabel patches all encrypted data in all namespaces in the target clusters and removes the
 // label whose value is the name of the current ETCD encryption key secret. This function is useful for the ETCD
 // encryption key secret rotation which requires all encrypted data to be rewritten to ETCD so that they become
 // encrypted with the new key.
+//
+// TODO (shafeeqes): Remove this function once we no longer support a kubernetes version in which the StorageVersionMigrator feature gate is not locked to true.
 func RewriteEncryptedDataRemoveLabel(
 	ctx context.Context,
 	log logr.Logger,
@@ -252,23 +440,8 @@ func GetResourcesForRewrite(
 	string,
 	error,
 ) {
-	var (
-		resourcesForRewrite        = resourcesToEncrypt
-		encryptionConfigHasChanged = !sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...))
-		encryptedGVKs              = sets.New[schema.GroupVersionKind]()
-		groupResourcesToEncrypt    = []schema.GroupResource{}
-		message                    = "Objects requiring to be rewritten after ETCD encryption key rotation"
-	)
-
-	// This means the function is invoked due to ETCD encryption configuration change, so include only the modified resources.
-	if encryptionConfigHasChanged {
-		resourcesForRewrite = getModifiedResources(resourcesToEncrypt, encryptedResources)
-		message = "Objects requiring to be rewritten after modification of encryption config"
-	}
-
-	for _, resource := range resourcesForRewrite {
-		groupResourcesToEncrypt = append(groupResourcesToEncrypt, schema.ParseGroupResource(resource))
-	}
+	groupResourcesToEncrypt, message, encryptionConfigHasChanged := getGroupResourcesForRewrite(resourcesToEncrypt, encryptedResources)
+	encryptedGVKs := sets.New[schema.GroupVersionKind]()
 
 	resourceLists, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
@@ -331,6 +504,54 @@ func GetResourcesForRewrite(
 	return encryptedGVKs.UnsortedList(), message, nil
 }
 
+func getGroupResourcesForRewrite(resourcesToEncrypt, encryptedResources []string) ([]schema.GroupResource, string, bool) {
+	resourcesForRewrite := resourcesToEncrypt
+	encryptionConfigHasChanged := !sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...))
+	message := "Objects requiring to be rewritten after ETCD encryption key rotation"
+
+	if encryptionConfigHasChanged {
+		resourcesForRewrite = getModifiedResources(resourcesToEncrypt, encryptedResources)
+		message = "Objects requiring to be rewritten after modification of encryption config"
+	}
+
+	grs := make([]schema.GroupResource, 0, len(resourcesForRewrite))
+	for _, resource := range resourcesForRewrite {
+		grs = append(grs, schema.ParseGroupResource(resource))
+	}
+	return grs, message, encryptionConfigHasChanged
+}
+
+func filterServedGroupResources(discoveryClient discovery.DiscoveryInterface, grs []schema.GroupResource) ([]schema.GroupResource, error) {
+	_, resourceLists, err := discoveryClient.ServerGroupsAndResources()
+	if err != nil {
+		failedGroups, isPartialFailure := discovery.GroupDiscoveryFailedErrorGroups(err)
+		if !isPartialFailure {
+			return nil, fmt.Errorf("error discovering server groups and resources: %w", err)
+		}
+		for failedGV := range failedGroups {
+			if slices.ContainsFunc(grs, func(gr schema.GroupResource) bool {
+				return gr.Group == failedGV.Group
+			}) {
+				return nil, fmt.Errorf("error discovering server groups and resources: %w", err)
+			}
+		}
+	}
+
+	gvrMap, err := discovery.GroupVersionResources(resourceLists)
+	if err != nil {
+		return nil, fmt.Errorf("error building resource map: %w", err)
+	}
+
+	servedGRs := sets.New[schema.GroupResource]()
+	for gvr := range gvrMap {
+		servedGRs.Insert(gvr.GroupResource())
+	}
+
+	return slices.DeleteFunc(slices.Clone(grs), func(gr schema.GroupResource) bool {
+		return !servedGRs.Has(gr)
+	}), nil
+}
+
 func getModifiedResources(resourcesToEncrypt []string, encryptedResources []string) []string {
 	var (
 		oldResources = sets.New(encryptedResources...)
@@ -341,4 +562,21 @@ func getModifiedResources(resourcesToEncrypt []string, encryptedResources []stri
 	)
 
 	return sets.List(addedResources.Union(removedResources))
+}
+
+// GetStorageVersionMigrationNameForGR returns the name used for a StorageVersionMigration object for the given GroupResource.
+// If the generated name exceeds 253 characters, it is truncated and a 5-character SHA256 checksum of the full name is appended.
+func GetStorageVersionMigrationNameForGR(gr schema.GroupResource) string {
+	const maxNameLength = 63
+
+	var name string
+	if gr.Group == "" {
+		name = fmt.Sprintf("gardener-rewrite-%s", gr.Resource)
+	} else {
+		name = fmt.Sprintf("gardener-rewrite-%s-%s", gr.Group, gr.Resource)
+	}
+	if len(name) <= maxNameLength {
+		return name
+	}
+	return name[:maxNameLength-6] + "-" + utils.ComputeSHA256Hex([]byte(name))[:5]
 }

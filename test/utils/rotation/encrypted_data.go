@@ -23,7 +23,9 @@ type EncryptedResource struct {
 // EncryptedDataVerifier creates and reads encrypted data in the cluster to verify correct configuration of etcd encryption.
 type EncryptedDataVerifier struct {
 	NewTargetClientFunc func(ctx context.Context) (kubernetes.Interface, error)
-	Resources           []EncryptedResource
+	// SetupFunc is called once in Before() before creating objects. Use it for idempotent prerequisites such as CRD creation. Optional.
+	SetupFunc func(ctx context.Context, c client.Client)
+	Resources []EncryptedResource
 }
 
 // Before is called before the rotation is started.
@@ -39,6 +41,10 @@ func (v *EncryptedDataVerifier) Before(ctx context.Context) {
 		targetClient, err = v.NewTargetClientFunc(ctx)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).Should(Succeed())
+
+	if v.SetupFunc != nil {
+		v.SetupFunc(ctx, targetClient.Client())
+	}
 
 	VerifyEncryptedData(ctx, targetClient.Client(), v.Resources)
 }
