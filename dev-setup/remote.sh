@@ -148,14 +148,9 @@ case "$command" in
       default_dns_provider_type=$(yq -e 'select(document_index == 0) | .spec.targetSystem.type' "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml)
 
       role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml)
-      role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml)
 
       if [[ $role1 != "default-domain" ]]; then
         echo "first workload identity in $SCRIPT_DIR/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml must be labeled as gardener.cloud/role=default-domain"
-        exit 1
-      fi
-      if [[ $role2 != "internal-domain" ]]; then
-        echo "second workload identity in $SCRIPT_DIR/gardenconfig/overlays/remote/credentials/domains/domain-workload-identities.yaml must be labeled as gardener.cloud/role=internal-domain"
         exit 1
       fi
 
@@ -186,14 +181,9 @@ case "$command" in
       check-not-initial "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]'
 
       role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml)
-      role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$SCRIPT_DIR"/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml)
 
       if [[ $role1 != "default-domain" ]]; then
         echo "first secret in $SCRIPT_DIR/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml must be labeled as gardener.cloud/role=default-domain"
-        exit 1
-      fi
-      if [[ $role2 != "internal-domain" ]]; then
-        echo "second secret in $SCRIPT_DIR/gardenconfig/overlays/remote/credentials/domains/domain-secrets.yaml must be labeled as gardener.cloud/role=internal-domain"
         exit 1
       fi
 

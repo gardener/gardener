@@ -43,12 +43,6 @@ Namespaces are the backing entities of Gardener projects in which shoot cluster 
 This validation handler protects active namespaces against premature deletion requests.
 Therefore, it denies deletion requests if a namespace still contains shoot clusters or if it belongs to a non-deleting Gardener project (without `.metadata.deletionTimestamp`).
 
-### Internal Domain Secret Validator
-
-Gardener uses internal domain secrets to configure DNS for shoot clusters.
-This validation handler ensures that only one internal domain secret can exist per namespace and validates the immutability of critical domain configuration.
-It prevents modifications that could break DNS resolution for existing shoots.
-
 ### Provider Secret Labels
 
 `Secret`s and `InternalSecret`s referenced in `SecretBinding`s or `CredentialsBinding`s are automatically labeled with the corresponding provider types.

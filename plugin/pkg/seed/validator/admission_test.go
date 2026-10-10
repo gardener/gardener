@@ -43,6 +43,13 @@ var _ = Describe("validator", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
 				},
+				Spec: core.SeedSpec{
+					DNS: core.SeedDNS{
+						Internal: &core.SeedDNSProviderConfig{
+							Domain: "internal.example.com",
+						},
+					},
+				},
 			}
 			shootBase = gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{

@@ -66,8 +66,6 @@ func Initialize(
 		internalDomain, err = gardenerutils.ReadGardenInternalDomain(
 			ctx,
 			gardenClient,
-			gardenerutils.ComputeGardenNamespace(seed.Name),
-			true,
 			seed.Spec.DNS.Internal,
 		)
 		if err != nil {
