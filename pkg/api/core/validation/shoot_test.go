@@ -3862,17 +3862,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 
-				It("should prevent setting podEvictionTimeout", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: 5 * time.Minute}
-
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
-						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
-					}))))
-				})
-
 				It("should prevent setting nodeMonitorGracePeriod", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 5 * time.Minute}
 
@@ -4060,18 +4049,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			It("should prevent setting the pod eviction timeout for kubernetes versions >= 1.33", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: time.Minute}
-				shoot.Spec.Kubernetes.Version = "1.33.0"
-
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
-					"Detail": ContainSubstring("for Kubernetes versions >= 1.33, podEvictionTimeout field is no longer supported"),
-				}))))
-			})
-
 			Describe("nodeCIDRMaskSizeIPv6 validation", func() {
 				BeforeEach(func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = nil
@@ -4167,26 +4144,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						})),
 					))
 				})
-			})
-
-			It("should prevent setting a negative pod eviction timeout", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: -1}
-
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
-				}))))
-			})
-
-			It("should prevent setting the pod eviction timeout to 0", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{}
-
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
-				}))))
 			})
 
 			It("should prevent setting a negative node monitor grace period", func() {
@@ -4546,21 +4503,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("newPodScaleUpDelay"),
 					"Detail": Equal("must be non-negative"),
 				})))),
-				Entry("valid with maxEmptyBulkDelete", core.ClusterAutoscaler{
-					MaxEmptyBulkDelete: &positiveInteger,
-				}, version_1_31, BeEmpty()),
-				Entry("invalid with negative maxEmptyBulkDelete", core.ClusterAutoscaler{
-					MaxEmptyBulkDelete: &negativeInteger,
-				}, version_1_31, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
-				Entry("invalid with maxEmptyBulkDelete set for kubernetes version 1.33 and above", core.ClusterAutoscaler{
-					MaxEmptyBulkDelete: &positiveInteger,
-				}, version_1_33,
-					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("maxEmptyBulkDelete"),
-						"Detail": Equal("for Kubernetes versions >= 1.33, maxEmptyBulkDelete field is no longer supported, use maxScaleDownParallelism instead"),
-					}))),
-				),
 				Entry("valid with maxScaleDownParallelism", core.ClusterAutoscaler{
 					MaxScaleDownParallelism: &positiveInteger,
 				}, version_1_32, BeEmpty()),
@@ -4570,22 +4512,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("valid with maxDrainParallelism", core.ClusterAutoscaler{
 					MaxDrainParallelism: &positiveInteger,
 				}, version_1_32, BeEmpty()),
-				Entry("valid with maxScaleDownParallelism and maxEmptyBulkDelete set to same value", core.ClusterAutoscaler{
-					MaxScaleDownParallelism: &positiveInteger,
-					MaxEmptyBulkDelete:      &positiveInteger,
-				}, version_1_32, BeEmpty()),
 				Entry("invalid with negative maxDrainParallelism", core.ClusterAutoscaler{
 					MaxDrainParallelism: &negativeInteger,
 				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxDrainParallelism"), int64(negativeInteger), "must be greater than or equal to 0").WithOrigin("minimum"))),
-				Entry("invalid with both maxEmptyBulkDelete and maxScaleDownParallelism set to different values", core.ClusterAutoscaler{
-					MaxEmptyBulkDelete:      new(positiveInteger + 10),
-					MaxScaleDownParallelism: &positiveInteger,
-				}, version_1_32, ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":     Equal(field.ErrorTypeInvalid),
-						"BadValue": Equal(positiveInteger + 10),
-						"Detail":   ContainSubstring(fmt.Sprintf("must equal maxScaleDownParallelism %d", positiveInteger)),
-					})))),
 				Entry("invalid with negative scaleDownDelayAfterAdd", core.ClusterAutoscaler{
 					ScaleDownDelayAfterAdd: &metav1.Duration{Duration: -2 * time.Minute},
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{

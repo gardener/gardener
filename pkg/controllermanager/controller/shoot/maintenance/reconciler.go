@@ -150,36 +150,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Set the .spec.kubernetes.kubeControllerManager.podEvictionTimeout field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.33.
-	// Gardener forbids setting the field for Shoots with K8s 1.33+. See https://github.com/gardener/gardener/pull/12343
-	{
-		oldK8sLess133, _ := versionutils.CheckVersionMeetsConstraint(oldShootKubernetesVersion.String(), "< 1.33")
-		newK8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(shootKubernetesVersion.String(), ">= 1.33")
-		if oldK8sLess133 && newK8sGreaterEqual133 {
-			if maintainedShoot.Spec.Kubernetes.KubeControllerManager != nil && maintainedShoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout != nil {
-				maintainedShoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = nil
-
-				reason := ".spec.kubernetes.kubeControllerManager.podEvictionTimeout is set to nil. Reason: The field was deprecated in favour of `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds` and can no longer be enabled for Shoot clusters using Kubernetes version 1.33+"
-				operations = append(operations, reason)
-			}
-		}
-	}
-
-	// Set the .spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.33.
-	// Gardener forbids setting the field for Shoots with K8s 1.33+. See https://github.com/gardener/gardener/pull/12413
-	{
-		oldK8sLess133, _ := versionutils.CheckVersionMeetsConstraint(oldShootKubernetesVersion.String(), "< 1.33")
-		newK8sGreaterEqual133, _ := versionutils.CheckVersionMeetsConstraint(shootKubernetesVersion.String(), ">= 1.33")
-		if oldK8sLess133 && newK8sGreaterEqual133 {
-			if maintainedShoot.Spec.Kubernetes.ClusterAutoscaler != nil && maintainedShoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
-				maintainedShoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete = nil
-
-				reason := ".spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: The field was deprecated in favour of `.spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism` and can no longer be enabled for Shoot clusters using Kubernetes version 1.33+"
-				operations = append(operations, reason)
-			}
-		}
-	}
-
 	// Set the .spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.35.
 	// Gardener forbids setting the field for Shoots with K8s 1.35+.
 	{

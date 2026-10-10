@@ -131,7 +131,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configIgnoreDaemonsetsUtilization           = true
 		configEmitPerNodeGroupMetrics               = true
 		configVerbosity                       int32 = 4
-		configMaxEmptyBulkDelete                    = new(int32(20))
 		configMaxScaleDownParallelism               = new(int32(20))
 		configMaxDrainParallelism                   = new(int32(2))
 		configNewPodScaleUpDelay                    = &metav1.Duration{Duration: time.Second}
@@ -155,7 +154,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			IgnoreDaemonsetsUtilization:     &configIgnoreDaemonsetsUtilization,
 			EmitPerNodeGroupMetrics:         &configEmitPerNodeGroupMetrics,
 			Verbosity:                       &configVerbosity,
-			MaxEmptyBulkDelete:              configMaxEmptyBulkDelete,
 			MaxScaleDownParallelism:         configMaxScaleDownParallelism,
 			MaxDrainParallelism:             configMaxDrainParallelism,
 			NewPodScaleUpDelay:              configNewPodScaleUpDelay,
