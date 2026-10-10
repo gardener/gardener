@@ -41,7 +41,8 @@ func (p *perses) datasources() []client.Object {
 
 	if p.values.VictoriaLogsEnabled && !p.values.OnlyDeployDatasourcesAndDashboards {
 		datasources = append(datasources,
-			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsPort), false),
+			// TODO(teodordichev): switch to HTTPS once the following PR is resolved - https://github.com/perses/perses-operator/pull/495
+			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsHttpPort), false),
 		)
 	}
 

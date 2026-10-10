@@ -218,6 +218,7 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 	return collector.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
+		b.SecretsManager,
 		collector.Values{
 			Image:                        collectorImage.String(),
 			KubeRBACProxyImage:           kubeRBACProxyImage.String(),
@@ -235,7 +236,6 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			VictoriaLogsBackend:          features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 			RemoveVali:                   features.DefaultFeatureGate.Enabled(features.RemoveVali),
 		},
-		b.SecretsManager,
 	), nil
 }
 
@@ -260,6 +260,8 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 			Enabled:     pvcAutoscalerEnabled,
 			MaxCapacity: resource.MustParse("40Gi"),
 		},
+		b.SecretsManager,
+		v1beta1constants.SecretNameCACluster,
 	)
 	if err != nil {
 		return nil, err

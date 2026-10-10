@@ -107,7 +107,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			IstioIngressGatewayNamespace: "istio-ingress",
 		}
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
-		component = New(c, namespace, values, fakeSecretManager)
+		component = New(c, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c, comptest.CmpOptsForIstio()...)
 
 		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
@@ -430,10 +430,11 @@ var _ = Describe("OpenTelemetry Collector", func() {
 								"verbosity": "basic",
 							},
 							"otlphttp/victorialogs": map[string]any{
-								"logs_endpoint": "http://logging-vl:9428/insert/opentelemetry/v1/logs",
+								"logs_endpoint": "https://logging-vl:9429/insert/opentelemetry/v1/logs",
 								"headers": map[string]any{
 									"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
 								},
+								"tls": map[string]any{"ca_file": "/etc/otel/tls/bundle.crt"},
 							},
 						},
 					},
@@ -518,7 +519,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 					SecretName: "logging-tls",
 				},
 			},
-		}}
+		}, getCaBundleVolume()}
+		openTelemetryCollector.Spec.VolumeMounts = []corev1.VolumeMount{getCaBundleVolumeMount()}
 		openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
 			ServicePort: kubeRBACValiServicePort,
 		})
@@ -570,7 +572,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			openTelemetryCollector.Spec.AdditionalContainers = nil
-			openTelemetryCollector.Spec.Volumes = nil
+			openTelemetryCollector.Spec.Volumes = []corev1.Volume{getCaBundleVolume()}
+			openTelemetryCollector.Spec.VolumeMounts = []corev1.VolumeMount{getCaBundleVolumeMount()}
 			openTelemetryCollector.Spec.Ports = nil
 			delete(openTelemetryCollector.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 			Expect(customResourcesManagedResource).To(consistOf(
@@ -687,7 +690,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "custom-ca-secret", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("custom-ca-bundle")}})).To(Succeed())
 
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			// The main test is that deploy succeeds with a custom CA secret name
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -701,7 +704,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			values.ShootNodeLoggingEnabled = false // Disable node logging for simpler test
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCASeed, Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte("seed-ca-bundle")}})).To(Succeed())
 
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			// The main test is that deploy succeeds with the seed CA secret
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -712,7 +715,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		It("should create ingress and kubeRBACProxy resources when ShootNodeLoggingEnabled is false", func() {
 			values.ShootNodeLoggingEnabled = false
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
@@ -742,7 +745,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		It("should remove the logs/vali pipeline when RemoveVali is enabled", func() {
 			values.RemoveVali = true
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
@@ -771,7 +774,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		It("should add the logs/victorialogs pipeline when VictoriaLogsBackend is enabled", func() {
 			values.VictoriaLogsBackend = true
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
@@ -806,7 +809,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		It("should create kubeRBACProxy with insecure listen and no tls volumes when TLS secret is not installed", func() {
 			values.ClusterType = "seed"
 			values.ShootNodeLoggingEnabled = false
-			component = New(c, namespace, values, fakeSecretManager)
+			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
@@ -820,7 +823,6 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 			seedCollector := openTelemetryCollector.DeepCopy()
 			seedCollector.Spec.AdditionalContainers = []corev1.Container{getInsecureValiKubeRBACContainer(seedVolumeMount), getInsecureOtlpKubeRBACContainer(seedVolumeMount)}
-			// Only the kubeconfig volume — no TLS volume
 			seedCollector.Spec.Volumes = []corev1.Volume{{
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
@@ -844,7 +846,8 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						},
 					},
 				},
-			}}
+			}, getCaBundleVolume()}
+			seedCollector.Spec.VolumeMounts = []corev1.VolumeMount{getCaBundleVolumeMount()}
 			seedCollector.Annotations = map[string]string{
 				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
 					v1beta1constants.LabelNetworkPolicySeedScrapeTargets +
@@ -1179,7 +1182,7 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelRole:                           "observability",
 		v1beta1constants.GardenRole:                          "observability",
 		gardenerutils.NetworkPolicyLabel("logging", 3100):    "allowed",
-		gardenerutils.NetworkPolicyLabel("logging-vl", 9428): "allowed",
+		gardenerutils.NetworkPolicyLabel("logging-vl", 9429): "allowed",
 		v1beta1constants.LabelNetworkPolicyToDNS:             "allowed",
 		v1beta1constants.LabelObservabilityApplication:       "opentelemetry-collector",
 	}
@@ -1314,5 +1317,28 @@ func getSecureOtlpKubeRBACContainer(volumeMount corev1.VolumeMount) corev1.Conta
 			volumeMount,
 			{Name: "tls-certificate", MountPath: "/tls", ReadOnly: true},
 		},
+	}
+}
+
+func getCaBundleVolume() corev1.Volume {
+	return corev1.Volume{
+		Name: "ca-bundle",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: v1beta1constants.SecretNameCACluster,
+				Items: []corev1.KeyToPath{{
+					Key:  "bundle.crt",
+					Path: "bundle.crt",
+				}},
+			},
+		},
+	}
+}
+
+func getCaBundleVolumeMount() corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      "ca-bundle",
+		MountPath: "/etc/otel/tls",
+		ReadOnly:  true,
 	}
 }
