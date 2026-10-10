@@ -9,8 +9,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -20,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -43,9 +48,48 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 	}
 
 	// Apply the machine namespace first, so we can use its UUID as owner reference for the IPPools.
+	// This is done with the privileged runtime client rather than the (potentially workload-identity-scoped)
+	// provider client: the workload identity subject has no permission to create namespaces, and the Role granting it
+	// permissions lives inside this very namespace, so it cannot bootstrap itself.
 	machineNamespace := namespace(cluster.Shoot.Status.TechnicalID)
-	if err := providerClient.Patch(ctx, machineNamespace, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+	if err := a.runtimeClient.Patch(ctx, machineNamespace, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 		return err
+	}
+
+	infraSecret, err := kubernetesutils.GetSecretByReference(ctx, a.runtimeClient, &infrastructure.Spec.SecretRef)
+	if err != nil {
+		return fmt.Errorf("could not retrieve provider secret: %w", err)
+	}
+
+	if infraSecret.Labels[securityv1alpha1constants.LabelPurpose] == securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor {
+		token, err := jwt.ParseSigned(
+			string(infraSecret.Data["token"]),
+			[]jose.SignatureAlgorithm{
+				jose.RS256,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed parsing token from infrastructure secret: %w", err)
+		}
+		// We do not care about the signature and authenticity of the token here.
+		// We just want to extract the "sub" claim to know which user the machine-controller-manager
+		// is running as when using workload identity.
+		// Code is only used in local setup.
+		claims := &jwt.Claims{}
+		if err := token.UnsafeClaimsWithoutVerification(claims); err != nil {
+			return fmt.Errorf("failed extracting claims from token in cloudprovider secret: %w", err)
+		}
+		subject := rbacv1.Subject{
+			Kind:     rbacv1.UserKind,
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Name:     claims.Subject,
+		}
+
+		for _, obj := range workloadIdentityRBACObjects(NamespaceName(cluster.Shoot.Status.TechnicalID), infrastructure.Namespace, subject) {
+			if err := a.runtimeClient.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+				return err
+			}
+		}
 	}
 
 	ipPools := []client.Object{}
@@ -88,13 +132,15 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, infrastructure.Spec.SecretRef)
-	if err != nil {
-		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
+	if err := kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
+		namespace(cluster.Shoot.Status.TechnicalID),
+	); err != nil {
+		return err
 	}
 
-	return kubernetesutils.DeleteObjects(ctx, providerClient,
-		namespace(cluster.Shoot.Status.TechnicalID),
+	return kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
+		emptyClusterRole(infrastructure.Namespace),
+		emptyClusterRoleBinding(infrastructure.Namespace),
 	)
 }
 
@@ -108,6 +154,118 @@ func (a *actuator) ForceDelete(ctx context.Context, log logr.Logger, infrastruct
 
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
 	return a.Reconcile(ctx, log, infrastructure, cluster)
+}
+
+func emptyRole(namespace string) *rbacv1.Role {
+	return &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+			Kind:       "Role",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "provider-local-infrastructure",
+			Namespace: namespace,
+		},
+	}
+}
+
+func emptyRoleBinding(namespace string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+			Kind:       "RoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "provider-local-infrastructure",
+			Namespace: namespace,
+		},
+	}
+}
+
+func emptyClusterRole(namespace string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "provider-local-infrastructure:" + namespace,
+		},
+	}
+}
+
+func emptyClusterRoleBinding(namespace string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+			Kind:       "ClusterRoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "provider-local-infrastructure:" + namespace,
+		},
+	}
+}
+
+// workloadIdentityRBACObjects returns the RBAC objects that authorize the workload identity subject to manage the
+// provider-local machine resources. The Role/RoleBinding live in the machine namespace (infra-<technicalID>), where the
+// machine-controller-manager creates pods, userdata secrets and services. The cluster-scoped ClusterRole/
+// ClusterRoleBinding (named after the shoot control plane namespace) grant access to the calico IPPools.
+func workloadIdentityRBACObjects(machineNamespace, shootNamespace string, subject rbacv1.Subject) []client.Object {
+	role := emptyRole(machineNamespace)
+	role.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"pods"},
+			Verbs:     []string{"create", "delete", "get", "list", "patch", "watch"},
+		},
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"pods/exec"},
+			Verbs:     []string{"create", "get"},
+		},
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"create", "get", "patch"},
+		},
+		{
+			APIGroups: []string{corev1.SchemeGroupVersion.Group},
+			Resources: []string{"services"},
+			Verbs:     []string{"create", "delete", "get", "patch"},
+		},
+		{
+			APIGroups: []string{networkingv1.SchemeGroupVersion.Group},
+			Resources: []string{"networkpolicies"},
+			Verbs:     []string{"create", "delete", "get", "patch"},
+		},
+	}
+
+	roleBinding := emptyRoleBinding(machineNamespace)
+	roleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.SchemeGroupVersion.Group,
+		Kind:     "Role",
+		Name:     role.Name,
+	}
+	roleBinding.Subjects = []rbacv1.Subject{subject}
+
+	clusterRole := emptyClusterRole(shootNamespace)
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"crd.projectcalico.org"},
+			Resources: []string{"ippools"},
+			Verbs:     []string{"create", "delete", "get", "patch"},
+		},
+	}
+
+	clusterRoleBinding := emptyClusterRoleBinding(shootNamespace)
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.SchemeGroupVersion.Group,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{subject}
+
+	return []client.Object{role, roleBinding, clusterRole, clusterRoleBinding}
 }
 
 func namespace(technicalID string) *corev1.Namespace {

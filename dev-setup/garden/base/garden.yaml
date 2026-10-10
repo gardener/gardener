@@ -69,6 +69,7 @@ spec:
         domain:
           name: discovery.local.gardener.cloud
           provider: primary
+        tlsSecretName: gardener-discovery-server-tls
     maintenance:
       timeWindow:
         begin: 220000+0100
