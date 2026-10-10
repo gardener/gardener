@@ -1,0 +1,195 @@
+kind: Dashboard
+metadata:
+  name: kubernetes-pods
+  project: garden
+spec:
+  display:
+    name: Kubernetes Pods
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          name: Pod
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: alphabetical-asc
+        plugin:
+          kind: VictoriaLogsFieldValuesVariable
+          spec:
+            datasource:
+              kind: VictoriaLogsDatasource
+              name: victorialogs
+            field: k8s.pod.name
+            query: '*'
+        name: pod
+    - kind: ListVariable
+      spec:
+        display:
+          name: Container
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: alphabetical-asc
+        plugin:
+          kind: VictoriaLogsFieldValuesVariable
+          spec:
+            datasource:
+              kind: VictoriaLogsDatasource
+              name: victorialogs
+            field: k8s.container.name
+            query: '{k8s.pod.name=~"$pod"}'
+        name: container
+    - kind: TextVariable
+      spec:
+        display:
+          name: Search
+          hidden: false
+        value: ""
+        name: search
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: Memory Usage
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: bytes
+            legend:
+              position: bottom
+              mode: list
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-garden
+                  query: sum (container_memory_working_set_bytes{pod=~"$pod", container=~"$container"}) by (pod)
+                  seriesNameFormat: '{{ pod }}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: CPU Usage
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: list
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-garden
+                  query: sum(rate(container_cpu_usage_seconds_total{container=~"$container",pod=~"$pod"}[$__rate_interval])) by (pod)
+                  seriesNameFormat: '{{ pod }}'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Network I/O
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: bytes/sec
+            legend:
+              position: bottom
+              mode: list
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-garden
+                  query: sum(rate(container_network_receive_bytes_total{pod=~"$pod"}[$__rate_interval])) by (pod)
+                  seriesNameFormat: '{{ pod }} Received'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-garden
+                  query: -sum(rate(container_network_transmit_bytes_total{pod=~"$pod"}[$__rate_interval])) by (pod)
+                  seriesNameFormat: '{{ pod }} Sent'
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Pod Logs
+        plugin:
+          kind: LogsTable
+          spec:
+            showTime: true
+            enableDetails: true
+        queries:
+          - kind: LogQuery
+            spec:
+              plugin:
+                kind: VictoriaLogsLogQuery
+                spec:
+                  datasource:
+                    kind: VictoriaLogsDatasource
+                    name: victorialogs
+                  query: '{k8s.pod.name=~"$pod", k8s.container.name=~"$container"} $search'
+  layouts:
+    - kind: Grid
+      spec:
+        items:
+          - x: 0
+            "y": 0
+            width: 24
+            height: 7
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 0
+            "y": 7
+            width: 24
+            height: 7
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 0
+            "y": 14
+            width: 24
+            height: 7
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 0
+            "y": 21
+            width: 24
+            height: 21
+            content:
+              $ref: '#/spec/panels/3_0'
+        display:
+          title: ""
+          collapse:
+            open: true
+  duration: 1h
+  annotations: []
+  refreshInterval: 0s
+  links: []

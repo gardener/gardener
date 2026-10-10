@@ -1,0 +1,319 @@
+kind: Dashboard
+metadata:
+  name: istio-ingress-gateway
+  project: garden
+spec:
+  display:
+    name: Istio Ingress Gateway
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - grafana
+              - migration
+              - not
+              - supported
+        name: istio_proxy_pod
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        defaultValue:
+          - $__all
+        allowAllValue: true
+        allowMultiple: true
+        sort: none
+        plugin:
+          kind: StaticListVariable
+          spec:
+            values:
+              - grafana
+              - migration
+              - not
+              - supported
+        name: istio_proxy_namespace
+  panels:
+    "0":
+      kind: Panel
+      spec:
+        display:
+          name: vCPU by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval]))
+                  seriesNameFormat: _total
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval])
+                  seriesNameFormat: '{{ pod }}'
+    "1":
+      kind: Panel
+      spec:
+        display:
+          name: Memory by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(container_memory_working_set_bytes{pod=~"istio-ingress.*"})
+                  seriesNameFormat: _total
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: container_memory_working_set_bytes{pod=~"$istio_proxy_pod"}
+                  seriesNameFormat: '{{ pod }}'
+    "2":
+      kind: Panel
+      spec:
+        display:
+          name: vCPU by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: decimal
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(rate(container_cpu_usage_seconds_total{pod=~"$istio_proxy_pod"}[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{ namespace }}'
+    "3":
+      kind: Panel
+      spec:
+        display:
+          name: Memory by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(rate(container_memory_working_set_bytes{pod=~"$istio_proxy_pod"}[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{ namespace }}'
+    "4":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Received by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(rate(istio_tcp_received_bytes_total{pod=~"$istio_proxy_pod" }[$__rate_interval])) by(pod)
+                  seriesNameFormat: '{{  pod }} '
+    "5":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Sent by Pod
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(rate(istio_tcp_sent_bytes_total{pod=~"$istio_proxy_pod"}[$__rate_interval])) by(pod)
+                  seriesNameFormat: '{{  pod }} '
+    "6":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Received by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(rate(istio_tcp_received_bytes_total{pod=~"$istio_proxy_pod", namespace=~"$istio_proxy_namespace" }[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{  namespace }} '
+    "7":
+      kind: Panel
+      spec:
+        display:
+          name: TCP Sent by Namespace
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            legend:
+              position: bottom
+              mode: list
+            yAxis:
+              format:
+                unit: bytes
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  minStep: ""
+                  query: sum(rate(istio_tcp_sent_bytes_total{pod=~"$istio_proxy_pod", namespace=~"$istio_proxy_namespace" }[$__rate_interval])) by (namespace)
+                  seriesNameFormat: '{{  namespace }} '
+  layouts:
+    - kind: Grid
+      spec:
+        items:
+          - x: 0
+            "y": 0
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/0'
+          - x: 11
+            "y": 0
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/1'
+          - x: 0
+            "y": 7
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/2'
+          - x: 11
+            "y": 7
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/3'
+          - x: 0
+            "y": 14
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/4'
+          - x: 11
+            "y": 14
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/5'
+          - x: 0
+            "y": 21
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/6'
+          - x: 11
+            "y": 21
+            width: 11
+            height: 7
+            content:
+              $ref: '#/spec/panels/7'
+  duration: 30m
