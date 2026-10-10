@@ -1786,7 +1786,7 @@ type Worker struct {
 	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,5,rep,name=labels"`
 	// Name is the name of the worker group.
 	Name string `json:"name" protobuf:"bytes,6,opt,name=name"`
-	// Machine contains information about the machine type and image.
+	// Machine contains information about the machine type, image and architecture.
 	Machine Machine `json:"machine" protobuf:"bytes,7,opt,name=machine"`
 	// Maximum is the maximum number of machines to create.
 	// This value is divided by the number of configured zones for a fair distribution.
@@ -1978,7 +1978,7 @@ type WorkerKubernetes struct {
 	Version *string `json:"version,omitempty" protobuf:"bytes,2,opt,name=version"`
 }
 
-// Machine contains information about the machine type and image.
+// Machine contains information about the machine type, image and architecture.
 type Machine struct {
 	// Type is the machine type of the worker group.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`

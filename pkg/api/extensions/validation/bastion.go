@@ -52,6 +52,23 @@ func ValidateBastionSpec(spec *extensionsv1alpha1.BastionSpec, fldPath *field.Pa
 		allErrs = append(allErrs, field.Required(fldPath.Child("ingress"), "field is required"))
 	}
 
+	if spec.Machine != nil {
+		if spec.Machine.Type == nil && spec.Machine.Image == nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("machine"), spec.Machine, "at least one of type or image must be specified"))
+		}
+		if spec.Machine.Type != nil && len(*spec.Machine.Type) == 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("machine", "type"), *spec.Machine.Type, "machine type must not be empty"))
+		}
+		if spec.Machine.Image != nil {
+			if len(spec.Machine.Image.Name) == 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("machine", "image", "name"), spec.Machine.Image.Name, "machine image name must not be empty"))
+			}
+			if spec.Machine.Image.Version != nil && len(*spec.Machine.Image.Version) == 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("machine", "image", "version"), *spec.Machine.Image.Version, "machine image version must not be empty"))
+			}
+		}
+	}
+
 	return allErrs
 }
 
@@ -66,6 +83,7 @@ func ValidateBastionSpecUpdate(newSpec, oldSpec *extensionsv1alpha1.BastionSpec,
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.UserData, oldSpec.UserData, fldPath.Child("userData"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Machine, oldSpec.Machine, fldPath.Child("machine"))...)
 
 	return allErrs
 }

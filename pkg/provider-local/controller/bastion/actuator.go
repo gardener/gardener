@@ -55,7 +55,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, bastion *extens
 		return fmt.Errorf("could not create client for bastion resources: %w", err)
 	}
 
-	image, err := bastionImage(cluster)
+	image, err := bastionImage(bastion, cluster)
 	if err != nil {
 		return err
 	}
@@ -136,8 +136,9 @@ func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1
 	return nil
 }
 
-func bastionImage(cluster *extensionscontroller.Cluster) (string, error) {
-	machineSpec, err := extensionsbastion.GetMachineSpecFromCloudProfile(cluster.CloudProfile)
+func bastionImage(bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) (string, error) {
+	bastionMachineOverride := extensionsbastion.BastionMachineToCloudProfileBastion(bastion.Spec.Machine)
+	machineSpec, err := extensionsbastion.GetMachineSpecFromCloudProfile(cluster.CloudProfile, bastionMachineOverride)
 	if err != nil {
 		return "", fmt.Errorf("failed to determine machine spec for bastion from CloudProfile: %w", err)
 	}
