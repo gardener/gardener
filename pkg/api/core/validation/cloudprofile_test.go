@@ -399,7 +399,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 					})
 
-					It("should allow multiple supported within the some minor", func() {
+					It("should forbid overlapping supported machine image versions within the same minor", func() {
 						cloudProfile.Spec.MachineImages = []core.MachineImage{
 							{
 								Name: machineImageName,
@@ -434,7 +434,10 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						}
 						errorList := ValidateCloudProfile(cloudProfile)
 
-						Expect(errorList).To(BeEmpty())
+						Expect(errorList).To(ConsistOf(
+							PointTo(MatchFields(IgnoreExtras, Fields{"Type": Equal(field.ErrorTypeForbidden), "Field": Equal("spec.machineImages[0].versions[0]")})),
+							PointTo(MatchFields(IgnoreExtras, Fields{"Type": Equal(field.ErrorTypeForbidden), "Field": Equal("spec.machineImages[0].versions[1]")})),
+						))
 					})
 
 					It("should forbid expired lifecycle stage on latest kubernetes version", func() {
@@ -3024,4 +3027,63 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 			})
 		})
 	})
+})
+
+var _ = Describe("Supported version lifecycle periods", func() {
+	start := metav1.NewTime(time.Now().Add(24 * time.Hour))
+	middle := metav1.NewTime(start.Add(time.Hour))
+	end := metav1.NewTime(middle.Add(time.Hour))
+	period := func(start, end *metav1.Time) core.ExpirableVersion {
+		version := core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationSupported, StartTime: start}}}
+		if end != nil {
+			version.Lifecycle = append(version.Lifecycle, core.LifecycleStage{Classification: core.ClassificationDeprecated, StartTime: end})
+		}
+		return version
+	}
+
+	DescribeTable("validates Kubernetes and machine image versions",
+		func(first, second core.ExpirableVersion, secondVersion string, overlap bool) {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+			first.Version = "1.30.1"
+			second.Version = secondVersion
+			for _, machineImages := range []bool{false, true} {
+				spec := core.CloudProfileSpec{Kubernetes: core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.32.0"}}}}
+				if machineImages {
+					spec.MachineImages = []core.MachineImage{{Name: "test-image", UpdateStrategy: new(core.UpdateStrategyPatch)}}
+					for _, version := range []core.ExpirableVersion{first, second} {
+						spec.MachineImages[0].Versions = append(spec.MachineImages[0].Versions, core.MachineImageVersion{
+							ExpirableVersion: version,
+							CRI:              []core.CRI{{Name: "containerd"}},
+							Architectures:    []string{"amd64"},
+						})
+					}
+				} else {
+					spec.Kubernetes.Versions = append(spec.Kubernetes.Versions, first, second)
+				}
+				errs := ValidateNamespacedCloudProfileStatus(&spec, field.NewPath("status", "cloudProfileSpec"))
+				if overlap {
+					Expect(errs).NotTo(BeEmpty())
+					for _, err := range errs {
+						Expect(err.Type).To(Equal(field.ErrorTypeForbidden))
+						Expect(err.Detail).To(ContainSubstring("lifecycle stages must not overlap per minor version"))
+					}
+				} else {
+					Expect(errs).To(BeEmpty())
+				}
+			}
+		},
+		Entry("unbounded periods overlap", period(nil, nil), period(nil, nil), "1.30.2", true),
+		Entry("finite future periods overlap", period(&start, &end), period(&middle, &end), "1.30.2", true),
+		Entry("finite and unbounded future periods overlap", period(&start, &end), period(&middle, nil), "1.30.2", true),
+		Entry("unbounded future periods overlap", period(&start, nil), period(&end, nil), "1.30.2", true),
+		Entry("adjacent periods do not overlap", period(nil, &middle), period(&middle, nil), "1.30.2", false),
+		Entry("separated periods do not overlap", period(&start, &middle), period(&end, nil), "1.30.2", false),
+		Entry("reversed separated periods do not overlap", period(&end, nil), period(&start, &middle), "1.30.2", false),
+		Entry("empty periods do not overlap", period(&middle, &middle), period(&start, &end), "1.30.2", false),
+		Entry("different minors do not conflict", period(nil, nil), period(nil, nil), "1.31.0", false),
+		Entry("explicit legacy and lifecycle versions conflict", core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, period(nil, nil), "1.30.2", true),
+		Entry("implicit legacy classifications retain their compatibility exception", core.ExpirableVersion{}, core.ExpirableVersion{}, "1.30.2", false),
+		Entry("implicit legacy classifications remain excluded beside lifecycle versions", core.ExpirableVersion{}, period(nil, nil), "1.30.2", false),
+		Entry("versions without a supported stage do not conflict", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationPreview}}}, period(nil, nil), "1.30.2", false),
+	)
 })
