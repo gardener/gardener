@@ -6,7 +6,13 @@ package restore
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/go-logr/logr"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -64,6 +70,20 @@ func run(ctx context.Context, opts *Options) error {
 		Zone:             opts.Zone,
 	}
 
+	// Track restore progress with a marker file so that a failed restore can be retried. The gardenlet deployment
+	// recovered from the etcd snapshot would otherwise trip the guard in BootstrapControlPlane on a retry. We write the
+	// marker before running the flow and remove it only on successful completion. While the marker exists, we reuse the
+	// existing Force skip-path so the gardenlet check is skipped for this (retryable) restore.
+	fs := afero.Afero{Fs: gardenadmbotanist.NewFs()}
+	isRetry, err := prepareRestoreInProgressMarker(fs)
+	if err != nil {
+		return err
+	}
+	if isRetry {
+		opts.Log.Info("Found restore-in-progress marker file, treating this invocation as a retry and skipping the existing-gardenlet check", "path", cmd.RestoreInProgressLocation)
+		initOpts.Force = true
+	}
+
 	var (
 		b *gardenadmbotanist.GardenadmBotanist
 
@@ -93,12 +113,19 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		// TODO(ialidzhikov): Implement the required cleanups before running the init flow.
 		// For more details, see https://github.com/gardener/gardener/issues/15279.
-		_ = g.Add(flow.Task{
+		runInitFlow = g.Add(flow.Task{
 			Name: "Running init flow",
 			Fn: func(ctx context.Context) error {
 				return initcmd.RunInitFlow(ctx, b, initOpts)
 			},
 			Dependencies: flow.NewTaskIDs(deletePriorNode, forceDeletePriorNodePods),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Marking restore as completed",
+			Fn: func(_ context.Context) error {
+				return removeRestoreInProgressMarker(opts.Log, b.FS)
+			},
+			Dependencies: flow.NewTaskIDs(runInitFlow),
 		})
 	)
 
@@ -107,6 +134,45 @@ func run(ctx context.Context, opts *Options) error {
 		ProgressReporter: flow.NewCommandLineProgressReporter(opts.ErrOut),
 	}); err != nil {
 		return flow.Errors(err)
+	}
+
+	return nil
+}
+
+// prepareRestoreInProgressMarker ensures the restore-in-progress marker file exists. It returns true if the marker
+// already existed before this invocation, indicating that this is a retry and the existing-gardenlet check should be
+// skipped. Its presence is the only signal; the file content is not used.
+func prepareRestoreInProgressMarker(fs afero.Afero) (bool, error) {
+	markerExists, err := fs.Exists(cmd.RestoreInProgressLocation)
+	if err != nil {
+		return false, fmt.Errorf("failed checking whether restore-in-progress marker file %s exists: %w", cmd.RestoreInProgressLocation, err)
+	}
+	if markerExists {
+		return true, nil
+	}
+
+	dir := filepath.Dir(cmd.RestoreInProgressLocation)
+	if err := fs.MkdirAll(dir, os.ModeDir); err != nil {
+		return false, fmt.Errorf("failed creating directory %s for restore-in-progress marker file: %w", dir, err)
+	}
+
+	if err := fs.WriteFile(cmd.RestoreInProgressLocation, nil, 0640); err != nil {
+		return false, fmt.Errorf("failed writing restore-in-progress marker file %s: %w", cmd.RestoreInProgressLocation, err)
+	}
+	return false, nil
+}
+
+// removeRestoreInProgressMarker removes the restore-in-progress marker file. Only this final restore task removes the
+// marker, so it is expected to exist at this point. If it is already gone, something removed it out of band; we do not
+// fail the (otherwise successful) restore over it, but log a warning so the anomaly is visible.
+func removeRestoreInProgressMarker(log logr.Logger, fs afero.Afero) error {
+	err := fs.Remove(cmd.RestoreInProgressLocation)
+	if err != nil {
+		if errors.Is(err, afero.ErrFileNotFound) {
+			log.Info("Warning: restore-in-progress marker file was already absent at completion; something removed it out of band", "path", cmd.RestoreInProgressLocation)
+			return nil
+		}
+		return fmt.Errorf("failed removing restore-in-progress marker file %s: %w", cmd.RestoreInProgressLocation, err)
 	}
 
 	return nil
