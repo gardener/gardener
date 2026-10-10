@@ -75,6 +75,32 @@ spec:
 
 > :warning: The `nodeCIDRMaskSize` configuration is immutable and cannot be changed afterwards.
 
+For IPv6 (both dual-stack and IPv6 single-stack clusters), the equivalent setting is `nodeCIDRMaskSizeIPv6`.
+Whether this field has any effect depends on the infrastructure: on infrastructures that perform per-node IPv6 prefix delegation
+(e.g. OpenStack with DHCPv6-PD), the infrastructure assigns node prefixes directly and kube-controller-manager's node-ipam is
+bypassed, so `nodeCIDRMaskSizeIPv6` is ignored. On infrastructures where kube-controller-manager manages CIDR allocation,
+the field controls the per-node subnet size and matters for cluster capacity.
+
+For the latter case, Gardener does **not** default `nodeCIDRMaskSizeIPv6` to a fixed value, because the usable range depends on
+the infrastructure-allocated IPv6 pod CIDR. If the field is left unset, Gardener derives the effective per-node mask from the
+actual IPv6 pod CIDR as `podCIDRMaskSize + 16` (capped at `/124`). For a `/64` pod CIDR this results in `/80`, i.e. up to
+65,536 nodes. The `+16` is the maximum difference Kubernetes' node-ipam allows for IPv6, so this choice maximizes the possible
+node count while still leaving an enormous address space per node.
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+spec:
+  kubernetes:
+    kubeControllerManager:
+      nodeCIDRMaskSizeIPv6: 80 # optional; derived from the IPv6 pod CIDR when unset
+```
+
+The derived value is not written back to the spec. You can see the input it is derived from in `.status.networking.pods`.
+Like `nodeCIDRMaskSize`, `nodeCIDRMaskSizeIPv6` is immutable: it can only be set at shoot creation or in the update that migrates
+a cluster to dual-stack (see [Dual-Stack Network Migration](./dual-stack-networking-migration.md)). Once the cluster is already
+dual-stack, the field can no longer be changed.
+
 _**Example 3**_
 ```
 Pod network: 100.96.0.0/20

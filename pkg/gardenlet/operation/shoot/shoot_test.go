@@ -170,6 +170,72 @@ var _ = Describe("shoot", func() {
 			)
 		})
 
+		Describe("#ToKCMPodNetworks", func() {
+			var shoot *gardencorev1beta1.Shoot
+
+			BeforeEach(func() {
+				shoot = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Networking: &gardencorev1beta1.Networking{
+							Pods:       new("10.0.0.0/24"),
+							IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+						},
+					},
+				}
+			})
+
+			It("returns nil for workerless shoot with nil Networking", func() {
+				shoot.Spec.Networking = nil
+
+				result, err := ToKCMPodNetworks(shoot)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(BeNil())
+			})
+
+			It("returns only spec pod CIDR when status networking is nil", func() {
+				result, err := ToKCMPodNetworks(shoot)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal([]net.IPNet{{
+					IP:   []byte{10, 0, 0, 0},
+					Mask: []byte{255, 255, 255, 0},
+				}}))
+			})
+
+			It("returns both IPv4 and IPv6 pod CIDRs during dual-stack migration", func() {
+				shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}
+				shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+					Pods: []string{"10.0.0.0/24", "fd00::/120"},
+				}
+
+				result, err := ToKCMPodNetworks(shoot)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal([]net.IPNet{
+					{
+						IP:   []byte{10, 0, 0, 0},
+						Mask: []byte{255, 255, 255, 0},
+					},
+					{
+						IP:   net.ParseIP("fd00::"),
+						Mask: net.CIDRMask(120, 128),
+					},
+				}))
+			})
+
+			It("does not duplicate spec CIDR already present in status", func() {
+				shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+					Pods: []string{"10.0.0.0/24"},
+				}
+
+				result, err := ToKCMPodNetworks(shoot)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(HaveLen(1))
+			})
+		})
+
 		Describe("#ProxyMode", func() {
 			It("should return false when KubeProxy is null", func() {
 				shoot.GetInfo().Spec.Kubernetes.KubeProxy = nil

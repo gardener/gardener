@@ -20,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
@@ -63,7 +64,12 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetRuntimeConfig(b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues().RuntimeConfig)
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetServiceNetworks(b.Shoot.Networks.Services)
-	b.Shoot.Components.ControlPlane.KubeControllerManager.SetPodNetworks(b.Shoot.Networks.Pods)
+
+	kcmPodNetworks, err := shoot.ToKCMPodNetworks(b.Shoot.GetInfo())
+	if err != nil {
+		return err
+	}
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetPodNetworks(kcmPodNetworks)
 
 	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)
 }

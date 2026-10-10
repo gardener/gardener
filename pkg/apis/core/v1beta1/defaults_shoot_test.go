@@ -94,11 +94,11 @@ var _ = Describe("Shoot defaulting", func() {
 						obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv6}
 					})
 
-					It("should default nodeCIDRMaskSize to 64", func() {
+					It("should not default NodeCIDRMaskSize or NodeCIDRMaskSizeIPv6 for IPv6 single-stack", func() {
 						SetObjectDefaults_Shoot(obj)
 
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
-						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(64))))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(BeNil())
 					})
 
 					It("should not default NodeCIDRMaskSize if NodeCIDRMaskSizeIPv6 is set by user for IPv6 single stack", func() {
@@ -118,10 +118,19 @@ var _ = Describe("Shoot defaulting", func() {
 						obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv4, IPFamilyIPv6}
 					})
 
-					It("should default both NodeCIDRMaskSize and NodeCIDRMaskSizeIPv6", func() {
+					It("should default NodeCIDRMaskSize but not NodeCIDRMaskSizeIPv6", func() {
 						SetObjectDefaults_Shoot(obj)
 						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(24))))
-						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(PointTo(Equal(int32(64))))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(BeNil())
+					})
+
+					It("should not overwrite a user-provided NodeCIDRMaskSizeIPv6", func() {
+						obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{
+							NodeCIDRMaskSizeIPv6: new(int32(80)),
+						}
+						SetObjectDefaults_Shoot(obj)
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(24))))
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSizeIPv6).To(PointTo(Equal(int32(80))))
 					})
 				})
 			})

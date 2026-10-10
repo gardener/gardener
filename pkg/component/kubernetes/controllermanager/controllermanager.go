@@ -655,6 +655,25 @@ func (k *kubeControllerManager) isDualStack() bool {
 	return false
 }
 
+// nodeCIDRMaskSizeIPv6 returns the IPv6 node CIDR mask size to pass to the kube-controller-manager.
+// A user-provided value takes precedence. Otherwise it is derived from the actual IPv6 pod CIDR (which
+// is infrastructure-dependent, e.g. a /64 on OpenStack), because defaulting it in the shoot spec cannot
+// know the real pod CIDR. Returns nil if no IPv6 pod network is present.
+func (k *kubeControllerManager) nodeCIDRMaskSizeIPv6() *int32 {
+	if k.values.Config != nil && k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
+		return k.values.Config.NodeCIDRMaskSizeIPv6
+	}
+
+	for _, podNetwork := range k.values.PodNetworks {
+		if podNetwork.IP.To4() != nil {
+			continue
+		}
+		podCIDRMaskSize, _ := podNetwork.Mask.Size()
+		return new(netutils.DefaultNodeCIDRMaskSizeIPv6(podCIDRMaskSize))
+	}
+	return nil
+}
+
 func (k *kubeControllerManager) computeCommand(port int32) []string {
 	var (
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
@@ -682,17 +701,23 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			if k.values.Config.NodeCIDRMaskSize != nil {
 				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *k.values.Config.NodeCIDRMaskSize))
 			}
-			if k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
-				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", *k.values.Config.NodeCIDRMaskSizeIPv6))
+			if nodeCIDRMaskSizeIPv6 := k.nodeCIDRMaskSizeIPv6(); nodeCIDRMaskSizeIPv6 != nil {
+				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", *nodeCIDRMaskSizeIPv6))
 			}
 		} else {
-			// Single-stack: use generic flag (works for both IPv4 and IPv6)
+			// Single-stack: use the generic flag (valid for both IPv4 and IPv6).
+			// For single-stack IPv6, NodeCIDRMaskSizeIPv6 takes priority over NodeCIDRMaskSize; if neither
+			// is set, the mask is derived from the actual pod CIDR via nodeCIDRMaskSizeIPv6() (same logic
+			// as the dual-stack path, returns nil for IPv4 so IPv4 single-stack is unaffected).
 			var maskSize *int32
 			if k.values.Config.NodeCIDRMaskSize != nil {
 				maskSize = k.values.Config.NodeCIDRMaskSize
 			}
 			if k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
 				maskSize = k.values.Config.NodeCIDRMaskSizeIPv6
+			}
+			if maskSize == nil {
+				maskSize = k.nodeCIDRMaskSizeIPv6()
 			}
 
 			if maskSize != nil {

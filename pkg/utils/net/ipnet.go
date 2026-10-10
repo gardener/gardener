@@ -105,3 +105,21 @@ func ToCIDRStrings(networks ...net.IPNet) []string {
 	}
 	return out
 }
+
+// DefaultNodeCIDRMaskSizeIPv6 returns the node CIDR mask size to use for an IPv6 pod network with the
+// given mask size when the user did not configure one. It picks the largest per-node subnet that
+// kube-controller-manager's node-ipam allows for IPv6 (podCIDRMaskSize + 16), capped at 124 to stay
+// within the range validation enforces for user-provided values. For a typical /64 pod CIDR this
+// yields /80.
+func DefaultNodeCIDRMaskSizeIPv6(podCIDRMaskSize int) int32 {
+	// Kubernetes' node-ipam limits the per-node subnet to at most 16 bits smaller than the cluster CIDR
+	// for IPv6 (clusterSubnetMaxDiff). Using the maximum difference yields the highest possible node
+	// count while still leaving an enormous address space per node.
+	const clusterSubnetMaxDiff = 16
+
+	mask := podCIDRMaskSize + clusterSubnetMaxDiff
+	if mask > 124 {
+		mask = 124
+	}
+	return int32(mask)
+}
