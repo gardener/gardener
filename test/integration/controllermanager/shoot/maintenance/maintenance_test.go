@@ -1944,6 +1944,50 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 			}).Should(Succeed())
 		})
 
+		hibernationWithEnabled := func(enabled bool) *gardencorev1beta1.Hibernation {
+			return &gardencorev1beta1.Hibernation{Enabled: new(enabled)}
+		}
+
+		DescribeTable("should skip the etcd encryption key rotation without failing maintenance when the shoot is hibernating or waking up", func(hibernation *gardencorev1beta1.Hibernation, isHibernated bool) {
+			patch := client.MergeFrom(shoot.DeepCopy())
+			shoot.Status.IsHibernated = isHibernated
+			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+			patch = client.MergeFrom(shoot.DeepCopy())
+			shoot.Spec.Hibernation = hibernation.DeepCopy()
+			shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
+				Credentials: &gardencorev1beta1.MaintenanceCredentialsAutoRotation{
+					SSHKeypair: &gardencorev1beta1.MaintenanceRotationConfig{
+						RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
+					},
+					ETCDEncryptionKey: &gardencorev1beta1.MaintenanceRotationConfig{
+						RotationPeriod: new(metav1.Duration{Duration: time.Hour}),
+					},
+				},
+			}
+			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+			fakeClock.SetTime(fakeClock.Now().Add(2 * time.Hour))
+
+			Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
+				g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Credentials \"rotate-ssh-keypair\": SSH keypair rotation started"))
+				g.Expect(shoot.Status.LastMaintenance.Description).NotTo(ContainSubstring("rotate-etcd-encryption-key"))
+				g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+				g.Expect(shoot.Status.LastMaintenance.FailureReason).To(BeNil())
+				g.Expect(shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]).To(And(
+					ContainSubstring("rotate-ssh-keypair"),
+					Not(ContainSubstring("rotate-etcd-encryption-key")),
+				))
+			}).Should(Succeed())
+		},
+			Entry("when hibernating", hibernationWithEnabled(true), false),
+			Entry("when waking up with hibernation disabled", hibernationWithEnabled(false), true),
+			Entry("when waking up without hibernation section", nil, true),
+		)
+
 		It("should auto rotate multiple credentials", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.Maintenance.AutoRotation = &gardencorev1beta1.MaintenanceAutoRotation{
