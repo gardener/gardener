@@ -109,7 +109,7 @@ var _ = Describe("Bash", func() {
 						},
 						TransmitUnencoded: new(true),
 					},
-					Permissions: new(uint32(0777)),
+					Permissions: new(int32(0777)),
 				},
 			}
 

@@ -108,7 +108,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&quotacontroller.Reconciler{
 		Config: controllermanagerconfigv1alpha1.QuotaControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

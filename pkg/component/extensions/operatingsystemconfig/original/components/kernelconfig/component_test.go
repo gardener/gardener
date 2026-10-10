@@ -85,7 +85,7 @@ var _ = Describe("Component", func() {
 
 		kernelSettingsFile := extensionsv1alpha1.File{
 			Path:        "/etc/sysctl.d/99-k8s-general.conf",
-			Permissions: new(uint32(0644)),
+			Permissions: new(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: modifiedData.String(),

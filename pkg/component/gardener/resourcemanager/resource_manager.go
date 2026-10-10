@@ -241,7 +241,7 @@ type Values struct {
 	// ClusterIdentity is the identity of the managing cluster.
 	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
-	ConcurrentSyncs *int
+	ConcurrentSyncs *int32
 	// HighAvailabilityConfigWebhookEnabled controls whether the high availability config webhook is enabled.
 	HighAvailabilityConfigWebhookEnabled bool
 	// SystemComponentsConfigWebhookEnabled defines if the SystemComponentsConfigWebhook should be enabled.
@@ -267,13 +267,13 @@ type Values struct {
 	// ManagedResourceLabels are labels added to the ManagedResource.
 	ManagedResourceLabels map[string]string
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources.
-	MaxConcurrentHealthWorkers *int
+	MaxConcurrentHealthWorkers *int32
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations.
-	MaxConcurrentTokenRequestorWorkers *int
+	MaxConcurrentTokenRequestorWorkers *int32
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations.
-	MaxConcurrentCSRApproverWorkers *int
+	MaxConcurrentCSRApproverWorkers *int32
 	// MaxConcurrentNetworkPolicyWorkers configures the number of worker threads for the network policy controller.
-	MaxConcurrentNetworkPolicyWorkers *int
+	MaxConcurrentNetworkPolicyWorkers *int32
 	// NamePrefix is the prefix for the resource names.
 	NamePrefix string
 	// PriorityClassName is the name of the priority class.
@@ -556,14 +556,14 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, config *resourcem
 		},
 		Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
 			HealthProbes: &resourcemanagerconfigv1alpha1.Server{
-				Port: int(r.healthPort()),
+				Port: r.healthPort(),
 			},
 			Metrics: &resourcemanagerconfigv1alpha1.Server{
-				Port: int(r.metricsPort()),
+				Port: r.metricsPort(),
 			},
 			Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
 				Server: resourcemanagerconfigv1alpha1.Server{
-					Port: int(r.serverPort()),
+					Port: r.serverPort(),
 				},
 				TLS: resourcemanagerconfigv1alpha1.TLSServer{
 					ServerCertDir: volumeMountPathCerts,

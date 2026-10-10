@@ -206,7 +206,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file1 = extensionsv1alpha1.File{
 			Path:        "/example/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file1"}},
-			Permissions: new(uint32(0777)),
+			Permissions: new(int32(0777)),
 		}
 		file2 = extensionsv1alpha1.File{
 			Path:    "/another/file",
@@ -215,38 +215,38 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file3 = extensionsv1alpha1.File{
 			Path:        "/third/file",
 			Content:     extensionsv1alpha1.FileContent{ImageRef: &extensionsv1alpha1.FileContentImageRef{Image: "foo-image", FilePathInImage: "/foo-file"}},
-			Permissions: new(uint32(0750)),
+			Permissions: new(int32(0750)),
 		}
 		Expect(fakeFS.WriteFile(path.Join(imageMountDirectory, file3.Content.ImageRef.FilePathInImage), []byte("file3"), 0755)).To(Succeed())
 		file4 = extensionsv1alpha1.File{
 			Path:        "/unchanged/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file4"}},
-			Permissions: new(uint32(0750)),
+			Permissions: new(int32(0750)),
 		}
 		file5 = extensionsv1alpha1.File{
 			Path:        "/changed/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file5"}},
-			Permissions: new(uint32(0750)),
+			Permissions: new(int32(0750)),
 		}
 		file6 = extensionsv1alpha1.File{
 			Path:        "/sixth/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file6"}},
-			Permissions: new(uint32(0750)),
+			Permissions: new(int32(0750)),
 		}
 		file7 = extensionsv1alpha1.File{
 			Path:        "/seventh/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file7"}},
-			Permissions: new(uint32(0750)),
+			Permissions: new(int32(0750)),
 		}
 		file8 = extensionsv1alpha1.File{
 			Path:        "/opt/bin/init-containerd",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file8"}},
-			Permissions: new(uint32(0644)),
+			Permissions: new(int32(0644)),
 		}
 		file9 = extensionsv1alpha1.File{
 			Path:        "/secretref/file",
 			Content:     extensionsv1alpha1.FileContent{SecretRef: &extensionsv1alpha1.FileContentSecretRef{Name: "file9-secret", DataKey: "content"}},
-			Permissions: new(uint32(0750)),
+			Permissions: new(int32(0750)),
 		}
 
 		By("Create Secret referenced by file9")
@@ -1232,7 +1232,7 @@ metadata:
 						Image:           "kubelet:v1.31.3",
 					},
 				},
-				Permissions: new(uint32(0755)),
+				Permissions: new(int32(0755)),
 			}
 			Expect(fakeFS.WriteFile(path.Join(imageMountDirectory, kubeletFile.Content.ImageRef.FilePathInImage), []byte("some-data"), 0755)).To(Succeed())
 
@@ -1257,7 +1257,7 @@ kubeReserved:
 `)),
 					},
 				},
-				Permissions: new(uint32(0600)),
+				Permissions: new(int32(0600)),
 			}
 
 			tempDir := GinkgoT().TempDir()
@@ -1287,7 +1287,7 @@ kind: NodeAgentConfiguration
 `)),
 					},
 				},
-				Permissions: new(uint32(0600)),
+				Permissions: new(int32(0600)),
 			}
 
 			operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, kubeletConfigFile, kubeletFile, nodeAgentConfigFile)

@@ -136,7 +136,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&maintenance.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		Clock:    fakeClock,
 		Recorder: mgr.GetEventRecorder("shoot-maintenance-controller"),

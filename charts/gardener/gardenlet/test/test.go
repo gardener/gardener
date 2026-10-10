@@ -629,10 +629,10 @@ func ComputeExpectedGardenletConfiguration(
 	featureGates map[string]bool,
 ) gardenletconfigv1alpha1.GardenletConfiguration {
 	var (
-		zero   = 0
-		one    = 1
-		five   = 5
-		twenty = 20
+		zero   = int32(0)
+		one    = int32(1)
+		five   = int32(5)
+		twenty = int32(20)
 
 		logLevelInfo        = "info"
 		logFormatJson       = "json"

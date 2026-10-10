@@ -45,9 +45,9 @@ var _ = Describe("Reconciler", func() {
 		credentialsBindingName = "credentialsbinding"
 		quotaName              = "quotaMeta"
 
-		minimumLifetimeDays     = 5
-		staleGracePeriodDays    = 10
-		staleExpirationTimeDays = 15
+		minimumLifetimeDays     = int32(5)
+		staleGracePeriodDays    = int32(10)
+		staleExpirationTimeDays = int32(15)
 		staleSyncPeriod         = metav1.Duration{Duration: time.Second}
 
 		project            *gardencorev1beta1.Project
@@ -174,8 +174,8 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should mark the project as 'not stale' because it is younger than the configured MinimumLifetimeDays", func() {
-			fakeClock.SetTime(time.Date(1, 1, minimumLifetimeDays+1, 0, 0, 0, 0, time.UTC))
-			project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
+			fakeClock.SetTime(time.Date(1, 1, int(minimumLifetimeDays)+1, 0, 0, 0, 0, time.UTC))
+			project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, int(minimumLifetimeDays)-1, 0, 0, 0, 0, time.UTC)}
 			Expect(fakeClient.Update(ctx, project)).To(Succeed())
 
 			_, result := reconciler.Reconcile(ctx, request)
@@ -188,7 +188,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("should mark the project as 'not stale' because the last activity was before the MinimumLifetimeDays", func() {
 			fakeClock.SetTime(time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC))
-			project.Status.LastActivityTimestamp = &metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
+			project.Status.LastActivityTimestamp = &metav1.Time{Time: time.Date(1, 1, int(minimumLifetimeDays)-1, 0, 0, 0, 0, time.UTC)}
 
 			Expect(fakeClient.Status().Update(ctx, project)).To(Succeed())
 
@@ -202,7 +202,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("project older than the configured MinimumLifetimeDays", func() {
 			BeforeEach(func() {
-				fakeClock.SetTime(time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC))
+				fakeClock.SetTime(time.Date(1, 1, int(minimumLifetimeDays)+1, 1, 0, 0, 0, time.UTC))
 				project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
 			})
 
@@ -620,7 +620,7 @@ var _ = Describe("Reconciler", func() {
 					Expect(fakeClient.Status().Update(ctx, p)).To(Succeed())
 
 					defer test.WithVar(&gardenerutils.TimeNow, func() time.Time {
-						return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
+						return time.Date(1, 1, int(minimumLifetimeDays)+1, 1, 0, 0, 0, time.UTC)
 					})()
 
 					_, result := reconciler.Reconcile(ctx, request)

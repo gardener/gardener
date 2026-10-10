@@ -121,7 +121,7 @@ var _ = Describe("controlPlaneBootstrap", func() {
 				HaveField("Path", "/var/lib/sshd-ensurer/run.sh"),
 				And(
 					HaveField("Path", nodeinit.GardenadmPathDownloadScript),
-					HaveField("Permissions", new(uint32(0755))),
+					HaveField("Permissions", new(int32(0755))),
 					HaveField("Content.Inline.Encoding", "b64"),
 					HaveField("Content.Inline.Data", Not(BeEmpty())),
 				),

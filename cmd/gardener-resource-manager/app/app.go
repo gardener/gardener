@@ -126,9 +126,9 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 		Controller: controllerconfig.Controller{
 			CacheSyncTimeout: cfg.Controllers.CacheSyncTimeout.Duration,
 		},
-		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(int(cfg.Server.HealthProbes.Port))),
 		Metrics: metricsserver.Options{
-			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(int(cfg.Server.Metrics.Port))),
 			ExtraHandlers: extraHandlers,
 		},
 
@@ -143,7 +143,7 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 
 		WebhookServer: controllerwebhook.NewServer(controllerwebhook.Options{
 			Host:    cfg.Server.Webhooks.BindAddress,
-			Port:    cfg.Server.Webhooks.Port,
+			Port:    int(cfg.Server.Webhooks.Port),
 			CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
 		}),
 	})

@@ -90,7 +90,7 @@ func validateNetworkPolicyControllerConfiguration(conf operatorconfigv1alpha1.Ne
 	return allErrs
 }
 
-func validateConcurrentSyncs(val *int, fldPath *field.Path) field.ErrorList {
+func validateConcurrentSyncs(val *int32, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if ptr.Deref(val, 0) <= 0 {

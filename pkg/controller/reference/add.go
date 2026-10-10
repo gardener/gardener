@@ -35,7 +35,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, name string) error {
 		Named(name+controllerNameSuffix).
 		For(r.NewObjectFunc(), builder.WithPredicates(r.Predicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		Complete(r)

@@ -67,7 +67,7 @@ var (
 	gardenNamespace     *corev1.Namespace
 	seedGardenNamespace *corev1.Namespace
 
-	deletionGracePeriodHours = 24
+	deletionGracePeriodHours = int32(24)
 )
 
 var _ = BeforeSuite(func() {
@@ -249,8 +249,8 @@ var _ = BeforeSuite(func() {
 	Expect((&backupentry.Reconciler{
 		Clock: fakeClock,
 		Config: gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
-			ConcurrentSyncs:                  new(5),
-			DeletionGracePeriodHours:         new(deletionGracePeriodHours),
+			ConcurrentSyncs:                  new(int32(5)),
+			DeletionGracePeriodHours:         &deletionGracePeriodHours,
 			DeletionGracePeriodShootPurposes: []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeProduction},
 		},
 		SeedName:        seed.Name,

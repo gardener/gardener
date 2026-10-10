@@ -48,7 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		WithOptions(controller.Options{MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Shoot.ConcurrentSyncs, 0)}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: int(ptr.Deref(r.Config.Controllers.Shoot.ConcurrentSyncs, 0))}).
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),
 			&gardencorev1beta1.Shoot{},

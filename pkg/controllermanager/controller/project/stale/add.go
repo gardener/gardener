@@ -35,7 +35,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(&gardencorev1beta1.Project{}, builder.WithPredicates(r.ProjectPredicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   r.Config.StaleSyncPeriod.Duration,
 		}).
 		Complete(r)

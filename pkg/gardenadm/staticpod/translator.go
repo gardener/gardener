@@ -84,7 +84,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 
 	return append([]extensionsv1alpha1.File{{
 		Path:        filepath.Join(kubelet.FilePathKubernetesManifests, pod.Name+".yaml"),
-		Permissions: new(uint32(0640)),
+		Permissions: new(int32(0640)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(staticPodYAML))}},
 	}}, filesFromVolumes...), hash, nil
 }
@@ -120,7 +120,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 		files               []extensionsv1alpha1.File
 		addFileWithHostPath = func(hostPath, fileName string, content []byte, desiredItems []corev1.KeyToPath) {
 			file := extensionsv1alpha1.File{
-				Permissions: new(uint32(0640)),
+				Permissions: new(int32(0640)),
 				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(content)}},
 			}
 

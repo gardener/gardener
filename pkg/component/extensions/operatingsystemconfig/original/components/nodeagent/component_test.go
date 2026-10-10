@@ -48,7 +48,7 @@ var _ = Describe("Component", func() {
 			Expect(err).NotTo(HaveOccurred())
 			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
 				Path:        nodeagentconfigv1alpha1.ClusterCAFilePath,
-				Permissions: new(uint32(0640)),
+				Permissions: new(int32(0640)),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -89,7 +89,7 @@ WantedBy=multi-user.target`),
 			))
 			Expect(files).To(ConsistOf(append(expectedFiles, extensionsv1alpha1.File{
 				Path:        "/opt/bin/gardener-node-agent",
-				Permissions: new(uint32(0755)),
+				Permissions: new(int32(0755)),
 				Content: extensionsv1alpha1.FileContent{
 					ImageRef: &extensionsv1alpha1.FileContentImageRef{
 						Image:           "gardener-node-agent:v1",
@@ -242,7 +242,7 @@ WantedBy=multi-user.target`))
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion),
-				Permissions: new(uint32(0600)),
+				Permissions: new(int32(0600)),
 				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
   caFile: ` + nodeagentconfigv1alpha1.ClusterCAFilePath + `
   server: ` + apiServerURL + `

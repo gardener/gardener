@@ -107,7 +107,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&criticalcomponents.Reconciler{
 		Config: resourcemanagerconfigv1alpha1.NodeCriticalComponentsControllerConfig{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 			Backoff:         &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 	}).AddToManager(mgr, mgr)).To(Succeed())

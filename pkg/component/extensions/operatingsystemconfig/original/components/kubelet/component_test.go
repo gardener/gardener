@@ -237,7 +237,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 	files := []extensionsv1alpha1.File{
 		{
 			Path:        "/var/lib/kubelet/ca.crt",
-			Permissions: new(uint32(0644)),
+			Permissions: new(int32(0644)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -247,7 +247,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 		},
 		{
 			Path:        "/var/lib/kubelet/config/kubelet",
-			Permissions: new(uint32(0600)),
+			Permissions: new(int32(0600)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -259,7 +259,7 @@ func kubeletFiles(ctx components.Context, kubeletConfig, kubeletCABundleBase64 s
 
 	files = append(files, extensionsv1alpha1.File{
 		Path:        "/opt/bin/kubelet",
-		Permissions: new(uint32(0755)),
+		Permissions: new(int32(0755)),
 		Content: extensionsv1alpha1.FileContent{
 			ImageRef: &extensionsv1alpha1.FileContentImageRef{
 				Image:           ctx.Images["hyperkube"].String(),

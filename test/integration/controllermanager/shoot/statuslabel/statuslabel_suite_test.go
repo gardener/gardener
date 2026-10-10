@@ -106,7 +106,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&statuslabel.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootStatusLabelControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 	By("Setup finalizer reconciler")
 	Expect((&shootstate.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootStateControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

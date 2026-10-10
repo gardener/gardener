@@ -92,9 +92,9 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 		Controller: controllerconfig.Controller{
 			CacheSyncTimeout: cfg.Controllers.CacheSyncTimeout.Duration,
 		},
-		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(int(cfg.Server.HealthProbes.Port))),
 		Metrics: metricsserver.Options{
-			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(int(cfg.Server.Metrics.Port))),
 			ExtraHandlers: extraHandlers,
 		},
 

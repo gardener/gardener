@@ -269,6 +269,7 @@ spec:
                         Permissions describes with which permissions the file should get written to the file system.
                         If no permissions are set, the operating system's defaults are used.
                       format: int32
+                      minimum: 0
                       type: integer
                   required:
                   - content
@@ -533,6 +534,7 @@ spec:
                         Permissions describes with which permissions the file should get written to the file system.
                         If no permissions are set, the operating system's defaults are used.
                       format: int32
+                      minimum: 0
                       type: integer
                   required:
                   - content

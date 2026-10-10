@@ -245,7 +245,7 @@ var _ = Describe("Garden controller tests", func() {
 			Config: operatorconfigv1alpha1.OperatorConfiguration{
 				Controllers: operatorconfigv1alpha1.ControllerConfiguration{
 					Garden: operatorconfigv1alpha1.GardenControllerConfig{
-						ConcurrentSyncs: new(5),
+						ConcurrentSyncs: new(int32(5)),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 						ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 							ETCDController:      &gardenletconfigv1alpha1.ETCDController{Workers: new(int64(5))},

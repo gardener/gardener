@@ -64,7 +64,7 @@ WantedBy=multi-user.target
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user-authorized-keys",
-					Permissions: new(uint32(0644)),
+					Permissions: new(int32(0644)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -74,7 +74,7 @@ WantedBy=multi-user.target
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user/run.sh",
-					Permissions: new(uint32(0755)),
+					Permissions: new(int32(0755)),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

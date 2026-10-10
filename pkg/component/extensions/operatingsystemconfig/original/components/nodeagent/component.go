@@ -99,7 +99,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	files = append(files,
 		extensionsv1alpha1.File{
 			Path:        nodeagentconfigv1alpha1.ClusterCAFilePath,
-			Permissions: new(uint32(0640)),
+			Permissions: new(int32(0640)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -109,7 +109,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 		extensionsv1alpha1.File{
 			Path:        PathBinary,
-			Permissions: new(uint32(0755)),
+			Permissions: new(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
@@ -192,7 +192,7 @@ func Files(config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensions
 
 	return []extensionsv1alpha1.File{{
 		Path:        nodeagenthelper.GetDefaultConfigFilePath(),
-		Permissions: new(uint32(0600)),
+		Permissions: new(int32(0600)),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 	}}, nil
 }

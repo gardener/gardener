@@ -37,11 +37,11 @@ var _ = Describe("Validation", func() {
 					ClusterID:     new(""),
 					ResourceClass: new("foo"),
 					Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
-						ConcurrentSyncs: new(5),
+						ConcurrentSyncs: new(int32(5)),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 					},
 					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
-						ConcurrentSyncs:     new(5),
+						ConcurrentSyncs:     new(int32(5)),
 						SyncPeriod:          &metav1.Duration{Duration: time.Minute},
 						ManagedByLabelValue: new("foo"),
 					},
@@ -230,7 +230,7 @@ var _ = Describe("Validation", func() {
 			Context("csr approver", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
 					conf.Controllers.CSRApprover.Enabled = true
-					conf.Controllers.CSRApprover.ConcurrentSyncs = new(0)
+					conf.Controllers.CSRApprover.ConcurrentSyncs = new(int32(0))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -242,7 +242,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return errors when machine namespace is empty", func() {
 					conf.Controllers.CSRApprover.Enabled = true
-					conf.Controllers.CSRApprover.ConcurrentSyncs = new(1)
+					conf.Controllers.CSRApprover.ConcurrentSyncs = new(int32(1))
 					conf.Controllers.CSRApprover.MachineNamespace = new("")
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -255,7 +255,7 @@ var _ = Describe("Validation", func() {
 
 				It("should return succeed when machine namespace is nil", func() {
 					conf.Controllers.CSRApprover.Enabled = true
-					conf.Controllers.CSRApprover.ConcurrentSyncs = new(1)
+					conf.Controllers.CSRApprover.ConcurrentSyncs = new(int32(1))
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 				})
@@ -288,7 +288,7 @@ var _ = Describe("Validation", func() {
 
 			Context("health", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.Health.ConcurrentSyncs = new(0)
+					conf.Controllers.Health.ConcurrentSyncs = new(int32(0))
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -300,7 +300,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.Health.ConcurrentSyncs = new(5)
+					conf.Controllers.Health.ConcurrentSyncs = new(int32(5))
 					conf.Controllers.Health.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -312,7 +312,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.Health.ConcurrentSyncs = new(5)
+					conf.Controllers.Health.ConcurrentSyncs = new(int32(5))
 					conf.Controllers.Health.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -326,7 +326,7 @@ var _ = Describe("Validation", func() {
 
 			Context("managed resources", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = new(0)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = new(int32(0))
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -338,7 +338,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is nil", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = new(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = new(int32(5))
 					conf.Controllers.ManagedResource.SyncPeriod = nil
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
@@ -350,7 +350,7 @@ var _ = Describe("Validation", func() {
 				})
 
 				It("should return errors because sync period is < 15s", func() {
-					conf.Controllers.ManagedResource.ConcurrentSyncs = new(5)
+					conf.Controllers.ManagedResource.ConcurrentSyncs = new(int32(5))
 					conf.Controllers.ManagedResource.SyncPeriod = &metav1.Duration{Duration: time.Second}
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(

@@ -85,7 +85,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 
 	if cfg.Controllers.TokenRequestor.Enabled {
 		if err := (&tokenrequestor.Reconciler{
-			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+			ConcurrentSyncs: int(ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0)),
 			Clock:           clock.RealClock{},
 			JitterFunc:      wait.Jitter,
 			APIAudiences:    []string{v1beta1constants.GardenerAudience},

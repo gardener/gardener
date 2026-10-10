@@ -108,7 +108,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = &testclock.FakeClock{}
 	Expect((&hibernation.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootHibernationControllerConfiguration{
-			ConcurrentSyncs:         new(5),
+			ConcurrentSyncs:         new(int32(5)),
 			TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute},
 		},
 		Clock: fakeClock,

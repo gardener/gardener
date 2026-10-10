@@ -43,7 +43,7 @@ import (
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type Reconciler struct {
 	RuntimeClient                     client.Client
-	ConcurrentSyncs                   *int
+	ConcurrentSyncs                   *int32
 	WatchRegisterers                  []func(controller.Controller) error
 	Resolver                          hostnameresolver.HostResolver
 	ResolverUpdate                    <-chan event.GenericEvent

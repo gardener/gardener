@@ -126,7 +126,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&cloudprofile.Reconciler{
 		Config: controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())
