@@ -129,10 +129,12 @@ type Values struct {
 	Config *gardencorev1beta1.KubeControllerManagerConfig
 	// NamePrefix is the prefix for the resource names.
 	NamePrefix string
-	// IsScaleDownDisabled - if true, pod requests can be scaled up, but never down
-	IsScaleDownDisabled bool
+	// IsGardenCluster specifies whether the cluster is a garden cluster.
+	IsGardenCluster bool
 	// IsWorkerless specifies whether the cluster has worker nodes.
 	IsWorkerless bool
+	// IsScaleDownDisabled - if true, pod requests can be scaled up, but never down
+	IsScaleDownDisabled bool
 	// PodNetworks are the pod CIDRs of the target cluster.
 	PodNetworks []net.IPNet
 	// ServiceNetworks are the service CIDRs of the target cluster.
@@ -235,7 +237,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	var (
 		vpa                 = k.emptyVPA()
 		service             = k.emptyService()
-		shootAccessSecret   = k.newShootAccessSecret()
+		clusterAccessSecret = k.newClusterAccessSecret()
 		deployment          = k.emptyDeployment()
 		podDisruptionBudget = k.emptyPodDisruptionBudget()
 		serviceMonitor      = k.emptyServiceMonitor()
@@ -278,7 +280,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := shootAccessSecret.Reconcile(ctx, k.seedClient.Client()); err != nil {
+	if err := clusterAccessSecret.Reconcile(ctx, k.seedClient.Client()); err != nil {
 		return err
 	}
 
@@ -431,7 +433,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			})
 		}
 
-		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, clusterAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err
@@ -552,7 +554,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName)
+	return k.reconcileShootResources(ctx, clusterAccessSecret.ServiceAccountName)
 }
 
 func (k *kubeControllerManager) Destroy(ctx context.Context) error {
@@ -562,7 +564,7 @@ func (k *kubeControllerManager) Destroy(ctx context.Context) error {
 		k.emptyService(),
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
-		k.newShootAccessSecret().Secret,
+		k.newClusterAccessSecret().Secret,
 		k.emptyServiceMonitor(),
 		k.emptyPrometheusRule(),
 	)
@@ -598,7 +600,10 @@ func (k *kubeControllerManager) emptyPodDisruptionBudget() *policyv1.PodDisrupti
 	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
-func (k *kubeControllerManager) newShootAccessSecret() *gardenerutils.AccessSecret {
+func (k *kubeControllerManager) newClusterAccessSecret() *gardenerutils.AccessSecret {
+	if k.values.IsGardenCluster {
+		return gardenerutils.NewGardenAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
+	}
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
 }
 

@@ -159,6 +159,7 @@ func NewConditions(clock clock.Clock, status operatorv1alpha1.ExtensionStatus) C
 type gardenInfo struct {
 	garden *operatorv1alpha1.Garden
 
+	upToDate                         bool
 	reconciled                       bool
 	deleting                         bool
 	genericTokenKubeconfigSecretName *string
@@ -167,6 +168,7 @@ type gardenInfo struct {
 func newGardenInfo(garden *operatorv1alpha1.Garden) *gardenInfo {
 	if garden == nil {
 		return &gardenInfo{
+			upToDate:   false,
 			reconciled: false,
 			deleting:   false,
 		}
@@ -179,6 +181,7 @@ func newGardenInfo(garden *operatorv1alpha1.Garden) *gardenInfo {
 
 	return &gardenInfo{
 		garden:                           garden,
+		upToDate:                         operator.IsGardenUpToDate(garden),
 		reconciled:                       operator.IsGardenSuccessfullyReconciled(garden),
 		deleting:                         gardenInDeletion(garden),
 		genericTokenKubeconfigSecretName: kubeconfigSecretName,

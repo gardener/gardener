@@ -159,11 +159,11 @@ var _ = Describe("GardenerDashboard", func() {
 	JustBeforeEach(func() {
 		virtualGardenAccessSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "shoot-access-gardener-dashboard",
+				Name:      "garden-access-gardener-dashboard",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
-					"resources.gardener.cloud/class":   "shoot",
+					"resources.gardener.cloud/class":   "garden",
 				},
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "gardener-dashboard",
@@ -598,7 +598,7 @@ frontend:
 				})
 			}
 
-			utilruntime.Must(gardener.InjectGenericKubeconfig(obj, "generic-token-kubeconfig", "shoot-access-gardener-dashboard"))
+			utilruntime.Must(gardener.InjectGenericKubeconfig(obj, "generic-token-kubeconfig", "garden-access-gardener-dashboard"))
 			utilruntime.Must(references.InjectAnnotations(obj))
 			return obj
 		}(oidc, gitHub, assetsConfigMapName)

@@ -315,7 +315,7 @@ var _ = Describe("Admission", func() {
 		})
 
 		It("should succeed if extension was deployed before", func() {
-			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-extension-admission-" + extensionName, Namespace: "garden"}})).To(Succeed())
+			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "garden-access-extension-admission-" + extensionName, Namespace: "garden"}})).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extension-admission-virtual-" + extensionName, Namespace: "garden"}})).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "extension-admission-virtual-" + extensionName, Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: "extension-admission-virtual-" + extensionName}}}})).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extension-admission-runtime-" + extensionName, Namespace: "garden"}})).To(Succeed())

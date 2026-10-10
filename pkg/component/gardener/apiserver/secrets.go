@@ -30,7 +30,7 @@ func (g *gardenerAPIServer) emptySecret(name string) *corev1.Secret {
 }
 
 func (g *gardenerAPIServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(DeploymentName, g.namespace)
+	return gardenerutils.NewGardenAccessSecret(DeploymentName, g.namespace)
 }
 
 func (g *gardenerAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.Context, secret *corev1.Secret) error {

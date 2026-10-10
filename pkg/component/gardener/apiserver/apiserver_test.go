@@ -278,7 +278,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				Annotations: map[string]string{
 					"reference.resources.gardener.cloud/configmap-1b2d9b42": "gardener-apiserver-audit-policy-config-1e270362",
 					"reference.resources.gardener.cloud/configmap-6e5f123b": "gardener-apiserver-admission-config-07c5248a",
-					"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
+					"reference.resources.gardener.cloud/secret-6f6e15a3":    "garden-access-gardener-apiserver",
 					"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
 					"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
 					"reference.resources.gardener.cloud/secret-867d23cd":    "generic-token-kubeconfig",
@@ -318,7 +318,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						Annotations: map[string]string{
 							"reference.resources.gardener.cloud/configmap-1b2d9b42": "gardener-apiserver-audit-policy-config-1e270362",
 							"reference.resources.gardener.cloud/configmap-6e5f123b": "gardener-apiserver-admission-config-07c5248a",
-							"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
+							"reference.resources.gardener.cloud/secret-6f6e15a3":    "garden-access-gardener-apiserver",
 							"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
 							"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
 							"reference.resources.gardener.cloud/secret-867d23cd":    "generic-token-kubeconfig",
@@ -526,7 +526,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 			},
 		}
-		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-apiserver"))
+		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "garden-access-gardener-apiserver"))
 
 		serviceVirtual = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -686,7 +686,7 @@ var _ = Describe("GardenerAPIServer", func() {
 							TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 							HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 								Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-garden"},
+									LocalObjectReference: corev1.LocalObjectReference{Name: "garden-access-prometheus-garden"},
 									Key:                  "token",
 								}},
 							},
@@ -897,11 +897,11 @@ resources:
 				It("should successfully deploy the access secret for the virtual garden", func() {
 					accessSecret := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "shoot-access-gardener-apiserver",
+							Name:      "garden-access-gardener-apiserver",
 							Namespace: namespace,
 							Labels: map[string]string{
 								"resources.gardener.cloud/purpose": "token-requestor",
-								"resources.gardener.cloud/class":   "shoot",
+								"resources.gardener.cloud/class":   "garden",
 							},
 							Annotations: map[string]string{
 								"serviceaccount.resources.gardener.cloud/name":      "gardener-apiserver",

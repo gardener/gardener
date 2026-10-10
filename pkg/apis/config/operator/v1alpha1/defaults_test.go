@@ -372,5 +372,27 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Controllers.ExtensionRequiredVirtual.ConcurrentSyncs).To(PointTo(Equal(2)))
 			})
 		})
+
+		Describe("TokenRequestor controller defaulting", func() {
+			It("should default the TokenRequestor controller config", func() {
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(5)))
+			})
+
+			It("should not overwrite already set values for TokenRequestor controller config", func() {
+				obj = &OperatorConfiguration{
+					Controllers: ControllerConfiguration{
+						TokenRequestor: TokenRequestorControllerConfiguration{
+							ConcurrentSyncs: new(2),
+						},
+					},
+				}
+
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(2)))
+			})
+		})
 	})
 })

@@ -230,6 +230,11 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		serviceMonitor = func(prometheusName, namePrefix string) *monitoringv1.ServiceMonitor {
+			accessSecretName := "shoot-access-prometheus-" + prometheusName
+			if strings.HasPrefix(prometheusName, "garden") {
+				accessSecretName = "garden-access-prometheus-" + prometheusName
+			}
+
 			return &monitoringv1.ServiceMonitor{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            prometheusName + "-" + namePrefix + "kube-controller-manager",
@@ -247,7 +252,7 @@ var _ = Describe("KubeControllerManager", func() {
 								TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 								HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 									Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
+										LocalObjectReference: corev1.LocalObjectReference{Name: accessSecretName},
 										Key:                  "token",
 									}},
 								},
@@ -870,6 +875,47 @@ namespace: kube-system
 				actualPrometheusRule := &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: expectedPrometheusRule.Name, Namespace: namespace}}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPrometheusRule), actualPrometheusRule)).To(Succeed())
 				Expect(actualPrometheusRule).To(DeepEqual(expectedPrometheusRule))
+			})
+		})
+
+		When("IsGardenCluster is set", func() {
+			It("should successfully deploy the access secret for the garden cluster", func() {
+				values = Values{
+					RuntimeVersion:    runtimeKubernetesVersion,
+					TargetVersion:     semverVersion,
+					Image:             image,
+					Config:            &kcmConfig,
+					PriorityClassName: priorityClassName,
+					IsWorkerless:      isWorkerless,
+					PodNetworks:       podCIDRs,
+					ServiceNetworks:   serviceCIDRs,
+					IsGardenCluster:   true,
+				}
+				kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
+				kubeControllerManager.SetReplicaCount(replicas)
+
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				accessSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "garden-access-kube-controller-manager",
+						Namespace: namespace,
+						Labels: map[string]string{
+							"resources.gardener.cloud/purpose": "token-requestor",
+							"resources.gardener.cloud/class":   "garden",
+						},
+						Annotations: map[string]string{
+							"serviceaccount.resources.gardener.cloud/name":      "kube-controller-manager",
+							"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+						},
+						ResourceVersion: "1",
+					},
+					Type: corev1.SecretTypeOpaque,
+				}
+
+				actualAccessSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(accessSecret), actualAccessSecret)).To(Succeed())
+				Expect(actualAccessSecret).To(Equal(accessSecret))
 			})
 		})
 	})

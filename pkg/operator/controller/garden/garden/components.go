@@ -456,7 +456,9 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1a
 		additionalTargetNamespaces = garden.Spec.VirtualCluster.Gardener.ResourceManager.AdditionalTargetNamespaces
 	}
 
+	// TODO(timuthy): Disable the TokenRequestor controller in the virtual garden GRM after Gardener v1.62.0 has been released.
 	return sharedcomponent.NewTargetGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
+		IsGardenCluster:          true,
 		IsWorkerless:             true,
 		LogLevel:                 r.Config.LogLevel,
 		LogFormat:                r.Config.LogFormat,
@@ -906,6 +908,7 @@ func (r *Reconciler) newKubeControllerManager(
 		operatorv1alpha1.VirtualGardenNamePrefix,
 		config,
 		v1beta1constants.PriorityClassNameGardenSystem300,
+		true,
 		true,
 		false,
 		certificateSigningDuration,

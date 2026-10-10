@@ -17,7 +17,7 @@ import (
 )
 
 var _ = Describe("Add", func() {
-	Describe("#HasRenewAnnotationPredicate", func() {
+	Describe("#IsGardenerInternalSecretPredicate", func() {
 		var (
 			name, namespace string
 			predicate       predicate.Predicate
@@ -34,19 +34,23 @@ var _ = Describe("Add", func() {
 			namespace = "garden"
 			name = "access"
 
-			predicate = HasRenewAnnotationPredicate(name, namespace)
+			predicate = IsGardenerInternalSecretPredicate(name, namespace)
 		})
 
-		It("should return true when expected object has renew annotation", func() {
+		It("should return true when the object matches name and namespace", func() {
+			test(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}, true)
+		})
+
+		It("should return true even when the object has no renew annotation", func() {
 			test(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace, Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": ""}}}, true)
 		})
 
-		It("should return false when expected object doesn't have renew annotation", func() {
-			test(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}, false)
+		It("should return false when the object has an unexpected name", func() {
+			test(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name + "-foo", Namespace: namespace}}, false)
 		})
 
-		It("should return false when unexpected object", func() {
-			test(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name + "-foo", Namespace: namespace, Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": ""}}}, false)
+		It("should return false when the object has an unexpected namespace", func() {
+			test(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace + "-foo"}}, false)
 		})
 	})
 })

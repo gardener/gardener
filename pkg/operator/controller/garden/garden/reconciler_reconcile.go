@@ -406,14 +406,20 @@ func (r *Reconciler) reconcile(
 		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying resources for gardener-operator access to virtual garden",
 			Fn:           component.OpWait(c.virtualGardenGardenerAccess).Deploy,
-			Dependencies: flow.NewTaskIDs(waitUntilVirtualGardenGardenerResourceManagerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		renewVirtualClusterAccess = g.Add(flow.Task{
 			Name: "Renewing virtual garden access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
+				// TODO(timuthy): Drop renewing secrets with class `shoot` when the TokenRequestor controller is disabled in GRM, after release v1.62.0
+				if err := tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
 					client.InNamespace(r.GardenNamespace),
 					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
+				); err != nil {
+					return err
+				}
+				return tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
+					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden},
 				)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
@@ -1215,7 +1221,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 }
 
 func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusHost string, dashboardDomain string, discoveryServerEnabled bool) error {
-	if err := gardenerutils.NewShootAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
+	if err := gardenerutils.NewGardenAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
 
