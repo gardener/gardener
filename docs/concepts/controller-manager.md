@@ -59,6 +59,9 @@ For gardenlets responsible for self-hosted shoots, the controller performs addit
 3. **Bootstrap Token Validation**: The CSR must be requested via a bootstrap token with a specific description format containing the shoot's namespace and name
 4. **Subject Matching**: The certificate request's subject must match the shoot metadata extracted from the bootstrap token description
 
+Steps 3 and 4 are skipped for certificate renewals: if the CSR is requested by the self-hosted shoot's gardenlet with its current client certificate (the requesting username equals the common name of the certificate request, and the requester is in the `gardener.cloud:system:shoots` group), it is auto-approved after the `SubjectAccessReview` for the `shootclient` subresource.
+This does not apply to `gardenadm` client certificates (`gardener.cloud:gardenadm:shoot:<namespace>:<name>`), which are always requested via a bootstrap token.
+
 #### Permission Model
 
 Both types of CSRs rely on the same RBAC setup:

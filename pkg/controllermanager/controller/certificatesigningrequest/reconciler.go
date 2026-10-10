@@ -23,6 +23,7 @@ package certificatesigningrequest
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"slices"
 	"strings"
@@ -109,7 +110,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	case isShootClient, isGardenadmClient:
 		subResource = "shootclient"
-		if ok, reason, err := r.isBootstrapTokenForThisCSR(ctx, csr); err != nil {
+		if isShootClient && isRequestedBySameShoot(csr, x509cr) {
+			log.Info("CSR was requested by the self-hosted shoot's gardenlet with its current client certificate, i.e., it is a certificate renewal")
+		} else if ok, reason, err := r.isBootstrapTokenForThisCSR(ctx, csr); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed checking bootstrap token description: %w", err)
 		} else if !ok {
 			return reconcile.Result{}, r.denyCSR(ctx, log, csr, fmt.Sprintf("Bootstrap token does not fulfill requirements for auto-approval: %s", reason))
@@ -132,6 +135,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log.Info("Auto-approving CSR")
 	return reconcile.Result{}, r.approveCSR(ctx, log, csr)
+}
+
+// isRequestedBySameShoot checks if the CSR was requested by the self-hosted shoot whose identity the certificate is
+// meant for, i.e., the gardenlet renews its client certificate using its current one. The CSR's username must match the
+// common name in the certificate request, and the requester must be in the shoots group.
+func isRequestedBySameShoot(csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) bool {
+	return csr.Spec.Username == x509cr.Subject.CommonName && slices.Contains(csr.Spec.Groups, v1beta1constants.ShootsGroup)
 }
 
 // isBootstrapTokenForThisCSR checks if the CSR was requested via a bootstrap token. If yes, it extracts the
