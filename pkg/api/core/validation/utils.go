@@ -471,6 +471,13 @@ func ValidateMachineType(machineType core.MachineType, names sets.Set[string], c
 	return allErrs
 }
 
+// volumeTypeNameMaxLength is the maximum length of a volume type name.
+const volumeTypeNameMaxLength = 63
+
+// volumeTypeNameRegexp allows the characters commonly used in infrastructure volume type names, e.g. `__DEFAULT__`,
+// `lvmdriver-1`, or `Premium_LRS`.
+var volumeTypeNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+
 // validateVolumeTypes validates the given list of volume types for valid values and combinations.
 func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -483,8 +490,10 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 		namePath := idxPath.Child("name")
 		if len(volumeType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
-		} else if errs := validateUnprefixedQualifiedName(volumeType.Name); len(errs) != 0 {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), volumeType.Name, fmt.Sprintf("volume type name must be a qualified name: %v", errs)))
+		} else if len(volumeType.Name) > volumeTypeNameMaxLength {
+			allErrs = append(allErrs, field.Invalid(namePath, volumeType.Name, fmt.Sprintf("volume type name must be no more than %d bytes", volumeTypeNameMaxLength)))
+		} else if !volumeTypeNameRegexp.MatchString(volumeType.Name) {
+			allErrs = append(allErrs, field.Invalid(namePath, volumeType.Name, fmt.Sprintf("volume type name must consist of alphanumeric characters, '-', '_' or '.' (e.g. `lvmdriver-1`, `Premium_LRS`, `__DEFAULT__`, regex used for validation is `%s`)", volumeTypeNameRegexp)))
 		}
 
 		if names.Has(volumeType.Name) {
