@@ -887,5 +887,36 @@ var _ = Describe("ActuatorReconcile", func() {
 				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
 		})
 
+		It("should return a severe error for a failed machine when the cluster is not hibernated", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:   3,
+				Conditions: healthyConditions,
+				FailedMachines: []*machinev1alpha1.MachineSummary{
+					{Name: "failed-machine", LastOperation: machinev1alpha1.LastOperation{Description: "VM deletion failed"}},
+				},
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("machine(s) failed")))
+		})
+
+		It("should tolerate a failed machine during hibernation and wait until replicas reach 0", func() {
+			cluster.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: new(true)}
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas: 1,
+				FailedMachines: []*machinev1alpha1.MachineSummary{
+					{Name: "failed-machine", LastOperation: machinev1alpha1.LastOperation{Description: "VM deletion failed due to 409 Conflict"}},
+				},
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			// Not a severe error: still waiting for replicas to reach 0, so a retriable "machines are awake" error is expected.
+			err := actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).NotTo(ContainSubstring("machine(s) failed"))
+		})
+
 	})
 })
