@@ -84,6 +84,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.ContainerRuntime{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		v1beta1.ControlPlane{}.OpenAPIModelName():                                 schema_pkg_apis_core_v1beta1_ControlPlane(ref),
 		v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref),
+		v1beta1.ControlPlaneLoadBalancerServices{}.OpenAPIModelName():             schema_pkg_apis_core_v1beta1_ControlPlaneLoadBalancerServices(ref),
 		v1beta1.ControllerDeployment{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
 		v1beta1.ControllerDeploymentList{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
 		v1beta1.ControllerInstallation{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
@@ -2924,6 +2925,57 @@ func schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref common.ReferenceCa
 		},
 		Dependencies: []string{
 			resource.Quantity{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ControlPlaneLoadBalancerServices(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControlPlaneLoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a map of annotations that will be injected/merged into the load balancer service object.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"externalTrafficPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalTrafficPolicy describes how nodes distribute service traffic they receive on one of the service's \"externally-facing\" addresses. Defaults to \"Cluster\".\n\nPossible enum values:\n - `\"Cluster\"` routes traffic to all endpoints.\n - `\"Local\"` preserves the source IP of the traffic by routing only to endpoints on the same node as the traffic was received on (dropping the traffic if there are no local endpoints).",
+							Type:        []string{"string"},
+							Format:      "",
+							Enum:        []interface{}{"Cluster", "Local"},
+						},
+					},
+					"proxyProtocol": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services. Defaults to nil, which is equivalent to not allowing ProxyProtocol.",
+							Ref:         ref(v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName()),
+						},
+					},
+					"class": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Class configures the Service.spec.loadBalancerClass field for the load balancer service. Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName()},
 	}
 }
 
@@ -11305,11 +11357,17 @@ func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallbac
 							Ref:         ref(v1beta1.Exposure{}.OpenAPIModelName()),
 						},
 					},
+					"loadBalancerServices": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.",
+							Ref:         ref(v1beta1.ControlPlaneLoadBalancerServices{}.OpenAPIModelName()),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.Backup{}.OpenAPIModelName(), v1beta1.Exposure{}.OpenAPIModelName()},
+			v1beta1.Backup{}.OpenAPIModelName(), v1beta1.ControlPlaneLoadBalancerServices{}.OpenAPIModelName(), v1beta1.Exposure{}.OpenAPIModelName()},
 	}
 }
 

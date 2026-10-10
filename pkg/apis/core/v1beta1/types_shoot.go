@@ -1858,6 +1858,9 @@ type WorkerControlPlane struct {
 	// Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
 	// +optional
 	Exposure *Exposure `json:"exposure,omitempty" protobuf:"bytes,2,opt,name=exposure"`
+	// LoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.
+	// +optional
+	LoadBalancerServices *ControlPlaneLoadBalancerServices `json:"loadBalancerServices,omitempty" protobuf:"bytes,3,opt,name=loadBalancerServices"`
 }
 
 // Exposure holds the exposure configuration for the shoot (either `extension` or `dns` or omitted/empty).
@@ -1886,6 +1889,26 @@ type ExtensionExposure struct {
 // DNSExposure specifies that this shoot will be exposed by DNS.
 // There is no specific configuration currently, for future extendability.
 type DNSExposure struct{}
+
+// ControlPlaneLoadBalancerServices controls settings for the load balancer service of the istio ingress gateway.
+type ControlPlaneLoadBalancerServices struct {
+	// Annotations is a map of annotations that will be injected/merged into the load balancer service object.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,1,rep,name=annotations"`
+	// ExternalTrafficPolicy describes how nodes distribute service traffic they
+	// receive on one of the service's "externally-facing" addresses.
+	// Defaults to "Cluster".
+	// +optional
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,2,opt,name=externalTrafficPolicy"`
+	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
+	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
+	// +optional
+	ProxyProtocol *LoadBalancerServicesProxyProtocol `json:"proxyProtocol,omitempty" protobuf:"bytes,3,opt,name=proxyProtocol"`
+	// Class configures the Service.spec.loadBalancerClass field for the load balancer service.
+	// Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
+	// +optional
+	Class *string `json:"class,omitempty" protobuf:"bytes,4,opt,name=class"`
+}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
 type MachineUpdateStrategy string

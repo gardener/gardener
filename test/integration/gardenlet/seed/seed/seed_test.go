@@ -53,7 +53,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/gardener/gardener/pkg/utils/test"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
@@ -189,7 +189,7 @@ var _ = Describe("Seed controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		DeferCleanup(test.WithVars(
+		DeferCleanup(testutils.WithVars(
 			&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
 			&resourcemanager.SkipWebhookDeployment, true,
 		))
@@ -403,7 +403,7 @@ var _ = Describe("Seed controller tests", func() {
 			}).ShouldNot(BeNil())
 
 			DeferCleanup(
-				test.WithVars(
+				testutils.WithVars(
 					&dnsrecord.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
 					&extension.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
 					&resourcemanager.Until, untilInTest,
@@ -594,7 +594,7 @@ var _ = Describe("Seed controller tests", func() {
 				Eventually(func(g Gomega) []string {
 					crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 					g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-					return test.ObjectNames(crdList)
+					return testutils.ObjectNames(crdList)
 				}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(crdsOnlyForSeedClusters))
 
 				patchMRHealth := func(mrName string) {
@@ -625,7 +625,7 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []string {
 						crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-						return test.ObjectNames(crdList)
+						return testutils.ObjectNames(crdList)
 					}).Should(ContainElements(crdsSharedWithGardenCluster))
 
 					// The seed controller waits for the gardener-resource-manager Deployment to be healthy, so
@@ -648,7 +648,7 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []string {
 						crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-						return test.ObjectNames(crdList)
+						return testutils.ObjectNames(crdList)
 					}).ShouldNot(ContainAnyOf(crdsSharedWithGardenCluster...))
 
 					// Usually, the gardener-operator deploys and manages the following resources.
@@ -784,7 +784,7 @@ var _ = Describe("Seed controller tests", func() {
 				Eventually(func(g Gomega) []string {
 					managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 					g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-					return test.ObjectNames(managedResourceList)
+					return testutils.ObjectNames(managedResourceList)
 				}).WithTimeout(time.Minute).Should(ConsistOf(expectedManagedResources))
 
 				expectedIstioManagedResources := []string{
@@ -797,7 +797,7 @@ var _ = Describe("Seed controller tests", func() {
 				Eventually(func(g Gomega) []string {
 					managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 					g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
-					return test.ObjectNames(managedResourceList)
+					return testutils.ObjectNames(managedResourceList)
 				}).Should(ConsistOf(expectedIstioManagedResources))
 
 				By("Verify extension object")
@@ -1006,6 +1006,7 @@ var _ = Describe("Seed controller tests", func() {
 					var (
 						applier                  = kubernetes.NewApplier(testClient, testClient.RESTMapper())
 						managedResourceCRDReader = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+						istioSystemNamespace     = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
 					)
 					istioCRDs, err := istio.NewCRD(testClient)
 					Expect(err).NotTo(HaveOccurred())
@@ -1025,6 +1026,7 @@ var _ = Describe("Seed controller tests", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
+					Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
 					Expect(component.OpWait(istioCRDs).Deploy(ctx)).To(Succeed())
 					Expect(component.OpWait(vpaCRD).Deploy(ctx)).To(Succeed())
 					Expect(component.OpWait(fluentCRD).Deploy(ctx)).To(Succeed())
@@ -1036,6 +1038,10 @@ var _ = Describe("Seed controller tests", func() {
 
 					DeferCleanup(func() {
 						Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
+						Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Succeed())
+						Eventually(func() error {
+							return testClient.Get(ctx, client.ObjectKeyFromObject(istioSystemNamespace), istioSystemNamespace)
+						}).Should(BeNotFoundError())
 						Expect(istioCRDs.Destroy(ctx)).To(Succeed())
 						Expect(vpaCRD.Destroy(ctx)).To(Succeed())
 						Expect(fluentCRD.Destroy(ctx)).To(Succeed())
@@ -1144,6 +1150,16 @@ var _ = Describe("Seed controller tests", func() {
 						return names
 					}).WithTimeout(time.Minute).Should(ConsistOf(expectedManagedResources))
 
+					expectedIstioManagedResources := []string{
+						"istio",
+					}
+
+					Eventually(func(g Gomega) []string {
+						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
+						return testutils.ObjectNames(managedResourceList)
+					}).Should(ConsistOf(expectedIstioManagedResources))
+
 					By("Verify that etcd-druid ManagedResource was NOT created")
 					Consistently(func() error {
 						return testClient.Get(ctx, client.ObjectKey{Name: "etcd-druid", Namespace: testNamespace.Name}, &resourcesv1alpha1.ManagedResource{})
@@ -1152,6 +1168,11 @@ var _ = Describe("Seed controller tests", func() {
 					By("Verify that gardener-resource-manager Deployment was NOT created")
 					Consistently(func() error {
 						return testClient.Get(ctx, client.ObjectKey{Name: "gardener-resource-manager", Namespace: testNamespace.Name}, &appsv1.Deployment{})
+					}).WithTimeout(5 * time.Second).Should(BeNotFoundError())
+
+					By("Verify that istio-system ManagedResource was NOT created")
+					Consistently(func() error {
+						return testClient.Get(ctx, client.ObjectKey{Name: "istio-system", Namespace: "istio-system"}, &resourcesv1alpha1.ManagedResource{})
 					}).WithTimeout(5 * time.Second).Should(BeNotFoundError())
 
 					By("Wait for 'last operation' state to be set to Succeeded")
