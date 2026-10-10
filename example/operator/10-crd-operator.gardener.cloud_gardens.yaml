@@ -698,6 +698,22 @@ spec:
                                   of a secret containing the kubeconfig for this webhook.
                                 minLength: 1
                                 type: string
+                              truncateEnabled:
+                                description: TruncateEnabled specifies whether audit
+                                  event and batch truncation is enabled.
+                                type: boolean
+                              truncateMaxBatchSize:
+                                description: TruncateMaxBatchSize is the maximum size
+                                  in bytes of a batch sent to the webhook.
+                                format: int64
+                                minimum: 1
+                                type: integer
+                              truncateMaxEventSize:
+                                description: TruncateMaxEventSize is the maximum size
+                                  in bytes of an audit event sent to the webhook.
+                                format: int64
+                                minimum: 1
+                                type: integer
                               version:
                                 default: audit.k8s.io/v1
                                 description: Version is the API version to send and
@@ -708,6 +724,11 @@ spec:
                             required:
                             - kubeconfigSecretName
                             type: object
+                            x-kubernetes-validations:
+                            - message: truncateMaxBatchSize must be greater than or
+                                equal to truncateMaxEventSize when both are configured
+                              rule: '!has(self.truncateMaxBatchSize) || !has(self.truncateMaxEventSize)
+                                || self.truncateMaxBatchSize >= self.truncateMaxEventSize'
                           encryptionConfig:
                             description: EncryptionConfig contains customizable encryption
                               configuration of the Gardener API server.
@@ -1610,6 +1631,22 @@ spec:
                                   of a secret containing the kubeconfig for this webhook.
                                 minLength: 1
                                 type: string
+                              truncateEnabled:
+                                description: TruncateEnabled specifies whether audit
+                                  event and batch truncation is enabled.
+                                type: boolean
+                              truncateMaxBatchSize:
+                                description: TruncateMaxBatchSize is the maximum size
+                                  in bytes of a batch sent to the webhook.
+                                format: int64
+                                minimum: 1
+                                type: integer
+                              truncateMaxEventSize:
+                                description: TruncateMaxEventSize is the maximum size
+                                  in bytes of an audit event sent to the webhook.
+                                format: int64
+                                minimum: 1
+                                type: integer
                               version:
                                 default: audit.k8s.io/v1
                                 description: Version is the API version to send and
@@ -1620,6 +1657,11 @@ spec:
                             required:
                             - kubeconfigSecretName
                             type: object
+                            x-kubernetes-validations:
+                            - message: truncateMaxBatchSize must be greater than or
+                                equal to truncateMaxEventSize when both are configured
+                              rule: '!has(self.truncateMaxBatchSize) || !has(self.truncateMaxEventSize)
+                                || self.truncateMaxBatchSize >= self.truncateMaxEventSize'
                           authentication:
                             description: Authentication contains settings related
                               to authentication.
