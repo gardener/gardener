@@ -128,6 +128,7 @@ const (
 	// gateway port tls-tunnel, Gateway, EnvoyFilter, etc.) through the gardenlet, as described in GEP-0030.
 	// owner: @jamand @timebertt
 	// alpha: v1.148.0
+	// beta: v1.154.0
 	RemoveHTTPProxyLegacyPort featuregate.Feature = "RemoveHTTPProxyLegacyPort"
 
 	// StrictAuditPolicyValidation enables strict decoding (rejecting unknown or misspelled fields) when the
@@ -180,7 +181,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableNginxIngressInSeed:      {Default: true, PreRelease: featuregate.Beta},
 	DisableNginxIngressInShoot:     {Default: true, PreRelease: featuregate.Beta},
 	LiveControlPlaneMigration:      {Default: false, PreRelease: featuregate.Alpha},
-	RemoveHTTPProxyLegacyPort:      {Default: false, PreRelease: featuregate.Alpha},
+	RemoveHTTPProxyLegacyPort:      {Default: true, PreRelease: featuregate.Beta},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
 }
 
