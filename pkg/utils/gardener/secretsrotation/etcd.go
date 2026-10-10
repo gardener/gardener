@@ -124,7 +124,7 @@ func CreateStorageVersionMigrationResourcesAndWaitForCompletion(
 				return fmt.Errorf("error while creating StorageVersionMigration object %q: %w", name, err)
 			}
 
-			log.Info("Successfully created/found existing StorageVersionMigration object, waiting for it to succeed", "name", name)
+			log.Info("Successfully created/found existing StorageVersionMigration object, waiting for it to succeed", "StorageVersionMigration", client.ObjectKeyFromObject(svm))
 
 			timeoutCtx, cancel := context.WithTimeout(ctx, StorageVersionMigrationWaitTimeout)
 			defer cancel()
@@ -135,7 +135,7 @@ func CreateStorageVersionMigrationResourcesAndWaitForCompletion(
 				}
 
 				if meta.IsStatusConditionTrue(svm.Status.Conditions, string(storagemigrationv1.MigrationSucceeded)) {
-					log.Info("Migration succeeded for StorageVersionMigration object", "name", name)
+					log.Info("Migration succeeded for StorageVersionMigration object", "StorageVersionMigration", client.ObjectKeyFromObject(svm))
 					return retry.Ok()
 				}
 
