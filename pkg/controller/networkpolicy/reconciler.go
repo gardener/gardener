@@ -114,9 +114,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		networkPolicyLogger := log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
 		if !labelsMatchAnySelector(namespace.Labels, policyConfig.namespaceSelectors) {
-			networkPolicyLogger.Info("Deleting NetworkPolicy")
-			if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
+			if err := r.deleteManagedNetworkPolicy(ctx, networkPolicyLogger, networkPolicy); err != nil {
+				return reconcile.Result{}, err
 			}
 
 			continue
@@ -238,6 +237,36 @@ func labelsMatchAnySelector(labelsToCheck map[string]string, selectors []labels.
 		}
 	}
 	return false
+}
+
+// deleteManagedNetworkPolicy deletes the given NetworkPolicy only if it is managed by Gardener. NetworkPolicies that
+// are not managed by Gardener (e.g. user-created policies which happen to share the name) are left untouched.
+func (r *Reconciler) deleteManagedNetworkPolicy(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
+	existing := &networkingv1.NetworkPolicy{}
+	if err := r.RuntimeClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), existing); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
+	}
+
+	if !isManagedByGardener(existing) {
+		log.Info("Skipping deletion of NetworkPolicy not managed by Gardener")
+		return nil
+	}
+
+	log.Info("Deleting NetworkPolicy")
+	if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
+		return fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
+	}
+	return nil
+}
+
+// isManagedByGardener returns true if the given NetworkPolicy was created by Gardener. Gardener-managed policies carry
+// the Gardener description annotation set by their respective reconcile functions.
+func isManagedByGardener(networkPolicy *networkingv1.NetworkPolicy) bool {
+	_, ok := networkPolicy.Annotations[v1beta1constants.GardenerDescription]
+	return ok
 }
 
 func (r *Reconciler) reconcileNetworkPolicyDenyAll(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
