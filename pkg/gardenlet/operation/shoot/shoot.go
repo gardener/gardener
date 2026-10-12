@@ -307,7 +307,6 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	shoot.ExternalDomain = externalDomain
 
 	if shoot.PriorExternalClusterDomain != nil {
-		// The prior domain can live in another zone, or it can use other credentials than the new domain.
 		priorShootObject := shootObject.DeepCopy()
 		priorShootObject.Spec.DNS.Domain = shoot.PriorExternalClusterDomain
 
