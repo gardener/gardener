@@ -230,7 +230,7 @@ WantedBy=multi-user.target`))
 								Path:       "/var/lib/valitail/auth-token",
 							},
 						},
-						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
+						SyncPeriod: &metav1.Duration{Duration: time.Hour},
 					},
 				},
 			}))
@@ -255,7 +255,7 @@ WantedBy=multi-user.target`))
 								Path:       "/var/lib/valitail/auth-token",
 							},
 						},
-						SyncPeriod: &metav1.Duration{Duration: time.Hour},
+						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 					},
 				},
 			}))
