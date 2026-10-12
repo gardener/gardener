@@ -255,7 +255,9 @@ The internal domain of the `Shoot` and all components using it (e.g., the `kubel
 
 The following restrictions apply:
 
-- The new domain must either follow the scheme `<shoot-name>.<project-name>.<default-domain>` of one of the `Seed`'s default domains, or the `Shoot` must use a primary DNS provider.
+- A `Shoot` with a default domain can only move to another default domain of its `Seed`, following the scheme `<shoot-name>.<project-name>.<default-domain>`.
+  A `Shoot` with a custom domain can only move to another custom domain of its primary DNS provider.
+  A `Shoot` cannot move between a default domain and a custom domain: a default domain must not be combined with a primary DNS provider, the primary DNS provider cannot be removed, and `.spec.dns.providers` cannot change together with the domain.
 - `.spec.dns.providers` cannot be changed in the same request.
 - The domain cannot be removed.
 - The domain cannot be changed while a CA rotation is already in progress.
