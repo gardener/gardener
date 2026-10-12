@@ -886,6 +886,68 @@ var _ = Describe("Generate", func() {
 					Expect(secret).To(BeNil())
 				})
 
+				When("loading missing CA from raw data", func() {
+					It("should fail to generate a new secret because raw CA data is empty", func() {
+						secret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, LoadMissingCAFromRaw(nil, nil, nil, nil)))
+						Expect(err).To(HaveOccurred())
+						Expect(secret).To(BeNil())
+					})
+
+					It("should successfully generate a new secret signed by the current CA loaded from raw data", func() {
+						By("Generate a CA certificate without secrets manager")
+						caData, err := (&secretsutils.CertificateSecretConfig{
+							Name:       caName,
+							CommonName: "tmp-fake-ca-raw",
+							CertType:   secretsutils.CACert,
+						}).Generate()
+						Expect(err).NotTo(HaveOccurred())
+
+						caSecretData := caData.SecretData()
+
+						By("Generate new secret")
+						secret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, LoadMissingCAFromRaw(caSecretData[secretsutils.DataKeyCertificateCA], caSecretData[secretsutils.DataKeyPrivateKeyCA], nil, nil)))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(secret).NotTo(BeNil())
+
+						By("Verify secret was signed with the provided CA certificate")
+						cert, err := secretsutils.LoadCertificate("", secret.Data["tls.key"], secret.Data["tls.crt"])
+						Expect(err).NotTo(HaveOccurred())
+						Expect(cert.Certificate.Issuer.CommonName).To(Equal("tmp-fake-ca-raw"))
+					})
+
+					It("should successfully generate a new secret signed by the old CA loaded from raw data", func() {
+						By("Generate current and old CA certificates without secrets manager")
+						caCurrentData, err := (&secretsutils.CertificateSecretConfig{
+							Name:       caName,
+							CommonName: "tmp-fake-ca-current-raw",
+							CertType:   secretsutils.CACert,
+						}).Generate()
+						Expect(err).NotTo(HaveOccurred())
+						caOldData, err := (&secretsutils.CertificateSecretConfig{
+							Name:       caName,
+							CommonName: "tmp-fake-ca-old-raw",
+							CertType:   secretsutils.CACert,
+						}).Generate()
+						Expect(err).NotTo(HaveOccurred())
+
+						caCurrentSecretData := caCurrentData.SecretData()
+						caOldSecretData := caOldData.SecretData()
+
+						By("Generate new secret using old CA")
+						secret, err := m.Generate(ctx, serverConfig, SignedByCA(caName, LoadMissingCAFromRaw(
+							caCurrentSecretData[secretsutils.DataKeyCertificateCA], caCurrentSecretData[secretsutils.DataKeyPrivateKeyCA],
+							caOldSecretData[secretsutils.DataKeyCertificateCA], caOldSecretData[secretsutils.DataKeyPrivateKeyCA],
+						), UseOldCA))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(secret).NotTo(BeNil())
+
+						By("Verify secret was signed with old CA certificate")
+						cert, err := secretsutils.LoadCertificate("", secret.Data["tls.key"], secret.Data["tls.crt"])
+						Expect(err).NotTo(HaveOccurred())
+						Expect(cert.Certificate.Issuer.CommonName).To(Equal("tmp-fake-ca-old-raw"))
+					})
+				})
+
 				It("should successfully to generate a new secret because CA was loaded from the system", func() {
 					By("Generate a CA certificate without secrets manager")
 					caData, err := (&secretsutils.CertificateSecretConfig{

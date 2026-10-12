@@ -24,9 +24,7 @@ const (
 	ServicePortNameEtcdPeer = "tls-etcd-peer"
 	// ServicePortNameEtcdClient is the name used for the etcd client port on the Istio ingress gateway.
 	ServicePortNameEtcdClient = "tls-etcd-client"
-)
 
-var (
 	// PortEtcdClient is the port exposed by etcd for client communication.
 	PortEtcdClient int32 = 2379
 	// PortEtcdPeer is the port exposed by etcd for server-to-server communication.

@@ -98,7 +98,9 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 			SyncPeriod:        &metav1.Duration{Duration: time.Minute},
 			SecretName:        b.operatingSystemConfigSecret.Name,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
+			PreferIPv6:        new(b.Shoot.PreferIPv6()),
 		},
+		Clock:                 b.Clock,
 		ConfigDir:             nodeagentconfigv1alpha1.BaseDir,
 		CancelContext:         cancelFunc,
 		Recorder:              &events.FakeRecorder{},
@@ -144,7 +146,7 @@ func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secret
 	units, files, err := nodeinit.Config(
 		gardencorev1beta1.Worker{},
 		image.String(),
-		nodeagentcomponent.ComponentConfig(secretName, b.Shoot.KubernetesVersion, controlPlaneAddress, nil, isControlPlaneNode),
+		nodeagentcomponent.ComponentConfig(secretName, b.Shoot.KubernetesVersion, controlPlaneAddress, nil, isControlPlaneNode, b.Shoot.PreferIPv6()),
 		caBundle,
 		b.RegistryCABundle != nil,
 	)

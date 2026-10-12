@@ -247,7 +247,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			MaxUnavailable: ptr.Deref(workerPool.MaxUnavailable, intstr.FromInt32(0)),
 			Annotations:    workerPool.Annotations,
 			// The worker is not created for unmanaged self-hosted shoots; for all other cases, CCM should always be there to put topology labels on the nodes for the region.
-			Labels:      gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, w.values.PreferIPv6, oscConfig.Init.GardenerNodeAgentSecretName, ""),
+			Labels:      gardenerutils.NodeLabelsForWorkerPool(workerPool, w.values.NodeLocalDNSEnabled, oscConfig.Init.GardenerNodeAgentSecretName, ""),
 			Taints:      workerPool.Taints,
 			MachineType: workerPool.Machine.Type,
 			MachineImage: extensionsv1alpha1.MachineImage{

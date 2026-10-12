@@ -28,6 +28,7 @@ controllers:
     secretName: name-of-osc-secret
     kubernetesVersion: 1.28.2
   # syncPeriod: 10m
+  # preferIPv6: false
   token:
     syncConfigs:
     - secretName: name-of-access-token-secret

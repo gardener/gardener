@@ -125,28 +125,23 @@ func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// restoreSecretFromPersistedData restores a Kubernetes Secret from persisted GardenerResourceData.
-// It handles both formats (with Immutable and Type fields) and (plain map[string][]byte)
 func restoreSecretFromPersistedData(ctx context.Context, seedClient client.Client, objectMeta metav1.ObjectMeta, rawData []byte) error {
-	var (
-		secretType = corev1.SecretTypeOpaque
-		secretInfo shootstate.SecretState
-	)
-	if err := json.Unmarshal(rawData, &secretInfo); err != nil || secretInfo.Data == nil {
-		return fmt.Errorf("failed to restore secret from PersistedData: %w", err)
+	var secretInfo shootstate.SecretState
+	if err := json.Unmarshal(rawData, &secretInfo); err != nil {
+		return fmt.Errorf("failed to restore secret %q from PersistedData: %w", objectMeta.Name, err)
 	}
+
+	secretType := corev1.SecretTypeOpaque
 	if secretInfo.Type != "" {
 		secretType = secretInfo.Type
 	}
 
-	secret := &corev1.Secret{
+	return client.IgnoreAlreadyExists(seedClient.Create(ctx, &corev1.Secret{
 		ObjectMeta: objectMeta,
 		Type:       secretType,
 		Data:       secretInfo.Data,
 		Immutable:  secretInfo.Immutable,
-	}
-
-	return client.IgnoreAlreadyExists(seedClient.Create(ctx, secret))
+	}))
 }
 
 func caCertConfigurations(isWorkerless, isSelfHosted bool) []secretsutils.ConfigInterface {

@@ -6,7 +6,6 @@ package bootstrappers_test
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strings"
 
@@ -30,6 +29,7 @@ var _ = Describe("ControlPlaneNodesEndpoints", func() {
 		fakeFS afero.Afero
 
 		bootstrapper *ControlPlaneNodesEndpoints
+		preferIPv6   bool
 
 		filePath = "/var/lib/etcd/control-plane-nodes-endpoints"
 
@@ -70,13 +70,15 @@ var _ = Describe("ControlPlaneNodesEndpoints", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
+		preferIPv6 = false
 	})
 
 	JustBeforeEach(func() {
 		bootstrapper = &ControlPlaneNodesEndpoints{
-			Log:    logr.Discard(),
-			FS:     fakeFS,
-			Client: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(node1, node2, workerNode).WithStatusSubresource(node1, node2, workerNode).Build(),
+			Log:        logr.Discard(),
+			FS:         fakeFS,
+			Client:     fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(node1, node2, workerNode).WithStatusSubresource(node1, node2, workerNode).Build(),
+			PreferIPv6: preferIPv6,
 		}
 	})
 
@@ -110,10 +112,10 @@ var _ = Describe("ControlPlaneNodesEndpoints", func() {
 				Expect(lines).To(ConsistOf("10.0.0.1", "10.0.0.2"))
 			})
 
-			When("a control plane node has the prefer-ipv6 label set to true", func() {
+			When("IPv6 should be preferred", func() {
 				BeforeEach(func() {
+					preferIPv6 = true
 					node1 = node1.DeepCopy()
-					node1.Labels[v1beta1constants.LabelNodePreferIPv6] = "true"
 					node1.Status.Addresses = []corev1.NodeAddress{
 						{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
 						{Type: corev1.NodeInternalIP, Address: "fd00::1"},
@@ -129,10 +131,10 @@ var _ = Describe("ControlPlaneNodesEndpoints", func() {
 				})
 			})
 
-			When("a control plane node has the prefer-ipv6 label set to false", func() {
+			When("IPv4 should be preferred", func() {
 				BeforeEach(func() {
+					preferIPv6 = false
 					node1 = node1.DeepCopy()
-					node1.Labels[v1beta1constants.LabelNodePreferIPv6] = "false"
 					node1.Status.Addresses = []corev1.NodeAddress{
 						{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
 						{Type: corev1.NodeInternalIP, Address: "fd00::1"},
@@ -145,17 +147,6 @@ var _ = Describe("ControlPlaneNodesEndpoints", func() {
 					content, err := fakeFS.ReadFile(filePath)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(strings.Split(string(content), "\n")).To(ConsistOf("10.0.0.1", "10.0.0.2"))
-				})
-			})
-
-			When("a control plane node has an invalid prefer-ipv6 label value", func() {
-				BeforeEach(func() {
-					node1 = node1.DeepCopy()
-					node1.Labels[v1beta1constants.LabelNodePreferIPv6] = "invalid"
-				})
-
-				It("should return an error", func() {
-					Expect(bootstrapper.Start(ctx)).To(MatchError(ContainSubstring(fmt.Sprintf("failed to parse %q label on node %q", v1beta1constants.LabelNodePreferIPv6, node1.Name))))
 				})
 			})
 		})

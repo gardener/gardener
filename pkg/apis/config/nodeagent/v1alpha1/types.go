@@ -141,6 +141,9 @@ type OperatingSystemConfigControllerConfig struct {
 	// KubernetesVersion contains the Kubernetes version of the kubelet, used for annotating the corresponding node
 	// resource with a kubernetes version annotation.
 	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
+	// PreferIPv6 specifies whether IPv6 addresses should be preferred over IPv4 addresses.
+	// +optional
+	PreferIPv6 *bool `json:"preferIPv6,omitempty"`
 }
 
 // TokenControllerConfig defines the configuration of the access token controller.

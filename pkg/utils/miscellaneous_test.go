@@ -341,6 +341,23 @@ baz`, spaces)).To(Equal(`foo
 		})
 	})
 
+	DescribeTable("#IPv4OrIPv6",
+		func(preferIPv6 bool, addrs []net.IP, expected net.IP) {
+			Expect(PreferredIPAddress(preferIPv6, addrs...)).To(Equal(expected))
+		},
+		Entry("no addresses → nil", false, nil, nil),
+		Entry("prefer IPv4, only IPv4 → returns it", false, []net.IP{net.ParseIP("1.2.3.4")}, net.ParseIP("1.2.3.4")),
+		Entry("prefer IPv6, only IPv6 → returns it", true, []net.IP{net.ParseIP("2001:db8::1")}, net.ParseIP("2001:db8::1")),
+		Entry("prefer IPv4, only IPv6 → falls back to IPv6", false, []net.IP{net.ParseIP("2001:db8::1")}, net.ParseIP("2001:db8::1")),
+		Entry("prefer IPv6, only IPv4 → falls back to IPv4", true, []net.IP{net.ParseIP("1.2.3.4")}, net.ParseIP("1.2.3.4")),
+		Entry("prefer IPv4, IPv4 first then IPv6 → returns IPv4", false, []net.IP{net.ParseIP("1.2.3.4"), net.ParseIP("2001:db8::1")}, net.ParseIP("1.2.3.4")),
+		Entry("prefer IPv4, IPv6 first then IPv4 → returns IPv4", false, []net.IP{net.ParseIP("2001:db8::1"), net.ParseIP("1.2.3.4")}, net.ParseIP("1.2.3.4")),
+		Entry("prefer IPv6, IPv6 first then IPv4 → returns IPv6", true, []net.IP{net.ParseIP("2001:db8::1"), net.ParseIP("1.2.3.4")}, net.ParseIP("2001:db8::1")),
+		Entry("prefer IPv6, IPv4 first then IPv6 → returns IPv6", true, []net.IP{net.ParseIP("1.2.3.4"), net.ParseIP("2001:db8::1")}, net.ParseIP("2001:db8::1")),
+		Entry("prefer IPv4, multiple IPv4 → returns first match", false, []net.IP{net.ParseIP("10.0.0.1"), net.ParseIP("10.0.0.2")}, net.ParseIP("10.0.0.1")),
+		Entry("prefer IPv6, multiple IPv6 → returns first match", true, []net.IP{net.ParseIP("2001:db8::1"), net.ParseIP("2001:db8::2")}, net.ParseIP("2001:db8::1")),
+	)
+
 	DescribeTable("#SplitAndTrimString",
 		func(str, sep string, expectedResult []string) {
 			Expect(SplitAndTrimString(str, sep)).To(Equal(expectedResult))

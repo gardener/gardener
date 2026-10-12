@@ -7,6 +7,7 @@ package operatingsystemconfig_test
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -40,14 +41,18 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	fakecontainerdclient "github.com/gardener/gardener/pkg/nodeagent/containerd/fake"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	fakeregistry "github.com/gardener/gardener/pkg/nodeagent/registry/fake"
 	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -1007,14 +1012,50 @@ units: {}
 
 		When("static Kubernetes control-plane manifests are part of the OSC files", func() {
 			BeforeEach(func() {
+				// Generate a self-signed CA to serve as both the ETCD and ETCD-peer CA.
+				ca, err := (&secretsutils.CertificateSecretConfig{
+					Name:       "etcd-ca",
+					CommonName: "etcd-ca",
+					CertType:   secretsutils.CACert,
+					Validity:   new(24 * time.Hour),
+				}).Generate()
+				Expect(err).NotTo(HaveOccurred())
+				caCert := ca.(*secretsutils.Certificate)
+
+				for _, baseDir := range []string{v1beta1constants.OperatingSystemConfigFilePathCAETCD, v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer} {
+					dir := filepath.Join(baseDir, v1beta1constants.OperatingSystemConfigFolderCurrent)
+					operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, []extensionsv1alpha1.File{
+						{Path: filepath.Join(dir, secretsutils.DataKeyCertificateCA), Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(caCert.CertificatePEM)}}},
+						{Path: filepath.Join(dir, secretsutils.DataKeyPrivateKeyCA), Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(caCert.PrivateKeyPEM)}}},
+					}...)
+				}
+
 				operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{Path: "/etc/kubernetes/manifests/kube-apiserver.yaml"})
+
+				DeferCleanup(test.WithVar(&operatingsystemconfig.LookupIP, func(_ string) ([]net.IP, error) {
+					return []net.IP{net.ParseIP("10.0.0.1")}, nil
+				}))
 			})
 
-			It("should add the 'control-plane' role label", func() {
+			It("should add the 'control-plane' role label and generate node-specific ETCD certificates", func() {
 				Eventually(func(g Gomega) map[string]string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 					return node.Labels
 				}).Should(HaveKeyWithValue("node-role.kubernetes.io/control-plane", ""))
+
+				for _, role := range []string{"main", "events"} {
+					for _, volumeName := range []string{etcdconstants.VolumeNameServerTLS, etcdconstants.VolumeNamePeerTLS} {
+						dir := staticpodtranslator.HostPath("etcd-"+role, volumeName)
+						Eventually(func(g Gomega) {
+							exists, err := fakeFS.Exists(filepath.Join(dir, secretsutils.DataKeyCertificate))
+							g.Expect(err).NotTo(HaveOccurred())
+							g.Expect(exists).To(BeTrue())
+							exists, err = fakeFS.Exists(filepath.Join(dir, secretsutils.DataKeyPrivateKey))
+							g.Expect(err).NotTo(HaveOccurred())
+							g.Expect(exists).To(BeTrue())
+						}).Should(Succeed())
+					}
+				}
 			})
 		})
 	})
@@ -1045,7 +1086,9 @@ units: {}
 
 	Context("static pods", func() {
 		var (
-			filePath            = "/etc/kubernetes/manifests/kube-apiserver.yaml"
+			// etcd.yaml is used instead of kube-apiserver.yaml to avoid triggering the isControlPlaneNode path,
+			// which requires ETCD CA files in the OSC. These tests focus on static pod rollout logic only.
+			filePath            = "/etc/kubernetes/manifests/etcd.yaml"
 			desiredStaticPodRaw = `apiVersion: v1
 kind: Pod
 metadata:

@@ -152,6 +152,11 @@ func (in *OperatingSystemConfigControllerConfig) DeepCopyInto(out *OperatingSyst
 		*out = new(v3.Version)
 		**out = **in
 	}
+	if in.PreferIPv6 != nil {
+		in, out := &in.PreferIPv6, &out.PreferIPv6
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

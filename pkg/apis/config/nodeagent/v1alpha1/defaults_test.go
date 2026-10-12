@@ -54,16 +54,19 @@ var _ = Describe("Defaults", func() {
 					SetDefaults_OperatingSystemConfigControllerConfig(obj)
 
 					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
+					Expect(obj.PreferIPv6).To(PointTo(BeFalse()))
 				})
 
 				It("should not overwrite existing values", func() {
 					obj := &OperatingSystemConfigControllerConfig{
 						SyncPeriod: &metav1.Duration{Duration: time.Second},
+						PreferIPv6: new(true),
 					}
 
 					SetDefaults_OperatingSystemConfigControllerConfig(obj)
 
 					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
+					Expect(obj.PreferIPv6).To(PointTo(BeTrue()))
 				})
 			})
 

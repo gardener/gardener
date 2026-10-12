@@ -276,45 +276,40 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
-	var controlPlaneNodeIP net.IP
-	if e.values.StaticPodConfig != nil && len(e.values.StaticPodConfig.ControlPlaneNodesIPAddresses) > 0 {
-		// TODO(rfranzke): Handle multiple control plane nodes later on as part of GEP-28.
-		controlPlaneNodeIP = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0]
+	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
 	}
 
-	var extraClientDNSNames []string
-	if e.values.LiveMigration != nil {
-		extraClientDNSNames = e.values.LiveMigration.ExtraClientServiceDNSNames
-	}
-
-	etcdCASecret, serverSecret, clientSecret, err := GenerateServerAndClientCertificates(
-		ctx,
-		e.secretsManager,
-		e.values.Role,
-		append(ClientServiceDNSNames(e.etcd.Name, e.namespace, e.values.StaticPodConfig != nil), extraClientDNSNames...),
-		controlPlaneNodeIP,
-	)
+	clientSecret, err := GenerateClientCertificate(ctx, e.secretsManager)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to generate client certificate: %w", err)
 	}
 
-	// add peer certs if shoot has HA control plane
-	// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable
-	//  PeerUrlTLS for all remaining clusters as well.
-	var peerUrlTLS *druidcorev1alpha1.PeerTLSConfig
-	if e.values.HighAvailabilityEnabled {
+	var (
+		clientUrlTLS = &druidcorev1alpha1.TLSConfig{
+			TLSCASecretRef: druidcorev1alpha1.SecretReference{
+				SecretReference: corev1.SecretReference{
+					Name:      etcdCASecret.Name,
+					Namespace: etcdCASecret.Namespace,
+				},
+				DataKey: new(secretsutils.DataKeyCertificateBundle),
+			},
+			ClientTLSSecretRef: corev1.SecretReference{
+				Name:      clientSecret.Name,
+				Namespace: clientSecret.Namespace,
+			},
+			// TODO(rfranzke): Once etcd-druid makes .spec.etcd.clientUrlTls.serverTLSSecretRef optional, this
+			//  ServerTLSSecretRef field should not be set here.
+			ServerTLSSecretRef: corev1.SecretReference{Name: "dummy-does-not-exist"},
+		}
+		peerUrlTLS *druidcorev1alpha1.PeerTLSConfig
+	)
+
+	if e.values.StaticPodConfig != nil || e.values.HighAvailabilityEnabled {
 		etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
-		}
-
-		var extraPeerDNSNames []string
-		if e.values.LiveMigration != nil {
-			extraPeerDNSNames = e.values.LiveMigration.ExtraPeerServiceDNSNames
-		}
-		peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, append(e.peerServiceDNSNames(), extraPeerDNSNames...), controlPlaneNodeIP)
-		if err != nil {
-			return fmt.Errorf("failed to generate a peer certificate: %w", err)
 		}
 
 		peerUrlTLS = &druidcorev1alpha1.PeerTLSConfig{
@@ -326,15 +321,43 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					},
 					DataKey: new(secretsutils.DataKeyCertificateBundle),
 				},
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      peerServerSecret.Name,
-					Namespace: e.namespace,
-				},
+				// TODO(rfranzke): Once etcd-druid makes .spec.etcd.peerUrlTls.serverTLSSecretRef optional, this
+				//  ServerTLSSecretRef field should not be set here.
+				ServerTLSSecretRef: corev1.SecretReference{Name: "dummy-does-not-exist"},
 			},
 		}
+	}
 
-		if e.values.LiveMigration != nil && e.values.LiveMigration.SkipClientSANVerification {
-			peerUrlTLS.SkipClientSANVerification = new(true)
+	// generate server and peer certs only for hosted shoots (for self-hosted shoots, gardener-node-agent generates
+	// them individually for each control-plane node)
+	if e.values.StaticPodConfig == nil {
+		var extraClientDNSNames, extraPeerDNSNames []string
+		if e.values.LiveMigration != nil {
+			extraClientDNSNames = e.values.LiveMigration.ExtraClientServiceDNSNames
+			extraPeerDNSNames = e.values.LiveMigration.ExtraPeerServiceDNSNames
+		}
+
+		serverSecret, err := GenerateServerCertificate(ctx, e.secretsManager, e.values.Role, append(ClientServiceDNSNames(e.etcd.Name, e.namespace, false), extraClientDNSNames...), nil)
+		if err != nil {
+			return fmt.Errorf("failed to generate server certificate: %w", err)
+		}
+		clientUrlTLS.ServerTLSSecretRef.Name = serverSecret.Name
+		clientUrlTLS.ServerTLSSecretRef.Namespace = e.namespace
+
+		// currently, peer certs are only added if the hosted shoot has an HA control plane
+		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable
+		//  PeerUrlTLS even for clusters that are currently not configured with HA.
+		if e.values.HighAvailabilityEnabled {
+			peerServerSecret, err := GeneratePeerCertificate(ctx, e.secretsManager, e.values.Role, append(e.peerServiceDNSNames(), extraPeerDNSNames...), nil)
+			if err != nil {
+				return fmt.Errorf("failed to generate a peer certificate: %w", err)
+			}
+			peerUrlTLS.ServerTLSSecretRef.Name = peerServerSecret.Name
+			peerUrlTLS.ServerTLSSecretRef.Namespace = e.namespace
+
+			if e.values.LiveMigration != nil && e.values.LiveMigration.SkipClientSANVerification {
+				peerUrlTLS.SkipClientSANVerification = new(true)
+			}
 		}
 	}
 
@@ -392,25 +415,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}),
 		}
 		e.etcd.Spec.Etcd = druidcorev1alpha1.EtcdConfig{
-			Resources: resourcesEtcd,
-			ClientUrlTLS: &druidcorev1alpha1.TLSConfig{
-				TLSCASecretRef: druidcorev1alpha1.SecretReference{
-					SecretReference: corev1.SecretReference{
-						Name:      etcdCASecret.Name,
-						Namespace: etcdCASecret.Namespace,
-					},
-					DataKey: new(secretsutils.DataKeyCertificateBundle),
-				},
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      serverSecret.Name,
-					Namespace: serverSecret.Namespace,
-				},
-				ClientTLSSecretRef: corev1.SecretReference{
-					Name:      clientSecret.Name,
-					Namespace: clientSecret.Namespace,
-				},
-			},
-			PeerUrlTLS: peerUrlTLS,
+			Resources:    resourcesEtcd,
+			ClientUrlTLS: clientUrlTLS,
+			PeerUrlTLS:   peerUrlTLS,
 			AdditionalAdvertisedURLs: func() *druidcorev1alpha1.AdditionalAdvertiseURLsSpec {
 				if e.values.LiveMigration != nil && len(e.values.LiveMigration.AdditionalAdvertisePeerURLs) > 0 {
 					return &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
@@ -435,23 +442,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		e.etcd.Spec.Backup = druidcorev1alpha1.BackupSpec{
-			TLS: &druidcorev1alpha1.TLSConfig{
-				TLSCASecretRef: druidcorev1alpha1.SecretReference{
-					SecretReference: corev1.SecretReference{
-						Name:      etcdCASecret.Name,
-						Namespace: etcdCASecret.Namespace,
-					},
-					DataKey: new(secretsutils.DataKeyCertificateBundle),
-				},
-				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      serverSecret.Name,
-					Namespace: serverSecret.Namespace,
-				},
-				ClientTLSSecretRef: corev1.SecretReference{
-					Name:      clientSecret.Name,
-					Namespace: clientSecret.Namespace,
-				},
-			},
+			TLS:                     clientUrlTLS,
 			Port:                    new(e.defaultPortOrEtcdEventsStaticPodPort(etcdconstants.PortBackupRestore, etcdconstants.StaticPodPortEtcdEventsBackupRestore)),
 			Resources:               resourcesBackupRestore,
 			SnapshotCompaction:      &snapshotCompactionSpec,
@@ -491,16 +482,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				e.etcd.Spec.ExternallyManagedMemberAddresses = slices.Clone(existingEtcd.Spec.ExternallyManagedMemberAddresses)
 				replicas = existingEtcd.Spec.Replicas
 			}
-			if controlPlaneNodeIP != nil {
-				if ip := controlPlaneNodeIP.String(); !slices.Contains(e.etcd.Spec.ExternallyManagedMemberAddresses, ip) {
+
+			for _, controlPlaneAddress := range e.values.StaticPodConfig.ControlPlaneNodesIPAddresses {
+				if ip := controlPlaneAddress.String(); !slices.Contains(e.etcd.Spec.ExternallyManagedMemberAddresses, ip) {
 					e.etcd.Spec.ExternallyManagedMemberAddresses = append(e.etcd.Spec.ExternallyManagedMemberAddresses, ip)
 					replicas++
 				}
 			}
+
 			e.etcd.Spec.Replicas = replicas
 			e.etcd.Spec.RunAsRoot = new(true)
-			shootAccessSecret := gardenerutils.NewShootAccessSecret(e.etcd.Name, e.namespace)
-			if err := shootAccessSecret.Reconcile(ctx, e.client); err != nil {
+
+			if err := gardenerutils.NewShootAccessSecret(e.etcd.Name, e.namespace).Reconcile(ctx, e.client); err != nil {
 				return err
 			}
 		}

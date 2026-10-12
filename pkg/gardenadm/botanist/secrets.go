@@ -20,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
 // MigrateSecrets exports the secrets generated with the fake client and imports them with the real client.
@@ -67,7 +68,11 @@ func (b *GardenadmBotanist) PersistBootstrapSecrets(ctx context.Context, configD
 			continue
 		}
 
-		dataJSON, err := json.Marshal(secret.Data)
+		dataJSON, err := json.Marshal(shootstate.SecretState{
+			Data:      secret.Data,
+			Immutable: secret.Immutable,
+			Type:      secret.Type,
+		})
 		if err != nil {
 			return fmt.Errorf("failed marshalling secret data for %s: %w", secret.Name, err)
 		}

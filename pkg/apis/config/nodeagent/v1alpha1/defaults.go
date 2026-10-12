@@ -33,6 +33,9 @@ func SetDefaults_OperatingSystemConfigControllerConfig(obj *OperatingSystemConfi
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 10 * time.Minute}
 	}
+	if obj.PreferIPv6 == nil {
+		obj.PreferIPv6 = new(false)
+	}
 }
 
 // SetDefaults_TokenControllerConfig sets defaults for the TokenControllerConfig object.

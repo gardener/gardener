@@ -98,36 +98,3 @@ func netIPNetSliceToStringSlice(in []net.IPNet) []string {
 	}
 	return out
 }
-
-// LookupIP is an alias for net.LookupIP that can be overridden in tests.
-var LookupIP = net.LookupIP
-
-// MachineIP returns the IP address of the current machine. It prefers addresses matching the primary IP family
-// (the first entry in .spec.networking.ipFamilies), falling back to any available address.
-// Similar to https://github.com/kubernetes/kubernetes/blob/ec9f0d55360f74337f9ef40879434a063821ff5b/pkg/kubelet/nodestatus/setters.go#L162-L178
-func (b *GardenadmBotanist) MachineIP() (net.IP, error) {
-	var (
-		preferIPv6 = b.Shoot.PreferIPv6()
-		fallback   net.IP
-	)
-
-	addrs, err := LookupIP(b.HostName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup IPs for hostname %s: %w", b.HostName, err)
-	}
-
-	for _, addr := range addrs {
-		if isIPv6 := addr.To4() == nil; isIPv6 == preferIPv6 {
-			return addr, nil
-		}
-		if fallback == nil {
-			fallback = addr
-		}
-	}
-
-	if fallback != nil {
-		return fallback, nil
-	}
-
-	return nil, fmt.Errorf("no IP address found for node")
-}

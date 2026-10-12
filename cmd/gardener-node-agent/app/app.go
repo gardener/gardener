@@ -221,9 +221,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 
 	if runControlPlaneNodesEndpointsBootstrapper {
 		bootstrapRunnables = append(bootstrapRunnables, &bootstrappers.ControlPlaneNodesEndpoints{
-			Log:    log.WithName("controlplane-nodes-endpoints"),
-			FS:     fs,
-			Client: mgr.GetClient(),
+			Log:        log.WithName("controlplane-nodes-endpoints"),
+			FS:         fs,
+			Client:     mgr.GetClient(),
+			PreferIPv6: ptr.Deref(cfg.Controllers.OperatingSystemConfig.PreferIPv6, false),
 		})
 	}
 
