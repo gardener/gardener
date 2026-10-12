@@ -625,7 +625,7 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "RPC Rate",
+          "legendFormat": "gRPC Rate",
           "metric": "grpc_server_started_total",
           "refId": "A",
           "step": 2
@@ -636,7 +636,7 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "RPC Failed Rate",
+          "legendFormat": "gRPC Failed Rate",
           "metric": "grpc_server_handled_total",
           "refId": "B",
           "step": 2
@@ -751,7 +751,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "description": "Number of currently open bidirectional gRPC streams for Watch and Lease operations.",
+      "description": "Number of currently open bidirectional gRPC Watch streams.",
       "title": "Active Watch Streams",
       "tooltip": {
         "msResolution": false,
@@ -894,7 +894,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Rate of key-value mutations at the MVCC storage layer. Unlike the gRPC request rate, this counts the actual puts/deletes committed to the DB - a single Kubernetes Txn RPC may contain multiple puts. Drives DB growth, compaction frequency and WAL load.",
+      "description": "Rate of key-value mutations at the MVCC storage layer, broken down by operation type. In Kubernetes, kube-apiserver wraps all writes in a Txn RPC \u2014 each Txn contains one Put (create/update) or one Delete. Put rate reflects object creates and updates; Delete rate reflects object deletions and expired resources. Drives DB growth, compaction frequency, and WAL load.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -949,21 +949,13 @@
           "intervalFactor": 1,
           "legendFormat": "Delete",
           "refId": "B"
-        },
-        {
-          "exemplar": true,
-          "expr": "sum(rate(etcd_mvcc_txn_total{role=~\"etcd-$role\"}[$__rate_interval]))",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "Txn",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "MVCC Operation Rate",
+      "title": "Write Operations (MVCC)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1843,7 +1835,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Container Disk Read Throughput (2m rate)",
+      "title": "Container Disk Read Throughput",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1943,7 +1935,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Container Disk Write Throughput (2m rate)",
+      "title": "Container Disk Write Throughput",
       "tooltip": {
         "shared": true,
         "sort": 0,
