@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -75,6 +74,43 @@ func (r RuntimeNetworkConfig) getBlockedNetworkPeers() []string {
 	peers = append(peers, r.Nodes...)
 
 	return peers
+}
+
+func (r *Reconciler) getShootNetworks(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy) ([]string, error) {
+	if !strings.HasPrefix(networkPolicy.Namespace, v1beta1constants.TechnicalIDPrefix) {
+		return nil, nil
+	}
+	cluster := &extensionsv1alpha1.Cluster{}
+	if err := r.RuntimeClient.Get(ctx, client.ObjectKey{Name: networkPolicy.Namespace}, cluster); err != nil {
+		return nil, err
+	}
+
+	shoot, err := extensions.ShootFromCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	if shoot.Spec.Networking == nil {
+		return nil, nil
+	}
+	shootNetworks := []string(nil)
+
+	if v := shoot.Spec.Networking.Nodes; v != nil {
+		shootNetworks = append(shootNetworks, *v)
+	}
+	if v := shoot.Spec.Networking.Pods; v != nil {
+		shootNetworks = append(shootNetworks, *v)
+	}
+	if v := shoot.Spec.Networking.Services; v != nil {
+		shootNetworks = append(shootNetworks, *v)
+	}
+
+	if shoot.Status.Networking != nil {
+		shootNetworks = append(shootNetworks, shoot.Status.Networking.Nodes...)
+		shootNetworks = append(shootNetworks, shoot.Status.Networking.Pods...)
+		shootNetworks = append(shootNetworks, shoot.Status.Networking.Services...)
+	}
+	return shootNetworks, nil
 }
 
 // Reconcile reconciles namespace in order to create some central network policies.
@@ -295,6 +331,12 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 		PrivateNetworks()...,
 	)
 
+	shootNetworks, err := r.getShootNetworks(ctx, networkPolicy)
+	if err != nil {
+		return err
+	}
+	exceptions = append(exceptions, shootNetworks...)
+
 	peers, err := GetNetworkPolicyPeersWithExceptions(
 		AllNetworks(),
 		exceptions,
@@ -350,39 +392,11 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
 	exceptions := r.RuntimeNetworks.getBlockedNetworkPeers()
 
-	if strings.HasPrefix(networkPolicy.Namespace, v1beta1constants.TechnicalIDPrefix) {
-		cluster := &extensionsv1alpha1.Cluster{}
-		if err := r.RuntimeClient.Get(ctx, client.ObjectKey{Name: networkPolicy.Namespace}, cluster); err != nil {
-			return err
-		}
-
-		shoot, err := extensions.ShootFromCluster(cluster)
-		if err != nil {
-			return err
-		}
-
-		if shoot.Spec.Networking != nil {
-			var shootNetworks []string
-			if v := shoot.Spec.Networking.Nodes; v != nil {
-				shootNetworks = append(shootNetworks, *v)
-			}
-			if v := shoot.Spec.Networking.Pods; v != nil {
-				shootNetworks = append(shootNetworks, *v)
-			}
-			if v := shoot.Spec.Networking.Services; v != nil {
-				shootNetworks = append(shootNetworks, *v)
-			}
-
-			if shoot.Status.Networking != nil {
-				networks := sets.New(shootNetworks...)
-				networks.Insert(shoot.Status.Networking.Nodes...)
-				networks.Insert(shoot.Status.Networking.Pods...)
-				networks.Insert(shoot.Status.Networking.Services...)
-				shootNetworks = networks.UnsortedList()
-			}
-			exceptions = append(exceptions, shootNetworks...)
-		}
+	shootNetworks, err := r.getShootNetworks(ctx, networkPolicy)
+	if err != nil {
+		return err
 	}
+	exceptions = append(exceptions, shootNetworks...)
 
 	peers, err := GetNetworkPolicyPeersWithExceptions(
 		PrivateNetworks(),
