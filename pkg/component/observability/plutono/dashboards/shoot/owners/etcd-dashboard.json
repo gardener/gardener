@@ -646,7 +646,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "gRPC Request Rate",
+      "title": "gRPC Rate and Errors",
       "tooltip": {
         "shared": true,
         "sort": 0,
