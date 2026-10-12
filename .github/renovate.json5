@@ -489,6 +489,23 @@
       ],
     },
     {
+      // Treat the `distroless-` prefixed envoy tag as equal to the upstream `vX.Y.Z` release so Renovate does
+      // not revert the prefix that the `renovate-post-upgrade` Action re-adds after each update. Renovate still
+      // writes the tag without the prefix on the initial update; the Action restores it, and this versioning
+      // stops subsequent runs from treating the prefixed tag as outdated and clobbering it. The github-releases
+      // datasource is kept so envoy update PRs include the release notes.
+      matchDatasources: [
+        'github-releases',
+      ],
+      matchPackageNames: [
+        'envoyproxy/envoy',
+      ],
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      versioning: 'regex:^(?:distroless-)?v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$',
+    },
+    {
       // Use GitHub releases only for external dependencies we mirror.
       matchDatasources: [
         'github-releases',
