@@ -427,6 +427,27 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					AllowPrivilegeEscalation: new(false),
 				},
 				ServiceAccount: collectorconstants.ServiceAccountName,
+				Volumes: []corev1.Volume{
+					{
+						Name: caBundleVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: caBundle.Name,
+								Items: []corev1.KeyToPath{{
+									Key:  secrets.DataKeyCertificateBundle,
+									Path: secrets.DataKeyCertificateBundle,
+								}},
+							},
+						},
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      caBundleVolumeName,
+						MountPath: caBundleMountPath,
+						ReadOnly:  true,
+					},
+				},
 			},
 			// TODO(rrhubenov): Remove `Vali` references and switch to only using VictoriaLogs components when the `VictoriaLogsBackend` feature gate is promoted to GA.
 			Config: otelv1beta1.Config{
@@ -640,24 +661,6 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		}
 	}
 
-	obj.Spec.Volumes = append(obj.Spec.Volumes, corev1.Volume{
-		Name: caBundleVolumeName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: caBundle.Name,
-				Items: []corev1.KeyToPath{{
-					Key:  secrets.DataKeyCertificateBundle,
-					Path: secrets.DataKeyCertificateBundle,
-				}},
-			},
-		},
-	})
-	obj.Spec.VolumeMounts = append(obj.Spec.VolumeMounts, corev1.VolumeMount{
-		Name:      caBundleVolumeName,
-		MountPath: caBundleMountPath,
-		ReadOnly:  true,
-	})
-
 	// We want these annotations to be passed down to the service that will be created by the OpenTelemetry Operator.
 	// Currently, there is no other way to define the annotations on the service other than adding them to the OpenTelemetryCollector resource.
 	// All annotations that exist here will be passed down to every resource that gets created by the OpenTelemetry Operator.
@@ -726,9 +729,7 @@ func (o *otelCollector) injectInsecureRBACProxy(obj *otelv1beta1.OpenTelemetryCo
 	o.injectRBACProxyContainers(obj, o.insecureValiRBACProxyArgs(), o.insecureOTLPRBACProxyArgs())
 
 	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
-	obj.Spec.Volumes = []corev1.Volume{
-		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
-	}
+	obj.Spec.Volumes = append(obj.Spec.Volumes, gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"))
 	obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
 	obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
 }
@@ -738,9 +739,9 @@ func (o *otelCollector) injectSecureRBACProxy(obj *otelv1beta1.OpenTelemetryColl
 
 	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
 	tlsVolumeMount := corev1.VolumeMount{Name: tlsCertificateVolumeName, MountPath: tlsMountPath, ReadOnly: true}
-	obj.Spec.Volumes = []corev1.Volume{
+	obj.Spec.Volumes = append(obj.Spec.Volumes,
 		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
-		{
+		corev1.Volume{
 			Name: tlsCertificateVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -748,7 +749,7 @@ func (o *otelCollector) injectSecureRBACProxy(obj *otelv1beta1.OpenTelemetryColl
 				},
 			},
 		},
-	}
+	)
 	obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount, tlsVolumeMount}
 	obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount, tlsVolumeMount}
 }

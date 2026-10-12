@@ -512,14 +512,14 @@ var _ = Describe("OpenTelemetry Collector", func() {
 		}
 
 		openTelemetryCollector.Spec.AdditionalContainers = []corev1.Container{kubeRBACProxyValiContainer, kubeRBACProxyOTLPContainer}
-		openTelemetryCollector.Spec.Volumes = []corev1.Volume{volume, {
+		openTelemetryCollector.Spec.Volumes = []corev1.Volume{getCaBundleVolume(), volume, {
 			Name: "tls-certificate",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: "logging-tls",
 				},
 			},
-		}, getCaBundleVolume()}
+		}}
 		openTelemetryCollector.Spec.VolumeMounts = []corev1.VolumeMount{getCaBundleVolumeMount()}
 		openTelemetryCollector.Spec.Ports = append(openTelemetryCollector.Spec.Ports, otelv1beta1.PortsSpec{
 			ServicePort: kubeRBACValiServicePort,
@@ -823,7 +823,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 			seedCollector := openTelemetryCollector.DeepCopy()
 			seedCollector.Spec.AdditionalContainers = []corev1.Container{getInsecureValiKubeRBACContainer(seedVolumeMount), getInsecureOtlpKubeRBACContainer(seedVolumeMount)}
-			seedCollector.Spec.Volumes = []corev1.Volume{{
+			seedCollector.Spec.Volumes = []corev1.Volume{getCaBundleVolume(), {
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
@@ -846,7 +846,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 						},
 					},
 				},
-			}, getCaBundleVolume()}
+			}}
 			seedCollector.Spec.VolumeMounts = []corev1.VolumeMount{getCaBundleVolumeMount()}
 			seedCollector.Annotations = map[string]string{
 				resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
