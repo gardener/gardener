@@ -47,21 +47,24 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
 	}
 
-	// Apply the machine namespace first, so we can use its UUID as owner reference for the IPPools.
-	// This is done with the privileged runtime client rather than the (potentially workload-identity-scoped)
-	// provider client: the workload identity subject has no permission to create namespaces, and the Role granting it
-	// permissions lives inside this very namespace, so it cannot bootstrap itself.
-	machineNamespace := namespace(cluster.Shoot.Status.TechnicalID)
-	if err := a.runtimeClient.Patch(ctx, machineNamespace, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
-		return err
-	}
-
 	infraSecret, err := kubernetesutils.GetSecretByReference(ctx, a.runtimeClient, &infrastructure.Spec.SecretRef)
 	if err != nil {
 		return fmt.Errorf("could not retrieve provider secret: %w", err)
 	}
+	isWorkloadIdentity := infraSecret.Labels[securityv1alpha1constants.LabelPurpose] == securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor
 
-	if infraSecret.Labels[securityv1alpha1constants.LabelPurpose] == securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor {
+	// The namespace must be created where the machine pods and IPPools live (the provider cluster), except for the
+	// workload-identity flow whose subject cannot create namespaces and whose provider client equals the runtime client.
+	machineNamespaceClient := providerClient
+	if isWorkloadIdentity {
+		machineNamespaceClient = a.runtimeClient
+	}
+	machineNamespace := namespace(cluster.Shoot.Status.TechnicalID)
+	if err := machineNamespaceClient.Patch(ctx, machineNamespace, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		return err
+	}
+
+	if isWorkloadIdentity {
 		token, err := jwt.ParseSigned(
 			string(infraSecret.Data["token"]),
 			[]jose.SignatureAlgorithm{
@@ -71,13 +74,12 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		if err != nil {
 			return fmt.Errorf("failed parsing token from infrastructure secret: %w", err)
 		}
-		// We do not care about the signature and authenticity of the token here.
-		// We just want to extract the "sub" claim to know which user the machine-controller-manager
-		// is running as when using workload identity.
-		// Code is only used in local setup.
+
+		// We only extract the "sub" claim to learn the user the machine-controller-manager runs as.
+		// Signature verification is irrelevant since this is local-setup-only code.
 		claims := &jwt.Claims{}
 		if err := token.UnsafeClaimsWithoutVerification(claims); err != nil {
-			return fmt.Errorf("failed extracting claims from token in cloudprovider secret: %w", err)
+			return fmt.Errorf("failed extracting claims from token in infrastructure secret: %w", err)
 		}
 		subject := rbacv1.Subject{
 			Kind:     rbacv1.UserKind,
@@ -132,12 +134,33 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) error {
-	if err := kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
+	providerClient, err := local.GetProviderClient(ctx, a.runtimeClient, infrastructure.Spec.SecretRef)
+	if err != nil {
+		return fmt.Errorf("could not create client for infrastructure resources: %w", err)
+	}
+
+	infraSecret, err := kubernetesutils.GetSecretByReference(ctx, a.runtimeClient, &infrastructure.Spec.SecretRef)
+	if err != nil {
+		return fmt.Errorf("could not retrieve provider secret: %w", err)
+	}
+	isWorkloadIdentity := infraSecret.Labels[securityv1alpha1constants.LabelPurpose] == securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor
+
+	// Delete the namespace on the same cluster it was created on in Reconcile.
+	machineNamespaceClient := providerClient
+	if isWorkloadIdentity {
+		machineNamespaceClient = a.runtimeClient
+	}
+	if err := kubernetesutils.DeleteObjects(ctx, machineNamespaceClient,
 		namespace(cluster.Shoot.Status.TechnicalID),
 	); err != nil {
 		return err
 	}
 
+	if !isWorkloadIdentity {
+		return nil
+	}
+
+	// Clean up the workload-identity RBAC objects created with the runtime client in Reconcile.
 	return kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
 		emptyClusterRole(infrastructure.Namespace),
 		emptyClusterRoleBinding(infrastructure.Namespace),
