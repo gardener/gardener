@@ -15,10 +15,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 func (g *garden) runMigrations(ctx context.Context, gardenClient client.Client) error {
-	if features.DefaultFeatureGate.Enabled(features.RemoveHTTPProxyLegacyPort) {
+	if !gardenlet.IsResponsibleForSelfHostedShoot() && features.DefaultFeatureGate.Enabled(features.RemoveHTTPProxyLegacyPort) {
 		if err := VerifyRemoveHTTPProxyLegacyPortMigration(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
 			return fmt.Errorf("failed to verify migration for RemoveHTTPProxyLegacyPort feature gate: %w", err)
 		}
