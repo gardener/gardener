@@ -1391,7 +1391,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DB Page Cache Coverage (%)",
+      "title": "DB Page Cache Coverage %",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1780,7 +1780,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "One minute rates for all filesystem read operations executed within the container(s).\n\nThe data has the following designation scheme: <pod-name> / <container-name>",
+      "description": "Rate of bytes read from disk by the etcd container(s) as reported by cAdvisor (<pod-name> / <container-name>). Elevated read throughput on the etcd container combined with low DB page cache coverage indicates kernel eviction of mmap'd pages.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1880,7 +1880,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "One minute rates for all filesystem write operations executed within the container(s).\n\nThe data has the following designation scheme: <pod-name> / <container-name>",
+      "description": "Rate of bytes written to disk by the etcd container(s) as reported by cAdvisor (<pod-name> / <container-name>).",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -2032,7 +2032,7 @@
       "timeRegions": [],
       "timeShift": null,
       "description": "Rate of filesystem read operations inside the etcd container(s) as reported by cAdvisor. A persistent spike here combined with low DB page cache coverage indicates the kernel is evicting mmap'd pages.",
-      "title": "Container read IOPS",
+      "title": "Container Read IOPS",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2127,7 +2127,7 @@
       "timeRegions": [],
       "timeShift": null,
       "description": "Rate of filesystem write operations inside the etcd container(s) as reported by cAdvisor.",
-      "title": "Container write IOPS",
+      "title": "Container Write IOPS",
       "tooltip": {
         "shared": true,
         "sort": 0,
