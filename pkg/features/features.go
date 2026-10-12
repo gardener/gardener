@@ -145,7 +145,7 @@ const (
 	// domains stay immutable, no `prior-*` entries are added to `Shoot.status.advertisedAddresses`, and no
 	// domain migration constraint is added to `Shoot.status.constraints`.
 	// owner: @ftl
-	// alpha: v1.153.0
+	// alpha: v1.154.0
 	MutableShootDomains featuregate.Feature = "MutableShootDomains"
 )
 
