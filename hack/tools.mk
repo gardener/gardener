@@ -62,7 +62,7 @@ KUBE_API_LINTER            := $(TOOLS_BIN_DIR)/kube-api-linter.so
 
 # default tool versions
 # renovate: datasource=github-releases depName=helm/helm
-HELM_VERSION ?= v4.2.4
+HELM_VERSION ?= v4.3.0
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.33.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
