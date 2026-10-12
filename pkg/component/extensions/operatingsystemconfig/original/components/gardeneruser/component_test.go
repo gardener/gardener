@@ -49,6 +49,8 @@ After=sshd.service
 Restart=on-failure
 EnvironmentFile=/etc/environment
 ExecStart=/var/lib/gardener-user/run.sh
+[Install]
+WantedBy=multi-user.target
 `),
 				},
 				extensionsv1alpha1.Unit{
