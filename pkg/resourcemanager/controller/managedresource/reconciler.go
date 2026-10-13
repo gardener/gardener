@@ -622,6 +622,10 @@ func keepObject(meta metav1.Object) bool {
 	return keyExistsAndValueTrue(meta.GetAnnotations(), resourcesv1alpha1.KeepObject)
 }
 
+func forceDeletion(mr *resourcesv1alpha1.ManagedResource) bool {
+	return keyExistsAndValueTrue(mr.GetAnnotations(), resourcesv1alpha1.ForceDeletion)
+}
+
 func isGarbageCollectableResource(obj *unstructured.Unstructured) bool {
 	return keyExistsAndValueTrue(obj.GetLabels(), references.LabelKeyGarbageCollectable) &&
 		obj.GetAPIVersion() == "v1" && sets.New("ConfigMap", "Secret").Has(obj.GetKind())
@@ -665,6 +669,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 		results         = make(chan *output)
 		wg              sync.WaitGroup
 		deletePVCs      = mr.Spec.DeletePersistentVolumeClaims != nil && *mr.Spec.DeletePersistentVolumeClaims
+		isForceDeletion = forceDeletion(mr)
 		deletionPending = false
 		errorList       = &multierror.Error{
 			ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("Could not clean all old resources"),
@@ -718,6 +723,10 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 				}
 
 				deleteOptions := &client.DeleteOptions{}
+				if isForceDeletion {
+					gracePeriodSeconds := int64(0)
+					deleteOptions.GracePeriodSeconds = &gracePeriodSeconds
+				}
 
 				// only delete resources in specific API groups with foreground deletion propagation
 				// see https://github.com/kubernetes/kubernetes/issues/91621, https://github.com/kubernetes/kubernetes/issues/91287
@@ -739,8 +748,18 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 					return
 				}
 
-				if err := finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj); err != nil {
-					logger.Error(err, "Error when finalizing resource if necessary")
+				var err error
+				if isForceDeletion {
+					// Forcefully remove all finalizers to unblock deletion of resources because shoot is being deleted anyways
+					if hasFinalizers, _ := utilclient.NewFinalizer().HasFinalizers(obj); hasFinalizers {
+						err = utilclient.NewFinalizer().Finalize(ctx, r.TargetClient, obj)
+					}
+				} else {
+					err = finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj)
+				}
+
+				if err != nil {
+					logger.Error(err, "Error when finalizing resource")
 					results <- &output{obj, true, err}
 					return
 				}

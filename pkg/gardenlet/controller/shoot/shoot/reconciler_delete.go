@@ -368,11 +368,18 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			waitForControllersToBeActive,
 		)
 
+		annotateManagedResourcesForForceDeletion = g.Add(flow.Task{
+			Name:         "Setting force deletion on managed resources",
+			Fn:           flow.TaskFn(botanist.AnnotateManagedResourcesForForceDeletion).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !cleanupShootResources,
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+
 		cleanKubernetesResources = g.Add(flow.Task{
 			Name:         "Cleaning Kubernetes resources",
 			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).Timeout(10 * time.Minute),
 			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
+			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup, annotateManagedResourcesForForceDeletion),
 		})
 		deleteMetricsServer = g.Add(flow.Task{
 			Name: "Deleting metrics-server",
