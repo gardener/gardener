@@ -48,8 +48,9 @@ receivers:
       - type: move
         from: body._HOSTNAME
         to: resource.nodename
-      - type: move
-        from: body._HOSTNAME
+        # TODO(iypetrov): Keep just 'k8s.node.name' once we move from 'Vali' to 'VictoriaLogs'.
+      - type: copy
+        from: resource.nodename
         to: resource.k8s.node.name
       - type: move
         from: body.MESSAGE
