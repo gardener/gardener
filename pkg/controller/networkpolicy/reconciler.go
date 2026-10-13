@@ -50,6 +50,8 @@ type Reconciler struct {
 	RuntimeNetworks                   RuntimeNetworkConfig
 	AdditionalNamespaceSelectors      []metav1.LabelSelector
 	additionalNamespaceLabelSelectors []labels.Selector
+	// NetworkPolicyNamePrefix is prepended to the names of all NetworkPolicies managed by this reconciler.
+	NetworkPolicyNamePrefix string
 }
 
 // RuntimeNetworkConfig is the configuration of the networks for the runtime cluster.
@@ -107,15 +109,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	for _, policyConfig := range r.networkPolicyConfigs() {
 		networkPolicy := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      policyConfig.name,
+				Name:      r.networkPolicyName(policyConfig.name),
 				Namespace: request.Name,
 			},
 		}
 		networkPolicyLogger := log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
+		if err := r.deleteLegacyNetworkPolicy(ctx, networkPolicyLogger, request.Name, policyConfig.name); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		if !labelsMatchAnySelector(namespace.Labels, policyConfig.namespaceSelectors) {
-			if err := r.deleteManagedNetworkPolicy(ctx, networkPolicyLogger, networkPolicy); err != nil {
-				return reconcile.Result{}, err
+			networkPolicyLogger.Info("Deleting NetworkPolicy")
+			if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
 			}
 
 			continue
@@ -151,6 +158,42 @@ func (r *Reconciler) reconcileNetworkPolicy(ctx context.Context, log logr.Logger
 		return nil
 	})
 	return err
+}
+
+const (
+	// NetworkPolicyNamePrefixOperator is the prefix for NetworkPolicies managed by the gardener-operator.
+	NetworkPolicyNamePrefixOperator = "gardener.cloud--operator--"
+	// NetworkPolicyNamePrefixGardenlet is the prefix for NetworkPolicies managed by the gardenlet.
+	NetworkPolicyNamePrefixGardenlet = "gardener.cloud--gardenlet--"
+)
+
+func (r *Reconciler) networkPolicyName(name string) string {
+	return r.NetworkPolicyNamePrefix + name
+}
+
+// deleteLegacyNetworkPolicy deletes a NetworkPolicy using the old unprefixed name if it was created by Gardener. This
+// only serves to clean up NetworkPolicies created before the name prefixes were introduced. NetworkPolicies without the
+// Gardener description annotation are not managed by Gardener and are left untouched.
+func (r *Reconciler) deleteLegacyNetworkPolicy(ctx context.Context, log logr.Logger, namespace, name string) error {
+	if r.NetworkPolicyNamePrefix == "" {
+		return nil
+	}
+
+	legacyNetworkPolicy := &networkingv1.NetworkPolicy{}
+	key := client.ObjectKey{Namespace: namespace, Name: name}
+	if err := r.RuntimeClient.Get(ctx, key, legacyNetworkPolicy); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get legacy NetworkPolicy %s: %w", key, err)
+	}
+
+	if _, ok := legacyNetworkPolicy.Annotations[v1beta1constants.GardenerDescription]; !ok {
+		return nil
+	}
+
+	log.Info("Deleting legacy NetworkPolicy")
+	return kubernetesutils.DeleteObject(ctx, r.RuntimeClient, legacyNetworkPolicy)
 }
 
 type networkPolicyConfig struct {
@@ -237,36 +280,6 @@ func labelsMatchAnySelector(labelsToCheck map[string]string, selectors []labels.
 		}
 	}
 	return false
-}
-
-// deleteManagedNetworkPolicy deletes the given NetworkPolicy only if it is managed by Gardener. NetworkPolicies that
-// are not managed by Gardener (e.g. user-created policies which happen to share the name) are left untouched.
-func (r *Reconciler) deleteManagedNetworkPolicy(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	existing := &networkingv1.NetworkPolicy{}
-	if err := r.RuntimeClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), existing); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("failed to get NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
-	}
-
-	if !isManagedByGardener(existing) {
-		log.Info("Skipping deletion of NetworkPolicy not managed by Gardener")
-		return nil
-	}
-
-	log.Info("Deleting NetworkPolicy")
-	if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
-		return fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
-	}
-	return nil
-}
-
-// isManagedByGardener returns true if the given NetworkPolicy was created by Gardener. Gardener-managed policies carry
-// the Gardener description annotation set by their respective reconcile functions.
-func isManagedByGardener(networkPolicy *networkingv1.NetworkPolicy) bool {
-	_, ok := networkPolicy.Annotations[v1beta1constants.GardenerDescription]
-	return ok
 }
 
 func (r *Reconciler) reconcileNetworkPolicyDenyAll(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {

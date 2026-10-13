@@ -40,7 +40,7 @@ var _ = Describe("Add", func() {
 				Namespace: "bar",
 			},
 		}
-		reconciler = &Reconciler{}
+		reconciler = &Reconciler{NetworkPolicyNamePrefix: NetworkPolicyNamePrefixOperator}
 	})
 
 	Describe("#NetworkPolicyPredicate", func() {
@@ -54,8 +54,8 @@ var _ = Describe("Add", func() {
 			networkPolicy = &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
 		})
 
-		It("should return true because the NetworkPolicy has name 'allow-to-runtime-apiserver'", func() {
-			networkPolicy.Name = "allow-to-runtime-apiserver"
+		It("should return true because the NetworkPolicy is managed by this reconciler", func() {
+			networkPolicy.Name = NetworkPolicyNamePrefixOperator + "allow-to-runtime-apiserver"
 			Expect(p.Create(event.CreateEvent{Object: networkPolicy})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: networkPolicy})).To(BeTrue())
 			Expect(p.Delete(event.DeleteEvent{Object: networkPolicy})).To(BeTrue())
