@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -408,6 +409,18 @@ var _ = Describe("shoot", func() {
 			It("should return true when last operation type is Restore", func() {
 				shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}}})
 				Expect(shoot.IsRestorePhase()).To(BeTrue())
+			})
+
+			It("should return true for a live-migration destination (GEP-39)", func() {
+				shoot.LiveMigrationRole = v1beta1helper.LiveMigrationRoleDestination
+				Expect(shoot.IsRestorePhase()).To(BeTrue())
+				Expect(shoot.IsLiveMigrationDestination()).To(BeTrue())
+			})
+
+			It("should return false for a live-migration source (GEP-39)", func() {
+				shoot.LiveMigrationRole = v1beta1helper.LiveMigrationRoleSource
+				Expect(shoot.IsRestorePhase()).To(BeFalse())
+				Expect(shoot.IsLiveMigrationDestination()).To(BeFalse())
 			})
 		})
 
