@@ -201,6 +201,24 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 				UseDefaultResources: new(false),
 				ReplicaCount:        new(v.values.Replicas),
 				PriorityClassName:   v.values.PriorityClassName,
+				// Port order matters => do not reorder
+				ExtraArgs: map[string]string{
+					"httpListenAddr": fmt.Sprintf(":%d,:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
+					"tls":            "true,false",
+					"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
+					"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
+				},
+				Volumes: []corev1.Volume{{
+					Name: vlServerTLSVolumeName,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{SecretName: vlServerTLSSecretName},
+					},
+				}},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      vlServerTLSVolumeName,
+					MountPath: vlServerTLSMountPath,
+					ReadOnly:  true,
+				}},
 			},
 			RetentionPeriod: "15d",
 			Storage: &corev1.PersistentVolumeClaimSpec{
@@ -223,6 +241,24 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 			ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
 				EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
 					Name: constants.ServiceName,
+				},
+				// Exposing both ports. The http port is left for extension compatibility reasons.
+				// For more information look up constants.VictoriaLogsHttpPort
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "https",
+							Port:       constants.VictoriaLogsPort,
+							TargetPort: intstr.FromInt32(constants.VictoriaLogsPort),
+							Protocol:   corev1.ProtocolTCP,
+						},
+						{
+							Name:       "http",
+							Port:       constants.VictoriaLogsHttpPort,
+							TargetPort: intstr.FromInt32(constants.VictoriaLogsHttpPort),
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
 				},
 			},
 		},
@@ -248,42 +284,6 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 			Annotations: managedAnnotations,
 		}
 	}
-
-	// Port order matters => do not reorder
-	vlSingle.Spec.ExtraArgs = map[string]string{
-		"httpListenAddr": fmt.Sprintf(":%d,:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
-		"tls":            "true,false",
-		"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
-		"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
-	}
-
-	// Exposing both ports. The http port is left for extension compatibility reasons.
-	// For more information look up constants.VictoriaLogsHttpPort
-	vlSingle.Spec.ServiceSpec.Spec.Ports = []corev1.ServicePort{
-		{
-			Name:       "https",
-			Port:       constants.VictoriaLogsPort,
-			TargetPort: intstr.FromInt32(constants.VictoriaLogsPort),
-			Protocol:   corev1.ProtocolTCP,
-		},
-		{
-			Name:       "http",
-			Port:       constants.VictoriaLogsHttpPort,
-			TargetPort: intstr.FromInt32(constants.VictoriaLogsHttpPort),
-			Protocol:   corev1.ProtocolTCP,
-		},
-	}
-	vlSingle.Spec.Volumes = []corev1.Volume{{
-		Name: vlServerTLSVolumeName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{SecretName: vlServerTLSSecretName},
-		},
-	}}
-	vlSingle.Spec.VolumeMounts = []corev1.VolumeMount{{
-		Name:      vlServerTLSVolumeName,
-		MountPath: vlServerTLSMountPath,
-		ReadOnly:  true,
-	}}
 
 	return vlSingle
 }
