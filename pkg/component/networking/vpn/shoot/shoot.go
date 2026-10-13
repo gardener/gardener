@@ -106,9 +106,37 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
+	// ClientIndexOffset is added to a client's pod ordinal to pick its VPN overlay IP, keeping the cert identity on the
+	// raw ordinal. The temporary vpn-shoot sets it to N so its clients don't collide with the permanent ones (0..N-1)
+	// on the shared vpn-seed-server during live migration.
+	ClientIndexOffset int
 	// AutoMTU enables automatic MTU configuration for the VPN connection.
 	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
 	AutoMTU *bool
+	// NameSuffix, when non-empty, is appended with a dash to every resource name produced by this component.
+	// Set to "tmp" for the temporary VPN shoot client during live migration.
+	NameSuffix string
+}
+
+func (v Values) name() string {
+	if v.NameSuffix == "" {
+		return deploymentName
+	}
+	return deploymentName + "-" + v.NameSuffix
+}
+
+func (v Values) clientCertName() string {
+	if v.NameSuffix == "" {
+		return "vpn-shoot-client"
+	}
+	return "vpn-shoot-client-" + v.NameSuffix
+}
+
+func (v Values) suffixedName(base string) string {
+	if v.NameSuffix == "" {
+		return base
+	}
+	return base + "-" + v.NameSuffix
 }
 
 // Interface contains functions for a VPNShoot deployer.
@@ -150,6 +178,9 @@ type vpnSecret struct {
 
 func (v *vpnShoot) Deploy(ctx context.Context) error {
 	scrapeConfig := v.emptyScrapeConfig()
+	jobName := v.values.suffixedName("tunnel-probe-apiserver-proxy")
+	podRegex := v.values.name() + `-(0|.+-.+);` + initContainerName
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, scrapeConfig, func() error {
 		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
 		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
@@ -175,7 +206,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 				{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
 					Action:       "keep",
-					Regex:        `vpn-shoot-(0|.+-.+);vpn-shoot-init`,
+					Regex:        podRegex,
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name", "__meta_kubernetes_pod_container_name"},
@@ -196,7 +227,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 				},
 				{
 					Action:      "replace",
-					Replacement: new("tunnel-probe-apiserver-proxy"),
+					Replacement: new(jobName),
 					TargetLabel: "job",
 				},
 			},
@@ -219,7 +250,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 				Rules: []monitoringv1.Rule{
 					{
 						Alert: "VPNShootNoPods",
-						Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="` + deploymentName + `"} == 0`),
+						Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="` + v.values.name() + `"} == 0`),
 						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
@@ -234,7 +265,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					},
 					{
 						Alert: "VPNHAShootNoPods",
-						Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="` + deploymentName + `"} == 0`),
+						Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="` + v.values.name() + `"} == 0`),
 						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
@@ -249,7 +280,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					},
 					{
 						Alert: "VPNProbeAPIServerProxyFailed",
-						Expr:  intstr.FromString(`absent(probe_success{job="tunnel-probe-apiserver-proxy"}) == 1 or probe_success{job="tunnel-probe-apiserver-proxy"} == 0 or probe_http_status_code{job="tunnel-probe-apiserver-proxy"} != 200`),
+						Expr:  intstr.FromString(`absent(probe_success{job="` + jobName + `"}) == 1 or probe_success{job="` + jobName + `"} == 0 or probe_http_status_code{job="` + jobName + `"} != 200`),
 						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn-test",
@@ -272,8 +303,8 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 
 	var (
 		config = &secretsutils.CertificateSecretConfig{
-			Name:                        "vpn-shoot-client",
-			CommonName:                  "vpn-shoot-client",
+			Name:                        v.values.clientCertName(),
+			CommonName:                  v.values.clientCertName(),
 			CertType:                    secretsutils.ClientCert,
 			SkipPublishingCACertificate: true,
 		}
@@ -320,7 +351,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShoot(ctx, v.client, v.namespace, v.managedResourceNameValue(), managedresources.LabelValueGardener, false, data)
 }
 
 func (v *vpnShoot) Destroy(ctx context.Context) error {
@@ -331,7 +362,7 @@ func (v *vpnShoot) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceName)
+	return managedresources.DeleteForShoot(ctx, v.client, v.namespace, v.managedResourceNameValue())
 }
 
 func (v *vpnShoot) SetNodeNetworkCIDRs(nodes []net.IPNet) {
@@ -354,22 +385,22 @@ func (v *vpnShoot) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, v.client, v.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, v.client, v.namespace, v.managedResourceNameValue())
 }
 
 func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, v.managedResourceNameValue())
 }
 
 func (v *vpnShoot) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
-	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("tunnel-probe-apiserver-proxy", v.namespace, shoot.Label)}
+	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta(v.values.suffixedName("tunnel-probe-apiserver-proxy"), v.namespace, shoot.Label)}
 }
 
 func (v *vpnShoot) emptyPrometheusRule() *monitoringv1.PrometheusRule {
-	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("tunnel-probe-apiserver-proxy", v.namespace, shoot.Label)}
+	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(v.values.suffixedName("tunnel-probe-apiserver-proxy"), v.namespace, shoot.Label)}
 }
 
 func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNShoot []vpnSecret) (map[string][]byte, error) {
@@ -388,7 +419,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 
 		secretCA = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpn-shoot-ca",
+				Name:      v.values.suffixedName("vpn-shoot-ca"),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -396,7 +427,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		}
 		secretTLSAuth = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpn-shoot-tlsauth",
+				Name:      v.values.suffixedName("vpn-shoot-tlsauth"),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -412,7 +443,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 	for i, item := range secretsVPNShoot {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      item.name,
+				Name:      v.values.suffixedName(item.name),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -427,16 +458,16 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
+				Name:      v.values.name(),
 				Namespace: metav1.NamespaceSystem,
-				Labels:    getLabels(),
+				Labels:    v.getLabels(),
 			},
 			AutomountServiceAccountToken: new(false),
 		}
 
 		networkPolicy = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud--allow-vpn",
+				Name:      v.values.suffixedName("gardener.cloud--allow-vpn"),
 				Namespace: metav1.NamespaceSystem,
 				Annotations: map[string]string{
 					v1beta1constants.GardenerDescription: "Allows the VPN to communicate with shoot components and makes " +
@@ -445,7 +476,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
-					MatchLabels: getLabels(),
+					MatchLabels: v.getLabels(),
 				},
 				Egress:      []networkingv1.NetworkPolicyEgressRule{{}},
 				Ingress:     []networkingv1.NetworkPolicyIngressRule{{}},
@@ -455,14 +486,14 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 
 		labels = map[string]string{
 			v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-			v1beta1constants.LabelApp:       labelValue,
+			v1beta1constants.LabelApp:       v.values.name(),
 			managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 		}
 		template = v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth)
 
 		networkPolicyFromSeed = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud--allow-from-seed",
+				Name:      v.values.suffixedName("gardener.cloud--allow-from-seed"),
 				Namespace: metav1.NamespaceSystem,
 				Annotations: map[string]string{
 					v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from the control plane to "+
@@ -525,7 +556,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		})
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpn-shoot",
+				Name:      v.values.name(),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -571,13 +602,13 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 func (v *vpnShoot) podDisruptionBudget() client.Object {
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      v.values.name(),
 			Namespace: metav1.NamespaceSystem,
-			Labels:    getLabels(),
+			Labels:    v.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable:             new(intstr.FromInt32(1)),
-			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
+			Selector:                   &metav1.LabelSelector{MatchLabels: v.getLabels()},
 			UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 		},
 	}
@@ -590,7 +621,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-				v1beta1constants.LabelApp:       labelValue,
+				v1beta1constants.LabelApp:       v.values.name(),
 				managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				"type":                          "tunnel",
 			},
@@ -711,7 +742,7 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      v.values.name(),
 			Namespace: metav1.NamespaceSystem,
 			Labels:    labels,
 		},
@@ -726,7 +757,7 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 				},
 			},
 			Selector: &metav1.LabelSelector{
-				MatchLabels: getLabels(),
+				MatchLabels: v.getLabels(),
 			},
 			Template: *template,
 		},
@@ -737,7 +768,7 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 	replicas := v.values.HighAvailabilityNumberOfShootClients
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      v.values.name(),
 			Namespace: metav1.NamespaceSystem,
 			Labels:    labels,
 		},
@@ -749,15 +780,22 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},
 			Selector: &metav1.LabelSelector{
-				MatchLabels: getLabels(),
+				MatchLabels: v.getLabels(),
 			},
 			Template: *template,
 		},
 	}
 }
 
-func getLabels() map[string]string {
-	return map[string]string{v1beta1constants.LabelApp: labelValue}
+func (v *vpnShoot) getLabels() map[string]string {
+	return map[string]string{v1beta1constants.LabelApp: v.values.name()}
+}
+
+func (v *vpnShoot) managedResourceNameValue() string {
+	if v.values.NameSuffix == "" {
+		return managedResourceName
+	}
+	return managedResourceName + "-" + v.values.NameSuffix
 }
 
 func (v *vpnShoot) indexedReversedHeader(index *int) string {
@@ -988,6 +1026,10 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			{
 				Name:  "HA_VPN_CLIENTS",
 				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
+			},
+			{
+				Name:  "VPN_CLIENT_INDEX_OFFSET",
+				Value: strconv.Itoa(v.values.ClientIndexOffset),
 			},
 		}...)
 		if features.DefaultFeatureGate.Enabled(features.VPNBondingModeRoundRobin) {
