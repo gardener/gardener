@@ -79,6 +79,8 @@ After=sshd.service
 Restart=on-failure
 EnvironmentFile=/etc/environment
 ExecStart=` + pathScript + `
+[Install]
+WantedBy=multi-user.target
 `),
 			},
 			{
