@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 )
@@ -57,6 +58,10 @@ func (b *Botanist) instantiateComponentsExtensions(ctx context.Context) (err err
 	}
 	b.Shoot.Components.Extensions.SelfHostedShootExposure = b.DefaultSelfHostedShootExposure()
 	b.Shoot.Components.Extensions.Worker = b.DefaultWorker()
+
+	if v1beta1helper.GetLiveMigrationRole(b.Shoot.GetInfo(), b.Seed.GetInfo().Name) == v1beta1helper.LiveMigrationRoleDestination {
+		b.Shoot.Components.Extensions.LiveMigrationVPNDNSRecord = b.DefaultLiveMigrationVPNDNSRecord()
+	}
 
 	return nil
 }
@@ -213,6 +218,13 @@ func (b *Botanist) instantiateComponentsSystem() (err error) {
 	b.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
 	if err != nil {
 		return err
+	}
+
+	if v1beta1helper.GetLiveMigrationRole(b.Shoot.GetInfo(), b.Seed.GetInfo().Name) == v1beta1helper.LiveMigrationRoleDestination {
+		b.Shoot.Components.SystemComponents.TemporaryVPNShoot, err = b.DefaultTemporaryVPNShoot()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
