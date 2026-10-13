@@ -396,6 +396,24 @@ func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string
 	return nil
 }
 
+// SetForceDeletion annotates the managed resource with the given name in the given namespace.
+func SetForceDeletion(ctx context.Context, c client.Writer, namespace, name string) error {
+	resource := &resourcesv1alpha1.ManagedResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	patch := client.MergeFrom(resource.DeepCopy())
+	metav1.SetMetaDataAnnotation(&resource.ObjectMeta, resourcesv1alpha1.ForceDeletion, "true")
+	if err := c.Patch(ctx, resource, patch); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("could not update managed resource '%s/%s': %w", namespace, name, err)
+	}
+
+	return nil
+}
+
 // RenderChartAndCreate renders a chart and creates a ManagedResource for the gardener-resource-manager
 // out of the results.
 func RenderChartAndCreate(ctx context.Context, namespace string, name string, secretNameWithPrefix bool, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]any, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
