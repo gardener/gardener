@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
-	"github.com/gardener/gardener/pkg/component/etcd/peerexposure"
+	"github.com/gardener/gardener/pkg/component/etcd/memberexposure"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -51,21 +51,21 @@ var _ = Describe("Etcd LiveMigration", func() {
 		values       *etcd.Values
 		gardenReader client.Client
 
-		peerExposureComponent *mockcomponent.MockDeployWaiter
+		memberExposureComponent *mockcomponent.MockDeployWaiter
 
 		actualNamespace string
-		actualValues    peerexposure.Values
+		actualValues    memberexposure.Values
 
 		b *Botanist
 	)
 
-	Describe("#DeployEtcdPeerExposure", func() {
+	Describe("#DeployEtcdMemberExposure", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			peerExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
+			memberExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
 
 			actualNamespace = ""
-			actualValues = peerexposure.Values{}
+			actualValues = memberexposure.Values{}
 		})
 
 		JustBeforeEach(func() {
@@ -100,17 +100,17 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should deploy with correct namespace, members and Istio config (no ClientHost when not source seed)", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx)
+			memberExposureComponent.EXPECT().Deploy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, ns string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, ns string, vals memberexposure.Values) component.DeployWaiter {
 				actualNamespace = ns
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualNamespace).To(Equal(namespace))
 			Expect(actualValues.Role).To(Equal(v1beta1constants.ETCDRoleMain))
@@ -125,11 +125,11 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should set ClientHost and ClientMemberHosts when seed is the source of a live migration", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx)
+			memberExposureComponent.EXPECT().Deploy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, vals memberexposure.Values) component.DeployWaiter {
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
 			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -139,9 +139,9 @@ var _ = Describe("Etcd LiveMigration", func() {
 				Spec:   gardencorev1beta1.ShootSpec{SeedName: new(dstSeedName)},
 				Status: gardencorev1beta1.ShootStatus{SeedName: new(seedName)},
 			})
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualValues.ClientHost).To(Equal("etcd-main-client-44d4fb.ingress.seed.example.com"))
 			Expect(actualValues.Members[0].ClientSNIHost).To(Equal(
@@ -150,11 +150,11 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should set ClientMemberHosts (but no ClientHost) when seed is the destination of a live migration", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx)
+			memberExposureComponent.EXPECT().Deploy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, vals memberexposure.Values) component.DeployWaiter {
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
 			b.Seed.SetInfo(&gardencorev1beta1.Seed{
@@ -168,9 +168,9 @@ var _ = Describe("Etcd LiveMigration", func() {
 				Spec:   gardencorev1beta1.ShootSpec{SeedName: new(dstSeedName)},
 				Status: gardencorev1beta1.ShootStatus{SeedName: new(seedName)},
 			})
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualValues.ClientHost).To(BeEmpty())
 			Expect(actualValues.Members[0].ClientSNIHost).To(Equal(
@@ -179,23 +179,23 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should return an error when Deploy fails", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx).Return(testErr)
+			memberExposureComponent.EXPECT().Deploy(ctx).Return(testErr)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, _ peerexposure.Values) component.DeployWaiter {
-				return peerExposureComponent
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, _ memberexposure.Values) component.DeployWaiter {
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
 		})
 
 		It("should compute 3 members for an HA shoot", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx)
+			memberExposureComponent.EXPECT().Deploy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, vals memberexposure.Values) component.DeployWaiter {
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
 			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -208,9 +208,9 @@ var _ = Describe("Etcd LiveMigration", func() {
 				},
 			})
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualValues.Members).To(HaveLen(int(etcdconstants.HAReplicaCount)))
 			for i := 0; i < int(etcdconstants.HAReplicaCount); i++ {
@@ -222,10 +222,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 	Describe("#DestroyEtcdPeerExposure", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			peerExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
+			memberExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
 
 			actualNamespace = ""
-			actualValues = peerexposure.Values{}
+			actualValues = memberexposure.Values{}
 		})
 
 		JustBeforeEach(func() {
@@ -260,17 +260,17 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should destroy with correct namespace, members and Istio config (no ClientHost)", func() {
-			peerExposureComponent.EXPECT().Destroy(ctx)
+			memberExposureComponent.EXPECT().Destroy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, ns string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, ns string, vals memberexposure.Values) component.DeployWaiter {
 				actualNamespace = ns
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DestroyEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DestroyEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualNamespace).To(Equal(namespace))
 			Expect(actualValues.Role).To(Equal(v1beta1constants.ETCDRoleMain))
@@ -280,15 +280,15 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should return an error when Destroy fails", func() {
-			peerExposureComponent.EXPECT().Destroy(ctx).Return(testErr)
+			memberExposureComponent.EXPECT().Destroy(ctx).Return(testErr)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, _ peerexposure.Values) component.DeployWaiter {
-				return peerExposureComponent
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, _ memberexposure.Values) component.DeployWaiter {
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DestroyEtcdPeerExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
+			Expect(b.DestroyEtcdMemberExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
 		})
 	})
 

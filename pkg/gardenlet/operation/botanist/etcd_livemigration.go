@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
-	"github.com/gardener/gardener/pkg/component/etcd/peerexposure"
+	"github.com/gardener/gardener/pkg/component/etcd/memberexposure"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -28,9 +28,9 @@ const (
 	liveMigrationHostLabelHashLength = 6
 )
 
-// NewPeerExposure is the constructor for the peer exposure component. Exposed for testing.
-var NewPeerExposure = func(c client.Client, namespace string, values peerexposure.Values) component.DeployWaiter {
-	return peerexposure.New(c, namespace, values)
+// NewMemberExposure is the constructor for the member exposure component. Exposed for testing.
+var NewMemberExposure = func(c client.Client, namespace string, values memberexposure.Values) component.DeployWaiter {
+	return memberexposure.New(c, namespace, values)
 }
 
 // CrossSeedPeerHostnames is the crossSeedPeerHostnames function. Exposed for testing.
@@ -93,15 +93,15 @@ func ComputeMemberClientURLs(seedName, shootNamespace, ingressDomain, role strin
 	for i := 0; i < int(replicas); i++ {
 		memberClientURLs = append(memberClientURLs, druidcorev1alpha1.MemberURLs{
 			Name: liveMigrationEtcdMemberName(seedName, role, i),
-			URLs: []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdClientMemberHost(seedName, shootNamespace, ingressDomain, role, i), peerexposure.EtcdClientPort)},
+			URLs: []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdClientMemberHost(seedName, shootNamespace, ingressDomain, role, i), memberexposure.EtcdClientPort)},
 		})
 	}
 	return memberClientURLs
 }
 
-// DefaultEtcdPeerExposure returns a new instance of the component that exposes this shoot's etcd peer endpoints
+// DefaultEtcdMemberExposure returns a new instance of the component that exposes this shoot's etcd member endpoints
 // for cross-seed live migration via the seed's shared Istio ingress gateway.
-func (b *Botanist) DefaultEtcdPeerExposure() component.DeployWaiter {
+func (b *Botanist) DefaultEtcdMemberExposure() component.DeployWaiter {
 	var (
 		clientHost     string
 		role           = v1beta1constants.ETCDRoleMain
@@ -111,9 +111,9 @@ func (b *Botanist) DefaultEtcdPeerExposure() component.DeployWaiter {
 		replicas       = getEtcdReplicas(b.Shoot.GetInfo())
 	)
 
-	members := make([]peerexposure.Member, 0, replicas)
+	members := make([]memberexposure.Member, 0, replicas)
 	for i := 0; i < int(replicas); i++ {
-		member := peerexposure.Member{
+		member := memberexposure.Member{
 			PeerSNIHost:   LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, i),
 			PodFQDN:       etcdPodFQDN(role, i, shootNamespace),
 			ExternalPort:  uint32(etcdconstants.PortEtcdPeerExternal) + uint32(i), // #nosec G115 -- Port constants are positive values well within uint32 range.
@@ -126,7 +126,7 @@ func (b *Botanist) DefaultEtcdPeerExposure() component.DeployWaiter {
 		clientHost = LiveMigrationEtcdClientHost(seedName, shootNamespace, ingressDomain, role)
 	}
 
-	return NewPeerExposure(b.SeedClientSet.Client(), shootNamespace, peerexposure.Values{
+	return NewMemberExposure(b.SeedClientSet.Client(), shootNamespace, memberexposure.Values{
 		Role:                         role,
 		Members:                      members,
 		ClientHost:                   clientHost,
@@ -135,20 +135,20 @@ func (b *Botanist) DefaultEtcdPeerExposure() component.DeployWaiter {
 	})
 }
 
-// DeployEtcdPeerExposure exposes the peer endpoints of this shoot's etcd members across seeds via the seed's shared Istio ingress gateway.
-func (b *Botanist) DeployEtcdPeerExposure(ctx context.Context) error {
-	if b.Shoot.Components.ControlPlane.EtcdPeerExposure == nil {
+// DeployEtcdMemberExposure exposes the member endpoints of this shoot's etcd members across seeds via the seed's shared Istio ingress gateway.
+func (b *Botanist) DeployEtcdMemberExposure(ctx context.Context) error {
+	if b.Shoot.Components.ControlPlane.EtcdMemberExposure == nil {
 		return nil
 	}
-	return b.Shoot.Components.ControlPlane.EtcdPeerExposure.Deploy(ctx)
+	return b.Shoot.Components.ControlPlane.EtcdMemberExposure.Deploy(ctx)
 }
 
-// DestroyEtcdPeerExposure removes the cross-seed peer exposure of this shoot's etcd members.
-func (b *Botanist) DestroyEtcdPeerExposure(ctx context.Context) error {
-	if b.Shoot.Components.ControlPlane.EtcdPeerExposure == nil {
+// DestroyEtcdMemberExposure removes the cross-seed member exposure of this shoot's etcd members.
+func (b *Botanist) DestroyEtcdMemberExposure(ctx context.Context) error {
+	if b.Shoot.Components.ControlPlane.EtcdMemberExposure == nil {
 		return nil
 	}
-	return b.Shoot.Components.ControlPlane.EtcdPeerExposure.Destroy(ctx)
+	return b.Shoot.Components.ControlPlane.EtcdMemberExposure.Destroy(ctx)
 }
 
 // etcdPodFQDN returns the in-cluster DNS subdomain for an etcd StatefulSet pod through the headless peer Service.
@@ -278,7 +278,7 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 			SkipClientSANVerification: true,
 			BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{
 				Members:         members,
-				ClientEndpoints: []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role), peerexposure.EtcdClientPort)},
+				ClientEndpoints: []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role), memberexposure.EtcdClientPort)},
 			},
 			ExtraPeerServiceDNSNames: crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
 			AdditionalAdvertisedURLs: &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{

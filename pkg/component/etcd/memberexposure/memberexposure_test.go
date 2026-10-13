@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package peerexposure_test
+package memberexposure_test
 
 import (
 	"context"
@@ -22,13 +22,13 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	. "github.com/gardener/gardener/pkg/component/etcd/peerexposure"
+	. "github.com/gardener/gardener/pkg/component/etcd/memberexposure"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("PeerExposure", func() {
+var _ = Describe("MemberExposure", func() {
 	var (
 		ctx = context.Background()
 

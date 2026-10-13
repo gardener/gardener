@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package peerexposure
+package memberexposure
 
 import (
 	"context"
@@ -47,7 +47,7 @@ type Member struct {
 	ClientSNIHost string
 }
 
-// Values are the configuration values for the etcd peer exposure component.
+// Values are the configuration values for the etcd member exposure component.
 type Values struct {
 	// Role is the role of the etcd.
 	Role string
@@ -62,30 +62,30 @@ type Values struct {
 	IstioIngressGatewayLabels map[string]string
 }
 
-// New creates a new instance of DeployWaiter which exposes the peer endpoints of a shoot's etcd members across seeds.
+// New creates a new instance of DeployWaiter which exposes the member endpoints of a shoot's etcd members across seeds.
 func New(client client.Client, namespace string, values Values) component.DeployWaiter {
-	return &peerExposure{
+	return &memberExposure{
 		client:    client,
 		namespace: namespace,
 		values:    values,
 	}
 }
 
-type peerExposure struct {
+type memberExposure struct {
 	client    client.Client
 	namespace string
 	values    Values
 }
 
-func (p *peerExposure) name() string {
+func (p *memberExposure) name() string {
 	return fmt.Sprintf("etcd-%s-peer", p.values.Role)
 }
 
-func (p *peerExposure) managedResourceName() string {
+func (p *memberExposure) managedResourceName() string {
 	return fmt.Sprintf("etcd-%s-peer-exposure", p.values.Role)
 }
 
-func (p *peerExposure) Deploy(ctx context.Context) error {
+func (p *memberExposure) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresourcesutils.NewRegistry(kubernetesclient.SeedScheme, kubernetesclient.SeedCodec, kubernetesclient.SeedSerializer)
 	)
@@ -151,22 +151,22 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 	return managedresourcesutils.CreateForSeed(ctx, p.client, p.namespace, p.managedResourceName(), false, data)
 }
 
-func (p *peerExposure) Destroy(ctx context.Context) error {
+func (p *memberExposure) Destroy(ctx context.Context) error {
 	return managedresourcesutils.DeleteForSeed(ctx, p.client, p.namespace, p.managedResourceName())
 }
 
-func (p *peerExposure) Wait(_ context.Context) error        { return nil }
-func (p *peerExposure) WaitCleanup(_ context.Context) error { return nil }
+func (p *memberExposure) Wait(_ context.Context) error        { return nil }
+func (p *memberExposure) WaitCleanup(_ context.Context) error { return nil }
 
-func (p *peerExposure) emptyGatewayFor(name string) *istionetworkingv1beta1.Gateway {
+func (p *memberExposure) emptyGatewayFor(name string) *istionetworkingv1beta1.Gateway {
 	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
 }
 
-func (p *peerExposure) emptyVirtualServiceFor(name string) *istionetworkingv1beta1.VirtualService {
+func (p *memberExposure) emptyVirtualServiceFor(name string) *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
 }
 
-func (p *peerExposure) emptyServiceEntryFor(name string) *istionetworkingv1beta1.ServiceEntry {
+func (p *memberExposure) emptyServiceEntryFor(name string) *istionetworkingv1beta1.ServiceEntry {
 	return &istionetworkingv1beta1.ServiceEntry{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
 }
 
@@ -175,7 +175,7 @@ func (p *peerExposure) emptyServiceEntryFor(name string) *istionetworkingv1beta1
 // injects the corresponding allow-rules into the etcd pods' NetworkPolicy, permitting inbound connections from the
 // Istio ingress-gateway namespace on both the peer and client ports.
 // The actual etcd Service cannot be used for this purpose because it is managed by etcd-druid and changes to it are rejected by the etcd webhook.
-func (p *peerExposure) networkPolicyTriggerService() *corev1.Service {
+func (p *memberExposure) networkPolicyTriggerService() *corev1.Service {
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("etcd-%s-netpol", p.values.Role), Namespace: p.namespace}}
 	svc.Labels = getLabels(p.values.Role)
 	svc.Spec.Selector = map[string]string{
@@ -193,11 +193,11 @@ func (p *peerExposure) networkPolicyTriggerService() *corev1.Service {
 	return svc
 }
 
-func (p *peerExposure) clientName() string {
+func (p *memberExposure) clientName() string {
 	return fmt.Sprintf("etcd-%s-client", p.values.Role)
 }
 
-func (p *peerExposure) clientServiceHost() string {
+func (p *memberExposure) clientServiceHost() string {
 	return kubernetesutils.FQDNForService(fmt.Sprintf("etcd-%s-client", p.values.Role), p.namespace)
 }
 

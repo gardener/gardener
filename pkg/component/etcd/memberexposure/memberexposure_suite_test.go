@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package peerexposure_test
+package memberexposure_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPeerExposure(t *testing.T) {
+func TestMemberExposure(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Etcd PeerExposure Suite")
+	RunSpecs(t, "Component Etcd MemberExposure Suite")
 }
