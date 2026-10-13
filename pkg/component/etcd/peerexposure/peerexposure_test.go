@@ -41,26 +41,26 @@ var _ = Describe("PeerExposure", func() {
 		clientHost        = "src-etcd-main.ingress.seed.example.com"
 		clientServiceFQDN = "etcd-main-client." + "shoot--foo--bar" + ".svc.cluster.local"
 		istioLabels       = map[string]string{"istio": "ingressgateway"}
-		members           = []PeerMember{
+		members           = []Member{
 			{
-				SNIHost:      "src-etcd-main-0.ingress.seed.example.com",
+				PeerSNIHost:  "src-etcd-main-0.ingress.seed.example.com",
 				PodFQDN:      "etcd-main-0.etcd-main-peer." + "shoot--foo--bar" + ".svc.cluster.local",
 				ExternalPort: 12380,
 			},
 		}
-		multiMembers = []PeerMember{
+		multiMembers = []Member{
 			{
-				SNIHost:      "src-etcd-main-0.ingress.seed.example.com",
+				PeerSNIHost:  "src-etcd-main-0.ingress.seed.example.com",
 				PodFQDN:      "etcd-main-0.etcd-main-peer." + "shoot--foo--bar" + ".svc.cluster.local",
 				ExternalPort: 12380,
 			},
 			{
-				SNIHost:      "src-etcd-main-1.ingress.seed.example.com",
+				PeerSNIHost:  "src-etcd-main-1.ingress.seed.example.com",
 				PodFQDN:      "etcd-main-1.etcd-main-peer." + "shoot--foo--bar" + ".svc.cluster.local",
 				ExternalPort: 12381,
 			},
 			{
-				SNIHost:      "src-etcd-main-2.ingress.seed.example.com",
+				PeerSNIHost:  "src-etcd-main-2.ingress.seed.example.com",
 				PodFQDN:      "etcd-main-2.etcd-main-peer." + "shoot--foo--bar" + ".svc.cluster.local",
 				ExternalPort: 12382,
 			},
@@ -148,7 +148,7 @@ var _ = Describe("PeerExposure", func() {
 			Expect(gw.Spec.Selector).To(Equal(istioLabels))
 			Expect(gw.Spec.Servers).To(HaveLen(1))
 			server := gw.Spec.Servers[0]
-			Expect(server.Hosts).To(Equal([]string{members[0].SNIHost}))
+			Expect(server.Hosts).To(Equal([]string{members[0].PeerSNIHost}))
 			Expect(server.Port.Number).To(Equal(uint32(12380)))
 			Expect(server.Port.Name).To(Equal("tls-etcd-peer-0"))
 			Expect(server.Port.Protocol).To(Equal("TLS"))
@@ -160,12 +160,12 @@ var _ = Describe("PeerExposure", func() {
 			Expect(ok).To(BeTrue(), "VirtualService/etcd-main-peer not found in MR")
 			Expect(vs.Labels).To(HaveKeyWithValue("app", "etcd-peer-exposure"))
 			Expect(vs.Spec.ExportTo).To(Equal([]string{istioNS}))
-			Expect(vs.Spec.Hosts).To(Equal([]string{members[0].SNIHost}))
+			Expect(vs.Spec.Hosts).To(Equal([]string{members[0].PeerSNIHost}))
 			Expect(vs.Spec.Gateways).To(Equal([]string{"etcd-main-peer"}))
 			Expect(vs.Spec.Tls).To(HaveLen(1))
 			route := vs.Spec.Tls[0]
 			Expect(route.Match[0].Port).To(Equal(uint32(12380)))
-			Expect(route.Match[0].SniHosts).To(Equal([]string{members[0].SNIHost}))
+			Expect(route.Match[0].SniHosts).To(Equal([]string{members[0].PeerSNIHost}))
 			Expect(route.Route[0].Destination.Host).To(Equal(members[0].PodFQDN))
 			Expect(route.Route[0].Destination.Port.Number).To(Equal(uint32(2380)))
 		})
@@ -208,7 +208,7 @@ var _ = Describe("PeerExposure", func() {
 				Expect(gw.Spec.Servers).To(HaveLen(3))
 				for i, m := range multiMembers {
 					srv := gw.Spec.Servers[i]
-					Expect(srv.Hosts).To(Equal([]string{m.SNIHost}))
+					Expect(srv.Hosts).To(Equal([]string{m.PeerSNIHost}))
 					Expect(srv.Port.Number).To(Equal(m.ExternalPort))
 					Expect(srv.Port.Name).To(Equal(fmt.Sprintf("tls-etcd-peer-%d", i)))
 					Expect(srv.Tls.Mode).To(Equal(istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH))
@@ -219,13 +219,13 @@ var _ = Describe("PeerExposure", func() {
 				vs, ok := objs["VirtualService/etcd-main-peer"].(*istionetworkingv1beta1.VirtualService)
 				Expect(ok).To(BeTrue())
 				Expect(vs.Spec.Hosts).To(ConsistOf(
-					multiMembers[0].SNIHost, multiMembers[1].SNIHost, multiMembers[2].SNIHost,
+					multiMembers[0].PeerSNIHost, multiMembers[1].PeerSNIHost, multiMembers[2].PeerSNIHost,
 				))
 				Expect(vs.Spec.Tls).To(HaveLen(3))
 				for i, m := range multiMembers {
 					route := vs.Spec.Tls[i]
 					Expect(route.Match[0].Port).To(Equal(m.ExternalPort))
-					Expect(route.Match[0].SniHosts).To(Equal([]string{m.SNIHost}))
+					Expect(route.Match[0].SniHosts).To(Equal([]string{m.PeerSNIHost}))
 					Expect(route.Route[0].Destination.Host).To(Equal(m.PodFQDN))
 					Expect(route.Route[0].Destination.Port.Number).To(Equal(uint32(2380)))
 				}
@@ -291,6 +291,75 @@ var _ = Describe("PeerExposure", func() {
 				Expect(objs).NotTo(HaveKey("Gateway/etcd-main-client"))
 				Expect(objs).NotTo(HaveKey("VirtualService/etcd-main-client"))
 				Expect(objs).NotTo(HaveKey("ServiceEntry/etcd-main-client"))
+			})
+		})
+
+		Context("when members have ClientSNIHost set", func() {
+			var (
+				clientSNIHost0       = "etcd-main-client-0-aabbcc.ingress.seed.example.com"
+				clientSNIHost1       = "etcd-main-client-1-ddeeff.ingress.seed.example.com"
+				clientSNIHost2       = "etcd-main-client-2-112233.ingress.seed.example.com"
+				membersWithClientSNI = []Member{
+					{
+						PeerSNIHost:   "src-etcd-main-0.ingress.seed.example.com",
+						PodFQDN:       "etcd-main-0.etcd-main-peer.shoot--foo--bar.svc.cluster.local",
+						ExternalPort:  12380,
+						ClientSNIHost: clientSNIHost0,
+					},
+					{
+						PeerSNIHost:   "src-etcd-main-1.ingress.seed.example.com",
+						PodFQDN:       "etcd-main-1.etcd-main-peer.shoot--foo--bar.svc.cluster.local",
+						ExternalPort:  12381,
+						ClientSNIHost: clientSNIHost1,
+					},
+					{
+						PeerSNIHost:   "src-etcd-main-2.ingress.seed.example.com",
+						PodFQDN:       "etcd-main-2.etcd-main-peer.shoot--foo--bar.svc.cluster.local",
+						ExternalPort:  12382,
+						ClientSNIHost: clientSNIHost2,
+					},
+				}
+			)
+
+			BeforeEach(func() {
+				values.Members = membersWithClientSNI
+				component_ = New(c, namespace, values)
+			})
+
+			It("should include a client gateway listing all per-ordinal SNI hosts", func() {
+				gw, ok := objs["Gateway/etcd-main-client"].(*istionetworkingv1beta1.Gateway)
+				Expect(ok).To(BeTrue(), "Gateway/etcd-main-client not found in MR")
+				var allSNIs []string
+				for _, srv := range gw.Spec.Servers {
+					allSNIs = append(allSNIs, srv.Hosts...)
+				}
+				Expect(allSNIs).To(ConsistOf(clientSNIHost0, clientSNIHost1, clientSNIHost2))
+			})
+
+			It("should include a client virtual service with one route per ordinal, each routing to the pod FQDN", func() {
+				vs, ok := objs["VirtualService/etcd-main-client"].(*istionetworkingv1beta1.VirtualService)
+				Expect(ok).To(BeTrue(), "VirtualService/etcd-main-client not found in MR")
+				Expect(vs.Spec.Hosts).To(ConsistOf(clientSNIHost0, clientSNIHost1, clientSNIHost2))
+				Expect(vs.Spec.Tls).To(HaveLen(3))
+				for i, m := range membersWithClientSNI {
+					route := vs.Spec.Tls[i]
+					Expect(route.Match[0].Port).To(Equal(uint32(443)))
+					Expect(route.Match[0].SniHosts).To(Equal([]string{m.ClientSNIHost}))
+					Expect(route.Route[0].Destination.Host).To(Equal(m.PodFQDN))
+					Expect(route.Route[0].Destination.Port.Number).To(Equal(uint32(2379)))
+				}
+			})
+
+			It("should include a per-member ServiceEntry at the etcd client port for each ordinal", func() {
+				for i, m := range membersWithClientSNI {
+					key := fmt.Sprintf("ServiceEntry/etcd-main-client-%d", i)
+					se, ok := objs[key].(*istionetworkingv1beta1.ServiceEntry)
+					Expect(ok).To(BeTrue(), "%s not found in MR", key)
+					Expect(se.Spec.Hosts).To(Equal([]string{m.PodFQDN}))
+					Expect(se.Spec.ExportTo).To(Equal([]string{istioNS}))
+					Expect(se.Spec.Ports).To(HaveLen(1))
+					Expect(se.Spec.Ports[0].Number).To(Equal(uint32(2379)))
+				}
 			})
 		})
 	})

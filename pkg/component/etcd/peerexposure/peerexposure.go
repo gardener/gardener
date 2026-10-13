@@ -26,10 +26,15 @@ import (
 	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-// PeerMember holds the cross-seed routing info for one etcd member.
-type PeerMember struct {
-	// SNIHost is the hostname under which this member is reachable from other seeds via the Istio ingress gateway.
-	SNIHost string
+const (
+	// EtcdClientPort is the port on which the etcd client endpoint is exposed via the Istio ingress gateway.
+	EtcdClientPort = 443
+)
+
+// Member holds the cross-seed routing info for one etcd member.
+type Member struct {
+	// PeerSNIHost is the hostname under which this member is reachable from other seeds via the Istio ingress gateway.
+	PeerSNIHost string
 	// PodFQDN is the in-cluster fully-qualified pod subdomain through the headless peer Service
 	// (e.g. etcd-main-0.etcd-main-peer.<namespace>.svc.cluster.local). Incoming traffic matching SNIHost is
 	// forwarded to exactly this pod, ensuring peer messages reach the correct member.
@@ -38,6 +43,8 @@ type PeerMember struct {
 	// assigned a unique port so that etcd's URLStringsEqual, which falls back to DNS resolution
 	// sees distinct IP:port tuples and cannot conflate members that share the same ingress IP.
 	ExternalPort uint32
+	// ClientSNIHost is the per-ordinal SNI host under which this member's client endpoint is reachable from other seeds.
+	ClientSNIHost string
 }
 
 // Values are the configuration values for the etcd peer exposure component.
@@ -45,7 +52,7 @@ type Values struct {
 	// Role is the role of the etcd.
 	Role string
 	// Members is the per-member routing table: each entry maps one SNI hostname to the pod it must reach.
-	Members []PeerMember
+	Members []Member
 	// ClientHost is the SNI host under which this seed's etcd client endpoint is reachable from other seeds. It is
 	// routed to the etcd client Service. When empty, no client exposure is deployed.
 	ClientHost string
@@ -103,21 +110,37 @@ func (p *peerExposure) Deploy(ctx context.Context) error {
 		resources = append(resources, serviceEntry)
 	}
 
+	allClientHosts := make([]string, 0, 1+len(p.values.Members))
 	if p.values.ClientHost != "" {
+		allClientHosts = append(allClientHosts, p.values.ClientHost)
+	}
+	for _, m := range p.values.Members {
+		if m.ClientSNIHost != "" {
+			allClientHosts = append(allClientHosts, m.ClientSNIHost)
+		}
+	}
+
+	if len(allClientHosts) > 0 {
 		clientGateway := p.emptyGatewayFor(p.clientName())
-		if err := istioutils.GatewayWithTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, []string{p.values.ClientHost})(); err != nil {
+		if err := istioutils.GatewayWithTLSPassthrough(clientGateway, getLabels(p.values.Role), p.values.IstioIngressGatewayLabels, allClientHosts)(); err != nil {
 			return err
 		}
 
 		clientVirtualService := p.emptyVirtualServiceFor(p.clientName())
-		if err := istioutils.VirtualServiceWithSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, []string{p.values.ClientHost}, clientGateway.Name, uint32(etcdconstants.PortEtcdClient), p.clientServiceHost())(); err != nil { // #nosec G115 -- Port constants are positive values well within uint32 range.
-			return err
-		}
+		virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.ClientHost, clientGateway.Name, p.clientServiceHost(), p.values.Members)()
 
 		clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
 		serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)() // #nosec G115 -- Port constants are positive values well within uint32 range.
 
 		resources = append(resources, clientGateway, clientVirtualService, clientServiceEntry)
+		for i, m := range p.values.Members {
+			if m.ClientSNIHost == "" {
+				continue
+			}
+			memberClientServiceEntry := p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.clientName(), i))
+			serviceEntryForExport(memberClientServiceEntry, getLabels(p.values.Role), m.PodFQDN, p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)() // #nosec G115 -- Port constants are positive values well within uint32 range.
+			resources = append(resources, memberClientServiceEntry)
+		}
 	}
 
 	data, err := registry.AddAllAndSerialize(resources...)
@@ -201,14 +224,14 @@ func serviceEntryForExport(serviceEntry *istionetworkingv1beta1.ServiceEntry, la
 	}
 }
 
-func gatewayWithPeerTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, members []PeerMember) func() {
+func gatewayWithPeerTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labels, istioLabels map[string]string, members []Member) func() {
 	return func() {
 		gateway.Labels = labels
 		servers := make([]*istioapinetworkingv1beta1.Server, len(members))
 
 		for i, m := range members {
 			servers[i] = &istioapinetworkingv1beta1.Server{
-				Hosts: []string{m.SNIHost},
+				Hosts: []string{m.PeerSNIHost},
 				Port: &istioapinetworkingv1beta1.Port{
 					Number:   m.ExternalPort,
 					Name:     fmt.Sprintf("%s-%d", etcdconstants.ServicePortNameEtcdPeer, i),
@@ -226,18 +249,18 @@ func gatewayWithPeerTLSPassthrough(gateway *istionetworkingv1beta1.Gateway, labe
 	}
 }
 
-func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo []string, members []PeerMember, gatewayName string) func() {
+func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo []string, members []Member, gatewayName string) func() {
 	return func() {
 		virtualService.Labels = labels
 		routes := make([]*istioapinetworkingv1beta1.TLSRoute, len(members))
 		allHosts := make([]string, len(members))
 
 		for i, m := range members {
-			allHosts[i] = m.SNIHost
+			allHosts[i] = m.PeerSNIHost
 			routes[i] = &istioapinetworkingv1beta1.TLSRoute{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
 					Port:     m.ExternalPort,
-					SniHosts: []string{m.SNIHost},
+					SniHosts: []string{m.PeerSNIHost},
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{
@@ -246,6 +269,59 @@ func virtualServiceWithPeerSNIMatch(virtualService *istionetworkingv1beta1.Virtu
 					},
 				}},
 			}
+		}
+
+		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
+			ExportTo: exportTo,
+			Hosts:    allHosts,
+			Gateways: []string{gatewayName},
+			Tls:      routes,
+		}
+	}
+}
+
+func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, exportTo []string, clientHost, gatewayName, clientServiceHost string, members []Member) func() {
+	return func() {
+		virtualService.Labels = labels
+
+		var (
+			allHosts []string
+			routes   []*istioapinetworkingv1beta1.TLSRoute
+		)
+
+		if clientHost != "" {
+			allHosts = append(allHosts, clientHost)
+			routes = append(routes, &istioapinetworkingv1beta1.TLSRoute{
+				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
+					Port:     EtcdClientPort,
+					SniHosts: []string{clientHost},
+				}},
+				Route: []*istioapinetworkingv1beta1.RouteDestination{{
+					Destination: &istioapinetworkingv1beta1.Destination{
+						Host: clientServiceHost,
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: uint32(etcdconstants.PortEtcdClient)}, // #nosec G115 -- Port constants are positive values well within uint32 range.
+					},
+				}},
+			})
+		}
+
+		for _, m := range members {
+			if m.ClientSNIHost == "" {
+				continue
+			}
+			allHosts = append(allHosts, m.ClientSNIHost)
+			routes = append(routes, &istioapinetworkingv1beta1.TLSRoute{
+				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
+					Port:     EtcdClientPort,
+					SniHosts: []string{m.ClientSNIHost},
+				}},
+				Route: []*istioapinetworkingv1beta1.RouteDestination{{
+					Destination: &istioapinetworkingv1beta1.Destination{
+						Host: m.PodFQDN,
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: uint32(etcdconstants.PortEtcdClient)}, // #nosec G115 -- Port constants are positive values well within uint32 range.
+					},
+				}},
+			})
 		}
 
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
