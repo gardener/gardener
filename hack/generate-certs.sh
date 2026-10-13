@@ -26,6 +26,8 @@ tls_crt="$cert_dir/tls.crt"
 
 echo "Generating certificates in: $cert_dir"
 
+ca_regenerated=false
+
 if [[ ! -s "$ca_crt" || ! -s "$ca_key" ]]; then
     echo "No CA found. Generating new CA key and certificate."
 
@@ -40,9 +42,10 @@ if [[ ! -s "$ca_crt" || ! -s "$ca_key" ]]; then
         -addext "basicConstraints=CA:TRUE" \
         -addext "keyUsage=keyCertSign,cRLSign" \
         -addext "subjectKeyIdentifier=hash"
+    ca_regenerated=true
 fi
 
-if [[ -s "$ca_key" && -s "$ca_crt" ]]; then
+if [[ "$ca_regenerated" == false && -s "$ca_key" && -s "$ca_crt" ]]; then
     if openssl x509 -checkend 86400 -in "$ca_crt" >/dev/null 2>&1; then
         echo "CA certificate is valid and will be reused."
     else
@@ -56,12 +59,16 @@ if [[ -s "$ca_key" && -s "$ca_crt" ]]; then
             -addext "basicConstraints=CA:TRUE" \
             -addext "keyUsage=keyCertSign,cRLSign" \
             -addext "subjectKeyIdentifier=hash"
+        ca_regenerated=true
     fi
 fi
 
 should_generate_cert=false
 
-if [[ -s "$tls_key" && -s "$tls_crt" ]]; then
+if [[ "$ca_regenerated" == true ]]; then
+    echo "CA was (re)generated. Regenerating TLS certificate so it chains to the new CA."
+    should_generate_cert=true
+elif [[ -s "$tls_key" && -s "$tls_crt" ]]; then
     if openssl x509 -checkend 86400 -in "$tls_crt" >/dev/null 2>&1; then
         echo "TLS certificate is valid and will be reused."
     else

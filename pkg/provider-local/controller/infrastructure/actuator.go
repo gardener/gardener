@@ -69,13 +69,14 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 			string(infraSecret.Data["token"]),
 			[]jose.SignatureAlgorithm{
 				jose.RS256,
+				jose.ES256, jose.ES384, jose.ES512,
 			},
 		)
 		if err != nil {
 			return fmt.Errorf("failed parsing token from infrastructure secret: %w", err)
 		}
 
-		// We only extract the "sub" claim to learn the user the machine-controller-manager runs as.
+		// Only the "sub" claim is extracted to check the user the machine-controller-manager runs as.
 		// Signature verification is irrelevant since this is local-setup-only code.
 		claims := &jwt.Claims{}
 		if err := token.UnsafeClaimsWithoutVerification(claims); err != nil {
@@ -156,11 +157,6 @@ func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *ex
 		return err
 	}
 
-	if !isWorkloadIdentity {
-		return nil
-	}
-
-	// Clean up the workload-identity RBAC objects created with the runtime client in Reconcile.
 	return kubernetesutils.DeleteObjects(ctx, a.runtimeClient,
 		emptyClusterRole(infrastructure.Namespace),
 		emptyClusterRoleBinding(infrastructure.Namespace),
