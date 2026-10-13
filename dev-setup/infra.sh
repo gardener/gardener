@@ -23,7 +23,32 @@ fi
 cleanup_registry_ca() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
     echo "> Removing registry CA from macOS login keychain..."
-    security delete-certificate -c "Gardener Local Registry CA" ~/Library/Keychains/login.keychain-db 2>/dev/null || true
+    local keychain="$HOME/Library/Keychains/login.keychain-db"
+    local certificates_file certificate_details fingerprints fingerprint
+
+    # Remove the current CA's trust entry, even if its certificate is missing from the keychain.
+    if [[ -f "$DIR_REGISTRY_TLS/ca.crt" ]]; then
+      security remove-trusted-cert -d "$DIR_REGISTRY_TLS/ca.crt" 2>/dev/null || true
+    fi
+
+    # Export all matching certificates and remove their trust entries.
+    certificates_file="$(mktemp)"
+    security find-certificate -a -c "Gardener Local Registry CA" -p "$keychain" > "$certificates_file" 2>/dev/null || true
+    security remove-trusted-cert -d "$certificates_file" 2>/dev/null || true
+    rm -f "$certificates_file"
+
+    # List the stored certificates. Each "SHA-1 hash: <fingerprint>" line identifies one certificate.
+    certificate_details="$(security find-certificate -a -c "Gardener Local Registry CA" -Z "$keychain" 2>/dev/null || true)"
+    fingerprints="$(awk '/SHA-1 hash:/ {print $3}' <<< "$certificate_details")"
+
+    # Read one fingerprint per line and delete that certificate from the keychain.
+    while read -r fingerprint; do
+      if [[ -z "$fingerprint" ]]; then
+        continue
+      fi
+      security delete-certificate -Z "$fingerprint" "$keychain" 2>/dev/null || true
+    done <<< "$fingerprints"
+
   elif [[ "$(uname -s)" == "Linux" ]]; then
     if command -v update-ca-certificates >/dev/null 2>&1; then
       echo "> Removing registry CA from /usr/local/share/ca-certificates/..."
@@ -97,13 +122,21 @@ case "$COMMAND" in
 
       mkdir -p "$DIR_REGISTRY_TLS"
 
+      # Older versions used serial 1 for every CA. Keychain identifies certificates by issuer and serial,
+      # so different worktrees' CAs collided. Migrate these certificates to unique serials once.
+      if [[ -f "$ca_crt" ]] && [[ "$(openssl x509 -in "$ca_crt" -noout -serial 2>/dev/null)" == "serial=01" ]]; then
+        echo "> Registry CA uses a legacy non-unique serial number, regenerating..."
+        cleanup_registry_ca
+        rm -f "$ca_crt" "$ca_key" "$tls_crt" "$tls_key"
+      fi
+
       # Also regenerate if any certificate is expired or expires within 30 days (certs are valid for 180 days).
       for cert_file in "$ca_crt" "$tls_crt"; do
         if [[ -f "$cert_file" ]] && ! openssl x509 -in "$cert_file" -noout -checkend 2592000 2>/dev/null; then
           echo "> Registry certificate $cert_file is expired or expiring soon, regenerating..."
-          rm -f "$ca_crt" "$ca_key" "$tls_crt" "$tls_key"
           # Remove the old CA from the system trust store so the new one can be re-added below.
           cleanup_registry_ca
+          rm -f "$ca_crt" "$ca_key" "$tls_crt" "$tls_key"
           break
         fi
       done
@@ -136,7 +169,7 @@ IP.2 = ::1
 EOF
 
         openssl req -x509 -newkey rsa:4096 -sha256 -days 180 -nodes \
-          -set_serial 1 \
+          -set_serial "0x$(openssl rand -hex 16)" \
           -keyout "$ca_key" -out "$ca_crt" \
           -subj "/CN=Gardener Local Registry CA" \
           -config "$cnf" -extensions v3_ca 2>/dev/null
@@ -163,10 +196,17 @@ EOF
       # This uses the login keychain (no sudo, current user only). The CA is constrained by nameConstraints to only
       # sign for registry.local.gardener.cloud and localhost, so trusting it here carries negligible risk.
       if [[ "$(uname -s)" == "Darwin" ]]; then
-        if ! security verify-cert -c "$ca_crt" -p ssl -q >/dev/null 2>&1; then
+        # Check that the CA is both trusted and stored for chain building. Verifying the CA file alone can
+        # succeed when only its trust settings were installed but its keychain import collided.
+        # Checking on every run retries the trust prompt if approval was dismissed previously.
+        if ! security verify-cert -c "$tls_crt" -p ssl -q >/dev/null 2>&1; then
           echo "> Adding registry CA to macOS login keychain (current user only); you may be prompted for your login password... (run 'make cleanup-local-registry-ca' to undo)"
           security add-trusted-cert -d -r trustRoot \
             -k ~/Library/Keychains/login.keychain-db "$ca_crt"
+          if ! security verify-cert -c "$tls_crt" -p ssl -q >/dev/null 2>&1; then
+            echo "> ERROR: Failed to establish registry CA trust. Run 'make kind-up' again and approve the keychain trust prompt." >&2
+            return 1
+          fi
         fi
       # On Linux, install the CA into the system trust store so that Go tools (e.g. skaffold, kubectl) trust the
       # registry. The CA is constrained by nameConstraints to only sign for registry.local.gardener.cloud and
