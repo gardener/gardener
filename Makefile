@@ -295,6 +295,10 @@ kind-%: export KUSTOMIZE_OVERLAY = $(subst kind-,,$(subst -up,,$(subst -down,,$@
 test-e2e-%: export E2E_JUNIT_REPORT_NAME = junit-$@.xml
 
 # kind*-{up,down}
+# Builds & deploys: cloud-controller-manager (via cloud-provider-local).
+# Builds: provider-local loadbalancer image (configured for the runtime cloud-controller-manager).
+# Deploys: Kubernetes runtime cluster, calico-node, calico-kube-controllers, metrics-server,
+#   bind9, registry, and registry-cache-* Docker containers.
 kind-single-node-up kind-single-node-down \
 kind-single-node2-up kind-single-node2-down \
 kind-multi-node-up kind-multi-node-down \
@@ -347,6 +351,11 @@ cloud-provider-local-up cloud-provider-local-dev cloud-provider-local-debug clou
 	$(DEV_SETUP)/cloud-provider-local.sh $(subst cloud-provider-local-,,$@)
 
 # operator-{up,dev,debug,down}
+# Builds & deploys: gardener-operator.
+# Builds: gardener-apiserver, gardener-controller-manager, gardener-scheduler,
+#   gardener-admission-controller, gardener-resource-manager,
+#   gardener-extension-provider-local, gardener-extension-admission-local,
+#   cloud-controller-manager-local, machine-controller-manager-provider-local.
 operator-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-operator.yaml
 operator-up operator-dev operator-debug operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(DEV_SETUP)/operator.sh $(subst operator-,,$@)
@@ -356,10 +365,18 @@ remote-up remote-down: $(KUBECTL)
 	$(DEV_SETUP)/remote.sh $(subst remote-,,$@) $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
 
 # garden-{up,down}
+# Deploys (via gardener-operator): gardener-apiserver, gardener-controller-manager, gardener-scheduler,
+#   gardener-admission-controller, gardener-resource-manager, gardener-dashboard, gardener-discovery-server,
+#   virtual-garden-etcd-main, virtual-garden-etcd-events, virtual-garden-kube-apiserver,
+#   virtual-garden-kube-controller-manager.
 garden-up garden-down: $(KUBECTL)
 	$(DEV_SETUP)/garden.sh $(subst garden-,,$@)
 
 # seed-{up,down}
+# Builds & deploys: gardenlet (bootstrapped by gardener-operator).
+# Builds: gardener-resource-manager, gardener-node-agent, provider-local node/loadbalancer images.
+# If the Seed cluster differs from the garden runtime cluster, deploys (via gardenlet): gardener-resource-manager.
+# Deploys: garden configuration (projects, credentials, cloud profiles).
 seed-% seed2-%: export SKAFFOLD_FILENAME = $(DEV_SETUP)/skaffold-seed.yaml
 seed-up seed-dev seed-debug seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(DEV_SETUP)/seed.sh $(subst seed-,,$@)
