@@ -178,10 +178,11 @@ type LiveMigrationValues struct {
 	// peer TLS client certificates. It is used during a live control plane migration because cross-seed peer TLS
 	// certificates carry the local service SAN, not the Istio-exposed hostname.
 	SkipClientSANVerification bool
-	// AdditionalAdvertisePeerURLs are extra per-member peer URLs to advertise in addition to the in-cluster peer URLs.
-	// They are used during a live control plane migration so that members residing in a different seed can be
-	// reached across clusters. The member names must follow etcd-druid's CEL constraint (`<memberNamePrefix>-<etcd-name>-<index>`).
-	AdditionalAdvertisePeerURLs []druidcorev1alpha1.MemberURLs
+	// AdditionalAdvertisedURLs holds per-member extra peer and client URLs for live control plane migration so that
+	// each seed's etcd members advertise their external Istio ingress endpoints. OverrideDefaultURL must be true on
+	// each sub-spec so that only the external URLs are advertised, suppressing the internal service DNS name that
+	// would collide with the other cluster's internal DNS name.
+	AdditionalAdvertisedURLs *druidcorev1alpha1.AdditionalAdvertiseURLsSpec
 	// BootstrapWithExistingCluster, when set, configures this etcd to join an existing (source) etcd cluster instead of
 	// bootstrapping a new one. It is set on the destination etcd during a live control plane migration so its
 	// members join the source cluster to form a temporary joint cluster. It can only be set at creation time.
@@ -419,12 +420,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			ClientUrlTLS: clientUrlTLS,
 			PeerUrlTLS:   peerUrlTLS,
 			AdditionalAdvertisedURLs: func() *druidcorev1alpha1.AdditionalAdvertiseURLsSpec {
-				if e.values.LiveMigration != nil && len(e.values.LiveMigration.AdditionalAdvertisePeerURLs) > 0 {
-					return &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
-						PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
-							Members: e.values.LiveMigration.AdditionalAdvertisePeerURLs,
-						},
-					}
+				if e.values.LiveMigration != nil {
+					return e.values.LiveMigration.AdditionalAdvertisedURLs
 				}
 				return nil
 			}(),

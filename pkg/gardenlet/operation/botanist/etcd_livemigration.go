@@ -194,10 +194,15 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 		destIngressDomain = destSeed.Spec.Ingress.Domain
 
 		values.LiveMigration = &etcd.LiveMigrationValues{
-			SkipClientSANVerification:   true,
-			AdditionalAdvertisePeerURLs: ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
-			ExtraClientServiceDNSNames:  []string{LiveMigrationEtcdClientHost(localSeedName, shootNamespace, localIngressDomain, role)},
-			ExtraPeerServiceDNSNames:    crossSeedPeerHostnames(localSeedName, localIngressDomain, destSeedName, destIngressDomain, shootNamespace, role, replicas),
+			SkipClientSANVerification: true,
+			AdditionalAdvertisedURLs: &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+				PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+					OverrideDefaultURL: new(true),
+					Members:            ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
+				},
+			},
+			ExtraClientServiceDNSNames: []string{LiveMigrationEtcdClientHost(localSeedName, shootNamespace, localIngressDomain, role)},
+			ExtraPeerServiceDNSNames:   crossSeedPeerHostnames(localSeedName, localIngressDomain, destSeedName, destIngressDomain, shootNamespace, role, replicas),
 		}
 
 	case v1beta1helper.LiveMigrationRoleDestination:
@@ -234,8 +239,13 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 					),
 				},
 			},
-			ExtraPeerServiceDNSNames:    crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
-			AdditionalAdvertisePeerURLs: ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
+			ExtraPeerServiceDNSNames: crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
+			AdditionalAdvertisedURLs: &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+				PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+					OverrideDefaultURL: new(true),
+					Members:            ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
+				},
+			},
 		}
 	}
 
