@@ -23,7 +23,6 @@ import (
 )
 
 const (
-	etcdClientPort = 443
 	// liveMigrationHostLabelHashLength is the number of hex characters of the SHA256 hash used in the left-most DNS label
 	// of the cross-seed etcd hostnames.
 	liveMigrationHostLabelHashLength = 6
@@ -36,6 +35,9 @@ var NewPeerExposure = func(c client.Client, namespace string, values peerexposur
 
 // CrossSeedPeerHostnames is the crossSeedPeerHostnames function. Exposed for testing.
 var CrossSeedPeerHostnames = crossSeedPeerHostnames
+
+// CrossSeedClientMemberHosts is the crossSeedClientMemberHosts function. Exposed for testing.
+var CrossSeedClientMemberHosts = crossSeedClientMemberHosts
 
 // SetLiveMigrationEtcdValues is the setLiveMigrationEtcdValues method. Exposed for testing.
 var SetLiveMigrationEtcdValues = func(b *Botanist, ctx context.Context, values *etcd.Values, role string) error {
@@ -58,6 +60,13 @@ func LiveMigrationEtcdClientHost(seedName, shootNamespace, ingressDomain, role s
 	return fmt.Sprintf("etcd-%s-client-%s.%s", role, hash, ingressDomain)
 }
 
+// LiveMigrationEtcdClientMemberHost returns the per-member SNI host under which the etcd client endpoint of the given
+// member on the given seed is advertised in the etcd cluster membership.
+func LiveMigrationEtcdClientMemberHost(seedName, shootNamespace, ingressDomain, role string, ordinal int) string {
+	hash := utils.ComputeSHA256Hex(fmt.Appendf(nil, "%s/%s/%s/%d", seedName, shootNamespace, role, ordinal))[:liveMigrationHostLabelHashLength]
+	return fmt.Sprintf("etcd-%s-client-%d-%s.%s", role, ordinal, hash, ingressDomain)
+}
+
 // liveMigrationEtcdMemberName returns the etcd member name for the given seed, role and ordinal. It matches
 // etcd-druid's member naming (`<memberNamePrefix>-<etcd-name>-<ordinal>`), where the member name prefix is the seed.
 func liveMigrationEtcdMemberName(seedName, role string, ordinal int) string {
@@ -77,6 +86,19 @@ func ComputeMemberPeerURLs(seedName, shootNamespace, ingressDomain, role string,
 	return memberPeerURLs
 }
 
+// ComputeMemberClientURLs returns the cross-seed client URLs for the etcd members of the given seed and role.
+// Each member advertises its SNI client hostname on the seed's Istio ingress gateway.
+func ComputeMemberClientURLs(seedName, shootNamespace, ingressDomain, role string, replicas int32) []druidcorev1alpha1.MemberURLs {
+	memberClientURLs := make([]druidcorev1alpha1.MemberURLs, 0, replicas)
+	for i := 0; i < int(replicas); i++ {
+		memberClientURLs = append(memberClientURLs, druidcorev1alpha1.MemberURLs{
+			Name: liveMigrationEtcdMemberName(seedName, role, i),
+			URLs: []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdClientMemberHost(seedName, shootNamespace, ingressDomain, role, i), peerexposure.EtcdClientPort)},
+		})
+	}
+	return memberClientURLs
+}
+
 // DefaultEtcdPeerExposure returns a new instance of the component that exposes this shoot's etcd peer endpoints
 // for cross-seed live migration via the seed's shared Istio ingress gateway.
 func (b *Botanist) DefaultEtcdPeerExposure() component.DeployWaiter {
@@ -89,13 +111,15 @@ func (b *Botanist) DefaultEtcdPeerExposure() component.DeployWaiter {
 		replicas       = getEtcdReplicas(b.Shoot.GetInfo())
 	)
 
-	members := make([]peerexposure.PeerMember, 0, replicas)
+	members := make([]peerexposure.Member, 0, replicas)
 	for i := 0; i < int(replicas); i++ {
-		members = append(members, peerexposure.PeerMember{
-			SNIHost:      LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, i),
-			PodFQDN:      etcdPodFQDN(role, i, shootNamespace),
-			ExternalPort: uint32(etcdconstants.PortEtcdPeerExternal) + uint32(i), // #nosec G115 -- Port constants are positive values well within uint32 range.
-		})
+		member := peerexposure.Member{
+			PeerSNIHost:   LiveMigrationEtcdPeerHost(seedName, shootNamespace, ingressDomain, role, i),
+			PodFQDN:       etcdPodFQDN(role, i, shootNamespace),
+			ExternalPort:  uint32(etcdconstants.PortEtcdPeerExternal) + uint32(i), // #nosec G115 -- Port constants are positive values well within uint32 range.
+			ClientSNIHost: LiveMigrationEtcdClientMemberHost(seedName, shootNamespace, ingressDomain, role, i),
+		}
+		members = append(members, member)
 	}
 
 	if v1beta1helper.GetLiveMigrationRole(b.Shoot.GetInfo(), seedName) == v1beta1helper.LiveMigrationRoleSource {
@@ -147,9 +171,24 @@ func crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, destSeedName, d
 	return hosts
 }
 
+// crossSeedClientMemberHosts returns the combined SNI client hostnames for both the source and destination
+// seeds (source first, then destination). The consistent ordering ensures the same config hash on both sides,
+// so the secretsManager returns the already-restored source client cert without regenerating it.
+func crossSeedClientMemberHosts(sourceSeedName, sourceIngressDomain, destSeedName, destIngressDomain, shootNamespace, role string, replicas int32) []string {
+	hosts := make([]string, 0, 2*int(replicas))
+	for i := 0; i < int(replicas); i++ {
+		hosts = append(hosts, LiveMigrationEtcdClientMemberHost(sourceSeedName, shootNamespace, sourceIngressDomain, role, i))
+	}
+	for i := 0; i < int(replicas); i++ {
+		hosts = append(hosts, LiveMigrationEtcdClientMemberHost(destSeedName, shootNamespace, destIngressDomain, role, i))
+	}
+	return hosts
+}
+
 // setLiveMigrationEtcdValues configures the cross-seed etcd values for a live control plane migration:
-//   - The source sets AdditionalAdvertisePeerURLs to its OWN cross-seed peer URLs so other cluster members
-//     can reach it via the Istio ingress gateway.
+//   - Both source and destination set AdditionalAdvertisedPeerURLs and AdditionalAdvertisedClientURLs (with
+//     OverrideDefaultURL=true) to their OWN cross-seed URLs so members on the other cluster can reach them via
+//     the Istio ingress gateway.
 //   - The destination sets BootstrapWithExistingCluster with the source's cross-seed peer URLs (the same
 //     URLs the source advertised) so etcd-druid joins the existing source cluster.
 //   - SkipClientSANVerification is set on both sides because cross-seed peer TLS certificates carry the
@@ -200,9 +239,16 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 					OverrideDefaultURL: new(true),
 					Members:            ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
 				},
+				ClientURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+					OverrideDefaultURL: new(true),
+					Members:            ComputeMemberClientURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
+				},
 			},
-			ExtraClientServiceDNSNames: []string{LiveMigrationEtcdClientHost(localSeedName, shootNamespace, localIngressDomain, role)},
-			ExtraPeerServiceDNSNames:   crossSeedPeerHostnames(localSeedName, localIngressDomain, destSeedName, destIngressDomain, shootNamespace, role, replicas),
+			ExtraClientServiceDNSNames: append(
+				crossSeedClientMemberHosts(localSeedName, localIngressDomain, destSeedName, destIngressDomain, shootNamespace, role, replicas),
+				LiveMigrationEtcdClientHost(localSeedName, shootNamespace, localIngressDomain, role),
+			),
+			ExtraPeerServiceDNSNames: crossSeedPeerHostnames(localSeedName, localIngressDomain, destSeedName, destIngressDomain, shootNamespace, role, replicas),
 		}
 
 	case v1beta1helper.LiveMigrationRoleDestination:
@@ -231,13 +277,8 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 		values.LiveMigration = &etcd.LiveMigrationValues{
 			SkipClientSANVerification: true,
 			BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{
-				Members: members,
-				ClientEndpoints: []string{
-					fmt.Sprintf("https://%s:%d",
-						LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role),
-						etcdClientPort,
-					),
-				},
+				Members:         members,
+				ClientEndpoints: []string{fmt.Sprintf("https://%s:%d", LiveMigrationEtcdClientHost(sourceSeedName, shootNamespace, sourceIngressDomain, role), peerexposure.EtcdClientPort)},
 			},
 			ExtraPeerServiceDNSNames: crossSeedPeerHostnames(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
 			AdditionalAdvertisedURLs: &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
@@ -245,7 +286,12 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 					OverrideDefaultURL: new(true),
 					Members:            ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
 				},
+				ClientURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+					OverrideDefaultURL: new(true),
+					Members:            ComputeMemberClientURLs(localSeedName, shootNamespace, localIngressDomain, role, replicas),
+				},
 			},
+			ExtraClientServiceDNSNames: crossSeedClientMemberHosts(sourceSeedName, sourceIngressDomain, localSeedName, localIngressDomain, shootNamespace, role, replicas),
 		}
 	}
 
