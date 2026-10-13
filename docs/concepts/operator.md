@@ -204,6 +204,8 @@ The Garden controller in the operator reconciles Garden objects with the help of
 
 #### [`Main` Reconciler](../../pkg/operator/controller/garden/garden)
 
+Apart from changes to the `Garden` resource itself, the reconciler is triggered when an `Extension` is created, deleted, or its `.spec.resources` change (e.g., `autoEnable`), as these influence which extensions are deployed for the `Garden`.
+
 The reconciler first generates a general CA certificate which is valid for ~`30d` and auto-rotated when 80% of its lifetime is reached.
 Afterwards, it brings up the so-called "garden system components".
 The [`gardener-resource-manager`](./resource-manager.md) is deployed first since its `ManagedResource` controller will be used to bring up the remainders.
