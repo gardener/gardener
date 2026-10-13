@@ -77,3 +77,23 @@ func (b *Botanist) KeepObjectsForManagedResources(ctx context.Context) error {
 
 	return nil
 }
+
+// AnnotateManagedResourcesForForceDeletion sets ManagedResource.Spec.ForceDeletion to true for all relevant managed resources.
+func (b *Botanist) AnnotateManagedResourcesForForceDeletion(ctx context.Context) error {
+	managedResources := &resourcesv1alpha1.ManagedResourceList{}
+	// No filtering on labels such as 'gardener' beause all managed resources (including extensions) should be considered.
+	if err := b.SeedClientSet.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
+		return fmt.Errorf("failed to list managed resources: %w", err)
+	}
+
+	for _, resource := range managedResources.Items {
+		// GRM only takes care of shoot managed resources (indicated by a nil) not seed.
+		if resource.Spec.Class == nil {
+			if err := managedresources.SetForceDeletion(ctx, b.SeedClientSet.Client(), resource.Namespace, resource.Name); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
