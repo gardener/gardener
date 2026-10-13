@@ -111,6 +111,7 @@ type Shoot struct {
 	VPNHighAvailabilityEnabled              bool
 	VPNHighAvailabilityNumberOfSeedServers  int
 	VPNHighAvailabilityNumberOfShootClients int
+	VPNHighAvailabilityTotalShootClients    int
 	VPNVPAUpdateDisabled                    bool
 	VPNAutoMTU                              *bool
 	NodeLocalDNSEnabled                     bool
@@ -193,6 +194,8 @@ type Extensions struct {
 	OperatingSystemConfig           operatingsystemconfig.Interface
 	SelfHostedShootExposure         *selfhostedshootexposure.SelfHostedShootExposure
 	Worker                          worker.Interface
+	// LiveMigrationVPNDNSRecord is non-nil only on the destination seed during live control plane migration.
+	LiveMigrationVPNDNSRecord dnsrecord.Interface
 }
 
 // SystemComponents contains references to system components.
@@ -209,6 +212,8 @@ type SystemComponents struct {
 	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
 	VPNShoot            vpnshoot.Interface
+	// TemporaryVPNShoot is non-nil only on the destination seed during live control plane migration.
+	TemporaryVPNShoot vpnshoot.Interface
 }
 
 // Addons contains references for the addons.
