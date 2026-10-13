@@ -47,6 +47,9 @@ receivers:
         to: resource.unit
       - type: move
         from: body._HOSTNAME
+        to: resource.nodename
+      - type: move
+        from: body._HOSTNAME
         to: resource.k8s.node.name
       - type: move
         from: body.MESSAGE
