@@ -204,7 +204,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 
 	secretTLSAuth, err := v.secretsManager.Generate(ctx, &secretsutils.VPNTLSAuthConfig{
 		Name: SecretNameTLSAuth,
-	}, secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
