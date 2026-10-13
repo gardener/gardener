@@ -757,6 +757,10 @@ var _ = Describe("VPNShoot", func() {
 							Name:  "HA_VPN_CLIENTS",
 							Value: "2",
 						},
+						{
+							Name:  "VPN_CLIENT_INDEX_OFFSET",
+							Value: "0",
+						},
 					}...)
 				}
 
