@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
@@ -68,6 +69,48 @@ var _ = Describe("KubeAPIServerExposure", func() {
 		Expect(botanist.SeedClientSet.Client().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: botanist.Shoot.ControlPlaneNamespace}})).To(Succeed())
 
 		botanist.SecretsManager = fakesecretsmanager.New(botanist.SeedClientSet.Client(), botanist.Shoot.ControlPlaneNamespace)
+	})
+
+	Describe("#DefaultKubeAPIServerService and #CleanupStaleIstioIngressNamespacesOfKubeAPIServerServices", func() {
+		var service *corev1.Service
+
+		BeforeEach(func() {
+			botanist.Shoot.InternalClusterDomain = new("internal.foo.bar")
+
+			service = &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        v1beta1constants.DeploymentNameKubeAPIServer,
+					Namespace:   botanist.Shoot.ControlPlaneNamespace,
+					Annotations: map[string]string{"networking.istio.io/exportTo": "istio-ingress--1"},
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIPs: []string{"10.0.0.1"},
+				},
+			}
+			Expect(botanist.SeedClientSet.Client().Create(context.TODO(), service)).To(Succeed())
+
+			Expect(botanist.SeedClientSet.Client().Create(context.TODO(), &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DefaultSNIIngressServiceName,
+					Namespace: v1beta1constants.DefaultSNIIngressNamespace,
+				},
+				Status: corev1.ServiceStatus{
+					LoadBalancer: corev1.LoadBalancerStatus{
+						Ingress: []corev1.LoadBalancerIngress{{IP: "1.2.3.4"}},
+					},
+				},
+			})).To(Succeed())
+		})
+
+		It("should retain the previous Istio ingress namespace until the stale namespaces are cleaned up", func() {
+			Expect(botanist.DefaultKubeAPIServerService().Deploy(context.TODO())).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKeyFromObject(service), service)).To(Succeed())
+			Expect(service.Annotations).To(HaveKeyWithValue("networking.istio.io/exportTo", v1beta1constants.DefaultSNIIngressNamespace+",istio-ingress--1"))
+
+			Expect(botanist.CleanupStaleIstioIngressNamespacesOfKubeAPIServerServices(context.TODO())).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKeyFromObject(service), service)).To(Succeed())
+			Expect(service.Annotations).To(HaveKeyWithValue("networking.istio.io/exportTo", v1beta1constants.DefaultSNIIngressNamespace))
+		})
 	})
 
 	Describe("#setAPIServerServiceClusterIPs", func() {

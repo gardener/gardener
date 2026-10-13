@@ -7,6 +7,7 @@ package apiserverexposure
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -50,16 +51,23 @@ type ServiceValues struct {
 	TopologyAwareRoutingEnabled bool
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
+	// RetainIstioIngressNamespaces indicates whether the Istio ingress namespaces the service is currently exported to
+	// should be kept in addition to the ones returned by the Istio ingress namespaces function. This is used while the
+	// kube-apiserver exposure moves to another Istio ingress gateway: the previous gateway must be able to forward
+	// requests on its existing connections until it is no longer configured for the kube-apiserver. Otherwise, it
+	// answers these requests with errors instead of closing the connections, so clients keep using it.
+	RetainIstioIngressNamespaces bool
 }
 
 // serviceValues configure the kube-apiserver service.
 // this one is not exposed as not all values should be configured
 // from the outside.
 type serviceValues struct {
-	namePrefix                  string
-	nameSuffix                  string
-	topologyAwareRoutingEnabled bool
-	runtimeKubernetesVersion    *semver.Version
+	namePrefix                   string
+	nameSuffix                   string
+	topologyAwareRoutingEnabled  bool
+	runtimeKubernetesVersion     *semver.Version
+	retainIstioIngressNamespaces bool
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -99,6 +107,7 @@ func NewService(
 		internalValues.nameSuffix = values.NameSuffix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
+		internalValues.retainIstioIngressNamespaces = values.RetainIstioIngressNamespaces
 	}
 
 	return &service{
@@ -130,7 +139,11 @@ func (s *service) Deploy(ctx context.Context) error {
 	obj := s.emptyService()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, istioapiannotation.NetworkingExportTo.Name, strings.Join(s.istioIngressNamespacesFunc(), ","))
+		istioIngressNamespaces := s.istioIngressNamespacesFunc()
+		if s.values.retainIstioIngressNamespaces {
+			istioIngressNamespaces = appendMissingNamespaces(istioIngressNamespaces, obj.Annotations[istioapiannotation.NetworkingExportTo.Name])
+		}
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, istioapiannotation.NetworkingExportTo.Name, strings.Join(istioIngressNamespaces, ","))
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
@@ -213,6 +226,18 @@ func (s *service) Wait(ctx context.Context) error {
 
 func (s *service) WaitCleanup(ctx context.Context) error {
 	return kubernetesutils.WaitUntilResourceDeleted(ctx, s.client, s.emptyService(), 2*time.Second)
+}
+
+// appendMissingNamespaces appends the namespaces of the given comma-separated exportTo value to the given namespaces
+// if they are not contained yet. The order of the given namespaces is kept to avoid needless updates of the service.
+func appendMissingNamespaces(namespaces []string, exportTo string) []string {
+	result := slices.Clone(namespaces)
+	for namespace := range strings.SplitSeq(exportTo, ",") {
+		if namespace != "" && !slices.Contains(result, namespace) {
+			result = append(result, namespace)
+		}
+	}
+	return result
 }
 
 func (s *service) emptyService() *corev1.Service {

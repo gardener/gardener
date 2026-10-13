@@ -19,20 +19,38 @@ import (
 )
 
 // DefaultKubeAPIServerService returns a deployer for the kube-apiserver service.
+// It keeps the Istio ingress namespaces the services are currently exported to, so that the previous Istio ingress
+// gateway keeps working until the SNI settings have been moved to the new one, see DeployKubeAPIServerSNI.
+// CleanupStaleIstioIngressNamespacesOfKubeAPIServerServices removes them afterwards.
 func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
-	deployer := []component.Deployer{
-		b.defaultKubeAPIServerServiceWithSuffix("", true),
-	}
-	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
-	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false)
-	if b.ShootUsesIstioTLSTermination() {
-		deployer = append(deployer, mutualTLSService)
-		deployer = append(deployer, upgradeService)
-	}
-	return component.OpWait(deployer...)
+	return component.OpWait(b.kubeAPIServerServices(true, true)...)
 }
 
-func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register bool) component.DeployWaiter {
+// CleanupStaleIstioIngressNamespacesOfKubeAPIServerServices removes the Istio ingress namespaces from the export of
+// the kube-apiserver services which are no longer used for exposing the kube-apiserver.
+func (b *Botanist) CleanupStaleIstioIngressNamespacesOfKubeAPIServerServices(ctx context.Context) error {
+	for _, service := range b.kubeAPIServerServices(false, false) {
+		if err := service.Deploy(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *Botanist) kubeAPIServerServices(register, retainIstioIngressNamespaces bool) []component.Deployer {
+	deployer := []component.Deployer{
+		b.defaultKubeAPIServerServiceWithSuffix("", register, retainIstioIngressNamespaces),
+	}
+	if b.ShootUsesIstioTLSTermination() {
+		deployer = append(deployer,
+			b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false, retainIstioIngressNamespaces),
+			b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false, retainIstioIngressNamespaces),
+		)
+	}
+	return deployer
+}
+
+func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register, retainIstioIngressNamespaces bool) component.DeployWaiter {
 	clusterIPsFunc := b.setAPIServerServiceClusterIPs
 	ingressFunc := func(address string) {
 		b.APIServerAddress = address
@@ -48,9 +66,10 @@ func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled && !b.ShootUsesIstioTLSTermination(),
-			RuntimeKubernetesVersion:    b.Shoot.RuntimeKubernetesVersion,
-			NameSuffix:                  suffix,
+			TopologyAwareRoutingEnabled:  b.Shoot.TopologyAwareRoutingEnabled && !b.ShootUsesIstioTLSTermination(),
+			RuntimeKubernetesVersion:     b.Shoot.RuntimeKubernetesVersion,
+			NameSuffix:                   suffix,
+			RetainIstioIngressNamespaces: retainIstioIngressNamespaces,
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: b.IstioServiceName(), Namespace: b.IstioNamespace()}
@@ -80,8 +99,8 @@ func (b *Botanist) ShootUsesIstioTLSTermination() bool {
 
 // CleanupKubeAPIServerLoadBalancingServices destroys the MutualTLS and ConnectionUpgrade services.
 func (b *Botanist) CleanupKubeAPIServerLoadBalancingServices(ctx context.Context) error {
-	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
-	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false)
+	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false, false)
+	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.ConnectionUpgradeServiceNameSuffix, false, false)
 	return component.OpWait(
 		component.OpDestroy(mutualTLSService),
 		component.OpDestroy(upgradeService),

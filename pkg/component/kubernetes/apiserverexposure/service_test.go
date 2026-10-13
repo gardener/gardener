@@ -58,6 +58,7 @@ var _ = Describe("#Service", func() {
 
 		ingressIP = ""
 		clusterIP = ""
+		customAnnotations = nil
 		namePrefix = "test-"
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -268,6 +269,33 @@ var _ = Describe("#Service", func() {
 		assertService()
 	})
 
+	Context("when the service is exported to other Istio ingress namespaces", func() {
+		BeforeEach(func() {
+			customAnnotations = map[string]string{"networking.istio.io/exportTo": "istio-old,istio-foo"}
+		})
+
+		It("should replace the Istio ingress namespaces", func() {
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			actual := &corev1.Service{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: expectedName}, actual)).To(Succeed())
+			Expect(actual.Annotations).To(HaveKeyWithValue("networking.istio.io/exportTo", "istio-foo,istio-bar"))
+		})
+
+		When("Istio ingress namespaces are retained", func() {
+			BeforeEach(func() {
+				values.RetainIstioIngressNamespaces = true
+			})
+
+			It("should add the Istio ingress namespaces and keep the existing ones", func() {
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				actual := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: expectedName}, actual)).To(Succeed())
+				Expect(actual.Annotations).To(HaveKeyWithValue("networking.istio.io/exportTo", "istio-foo,istio-bar,istio-old"))
+			})
+		})
+	})
 })
 
 func netpolAnnotations() map[string]string {
