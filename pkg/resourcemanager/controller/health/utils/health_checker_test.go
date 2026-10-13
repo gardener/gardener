@@ -523,22 +523,45 @@ var _ = Describe("CheckHealth", func() {
 	})
 
 	Context("PersistentVolumeClaimAutoscaler", func() {
-		BeforeEach(func() {
-			healthy = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{}
-			unhealthy = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{
-				Status: pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscalerStatus{Conditions: []metav1.Condition{{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionUnknown}}},
-			}
-			unhealthyWithSkipHealthCheckAnnotation = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						resourcesv1alpha1.SkipHealthCheck: "true",
+		Context("without Resizing condition", func() {
+			BeforeEach(func() {
+				healthy = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{}
+				unhealthy = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{
+					Status: pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscalerStatus{Conditions: []metav1.Condition{{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionUnknown}}},
+				}
+				unhealthyWithSkipHealthCheckAnnotation = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							resourcesv1alpha1.SkipHealthCheck: "true",
+						},
 					},
-				},
-				Status: pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscalerStatus{Conditions: []metav1.Condition{{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionUnknown}}},
-			}
+					Status: pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscalerStatus{Conditions: []metav1.Condition{{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionUnknown}}},
+				}
+			})
+
+			testSuite()
 		})
 
-		testSuite()
+		Context("with Resizing condition", func() {
+			BeforeEach(func() {
+				healthy = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{
+					Status: pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscalerStatus{Conditions: []metav1.Condition{{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionTrue}}},
+				}
+				unhealthy = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{
+					Status: pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscalerStatus{Conditions: []metav1.Condition{{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionFalse}}},
+				}
+				unhealthyWithSkipHealthCheckAnnotation = &pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							resourcesv1alpha1.SkipHealthCheck: "true",
+						},
+					},
+					Status: pvcautoscalingv1alpha1.PersistentVolumeClaimAutoscalerStatus{Conditions: []metav1.Condition{{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionFalse}}},
+				}
+			})
+
+			testSuite()
+		})
 	})
 
 	Context("Certificate", func() {

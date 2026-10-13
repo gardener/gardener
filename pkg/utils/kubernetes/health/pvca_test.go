@@ -23,18 +23,10 @@ var _ = Describe("PersistentVolumeClaimAutoscaler", func() {
 			Expect(health.CheckPersistentVolumeClaimAutoscaler(pvca)).To(matcher)
 		},
 		Entry("no conditions", nil, BeNil()),
-		Entry("RecommendationAvailable True", []metav1.Condition{
-			{Type: string(pvcautoscalingv1alpha1.ConditionTypeRecommendationAvailable), Status: metav1.ConditionTrue},
-		}, BeNil()),
-		Entry("RecommendationAvailable True and Resizing True", []metav1.Condition{
-			{Type: string(pvcautoscalingv1alpha1.ConditionTypeRecommendationAvailable), Status: metav1.ConditionTrue},
+		Entry("Resizing True", []metav1.Condition{
 			{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionTrue},
 		}, BeNil()),
-		Entry("RecommendationAvailable False is ignored", []metav1.Condition{
-			{Type: string(pvcautoscalingv1alpha1.ConditionTypeRecommendationAvailable), Status: metav1.ConditionFalse, Reason: "RecommendationError", Message: "storage class does not support expansion"},
-		}, BeNil()),
 		Entry("Resizing Unknown", []metav1.Condition{
-			{Type: string(pvcautoscalingv1alpha1.ConditionTypeRecommendationAvailable), Status: metav1.ConditionTrue},
 			{Type: string(pvcautoscalingv1alpha1.ConditionTypeResizing), Status: metav1.ConditionUnknown, Reason: "Reconcile", Message: "could not parse gardener.cloud/previous-size annotation"},
 		}, MatchError(ContainSubstring(`condition "Resizing" has invalid status Unknown (expected True) due to Reconcile: could not parse gardener.cloud/previous-size annotation`))),
 		Entry("Resizing False", []metav1.Condition{
