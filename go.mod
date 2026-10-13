@@ -45,7 +45,7 @@ require (
 	github.com/perses/perses v0.54.0
 	github.com/perses/perses-operator v0.5.0
 	github.com/perses/spec v0.2.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.1
 	github.com/prometheus/blackbox_exporter v0.28.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/common v0.72.0
@@ -86,7 +86,7 @@ require (
 	k8s.io/cri-client v0.37.1
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/kube-aggregator v0.37.1
-	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad
+	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
 	k8s.io/kube-proxy v0.37.1
 	k8s.io/kube-state-metrics/v2 v2.20.0
 	k8s.io/kubelet v0.37.1
