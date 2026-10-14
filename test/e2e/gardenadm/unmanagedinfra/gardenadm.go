@@ -209,6 +209,8 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, RunInMachine, RunInNode)
 
 			Context("gardenlet in-place update orchestration", Ordered, Label("inplace-update"), func() {
+				var nextVersion string
+
 				It("should trigger an in-place update by bumping the control-plane pool to the next minor Kubernetes version", func(ctx SpecContext) {
 					Eventually(ctx, func(g Gomega) {
 						g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -217,7 +219,8 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					cloudProfile := &gardencorev1beta1.CloudProfile{}
 					Expect(gardenClientSet.Client().Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfile.Name}, cloudProfile)).To(Succeed())
 
-					nextVersion, _, err := shootupdatesuite.ComputeNewKubernetesVersions(cloudProfile, shoot, nil, nil)
+					var err error
+					nextVersion, _, err = shootupdatesuite.ComputeNewKubernetesVersions(cloudProfile, shoot, nil, nil)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(nextVersion).NotTo(BeEmpty(), "expected a next minor version for the shoot")
 
@@ -283,6 +286,14 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 						return completed
 					}).WithPolling(30 * time.Second).Should(BeTrue())
 				}, SpecTimeout(15*time.Minute))
+
+				It("should verify that the new Kubernetes version was applied to the control-plane node", func(ctx SpecContext) {
+					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(0)}}
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+						g.Expect(node.Status.NodeInfo.KubeletVersion).To(ContainSubstring(nextVersion))
+					}).WithPolling(10 * time.Second).Should(Succeed())
+				}, SpecTimeout(2*time.Minute))
 			})
 		})
 

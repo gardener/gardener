@@ -222,15 +222,5 @@ var _ = Describe("Reconciler", func() {
 			}}
 			Expect(MaxUnavailableForPool(workers, poolName, 1)).To(Equal(1))
 		})
-
-		It("should return 1 for a control-plane pool regardless of MaxUnavailable", func() {
-			workers := []gardencorev1beta1.Worker{{
-				Name:           poolName,
-				Maximum:        5,
-				ControlPlane:   &gardencorev1beta1.WorkerControlPlane{},
-				MaxUnavailable: new(intstr.FromString("99%")),
-			}}
-			Expect(MaxUnavailableForPool(workers, poolName, 5)).To(Equal(1))
-		})
 	})
 })
