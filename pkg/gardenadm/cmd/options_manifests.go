@@ -49,4 +49,8 @@ const ConfigDirLocation = botanist.GardenadmBaseDir + "/config-directory"
 // Its presence signals that a subsequent `gardenadm restore` invocation is a retry, in which case
 // the check for an already-existing gardenlet deployment (which is expected to be part of the
 // restored etcd snapshot) is skipped.
-const RestoreInProgressLocation = botanist.GardenadmBaseDir + "/restore-in-progress"
+const (
+	RestoreInProgressLocation = botanist.GardenadmBaseDir + "/restore-in-progress"
+	RestoreInProgressDirMode  = 0750
+	RestoreInProgressFileMode = 0640
+)

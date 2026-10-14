@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/go-logr/logr"
@@ -123,7 +122,7 @@ func run(ctx context.Context, opts *Options) error {
 		_ = g.Add(flow.Task{
 			Name: "Marking restore as completed",
 			Fn: func(_ context.Context) error {
-				return removeRestoreInProgressMarker(opts.Log, b.FS)
+				return removeRestoreInProgressMarker(opts.Log, fs)
 			},
 			Dependencies: flow.NewTaskIDs(runInitFlow),
 		})
@@ -152,19 +151,19 @@ func prepareRestoreInProgressMarker(fs afero.Afero) (bool, error) {
 	}
 
 	dir := filepath.Dir(cmd.RestoreInProgressLocation)
-	if err := fs.MkdirAll(dir, os.ModeDir); err != nil {
+	if err := fs.MkdirAll(dir, cmd.RestoreInProgressDirMode); err != nil {
 		return false, fmt.Errorf("failed creating directory %s for restore-in-progress marker file: %w", dir, err)
 	}
 
-	if err := fs.WriteFile(cmd.RestoreInProgressLocation, nil, 0640); err != nil {
+	if err := fs.WriteFile(cmd.RestoreInProgressLocation, nil, cmd.RestoreInProgressFileMode); err != nil {
 		return false, fmt.Errorf("failed writing restore-in-progress marker file %s: %w", cmd.RestoreInProgressLocation, err)
 	}
 	return false, nil
 }
 
 // removeRestoreInProgressMarker removes the restore-in-progress marker file. Only this final restore task removes the
-// marker, so it is expected to exist at this point. If it is already gone, something removed it out of band; we do not
-// fail the (otherwise successful) restore over it, but log a warning so the anomaly is visible.
+// marker, so it is expected to exist at this point. Any removal error (including the file already being gone) is logged
+// as a warning but does not fail the restore, since the restore itself has already succeeded at this point.
 func removeRestoreInProgressMarker(log logr.Logger, fs afero.Afero) error {
 	err := fs.Remove(cmd.RestoreInProgressLocation)
 	if err != nil {
@@ -172,7 +171,8 @@ func removeRestoreInProgressMarker(log logr.Logger, fs afero.Afero) error {
 			log.Info("Warning: restore-in-progress marker file was already absent at completion; something removed it out of band", "path", cmd.RestoreInProgressLocation)
 			return nil
 		}
-		return fmt.Errorf("failed removing restore-in-progress marker file %s: %w", cmd.RestoreInProgressLocation, err)
+		log.Info("Warning: failed to remove restore-in-progress marker file; the restore succeeded, but a leftover marker will cause the next invocation to be treated as a retry", "path", cmd.RestoreInProgressLocation, "err", err.Error())
+		return nil
 	}
 
 	return nil
