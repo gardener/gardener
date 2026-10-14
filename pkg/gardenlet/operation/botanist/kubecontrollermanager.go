@@ -65,7 +65,7 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetRuntimeConfig(b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues().RuntimeConfig)
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetServiceNetworks(b.Shoot.Networks.Services)
 
-	kcmPodNetworks, err := shoot.ToKCMPodNetworks(b.Shoot.GetInfo())
+	kcmPodNetworks, err := shoot.AllPodNetworks(b.Shoot.GetInfo())
 	if err != nil {
 		return err
 	}

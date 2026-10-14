@@ -712,11 +712,11 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 	}, nil
 }
 
-// ToKCMPodNetworks returns the full set of pod CIDRs for a shoot, including both IPv4 and IPv6
+// AllPodNetworks returns the full set of pod CIDRs for a shoot, including both IPv4 and IPv6
 // families, without applying the dual-stack migration filter. KCM must receive the full dual-stack
 // pod networks so it can act as the IPAM controller and assign IPv6 pod CIDRs to nodes even before
 // nodes have been migrated to dual-stack.
-func ToKCMPodNetworks(shoot *gardencorev1beta1.Shoot) ([]net.IPNet, error) {
+func AllPodNetworks(shoot *gardencorev1beta1.Shoot) ([]net.IPNet, error) {
 	if shoot.Spec.Networking == nil {
 		return nil, nil
 	}

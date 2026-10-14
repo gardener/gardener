@@ -170,7 +170,7 @@ var _ = Describe("shoot", func() {
 			)
 		})
 
-		Describe("#ToKCMPodNetworks", func() {
+		Describe("#AllPodNetworks", func() {
 			var shoot *gardencorev1beta1.Shoot
 
 			BeforeEach(func() {
@@ -187,14 +187,14 @@ var _ = Describe("shoot", func() {
 			It("returns nil for workerless shoot with nil Networking", func() {
 				shoot.Spec.Networking = nil
 
-				result, err := ToKCMPodNetworks(shoot)
+				result, err := AllPodNetworks(shoot)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(BeNil())
 			})
 
 			It("returns only spec pod CIDR when status networking is nil", func() {
-				result, err := ToKCMPodNetworks(shoot)
+				result, err := AllPodNetworks(shoot)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(Equal([]net.IPNet{{
@@ -209,7 +209,7 @@ var _ = Describe("shoot", func() {
 					Pods: []string{"10.0.0.0/24", "fd00::/120"},
 				}
 
-				result, err := ToKCMPodNetworks(shoot)
+				result, err := AllPodNetworks(shoot)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(Equal([]net.IPNet{
@@ -229,7 +229,7 @@ var _ = Describe("shoot", func() {
 					Pods: []string{"10.0.0.0/24"},
 				}
 
-				result, err := ToKCMPodNetworks(shoot)
+				result, err := AllPodNetworks(shoot)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(HaveLen(1))

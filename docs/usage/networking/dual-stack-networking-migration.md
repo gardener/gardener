@@ -26,8 +26,8 @@ Dual-stack networking allows clusters to operate with both IPv4 and IPv6 protoco
 
 The relevance of `spec.kubernetes.kubeControllerManager.nodeCIDRMaskSizeIPv6` depends on the infrastructure:
 
-- **Infrastructure-managed prefix delegation** (e.g. AWS, GCP): the infrastructure delegates a per-node IPv6 prefix directly to each node. Kubernetes' node-ipam in kube-controller-manager is bypassed; `nodeCIDRMaskSizeIPv6` is ignored and does not need to be set.
-- **Kubernetes-managed CIDR allocation**: kube-controller-manager carves per-node subnets out of the IPv6 pod network. `nodeCIDRMaskSizeIPv6` controls the size of these per-node subnets and matters for cluster capacity.
+- **Infrastructure-managed prefix delegation** (e.g. AWS, GCP): The infrastructure delegates a per-node IPv6 prefix directly to each node. Kubernetes' node-ipam in `kube-controller-manager` is bypassed; `nodeCIDRMaskSizeIPv6` is ignored and does not need to be set.
+- **Kubernetes-managed CIDR allocation**: `kube-controller-manager` carves per-node subnets out of the IPv6 pod network. `nodeCIDRMaskSizeIPv6` controls the size of these per-node subnets and matters for cluster capacity.
 
 For the second case, this value is **not** defaulted to a fixed number, because the usable range depends on the infrastructure-allocated IPv6 pod CIDR. For example, if the infrastructure hands out a `/64` pod network, a mask of `/64` would only allow a single node.
 

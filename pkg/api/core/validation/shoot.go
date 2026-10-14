@@ -452,8 +452,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, newSpec.SeedName != nil, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
 
-	oldIsDualStack := oldSpec.Networking != nil && core.IsDualStack(oldSpec.Networking.IPFamilies)
-	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, oldIsDualStack, fldPath.Child("kubernetes", "kubeControllerManager"))...)
+	oldHasIPv6 := oldSpec.Networking != nil && (core.IsDualStack(oldSpec.Networking.IPFamilies) || core.IsIPv6SingleStack(oldSpec.Networking.IPFamilies))
+	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, oldHasIPv6, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 
 	if err := validateWorkerUpdate(len(newSpec.Provider.Workers) > 0, len(oldSpec.Provider.Workers) > 0, fldPath.Child("provider", "workers")); err != nil {
 		allErrs = append(allErrs, err)
@@ -821,7 +821,7 @@ func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.EncryptionConfig,
 	return allErrs
 }
 
-func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControllerManagerConfig, oldIsDualStack bool, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControllerManagerConfig, oldHasIPv6 bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	var (
@@ -841,10 +841,10 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskNew, nodeCIDRMaskOld, fldPath.Child("nodeCIDRMaskSize"))...)
-	// nodeCIDRMaskSizeIPv6 may be set in the update that migrates the shoot to dual-stack (IPv4-only old spec,
-	// nodeCIDRMaskIPv6Old == nil). Once active (dual-stack or single-stack IPv6 with the value already set),
+	// nodeCIDRMaskSizeIPv6 may be set in the update that migrates an IPv4-only shoot to dual-stack
+	// (oldHasIPv6 == false, nodeCIDRMaskIPv6Old == nil). Once the shoot has IPv6 (dual-stack or IPv6-only),
 	// it is immutable because IPv6 pod CIDRs are already allocated to nodes.
-	if oldIsDualStack || nodeCIDRMaskIPv6Old != nil {
+	if oldHasIPv6 || nodeCIDRMaskIPv6Old != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskIPv6New, nodeCIDRMaskIPv6Old, fldPath.Child("nodeCIDRMaskSizeIPv6"))...)
 	}
 

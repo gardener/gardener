@@ -706,18 +706,12 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			}
 		} else {
 			// Single-stack: use the generic flag (valid for both IPv4 and IPv6).
-			// For single-stack IPv6, NodeCIDRMaskSizeIPv6 takes priority over NodeCIDRMaskSize; if neither
-			// is set, the mask is derived from the actual pod CIDR via nodeCIDRMaskSizeIPv6() (same logic
-			// as the dual-stack path, returns nil for IPv4 so IPv4 single-stack is unaffected).
-			var maskSize *int32
+			maskSize := k.nodeCIDRMaskSizeIPv6()
 			if k.values.Config.NodeCIDRMaskSize != nil {
 				maskSize = k.values.Config.NodeCIDRMaskSize
 			}
 			if k.values.Config.NodeCIDRMaskSizeIPv6 != nil {
 				maskSize = k.values.Config.NodeCIDRMaskSizeIPv6
-			}
-			if maskSize == nil {
-				maskSize = k.nodeCIDRMaskSizeIPv6()
 			}
 
 			if maskSize != nil {

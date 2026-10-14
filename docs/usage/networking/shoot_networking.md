@@ -76,7 +76,7 @@ spec:
 > :warning: The `nodeCIDRMaskSize` configuration is immutable and cannot be changed afterwards.
 
 For IPv6 (both dual-stack and IPv6 single-stack clusters), the equivalent setting is `nodeCIDRMaskSizeIPv6`.
-Whether this field has any effect depends on the infrastructure: on infrastructures that perform per-node IPv6 prefix delegation, the infrastructure assigns node prefixes directly and kube-controller-manager's node-ipam is
+Whether this field has any effect depends on the infrastructure: On infrastructures that perform per-node IPv6 prefix delegation, the infrastructure assigns node prefixes directly and kube-controller-manager's node-ipam is
 bypassed, so `nodeCIDRMaskSizeIPv6` is ignored. On infrastructures where kube-controller-manager manages CIDR allocation,
 the field controls the per-node subnet size and matters for cluster capacity.
 
