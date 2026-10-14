@@ -468,6 +468,26 @@ var _ = Describe("managedresources", func() {
 		})
 	})
 
+	Describe("#SetForceDeletion", func() {
+		It("should annotate the managed resource", func() {
+			mr := managedResource(false)
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(SetForceDeletion(ctx, fakeClient, namespace, name)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(mr.Annotations[resourcesv1alpha1.ForceDeletion]).To(Equal("true"))
+		})
+
+		It("should not fail if the managed resource is not found", func() {
+			Expect(SetForceDeletion(ctx, fakeClient, namespace, name)).To(Succeed())
+		})
+
+		It("should fail if the managed resource could not be updated", func() {
+			errClient := &errorClient{err: fakeErr, failMRPatch: true, Client: fakeClient}
+			Expect(SetForceDeletion(ctx, errClient, namespace, name)).To(MatchError(fakeErr))
+		})
+	})
+
 	Describe("#WaitUntilHealthy", func() {
 		It("should fail when the managed resource cannot be read", func() {
 			errClient := &errorClient{err: fakeErr, failMRGet: true, Client: fakeClient}
