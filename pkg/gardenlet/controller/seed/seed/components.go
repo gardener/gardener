@@ -215,7 +215,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.istio, c.istioDefaultLabels, c.istioDefaultNamespace, err = r.newIstio(ctx, seed, seedIsGarden)
+	c.istio, c.istioDefaultLabels, c.istioDefaultNamespace, err = r.newIstio(ctx, seed, seedIsGarden, seedIsSelfHostedShoot)
 	if err != nil {
 		return
 	}
@@ -361,7 +361,7 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 	})
 }
 
-func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGarden bool) (component.DeployWaiter, map[string]string, string, error) {
+func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGarden, seedIsSelfHostedShoot bool) (component.DeployWaiter, map[string]string, string, error) {
 	labels := sharedcomponent.GetIstioZoneLabels(r.Config.SNI.Ingress.Labels, nil)
 
 	httpProxyLegacyPortEnabled := !features.DefaultFeatureGate.Enabled(features.RemoveHTTPProxyLegacyPort)
@@ -392,7 +392,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 		"",
 		*r.Config.SNI.Ingress.Namespace,
 		v1beta1constants.PriorityClassNameSeedSystemCritical,
-		!seedIsGarden,
+		!seedIsGarden && !seedIsSelfHostedShoot,
 		labels,
 		[]string{
 			gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+v1beta1constants.DeploymentNameIstioBasicAuthServer, istiobasicauthserver.Port),

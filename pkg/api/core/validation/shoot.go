@@ -61,7 +61,7 @@ var (
 	availableKubernetesDashboardAuthenticationModes = sets.New(
 		core.KubernetesDashboardAuthModeToken,
 	)
-	availableNginxIngressExternalTrafficPolicies = sets.New(
+	availableShootExternalTrafficPolicies = sets.New(
 		string(corev1.ServiceExternalTrafficPolicyCluster),
 		string(corev1.ServiceExternalTrafficPolicyLocal),
 	)
@@ -701,8 +701,8 @@ func validateAddons(addons *core.Addons, purpose *core.ShootPurpose, workerless 
 		}
 
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
-			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableNginxIngressExternalTrafficPolicies)))
+			if !availableShootExternalTrafficPolicies.Has(string(*policy)) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, sets.List(availableShootExternalTrafficPolicies)))
 			}
 		}
 	}
@@ -2948,6 +2948,19 @@ func ValidateWorkerControlPlane(controlPlane *core.WorkerControlPlane, shootName
 			} else {
 				allErrs = append(allErrs, validateDNS1123Label(*controlPlane.Exposure.Extension.Type, exposurePath.Child("type"))...)
 			}
+		}
+	}
+
+	if lbServices := controlPlane.LoadBalancerServices; lbServices != nil {
+		lbServicesPath := fldPath.Child("loadBalancerServices")
+		allErrs = append(allErrs, apivalidation.ValidateAnnotations(lbServices.Annotations, lbServicesPath.Child("annotations"))...)
+
+		if class := lbServices.Class; class != nil {
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateQualifiedName(*class, lbServicesPath.Child("class"))...)
+		}
+
+		if policy := lbServices.ExternalTrafficPolicy; policy != nil && !availableShootExternalTrafficPolicies.Has(string(*policy)) {
+			allErrs = append(allErrs, field.NotSupported(lbServicesPath.Child("externalTrafficPolicy"), *policy, sets.List(availableShootExternalTrafficPolicies)))
 		}
 	}
 

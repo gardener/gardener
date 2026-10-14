@@ -2119,6 +2119,82 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				})
+
+				Describe("LoadBalancerServices validation", func() {
+					It("should allow a fully populated LoadBalancerServices", func() {
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+							LoadBalancerServices: &core.ControlPlaneLoadBalancerServices{
+								Annotations:           map[string]string{"foo": "bar"},
+								ExternalTrafficPolicy: new(corev1.ServiceExternalTrafficPolicyLocal),
+								ProxyProtocol:         &core.LoadBalancerServicesProxyProtocol{Allowed: true},
+								Class:                 new("my-lb-class"),
+							},
+						}
+
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					})
+
+					It("should allow an empty LoadBalancerServices", func() {
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+							LoadBalancerServices: &core.ControlPlaneLoadBalancerServices{},
+						}
+
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					})
+
+					It("should allow the external traffic policy 'Cluster'", func() {
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+							LoadBalancerServices: &core.ControlPlaneLoadBalancerServices{ExternalTrafficPolicy: new(corev1.ServiceExternalTrafficPolicyCluster)},
+						}
+
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					})
+
+					It("should allow the external traffic policy 'Local'", func() {
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+							LoadBalancerServices: &core.ControlPlaneLoadBalancerServices{ExternalTrafficPolicy: new(corev1.ServiceExternalTrafficPolicyLocal)},
+						}
+
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					})
+
+					It("should forbid an unsupported external traffic policy", func() {
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+							LoadBalancerServices: &core.ControlPlaneLoadBalancerServices{ExternalTrafficPolicy: new(corev1.ServiceExternalTrafficPolicy("something-else"))},
+						}
+
+						Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+							"Type":  Equal(field.ErrorTypeNotSupported),
+							"Field": Equal("spec.provider.workers[0].controlPlane.loadBalancerServices.externalTrafficPolicy"),
+						}))
+					})
+
+					It("should forbid invalid annotations", func() {
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+							LoadBalancerServices: &core.ControlPlaneLoadBalancerServices{
+								Annotations: map[string]string{"foo/bar/baz": "value"},
+							},
+						}
+
+						Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.provider.workers[0].controlPlane.loadBalancerServices.annotations"),
+						}))
+					})
+
+					It("should forbid an invalid load balancer class", func() {
+						shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{
+							LoadBalancerServices: &core.ControlPlaneLoadBalancerServices{
+								Class: new("invalid class"),
+							},
+						}
+
+						Expect(ValidateShoot(shoot)).To(ConsistOfFields(Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.provider.workers[0].controlPlane.loadBalancerServices.class"),
+						}))
+					})
+				})
 			})
 
 			Describe("ClusterAutoscaler options validation", func() {

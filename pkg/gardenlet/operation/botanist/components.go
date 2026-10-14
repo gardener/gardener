@@ -85,6 +85,10 @@ func (b *Botanist) instantiateComponentsControlPlane(ctx context.Context) (err e
 	if err != nil {
 		return err
 	}
+	b.Shoot.Components.ControlPlane.Istio, err = b.DefaultIstio(ctx)
+	if err != nil {
+		return err
+	}
 	b.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServerSNI()
 	b.Shoot.Components.ControlPlane.KubeAPIServer, err = b.DefaultKubeAPIServer(ctx)
