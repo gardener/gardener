@@ -353,6 +353,11 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, session.Out).Should(gbytes.Say("work in progress"))
 		}, SpecTimeout(time.Minute))
 
+		It("should destroy the bastion", func(ctx SpecContext) {
+			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
+			Eventually(ctx, Get(bastion)).Should(BeNotFoundError())
+		}, SpecTimeout(time.Minute))
+
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
 			RunAndWait(ctx, "bootstrap", "-d", configDir, "--bastion-ingress-cidr", "1.2.3.4/32")
 		}, SpecTimeout(10*time.Minute))

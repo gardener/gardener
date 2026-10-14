@@ -205,7 +205,6 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			Dependencies: flow.NewTaskIDs(reconcileInfrastructure),
 		})
-		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
 		connectToMachine = g.Add(flow.Task{
 			Name:         "Connecting to the first control plane machine",
@@ -264,7 +263,14 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
 		})
 
-		_ = fetchKubeconfig
+		// The Bastion is only needed for connecting to the first control plane machine. Destroy it once the control plane
+		// has been bootstrapped successfully, so that it doesn't keep running (and incurring costs) after the bootstrap
+		// cluster has been thrown away. If the flow fails earlier, the Bastion is kept for re-running the flow.
+		_ = g.Add(flow.Task{
+			Name:         "Destroying bastion host",
+			Fn:           component.OpDestroyAndWait(b.Shoot.Components.Bastion).Destroy,
+			Dependencies: flow.NewTaskIDs(fetchKubeconfig),
+		})
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
 		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing
