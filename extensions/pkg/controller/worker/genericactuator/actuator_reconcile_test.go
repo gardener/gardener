@@ -586,8 +586,7 @@ var _ = Describe("ActuatorReconcile", func() {
 		})
 
 		It("should do nothing because the maps in worker status and inPlaceWorkerPoolToHashMap are same", func() {
-			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
 			Expect(worker.Status.InPlaceUpdates.WorkerPoolToHashMap).To(Equal(map[string]string{
@@ -599,8 +598,7 @@ var _ = Describe("ActuatorReconcile", func() {
 		It("should not add non in-place update worker pools to the worker status", func() {
 			worker.Spec.Pools[0].UpdateStrategy = new(gardencorev1beta1.AutoRollingUpdate)
 
-			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
 			Expect(worker.Status.InPlaceUpdates.WorkerPoolToHashMap).To(Equal(map[string]string{
@@ -623,8 +621,7 @@ var _ = Describe("ActuatorReconcile", func() {
 			}
 			Expect(seedClient.Update(ctx, worker)).To(Succeed())
 
-			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
 			Expect(worker.Status.InPlaceUpdates.WorkerPoolToHashMap).To(Equal(map[string]string{
@@ -644,8 +641,7 @@ var _ = Describe("ActuatorReconcile", func() {
 			worker.Spec.Pools[1].KubernetesVersion = new("1.31.0")
 			worker.Spec.Pools[2].KubernetesVersion = new("1.32.0")
 
-			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
 			Expect(worker.Status.InPlaceUpdates.WorkerPoolToHashMap).To(Equal(map[string]string{
@@ -669,8 +665,7 @@ var _ = Describe("ActuatorReconcile", func() {
 			worker.Spec.Pools[1].KubernetesVersion = new("1.32.0")
 			worker.Spec.Pools[2].KubernetesVersion = new("1.31.0")
 
-			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
 			Expect(worker.Status.InPlaceUpdates.WorkerPoolToHashMap).To(Equal(map[string]string{
@@ -701,8 +696,7 @@ var _ = Describe("ActuatorReconcile", func() {
 
 			worker.Spec.Pools[0].KubernetesVersion = new("1.33.0")
 
-			err := actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(actuator.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
 			Expect(worker.Status.InPlaceUpdates.WorkerPoolToHashMap).To(Equal(map[string]string{

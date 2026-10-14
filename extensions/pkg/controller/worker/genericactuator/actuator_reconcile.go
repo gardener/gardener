@@ -592,15 +592,9 @@ func (a *genericActuator) updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx cont
 		}
 
 		// Skip the worker pool if there are machine deployments which are not updated.
-		outdatedMachineDeploymentsPresent := false
-		for _, mcd := range machineDeploymentList.Items {
-			if mcd.Status.UpdatedReplicas < mcd.Status.Replicas {
-				outdatedMachineDeploymentsPresent = true
-				break
-			}
-		}
-
-		if outdatedMachineDeploymentsPresent {
+		if slices.ContainsFunc(machineDeploymentList.Items, func(mcd machinev1alpha1.MachineDeployment) bool {
+			return mcd.Status.UpdatedReplicas < mcd.Status.Replicas
+		}) {
 			continue
 		}
 
