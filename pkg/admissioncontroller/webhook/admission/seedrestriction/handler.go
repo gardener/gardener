@@ -58,7 +58,6 @@ var (
 	configMapResource                 = corev1.Resource("configmaps")
 	seedResource                      = gardencorev1beta1.Resource("seeds")
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
-	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
 
@@ -119,8 +118,6 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitSecret(ctx, seedName, request)
 	case seedResource:
 		return h.admitSeed(ctx, seedName, request)
-	case shootResource:
-		return h.admitShoot(seedName, request)
 	case serviceAccountResource:
 		return h.admitServiceAccount(ctx, seedName, userType, request)
 	case shootStateResource:
@@ -718,44 +715,6 @@ func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, user
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
-}
-
-func (h *Handler) admitShoot(_ string, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Update {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
-	}
-	oldShoot := &gardencorev1beta1.Shoot{}
-	if err := h.Decoder.DecodeRaw(request.OldObject, oldShoot); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-	newShoot := &gardencorev1beta1.Shoot{}
-	if err := h.Decoder.Decode(request, newShoot); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-	if apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
-		return admission.Allowed("")
-	}
-	// Allow setting .spec.networking.nodes from nil — gardenlet writes this after node CIDR discovery.
-	var oldNodes *string
-	if oldShoot.Spec.Networking != nil {
-		oldNodes = oldShoot.Spec.Networking.Nodes
-	}
-	var newNodes *string
-	if newShoot.Spec.Networking != nil {
-		newNodes = newShoot.Spec.Networking.Nodes
-	}
-	if oldNodes == nil && newNodes != nil {
-		// Check that .spec.networking.nodes is the only change by temporarily patching old spec and re-comparing.
-		oldSpecForComparison := *oldShoot.Spec.DeepCopy()
-		if oldSpecForComparison.Networking == nil {
-			oldSpecForComparison.Networking = &gardencorev1beta1.Networking{}
-		}
-		oldSpecForComparison.Networking.Nodes = newNodes
-		if apiequality.Semantic.DeepEqual(oldSpecForComparison, newShoot.Spec) {
-			return admission.Allowed("")
-		}
-	}
-	return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Shoot (only .spec.networking.nodes may be set from nil)"))
 }
 
 func (h *Handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {
