@@ -91,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if garden.deleting ||
 		extension.DeletionTimestamp != nil ||
 		conditions.installed.Status == gardencorev1beta1.ConditionProgressing && conditions.installed.Reason == ReasonDeleteFailed {
-		return r.delete(ctx, log, extension, conditions)
+		return r.delete(ctx, log, garden, extension, conditions)
 	}
 
 	return r.reconcile(ctx, log, garden, extension, conditions)

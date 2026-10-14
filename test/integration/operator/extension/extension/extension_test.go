@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/kubernetes"
 )
 
 var _ = Describe("Extension controller tests", func() {
@@ -352,6 +354,24 @@ var _ = Describe("Extension controller tests", func() {
 			By("Ensure extension is gone")
 			Eventually(func() error { return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo) }).Should(BeNotFoundError())
 		})
+
+		By("Create API server deployments for the garden cluster")
+		for _, deploymentName := range []string{"virtual-garden-kube-apiserver", "gardener-apiserver"} {
+			deployment := kubernetes.NewDeployment(deploymentName, testNamespace.Name, "", testID, testRunID)
+			Expect(testClient.Create(ctx, deployment)).To(Succeed(), "Failed to create deployment %s", deploymentName)
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, deployment))).To(Succeed(), "Failed to delete deployment %s", deploymentName)
+			})
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+				patch := client.MergeFrom(deployment.DeepCopy())
+				deployment.Status.ObservedGeneration = deployment.Generation
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+				g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+			}).Should(Succeed())
+		}
 
 		By("Wait for admission virtual managed resource and set it as applied, healthy and not progressing")
 		Eventually(func() error {
