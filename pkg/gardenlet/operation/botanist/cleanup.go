@@ -71,10 +71,10 @@ var (
 	NotKubernetesProvider = utils.MustNewRequirement(Provider, selection.NotEquals, KubernetesProvider)
 	// NotKubeAggregatorAutoManaged is a requirement that something is not auto-managed by Kube-Aggregator.
 	NotKubeAggregatorAutoManaged = utils.MustNewRequirement(KubeAggregatorAutoManaged, selection.DoesNotExist)
-	// NotManagedByGardener is a requirement that something is not managed via ManagedResources
+	// NotManagedByGardener is a requirement that something is not managed via ManagedResources.
 	NotManagedByGardener = utils.MustNewRequirement(resourcesv1alpha1.ManagedBy, selection.NotEquals, resourcesv1alpha1.GardenerManager)
 
-	// CleanupSelector is a selector that excludes system components, all resources not considered for auto cleanup and all components not managed via ManagedResources
+	// CleanupSelector is a selector that excludes system components, all resources not considered for auto cleanup and all components not managed via ManagedResources.
 	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention).Add(NotManagedByGardener)
 
 	// NoCleanupPreventionListOption are CollectionMatching that exclude system components or non-auto cleaned up resource.
