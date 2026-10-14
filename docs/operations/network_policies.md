@@ -174,7 +174,7 @@ Therefore, pods should have labels matching to the selectors of the available ne
 NAME                                                    POD-SELECTOR
 gardener.cloud--allow-dns                               k8s-app in (kube-dns)
 gardener.cloud--allow-from-seed                         networking.gardener.cloud/from-seed=allowed
-gardener.cloud--allow-from-control-plane-components     networking.gardener.cloud/from-seed=allowed
+gardener.cloud--allow-from-control-plane-components     networking.gardener.cloud/from-control-plane=allowed
 gardener.cloud--allow-to-dns                            networking.gardener.cloud/to-dns=allowed
 gardener.cloud--allow-to-apiserver                      networking.gardener.cloud/to-apiserver=allowed
 gardener.cloud--allow-to-from-nginx                     app=nginx-ingress
@@ -195,7 +195,7 @@ Shoot components serving webhook handlers must be reached by `kube-apiserver`s o
 However, the control plane components, e.g. `kube-apiserver`, run on the seed cluster decoupled by a [VPN connection](https://github.com/gardener/enhancements/tree/main/geps/0014-reversed-cluster-vpn).
 Therefore, shoot components serving webhook handlers need to allow the VPN endpoints in the shoot cluster as clients to allow `kube-apiserver`s to call them.
 
-For the `kube-system` namespace, the network policy `gardener.cloud--allow-from-seed` (or `gardener.cloud--allow-from-control-plane-components` for self-hosted shoots) fulfils the purpose to allow pods to mark themselves as targets for such calls, allowing corresponding traffic to pass through.
+For the `kube-system` namespace, the network policy `gardener.cloud--allow-from-seed` (selecting pods labeled with `networking.gardener.cloud/from-seed=allowed`) fulfils this purpose for regular shoots, while `gardener.cloud--allow-from-control-plane-components` (selecting pods labeled with `networking.gardener.cloud/from-control-plane=allowed`) fulfils it for self-hosted shoots.
 
 For custom namespaces, operators can use the network policy `gardener.cloud--allow-from-seed` as a template.
 Please note that the label selector may change over time, i.e. with Gardener version updates.

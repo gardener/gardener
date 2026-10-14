@@ -199,6 +199,7 @@ spec:
       labels:
         gardener.cloud/role: system-component
         k8s-app: metrics-server
+        networking.gardener.cloud/from-control-plane: allowed
         networking.gardener.cloud/from-seed: allowed
         networking.gardener.cloud/to-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed

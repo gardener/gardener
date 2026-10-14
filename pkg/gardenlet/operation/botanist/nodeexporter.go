@@ -25,8 +25,9 @@ func (b *Botanist) DefaultNodeExporter() (component.DeployWaiter, error) {
 	}
 
 	values := nodeexporter.Values{
-		Image:      image.String(),
-		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
+		Image:        image.String(),
+		VPAEnabled:   b.Shoot.WantsVerticalPodAutoscaler,
+		IsSelfHosted: b.Shoot.IsSelfHosted(),
 	}
 
 	return nodeexporter.New(

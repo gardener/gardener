@@ -6,6 +6,7 @@ package nodeexporter_test
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -494,6 +495,22 @@ status: {}
 
 			It("should successfully deploy the VPA resource", func() {
 				expectedManifests = append(expectedManifests, vpaYAML)
+				Expect(manifests).To(ConsistOf(expectedManifests))
+			})
+		})
+
+		Context("self-hosted shoot", func() {
+			BeforeEach(func() {
+				values.IsSelfHosted = true
+			})
+
+			It("should add the from-control-plane label to the DaemonSet pod template", func() {
+				selfHostedDaemonSetYAML := strings.ReplaceAll(
+					daemonSetYAML,
+					"networking.gardener.cloud/from-seed: allowed",
+					"networking.gardener.cloud/from-control-plane: allowed",
+				)
+				expectedManifests = []string{serviceAccountYAML, serviceYAML, selfHostedDaemonSetYAML}
 				Expect(manifests).To(ConsistOf(expectedManifests))
 			})
 		})

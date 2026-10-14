@@ -198,13 +198,13 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 					Namespace: metav1.NamespaceSystem,
 					Annotations: map[string]string{
 						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Ingress from the control plane to "+
-							"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootFromSeed,
+							"pods labeled with '%s=%s'.", v1beta1constants.LabelNetworkPolicyShootFromControlPlane,
 							v1beta1constants.LabelNetworkPolicyAllowed),
 					},
 				},
 				Spec: networkingv1.NetworkPolicySpec{
 					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootFromSeed: v1beta1constants.LabelNetworkPolicyAllowed},
+						MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyShootFromControlPlane: v1beta1constants.LabelNetworkPolicyAllowed},
 					},
 					Ingress:     []networkingv1.NetworkPolicyIngressRule{{From: peers}},
 					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},

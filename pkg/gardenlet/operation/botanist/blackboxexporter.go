@@ -61,19 +61,25 @@ func (b *Botanist) DefaultBlackboxExporterCluster() (component.DeployWaiter, err
 		return nil, nil
 	}
 
+	podLabels := map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+	}
+	if b.Shoot.IsSelfHosted() {
+		podLabels[v1beta1constants.LabelNetworkPolicyShootFromControlPlane] = v1beta1constants.LabelNetworkPolicyAllowed
+	} else {
+		podLabels[v1beta1constants.LabelNetworkPolicyShootFromSeed] = v1beta1constants.LabelNetworkPolicyAllowed
+	}
+
 	return sharedcomponent.NewBlackboxExporter(
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
 		b.Shoot.ControlPlaneNamespace,
 		blackboxexporter.Values{
-			ClusterType: component.ClusterTypeShoot,
-			VPAEnabled:  b.Shoot.WantsVerticalPodAutoscaler,
-			PodLabels: map[string]string{
-				v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
-				v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
-				v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-				v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-			},
+			ClusterType:       component.ClusterTypeShoot,
+			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
+			PodLabels:         podLabels,
 			PriorityClassName: "system-cluster-critical",
 			Config:            clusterblackboxexporter.Config(),
 			ScrapeConfigs:     clusterblackboxexporter.ScrapeConfig(b.Shoot.ControlPlaneNamespace),

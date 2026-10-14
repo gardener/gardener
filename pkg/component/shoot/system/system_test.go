@@ -480,13 +480,13 @@ var _ = Describe("ShootSystem", func() {
 								Name:      "gardener.cloud--allow-from-control-plane-components",
 								Namespace: "kube-system",
 								Annotations: map[string]string{
-									"gardener.cloud/description": "Allows Ingress from the control plane to pods labeled with 'networking.gardener.cloud/from-seed=allowed'.",
+									"gardener.cloud/description": "Allows Ingress from the control plane to pods labeled with 'networking.gardener.cloud/from-control-plane=allowed'.",
 								},
 							},
 							Spec: networkingv1.NetworkPolicySpec{
 								PodSelector: metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"networking.gardener.cloud/from-seed": "allowed",
+										"networking.gardener.cloud/from-control-plane": "allowed",
 									},
 								},
 								Ingress: []networkingv1.NetworkPolicyIngressRule{{
