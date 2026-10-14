@@ -93,14 +93,13 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 				g.Expect(node.Annotations).To(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
 				g.Expect(findCondition(node)).To(BeNil())
-			}, 2*time.Second, 200*time.Millisecond).Should(Succeed())
+			}).Should(Succeed())
 
 			By("Remove finalizer and force-delete the pod so the drain can complete")
 			removeFinalizers(pod)
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, pod, client.GracePeriodSeconds(0)))).To(Succeed())
 			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)
-				g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "pod should be gone")
+				g.Expect(apierrors.IsNotFound(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod))).To(BeTrue(), "pod should be gone")
 			}).Should(Succeed())
 
 			// Re-trigger reconcile by toggling needs-drain off and on, rather than
@@ -119,7 +118,7 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(node.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
 				g.Expect(node.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain))
 				g.Expect(findCondition(node)).To(matchCondition(machinev1alpha1.ReadyForUpdate))
-			}).WithTimeout(15 * time.Second).Should(Succeed())
+			}).Should(Succeed())
 		})
 
 		It("should force-delete remaining pods and complete the drain once the drain timeout is exceeded", func() {
@@ -153,14 +152,13 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			Consistently(func(g Gomega) {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 				g.Expect(findCondition(node)).To(BeNil())
-			}, 2*time.Second, 200*time.Millisecond).Should(Succeed())
+			}).Should(Succeed())
 
 			By("Remove the finalizer and delete the pod so the drain can complete")
 			removeFinalizers(pod)
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, pod, client.GracePeriodSeconds(0)))).To(Succeed())
 			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)
-				g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "pod should be gone")
+				g.Expect(apierrors.IsNotFound(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod))).To(BeTrue(), "pod should be gone")
 			}).Should(Succeed())
 
 			By("The drain completes and ReadyForUpdate is set")
@@ -170,7 +168,7 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 				g.Expect(node.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
 				g.Expect(findCondition(node)).To(matchCondition(machinev1alpha1.ReadyForUpdate))
-			}).WithTimeout(15 * time.Second).Should(Succeed())
+			}).Should(Succeed())
 		})
 
 		It("should respect the pool's MaxUnavailable when multiple nodes need drain", func() {
@@ -189,12 +187,12 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			By("Eventually exactly two of the three nodes have started the drain")
 			Eventually(func(g Gomega) int {
 				return countDrainStarted(g, nodes)
-			}).WithTimeout(15 * time.Second).Should(Equal(2))
+			}).Should(Equal(2))
 
 			By("Confirm the cap is held: never more than two nodes have started the drain")
 			Consistently(func(g Gomega) int {
 				return countDrainStarted(g, nodes)
-			}, 2*time.Second, 200*time.Millisecond).Should(Equal(2))
+			}).Should(Equal(2))
 		})
 
 		It("should force the control-plane pool's MaxUnavailable to 1 even when the spec says 99%", func() {
@@ -212,10 +210,10 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			By("Verify only a single control-plane node ever starts a drain")
 			Eventually(func(g Gomega) int {
 				return countDrainStarted(g, nodes)
-			}).WithTimeout(15 * time.Second).Should(Equal(1))
+			}).Should(Equal(1))
 			Consistently(func(g Gomega) int {
 				return countDrainStarted(g, nodes)
-			}, 2*time.Second, 200*time.Millisecond).Should(Equal(1))
+			}).Should(Equal(1))
 		})
 
 		It("should treat a node already failed (LabelKeyNodeUpdateResult=failed) as unavailable for the cap", func() {
@@ -230,7 +228,7 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			Consistently(func(g Gomega) bool {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(pendingNode), pendingNode)).To(Succeed())
 				return pendingNode.Spec.Unschedulable
-			}, 3*time.Second, 200*time.Millisecond).Should(BeFalse())
+			}).Should(BeFalse())
 
 			Eventually(func(g Gomega) *corev1.NodeCondition {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(failedNode), failedNode)).To(Succeed())
@@ -373,7 +371,7 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(grm2.DeletionTimestamp).To(BeNil())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(other), other)).To(Succeed())
 				g.Expect(other.DeletionTimestamp).To(BeNil())
-			}, 1*time.Second, 200*time.Millisecond).Should(Succeed())
+			}).Should(Succeed())
 		})
 
 		It("should record a failure with the GNA-supplied reason", func() {
@@ -484,7 +482,7 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				cond := findCondition(node)
 				g.Expect(cond).NotTo(BeNil())
 				g.Expect(cond.Reason).To(Equal(machinev1alpha1.ReadyForUpdate))
-			}, 2*time.Second, 200*time.Millisecond).Should(Succeed())
+			}).Should(Succeed())
 		})
 	})
 
@@ -587,6 +585,7 @@ func newPod(name, namespace, nodeName string, opts ...func(*corev1.Pod)) *corev1
 }
 
 func removeFinalizers(obj client.Object) {
+	GinkgoHelper()
 	Eventually(func(g Gomega) {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Or(Succeed(), BeNotFoundError()))
 		if obj.GetDeletionTimestamp() != nil && len(obj.GetFinalizers()) == 0 {
@@ -599,6 +598,7 @@ func removeFinalizers(obj client.Object) {
 }
 
 func addNeedsDrain(node *corev1.Node) {
+	GinkgoHelper()
 	Eventually(func(g Gomega) {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 		patch := client.MergeFrom(node.DeepCopy())
@@ -608,6 +608,7 @@ func addNeedsDrain(node *corev1.Node) {
 }
 
 func setUpdateResultLabel(node *corev1.Node, value string) {
+	GinkgoHelper()
 	Eventually(func(g Gomega) {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 		patch := client.MergeFrom(node.DeepCopy())
@@ -617,6 +618,7 @@ func setUpdateResultLabel(node *corev1.Node, value string) {
 }
 
 func setReadyForUpdateCondition(node *corev1.Node, lastTransition time.Time) {
+	GinkgoHelper()
 	Eventually(func(g Gomega) {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 		patch := client.MergeFrom(node.DeepCopy())

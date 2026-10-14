@@ -33,7 +33,6 @@ import (
 	nodeagenthelper "github.com/gardener/gardener/pkg/api/config/nodeagent/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
@@ -217,8 +216,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "gardener-resource-manager",
-						Labels: map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager},
+						Name: "gardener-resource-manager",
 					},
 					Spec: corev1.PodSpec{
 						NodeName: "test-node",
@@ -253,38 +251,10 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			return names
 		}
 
-		It("should delete all pods running on this node when skipGRM is false", func() {
-			Expect(reconciler.deleteRemainingPods(ctx, log, node, false)).To(Succeed())
+		It("should delete all pods running on this node", func() {
+			Expect(reconciler.deleteRemainingPods(ctx, log, node)).To(Succeed())
 
 			Expect(remainingPodNames()).To(ConsistOf("pod-3"))
-		})
-
-		It("should requeue when skipGRM is true and no healthy GRM exists on another node", func() {
-			Expect(reconciler.deleteRemainingPods(ctx, log, node, true)).To(MatchError(ContainSubstring("no healthy gardener-resource-manager pod found on another node")))
-
-			Expect(remainingPodNames()).To(ConsistOf("pod-1", "gardener-resource-manager", "pod-3"))
-		})
-
-		It("should delete all pods including GRM when skipGRM is true and a healthy GRM exists on another node", func() {
-			healthyGRMElsewhere := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-resource-manager-other",
-					Namespace: metav1.NamespaceSystem,
-					Labels:    map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager},
-				},
-				Spec: corev1.PodSpec{NodeName: "another-node"},
-				Status: corev1.PodStatus{
-					Phase: corev1.PodRunning,
-					Conditions: []corev1.PodCondition{
-						{Type: corev1.PodReady, Status: corev1.ConditionTrue},
-					},
-				},
-			}
-			Expect(c.Create(ctx, healthyGRMElsewhere)).To(Succeed())
-
-			Expect(reconciler.deleteRemainingPods(ctx, log, node, true)).To(Succeed())
-
-			Expect(remainingPodNames()).To(ConsistOf("pod-3", "gardener-resource-manager-other"))
 		})
 	})
 
@@ -420,7 +390,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 		})
 
 		It("should return nil if node is nil", func() {
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, nil, &osVersion, false)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, nil, &osVersion)).To(Succeed())
 		})
 
 		It("should set the node to update-failed if the lastAttempted version is equal to the osc.Spec.InPlaceUpdates.OperatingSystemVersion", func() {
@@ -428,7 +398,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			osc.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.4"
 			oscChanges.InPlaceUpdates.OperatingSystem = true
 
-			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)
 			Expect(err).To(MatchError(ContainSubstring("OS update might have failed and rolled back to the previous version")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 
@@ -445,7 +415,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			Expect(c.Update(ctx, node)).To(Succeed())
 			oscChanges.InPlaceUpdates.OperatingSystem = true
 
-			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)
 			Expect(err).To(MatchError(ContainSubstring("OS update has failed with error")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 
@@ -482,7 +452,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).NotTo(HaveKey(machinev1alpha1.LabelKeyNodeUpdateResult))
@@ -522,7 +492,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion, false)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
 
 			podList := &corev1.PodList{}
 			Expect(c.List(ctx, podList)).To(Succeed())
@@ -565,7 +535,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion, false)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
@@ -606,7 +576,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion, false)).To(Succeed())
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osc.Spec.InPlaceUpdates.OperatingSystemVersion)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
@@ -658,7 +628,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
 
-			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, new("1.1.0"), false)
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, new("1.1.0"))
 			Expect(err).To(MatchError(ContainSubstring("stopping reconciliation until gardener-node-agent is restarted after the OS update. Current version: \"1.1.0\", Desired version: \"1.2.3\"")))
 			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 		})

@@ -741,9 +741,9 @@ func PrepareGardenletChartValues(
 	}
 
 	tolerations := []map[string]any{{
-		"key":      "node-role.kubernetes.io/control-plane",
-		"operator": "Exists",
-		"effect":   "NoSchedule",
+		"key":      v1beta1constants.LabelNodeRoleControlPlane,
+		"operator": string(corev1.TolerationOpExists),
+		"effect":   string(corev1.TaintEffectNoSchedule),
 	}}
 
 	// For unmanaged self-hosted shoots, gardenlet orchestrates in-place node updates and cordons the node during
@@ -752,8 +752,8 @@ func PrepareGardenletChartValues(
 	if !v1beta1helper.HasManagedInfrastructure(shoot) {
 		tolerations = append(tolerations, map[string]any{
 			"key":      corev1.TaintNodeUnschedulable,
-			"operator": "Exists",
-			"effect":   "NoSchedule",
+			"operator": string(corev1.TolerationOpExists),
+			"effect":   string(corev1.TaintEffectNoSchedule),
 		})
 
 		values, err = utils.SetToValuesMap(values, true, "unmanagedInfrastructure")

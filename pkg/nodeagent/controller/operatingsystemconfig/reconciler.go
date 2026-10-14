@@ -393,7 +393,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed removing deleted files: %w", err)
 	}
 
-	if err := r.performInPlaceUpdate(ctx, log, osc, oscChanges, node, osVersion, gardenletOrchestratedInPlaceUpdate); err != nil {
+	if err := r.performInPlaceUpdate(ctx, log, osc, oscChanges, node, osVersion); err != nil {
 		// If the error is retriable, we requeue with a delay.
 		if retriableErrorPatternRegex.MatchString(err.Error()) {
 			log.Error(err, "Update failed with retriable error, Requeuing with a delay")
@@ -877,7 +877,7 @@ func isInPlaceUpdate(changes *operatingSystemConfigChanges) bool {
 		changes.InPlaceUpdates.ServiceAccountKeyRotation
 }
 
-func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscChanges *operatingSystemConfigChanges, node *corev1.Node, osVersion *string, gardenletOrchestrated bool) error {
+func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscChanges *operatingSystemConfigChanges, node *corev1.Node, osVersion *string) error {
 	// Node can be nil during the first reconciliation loop.
 	if node == nil {
 		return nil
@@ -942,7 +942,7 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 	}
 
 	if (nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)) || kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed) {
-		if err := r.deleteRemainingPods(ctx, log, node, gardenletOrchestrated); err != nil {
+		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}
 		if err := r.patchNodeUpdateSuccessful(ctx, log, node); err != nil {
@@ -1148,39 +1148,15 @@ func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log l
 // The machine-controller-manager drains the node and marks it unschedulable before marking the node ready for in-place updates.
 // Despite this, DaemonSet pods and pods with local storage are recreated on the node during the update,
 // requiring an additional deletion step after the completion of update.
-func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node, gardenletOrchestrated bool) error {
+func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node) error {
 	// List all pods running on the node and delete them.
 	// This should recreate daemonset pods and pods with local storage.
-	//
-	// For inplace update orchestrated by gardenlet (gardenletOrchestrated=true), the GRM pod on this node is deleted only after a healthy
-	// GRM replica is confirmed to be running on another node. This keeps the GRM webhook available, which is needed
-	// for the new kube-proxy pod to come up on the updated node.
-
-	if gardenletOrchestrated {
-		allGRMPods := &corev1.PodList{}
-		if err := r.Client.List(ctx, allGRMPods,
-			client.InNamespace(metav1.NamespaceSystem),
-			client.MatchingLabels{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameGardenerResourceManager},
-		); err != nil {
-			return fmt.Errorf("failed listing gardener-resource-manager pods: %w", err)
-		}
-
-		if !slices.ContainsFunc(allGRMPods.Items, func(pod corev1.Pod) bool {
-			return pod.Spec.NodeName != node.Name && pod.Status.Phase == corev1.PodRunning &&
-				slices.ContainsFunc(pod.Status.Conditions, func(cond corev1.PodCondition) bool {
-					return cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue
-				})
-		}) {
-			return fmt.Errorf("no healthy gardener-resource-manager pod found on another node, requeuing")
-		}
-	}
-
+	log.Info("Deleting pods running on the node", "node", node.Name)
 	podList := &corev1.PodList{}
 	if err := r.Client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}); err != nil {
 		return fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
 	}
 
-	log.Info("Deleting pods running on the node", "node", node.Name)
 	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, nil)
 }
 

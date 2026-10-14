@@ -548,16 +548,16 @@ Please refer to [GEP-0022: Improved Usage of the `ShootState` API](https://githu
 
 This reconciler is only enabled for self-hosted shoot clusters with unmanaged infrastructure (i.e. shoots connected via `gardenadm connect`).
 Such clusters have no `machine-controller-manager` since their nodes are physical or pre-existing machines joined via `gardenadm join`.
-For worker pools with an in-place update strategy, the `gardenlet` therefore takes over the coordination role that the `machine-controller-manager` performs for managed shoots.
+For worker pools with an in-place update strategy, the `gardenlet` therefore takes over the coordination role that the `machine-controller-manager` performs for hosted shoots or those with managed infrastructure.
 
 The reconciler watches the `Node` objects of the shoot's worker pools and drives their in-place update in lockstep with `gardener-node-agent` (GNA):
 
 - When GNA detects that the `OperatingSystemConfig` of a node changed (e.g. a Kubernetes minor version bump) it sets the `in-place-update.node-agent.gardener.cloud/needs-drain=true` annotation on the `Node` and waits, instead of draining itself.
-- The reconciler enforces the pool's `maxUnavailable` (capped at `1` for control plane pools) and, for eligible nodes, cordons them and evicts their pods. It honors `PodDisruptionBudget`s, skips pods that must not be evicted (`DaemonSet` pods, mirror pods, `gardenlet`, `gardener-resource-manager`, pods tolerating the unschedulable taint, and already-terminated pods) and force-deletes remaining pods once a drain times out.
+- The reconciler enforces the pool's `maxUnavailable` and, for eligible nodes, cordons them and evicts their pods. It honors `PodDisruptionBudget`s, skips pods that must not be evicted (`DaemonSet` pods, mirror pods, `gardenlet`, `gardener-resource-manager`, pods tolerating the unschedulable taint, and already-terminated pods) and force-deletes remaining pods once a drain times out.
 - Once a node is drained it sets the `NodeInPlaceUpdate` condition to `ReadyForUpdate`, which is GNA's signal to perform the actual update.
 - After GNA has finished, it reports the outcome via the `machine.sapcloud.io/node-update-result=successful|failed` label. The reconciler records the result in the `NodeInPlaceUpdate` condition; on success it also removes the update-result label and uncordons the node.
 - Once all nodes in a pool have been updated successfully, the reconciler records the new pool hash in the shoot's `status.inPlaceUpdates.workerPoolToHashMap` and removes the pool from `status.inPlaceUpdates.pendingWorkerUpdates.autoInPlaceUpdate`.
-- If GNA does not complete the update within a timeout, the reconciler marks the update as failed.
+- If GNA does not complete the update within a timeout, the reconciler marks the update as failed. For remediation steps, see [Retrying a Failed In-Place Update](../usage/shoot-operations/shoot_updates.md#retrying-a-failed-in-place-update).
 
 ### ["Status" Reconciler](../../pkg/gardenlet/controller/shoot/status)
 

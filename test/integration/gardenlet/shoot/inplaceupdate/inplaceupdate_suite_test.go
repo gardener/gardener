@@ -81,6 +81,9 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	SetDefaultEventuallyTimeout(30 * time.Second)
+	SetDefaultConsistentlyDuration(2 * time.Second)
+
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
