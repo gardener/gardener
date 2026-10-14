@@ -24,7 +24,7 @@ tool (
 // This is a separate go module to decouple the gardener codebase and production binaries from dependencies that are
 // only needed to build the logcheck tool and kube-api-linter plugin
 require (
-	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba
+	golang.org/x/exp v0.0.0-20261013213113-2ab7f3cbc5fb
 	// this has to be kept in sync with the used golangci-lint version
 	// use go version -m hack/tools/bin/<<architecture>>/golangci-lint to detect the dependency versions
 	// or, with `go work` enabled, use `go work sync`
