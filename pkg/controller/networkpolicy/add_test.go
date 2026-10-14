@@ -69,6 +69,22 @@ var _ = Describe("Add", func() {
 			Expect(p.Delete(event.DeleteEvent{Object: networkPolicy})).To(BeFalse())
 			Expect(p.Generic(event.GenericEvent{Object: networkPolicy})).To(BeFalse())
 		})
+
+		It("should return false because the NetworkPolicy name does not have the prefix", func() {
+			networkPolicy.Name = "allow-to-runtime-apiserver"
+			Expect(p.Create(event.CreateEvent{Object: networkPolicy})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: networkPolicy})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: networkPolicy})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: networkPolicy})).To(BeFalse())
+		})
+
+		It("should return false because the NetworkPolicy name has a different prefix", func() {
+			networkPolicy.Name = NetworkPolicyNamePrefixGardenlet + "allow-to-runtime-apiserver"
+			Expect(p.Create(event.CreateEvent{Object: networkPolicy})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: networkPolicy})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: networkPolicy})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: networkPolicy})).To(BeFalse())
+		})
 	})
 
 	Describe("#MapToNamespaces", func() {

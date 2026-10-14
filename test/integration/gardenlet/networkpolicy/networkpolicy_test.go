@@ -369,6 +369,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, networkPolicy))).To(Succeed())
 				})
 
+				By("Trigger reconciliation by updating the namespace")
+				fooNamespace.Labels["foo"] = "bar"
+				Expect(testClient.Update(ctx, fooNamespace)).To(Succeed())
+
 				By("Wait for controller to delete the legacy network policy")
 				Eventually(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
