@@ -307,11 +307,14 @@ var _ = Describe("Helper", func() {
 		})
 
 		It("should return the requested condition", func() {
+			Expect(GetLiveMigrationConditions(shootWithCondition)).To(ConsistOf(condition))
 			Expect(GetLiveMigrationCondition(shootWithCondition, condition.Type)).To(Equal(&condition))
 			Expect(IsLiveMigrationConditionTrue(shootWithCondition, condition.Type)).To(BeTrue())
 		})
 
-		It("should report False for a missing or non-True condition", func() {
+		It("should report false for a missing or false condition", func() {
+			Expect(GetLiveMigrationConditions(shootWithCondition)).To(ConsistOf(condition))
+			Expect(GetLiveMigrationCondition(shootWithCondition, gardencorev1beta1.ShootLiveMigrationMigrationCompleted)).To(BeNil())
 			Expect(IsLiveMigrationConditionTrue(shootWithCondition, gardencorev1beta1.ShootLiveMigrationMigrationCompleted)).To(BeFalse())
 		})
 	})

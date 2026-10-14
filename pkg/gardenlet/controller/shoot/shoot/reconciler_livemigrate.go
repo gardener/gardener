@@ -61,7 +61,7 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 		},
 		nil,
 		errorsutils.ToExecute("Create botanist", func() error {
-			return retryutils.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
+			return retryutils.UntilTimeout(ctx, liveMigrationStepInterval, liveMigrationStepTimeout, func(context.Context) (done bool, err error) {
 				botanist, err = botanistpkg.New(ctx, o)
 				if err != nil {
 					return retryutils.MinorError(err)
