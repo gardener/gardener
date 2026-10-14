@@ -182,6 +182,25 @@ func newGardenCustomResourceStateMetrics() customresourcestate.Resource {
 		},
 	})
 
+	resource.Metrics = append(resource.Metrics, customresourcestate.Generator{
+		Name: "garden_constraint",
+		Help: "represents a constraint on a Garden object",
+		Each: customresourcestate.Metric{
+			Type: metric.StateSet,
+			StateSet: &customresourcestate.MetricStateSet{
+				LabelName: "status",
+				List:      []string{"Progressing", "True", "False", "Unknown"},
+				ValueFrom: []string{"status"},
+				MetricMeta: customresourcestate.MetricMeta{
+					LabelsFromPath: map[string][]string{
+						"constraint": {"type"},
+					},
+					Path: []string{"status", "constraints"},
+				},
+			},
+		},
+	})
+
 	return resource
 }
 
