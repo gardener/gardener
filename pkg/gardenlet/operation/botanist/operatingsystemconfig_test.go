@@ -25,7 +25,6 @@ import (
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -489,7 +488,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						oscSecret := &corev1.Secret{}
 						Expect(runtime.DecodeInto(codec, decompressed, oscSecret)).To(Succeed())
 						Expect(oscSecret.Annotations).To(HaveKeyWithValue(
-							v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true"),
+							"reconciliation.osc.node-agent.gardener.cloud/gardenlet-orchestrated", "true"),
 							"pool %s: gardenlet-orchestrated annotation missing or wrong", workerName)
 					}
 				})
@@ -538,7 +537,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						oscSecret := &corev1.Secret{}
 						Expect(runtime.DecodeInto(codec, decompressed, oscSecret)).To(Succeed())
 						Expect(oscSecret.Annotations).NotTo(HaveKey(
-							v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated),
+							"reconciliation.osc.node-agent.gardener.cloud/gardenlet-orchestrated"),
 							"pool %s: gardenlet-orchestrated annotation should not be set", workerName)
 					}
 				})

@@ -134,8 +134,7 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 		needsRequeue bool
 	)
 
-	for i := range nodeList.Items {
-		node := &nodeList.Items[i]
+	for _, node := range nodeList.Items {
 		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] == "" || !node.Spec.Unschedulable {
 			continue
 		}
@@ -143,7 +142,7 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 		drainFns = append(drainFns, func(ctx context.Context) error {
 			ctx, cancel := context.WithTimeout(ctx, time.Minute)
 			defer cancel()
-			if err := r.drainAndMarkReady(ctx, log, node); err != nil {
+			if err := r.drainAndMarkReady(ctx, log, &node); err != nil {
 				if ctx.Err() != nil {
 					return fmt.Errorf("context cancelled while draining node %s: %w", node.Name, ctx.Err())
 				}
@@ -171,14 +170,11 @@ func NodeInPlaceUpdateOngoingOrFailed(node *corev1.Node) bool {
 }
 
 // MaxUnavailableForPool returns the maximum number of nodes that can undergo in-place
-// updates simultaneously for the given pool. Control plane pools are always limited to 1.
+// updates simultaneously for the given pool.
 func MaxUnavailableForPool(workers []gardencorev1beta1.Worker, poolName string, currentNodeCount int) int {
 	for _, w := range workers {
 		if w.Name != poolName {
 			continue
-		}
-		if w.ControlPlane != nil {
-			return 1
 		}
 		if w.MaxUnavailable != nil {
 			maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(w.MaxUnavailable, currentNodeCount, false)
@@ -202,7 +198,7 @@ func (r *Reconciler) drainAndMarkReady(ctx context.Context, log logr.Logger, nod
 			return err
 		}
 
-		patch := client.MergeFrom(node.DeepCopy())
+		patch := client.StrategicMergeFrom(node.DeepCopy())
 		r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.ReadyForUpdate, "Node drained and ready for in-place update")
 		if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
 			return fmt.Errorf("failed to set NodeInPlaceUpdate condition on node %s: %w", node.Name, err)
@@ -358,7 +354,7 @@ func (r *Reconciler) workersFromCluster(ctx context.Context) ([]gardencorev1beta
 func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.Logger, node *corev1.Node) error {
 	log = log.WithValues("node", node.Name)
 
-	patch := client.MergeFrom(node.DeepCopy())
+	patch := client.StrategicMergeFrom(node.DeepCopy())
 	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateSuccessful, "In-place update completed successfully")
 	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
 		return fmt.Errorf("failed to set NodeInPlaceUpdate condition to successful on node %s: %w", node.Name, err)
@@ -383,7 +379,7 @@ func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, no
 		reason = "GNA reported in-place update failure"
 	}
 
-	patch := client.MergeFrom(node.DeepCopy())
+	patch := client.StrategicMergeFrom(node.DeepCopy())
 	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, reason)
 	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
 		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
@@ -408,7 +404,7 @@ func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, no
 		return fmt.Errorf("failed to label node with update failed label %s: %w", node.Name, err)
 	}
 
-	patch = client.MergeFrom(node.DeepCopy())
+	patch = client.StrategicMergeFrom(node.DeepCopy())
 	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, "GNA failed to complete the in-place update within the expected time")
 	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
 		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
