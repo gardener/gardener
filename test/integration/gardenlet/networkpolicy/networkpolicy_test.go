@@ -591,6 +591,65 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		})
 	})
 
+	Context("skip-reconcile label", func() {
+		It("should not delete a NetworkPolicy in a namespace labeled with skip-reconcile=true", func() {
+			By("Label the foo namespace with skip-reconcile=true")
+			patch := client.MergeFrom(fooNamespace.DeepCopy())
+			fooNamespace.Labels[v1beta1constants.LabelNetworkPolicySkipReconcile] = "true"
+			Expect(testClient.Patch(ctx, fooNamespace, patch)).To(Succeed())
+
+			By("Create a deny-all NetworkPolicy in the foo namespace")
+			networkPolicy := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: fooNamespace.Name,
+					Name:      "deny-all",
+				},
+			}
+			Expect(testClient.Create(ctx, networkPolicy)).To(Succeed())
+
+			DeferCleanup(func() {
+				By("Delete network policy")
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, networkPolicy))).To(Succeed())
+			})
+
+			By("Ensure controller does not delete the NetworkPolicy")
+			Consistently(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
+			}).Should(Succeed())
+		})
+
+		It("should delete a NetworkPolicy in a namespace after the skip-reconcile label is removed", func() {
+			By("Label the foo namespace with skip-reconcile=true")
+			patch := client.MergeFrom(fooNamespace.DeepCopy())
+			fooNamespace.Labels[v1beta1constants.LabelNetworkPolicySkipReconcile] = "true"
+			Expect(testClient.Patch(ctx, fooNamespace, patch)).To(Succeed())
+
+			By("Create a deny-all NetworkPolicy in the foo namespace")
+			networkPolicy := &networkingv1.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: fooNamespace.Name,
+					Name:      "deny-all",
+				},
+			}
+			Expect(testClient.Create(ctx, networkPolicy)).To(Succeed())
+
+			DeferCleanup(func() {
+				By("Delete network policy")
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, networkPolicy))).To(Succeed())
+			})
+
+			By("Remove the skip-reconcile label from the foo namespace")
+			patch = client.MergeFrom(fooNamespace.DeepCopy())
+			delete(fooNamespace.Labels, v1beta1constants.LabelNetworkPolicySkipReconcile)
+			Expect(testClient.Patch(ctx, fooNamespace, patch)).To(Succeed())
+
+			By("Wait for controller to delete the NetworkPolicy")
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
+			}).Should(BeNotFoundError())
+		})
+	})
+
 	Context("seed gets registered as garden", func() {
 		var garden *operatorv1alpha1.Garden
 

@@ -641,6 +641,9 @@ const (
 	// need to initiate the communication with a target API server (e.g., shoot API server or virtual garden API
 	// server).
 	LabelNetworkPolicyAccessTargetAPIServer = "networking.gardener.cloud/access-target-apiserver"
+	// LabelNetworkPolicySkipReconcile is a label on namespaces that prevents the NetworkPolicy controller from
+	// reconciling (creating, updating, or deleting) any of its managed NetworkPolicies in that namespace.
+	LabelNetworkPolicySkipReconcile = "networkpolicy.gardener.cloud/skip-reconcile"
 
 	// LabelAuthorizationExtensionsServiceAccountSelector is a constant for an annotation key on ClusterRoles in the
 	// garden cluster which can be used to describe a selector for labels on ServiceAccounts which are allowed to get

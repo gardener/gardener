@@ -113,6 +113,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 		networkPolicyLogger := log.WithValues("networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
+		if skip, ok := namespace.Labels[v1beta1constants.LabelNetworkPolicySkipReconcile]; ok && skip == "true" {
+			networkPolicyLogger.V(1).Info("Skipping NetworkPolicy reconciliation because namespace has skip-reconcile label")
+			continue
+		}
+
 		if !labelsMatchAnySelector(namespace.Labels, policyConfig.namespaceSelectors) {
 			networkPolicyLogger.Info("Deleting NetworkPolicy")
 			if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
