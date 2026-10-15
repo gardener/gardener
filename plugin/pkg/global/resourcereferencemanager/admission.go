@@ -47,6 +47,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	versionedsecurity "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
@@ -89,7 +90,7 @@ type ReferenceManager struct {
 	workloadIdentityLister       securityv1alpha1listers.WorkloadIdentityLister
 	projectLister                gardencorev1beta1listers.ProjectLister
 	quotaLister                  gardencorev1beta1listers.QuotaLister
-	controllerDeploymentLister   gardencorev1beta1listers.ControllerDeploymentLister
+	controllerDeploymentLister   gardencorev1listers.ControllerDeploymentLister
 	exposureClassLister          gardencorev1beta1listers.ExposureClassLister
 	managedSeedLister            seedmanagementv1alpha1listers.ManagedSeedLister
 	gardenletLister              seedmanagementv1alpha1listers.GardenletLister
@@ -158,7 +159,7 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 	projectInformer := f.Core().V1beta1().Projects()
 	r.projectLister = projectInformer.Lister()
 
-	controllerDeploymentInformer := f.Core().V1beta1().ControllerDeployments()
+	controllerDeploymentInformer := f.Core().V1().ControllerDeployments()
 	r.controllerDeploymentLister = controllerDeploymentInformer.Lister()
 
 	exposureClassInformer := f.Core().V1beta1().ExposureClasses()
@@ -1427,7 +1428,7 @@ func (r *ReferenceManager) lookupControllerDeployment(ctx context.Context, name 
 	}
 
 	deploymentFromClient := func(ctx context.Context, _, name string) (runtime.Object, error) {
-		return r.gardenCoreClient.CoreV1beta1().ControllerDeployments().Get(ctx, name, kubernetesclient.DefaultGetOptions())
+		return r.gardenCoreClient.CoreV1().ControllerDeployments().Get(ctx, name, kubernetesclient.DefaultGetOptions())
 	}
 
 	_, err := lookupResource(ctx, "", name, deploymentFromLister, deploymentFromClient)
