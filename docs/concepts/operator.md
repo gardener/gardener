@@ -403,6 +403,7 @@ This section highlights the most prominent fields:
 - `domain`: Allows configuring a custom domain (and optionally a DNS provider) for the gardener-dashboard.
   If set, the dashboard is exposed on this single domain only.
   If not set, the dashboard is exposed on each configured runtime ingress domain via the `dashboard.<ingress-domain>` subdomain pattern.
+  A dedicated `DNSRecord` is always created for an explicitly configured `domain`, even if it is a subdomain of a runtime ingress domain and would otherwise already be covered by the wildcard `DNSRecord`. This avoids ACME DNS-01 certificate renewal issues with some DNS providers (e.g. Google Cloud DNS), where the wildcard's renewal TXT record can shadow the one needed for the dashboard domain.
 - `tlsSecretName`: Allows specifying the name of a `Secret` in the `garden` namespace containing a trusted TLS certificate for the dashboard domain.
   If not configured, Gardener falls back to the wildcard certificate (or generates a self-signed certificate if no wildcard certificate is available).
 

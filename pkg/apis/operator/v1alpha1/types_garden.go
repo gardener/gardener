@@ -701,6 +701,8 @@ type GardenerDashboardConfig struct {
 	// Domain overrides the default ingress domain and optionally the DNS provider for the gardener-dashboard.
 	// If not set, the dashboard is exposed on each configured runtime ingress domain via the
 	// "dashboard.<ingress-domain>" subdomain pattern.
+	// A dedicated DNSRecord is always created for this domain, even if it is a subdomain of a runtime ingress
+	// domain, to avoid ACME DNS-01 certificate renewal issues with some DNS providers (e.g. Google Cloud DNS).
 	// +optional
 	Domain *DNSDomain `json:"domain,omitempty"`
 	// TLSSecretName is the name of a secret (in the garden namespace) containing
@@ -819,6 +821,8 @@ type GardenerDiscoveryServerConfig struct {
 	// Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.
 	// This field is optional, but once the gardener-discovery-server is enabled, its domain cannot be changed anymore.
 	// Defaults to "discovery.<first-runtime-ingress-domain>".
+	// A dedicated DNSRecord is always created for this domain, even if it is a subdomain of a runtime ingress
+	// domain, to avoid ACME DNS-01 certificate renewal issues with some DNS providers (e.g. Google Cloud DNS).
 	// +optional
 	Domain *DNSDomain `json:"domain,omitempty"`
 	// TLSSecretName is the name of a secret (in the garden namespace) containing
