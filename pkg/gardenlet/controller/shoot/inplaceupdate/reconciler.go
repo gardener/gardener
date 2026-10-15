@@ -107,25 +107,140 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return r.requeueForUpdateTimeout(nodeList), nil
 }
 
-// requeueForUpdateTimeout returns a Result that requeues just before the earliest ReadyForUpdate
-// timeout across all nodes, so the next reconcile can detect a stuck GNA in time.
-func (r *Reconciler) requeueForUpdateTimeout(nodeList *corev1.NodeList) reconcile.Result {
-	var requeueAfter time.Duration
-	for _, node := range nodeList.Items {
-		for _, cond := range node.Status.Conditions {
-			if cond.Type != machinev1alpha1.NodeInPlaceUpdate || cond.Status != corev1.ConditionTrue || cond.Reason != machinev1alpha1.ReadyForUpdate {
-				continue
-			}
+// cleanupAfterSuccessfulUpdate handles the case where GNA has set the update-result=successful label.
+func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	patch := client.StrategicMergeFrom(node.DeepCopy())
+	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateSuccessful, "In-place update completed successfully")
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to set NodeInPlaceUpdate condition to successful on node %s: %w", node.Name, err)
+	}
 
-			// Requeue instantly for nodes whose in-place update has already timed out.
-			remaining := max(r.Config.UpdateTimeout.Duration-r.Clock.Since(cond.LastTransitionTime.Time), time.Second)
-			if requeueAfter == 0 || remaining < requeueAfter {
-				requeueAfter = remaining
-			}
-			break
+	patch = client.MergeFrom(node.DeepCopy())
+	delete(node.Labels, machinev1alpha1.LabelKeyNodeUpdateResult)
+	node.Spec.Unschedulable = false
+	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to remove update-result label and uncordon node %s: %w", node.Name, err)
+	}
+	log.Info("Cleaned up node after successful in-place update")
+	return nil
+}
+
+// handleUpdateFailed handles the case where GNA has set the update-result=failed label.
+func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	message := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
+	if message == "" {
+		message = "GNA reported in-place update failure"
+	}
+
+	patch := client.StrategicMergeFrom(node.DeepCopy())
+	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, message)
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
+	}
+
+	log.Info("Recorded GNA-reported update failure in condition", "reason", message)
+	return nil
+}
+
+func (r *Reconciler) isUpdateTimedOut(node *corev1.Node) bool {
+	return slices.ContainsFunc(node.Status.Conditions, func(cond corev1.NodeCondition) bool {
+		return cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Status == corev1.ConditionTrue && cond.Reason == machinev1alpha1.ReadyForUpdate && r.Clock.Since(cond.LastTransitionTime.Time) > r.Config.UpdateTimeout.Duration
+	})
+}
+
+// markUpdateTimedOut sets the update-result=failed label and the UpdateFailed condition on a node that exceeded the UpdateTimeout.
+func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	patch := client.MergeFrom(node.DeepCopy())
+	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
+	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to label node with update failed label %s: %w", node.Name, err)
+	}
+
+	patch = client.StrategicMergeFrom(node.DeepCopy())
+	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, "GNA failed to complete the in-place update within the expected time")
+	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
+	}
+
+	log.Info("Marked in-place update as failed due to timeout")
+	return nil
+}
+
+// cordonNodesForUpdate cordons nodes that need draining.
+func (r *Reconciler) cordonNodesForUpdate(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) error {
+	workers, err := r.workersFromCluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	var (
+		inProgress     int
+		maxUnavailable = MaxUnavailableForPool(workers, nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool], len(nodeList.Items))
+	)
+
+	for _, node := range nodeList.Items {
+		if NodeInPlaceUpdateOngoingOrFailed(&node) {
+			inProgress++
 		}
 	}
-	return reconcile.Result{RequeueAfter: requeueAfter}
+
+	for i := range nodeList.Items {
+		if inProgress >= maxUnavailable {
+			break
+		}
+
+		node := &nodeList.Items[i]
+		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" || node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || NodeInPlaceUpdateOngoingOrFailed(node) {
+			continue
+		}
+
+		patch := client.MergeFrom(node.DeepCopy())
+		node.Spec.Unschedulable = true
+		metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime, r.Clock.Now().UTC().Format(time.RFC3339))
+		if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
+			return fmt.Errorf("failed to cordon node %s: %w", node.Name, err)
+		}
+		log.Info("Cordoned node for in-place update", "node", node.Name)
+		inProgress++
+	}
+
+	return nil
+}
+
+func (r *Reconciler) workersFromCluster(ctx context.Context) ([]gardencorev1beta1.Worker, error) {
+	cluster, err := extensions.GetCluster(ctx, r.ShootClient, metav1.NamespaceSystem)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting Cluster resource for namespace %s: %w", metav1.NamespaceSystem, err)
+	}
+	if cluster.Shoot == nil {
+		return nil, nil
+	}
+	return cluster.Shoot.Spec.Provider.Workers, nil
+}
+
+// MaxUnavailableForPool returns the maximum number of nodes that can undergo in-place
+// updates simultaneously for the given pool.
+func MaxUnavailableForPool(workers []gardencorev1beta1.Worker, poolName string, currentNodeCount int) int {
+	for _, w := range workers {
+		if w.Name != poolName {
+			continue
+		}
+		if w.MaxUnavailable != nil {
+			maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(w.MaxUnavailable, currentNodeCount, false)
+			if err == nil && maxUnavailable > 0 {
+				return maxUnavailable
+			}
+		}
+		break
+	}
+	return 1
+}
+
+// NodeInPlaceUpdateOngoingOrFailed returns true if the node is currently unavailable for
+// in-place update purposes (cordoned and draining/conditioned, or marked failed).
+func NodeInPlaceUpdateOngoingOrFailed(node *corev1.Node) bool {
+	return (node.Spec.Unschedulable && (node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || nodeHasActiveInPlaceUpdateConditionFromObject(node))) ||
+		node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed
 }
 
 // drainPendingNodes drains all cordoned nodes that are awaiting eviction in parallel.
@@ -163,31 +278,6 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 	}
 
 	return needsRequeue, nil
-}
-
-// NodeInPlaceUpdateOngoingOrFailed returns true if the node is currently unavailable for
-// in-place update purposes (cordoned and draining/conditioned, or marked failed).
-func NodeInPlaceUpdateOngoingOrFailed(node *corev1.Node) bool {
-	return (node.Spec.Unschedulable && (node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || nodeHasActiveInPlaceUpdateCondition(node))) ||
-		node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed
-}
-
-// MaxUnavailableForPool returns the maximum number of nodes that can undergo in-place
-// updates simultaneously for the given pool.
-func MaxUnavailableForPool(workers []gardencorev1beta1.Worker, poolName string, currentNodeCount int) int {
-	for _, w := range workers {
-		if w.Name != poolName {
-			continue
-		}
-		if w.MaxUnavailable != nil {
-			maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(w.MaxUnavailable, currentNodeCount, false)
-			if err == nil && maxUnavailable > 0 {
-				return maxUnavailable
-			}
-		}
-		break
-	}
-	return 1
 }
 
 // drainAndMarkReady drains the node and, on success, marks it ready for the in-place update (sets the ReadyForUpdate
@@ -306,117 +396,6 @@ func ShouldEvictPod(pod corev1.Pod) bool {
 	})
 }
 
-// cordonNodesForUpdate cordons nodes that need draining.
-func (r *Reconciler) cordonNodesForUpdate(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) error {
-	workers, err := r.workersFromCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	var (
-		inProgress     int
-		maxUnavailable = MaxUnavailableForPool(workers, nodeList.Items[0].Labels[v1beta1constants.LabelWorkerPool], len(nodeList.Items))
-	)
-
-	for _, node := range nodeList.Items {
-		if NodeInPlaceUpdateOngoingOrFailed(&node) {
-			inProgress++
-		}
-	}
-
-	for i := range nodeList.Items {
-		if inProgress >= maxUnavailable {
-			break
-		}
-
-		node := &nodeList.Items[i]
-		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" || node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || NodeInPlaceUpdateOngoingOrFailed(node) {
-			continue
-		}
-
-		patch := client.MergeFrom(node.DeepCopy())
-		node.Spec.Unschedulable = true
-		metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime, r.Clock.Now().UTC().Format(time.RFC3339))
-		if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
-			return fmt.Errorf("failed to cordon node %s: %w", node.Name, err)
-		}
-		log.Info("Cordoned node for in-place update", "node", node.Name)
-		inProgress++
-	}
-
-	return nil
-}
-
-func (r *Reconciler) workersFromCluster(ctx context.Context) ([]gardencorev1beta1.Worker, error) {
-	cluster, err := extensions.GetCluster(ctx, r.ShootClient, metav1.NamespaceSystem)
-	if err != nil {
-		return nil, fmt.Errorf("failed getting Cluster resource for namespace %s: %w", metav1.NamespaceSystem, err)
-	}
-	if cluster.Shoot == nil {
-		return nil, nil
-	}
-	return cluster.Shoot.Spec.Provider.Workers, nil
-}
-
-// cleanupAfterSuccessfulUpdate handles the case where GNA has set the update-result=successful label.
-func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	patch := client.StrategicMergeFrom(node.DeepCopy())
-	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateSuccessful, "In-place update completed successfully")
-	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("failed to set NodeInPlaceUpdate condition to successful on node %s: %w", node.Name, err)
-	}
-
-	patch = client.MergeFrom(node.DeepCopy())
-	delete(node.Labels, machinev1alpha1.LabelKeyNodeUpdateResult)
-	node.Spec.Unschedulable = false
-	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("failed to remove update-result label and uncordon node %s: %w", node.Name, err)
-	}
-	log.Info("Cleaned up node after successful in-place update")
-	return nil
-}
-
-// handleUpdateFailed handles the case where GNA has set the update-result=failed label.
-func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	message := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
-	if message == "" {
-		message = "GNA reported in-place update failure"
-	}
-
-	patch := client.StrategicMergeFrom(node.DeepCopy())
-	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, message)
-	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
-	}
-
-	log.Info("Recorded GNA-reported update failure in condition", "reason", message)
-	return nil
-}
-
-func (r *Reconciler) isUpdateTimedOut(node *corev1.Node) bool {
-	return slices.ContainsFunc(node.Status.Conditions, func(cond corev1.NodeCondition) bool {
-		return cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Status == corev1.ConditionTrue && cond.Reason == machinev1alpha1.ReadyForUpdate && r.Clock.Since(cond.LastTransitionTime.Time) > r.Config.UpdateTimeout.Duration
-	})
-}
-
-// markUpdateTimedOut sets the update-result=failed label and the UpdateFailed condition on a node that exceeded the UpdateTimeout.
-func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	patch := client.MergeFrom(node.DeepCopy())
-	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
-	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("failed to label node with update failed label %s: %w", node.Name, err)
-	}
-
-	patch = client.StrategicMergeFrom(node.DeepCopy())
-	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, "GNA failed to complete the in-place update within the expected time")
-	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
-		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
-	}
-
-	log.Info("Marked in-place update as failed due to timeout")
-	return nil
-}
-
 // updateShootPoolHashAndClearAutoInPlaceUpdate updates the shoot status to record that the pool completed its in-place update.
 func (r *Reconciler) updateShootPoolHashAndClearAutoInPlaceUpdate(ctx context.Context, log logr.Logger, poolName string) error {
 	shoot := &gardencorev1beta1.Shoot{}
@@ -484,6 +463,27 @@ func (r *Reconciler) updateShootPoolHashAndClearAutoInPlaceUpdate(ctx context.Co
 
 	log.Info("Updated pool hash and cleared AutoInPlaceUpdate", "pool", poolName, "hash", currentHash)
 	return nil
+}
+
+// requeueForUpdateTimeout returns a Result that requeues just before the earliest ReadyForUpdate
+// timeout across all nodes, so the next reconcile can detect a stuck GNA in time.
+func (r *Reconciler) requeueForUpdateTimeout(nodeList *corev1.NodeList) reconcile.Result {
+	var requeueAfter time.Duration
+	for _, node := range nodeList.Items {
+		for _, cond := range node.Status.Conditions {
+			if cond.Type != machinev1alpha1.NodeInPlaceUpdate || cond.Status != corev1.ConditionTrue || cond.Reason != machinev1alpha1.ReadyForUpdate {
+				continue
+			}
+
+			// Requeue instantly for nodes whose in-place update has already timed out.
+			remaining := max(r.Config.UpdateTimeout.Duration-r.Clock.Since(cond.LastTransitionTime.Time), time.Second)
+			if requeueAfter == 0 || remaining < requeueAfter {
+				requeueAfter = remaining
+			}
+			break
+		}
+	}
+	return reconcile.Result{RequeueAfter: requeueAfter}
 }
 
 func (r *Reconciler) setNodeInPlaceUpdateCondition(node *corev1.Node, reason, message string) {
