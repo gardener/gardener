@@ -124,7 +124,7 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldNode, ObjectNew: newNode})).To(BeTrue())
 			})
 
-			It("should return false when neither needs-drain nor update-result changes", func() {
+			It("should return false when the NodeInPlaceUpdate condition is added (absent in old, present in new)", func() {
 				oldNode := node.DeepCopy()
 				newNode := node.DeepCopy()
 				newNode.Status.Conditions = []corev1.NodeCondition{{
@@ -132,6 +132,31 @@ var _ = Describe("Add", func() {
 					Status: corev1.ConditionTrue,
 					Reason: machinev1alpha1.ReadyForUpdate,
 				}}
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldNode, ObjectNew: newNode})).To(BeFalse())
+			})
+
+			It("should return true when the NodeInPlaceUpdate condition is cleared (present in old, absent in new)", func() {
+				oldNode := node.DeepCopy()
+				oldNode.Status.Conditions = []corev1.NodeCondition{{
+					Type:   machinev1alpha1.NodeInPlaceUpdate,
+					Status: corev1.ConditionTrue,
+					Reason: machinev1alpha1.UpdateFailed,
+				}}
+				newNode := node.DeepCopy()
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldNode, ObjectNew: newNode})).To(BeTrue())
+			})
+
+			It("should return false when a non-successful NodeInPlaceUpdate condition is present in both old and new", func() {
+				cond := corev1.NodeCondition{
+					Type:   machinev1alpha1.NodeInPlaceUpdate,
+					Status: corev1.ConditionTrue,
+					Reason: machinev1alpha1.UpdateFailed,
+				}
+				oldNode := node.DeepCopy()
+				oldNode.Status.Conditions = []corev1.NodeCondition{cond}
+				newNode := oldNode.DeepCopy()
 
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldNode, ObjectNew: newNode})).To(BeFalse())
 			})
