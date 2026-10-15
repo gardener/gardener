@@ -121,7 +121,7 @@ func AddToManager(
 	}
 	if !seedIsGarden && (!seedIsSelfHostedShoot || gardenletutils.IsResponsibleForSelfHostedShoot()) {
 		// The token requestor controller is only added when:
-		// (a) the seed is not the garden runtime cluster (the Gardener Operator already runs the controller), and
+		// (a) the seed is not the garden runtime cluster (the gardener-operator already runs the controller), and
 		// (b) the gardenlet is responsible for a seed that is not a self-hosted shoot (since here the shoot gardenlet already
 		//     runs the controller, see (c)), or
 		// (c) the gardenlet is responsible for a self-hosted shoot

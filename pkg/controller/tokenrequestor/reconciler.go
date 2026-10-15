@@ -51,7 +51,7 @@ type Reconciler struct {
 	// if the serviceaccount.resources.gardener.cloud/namespace annotation is not set.
 
 	// Deprecated: Always use the serviceaccount.resources.gardener.cloud/namespace annotation to specify the namespace for the requested ServiceAccount.
-	// TODO(timuthy): Drop the default namespace after Gardener v1.162 has been released. Assuming a default namespace is too confusing since the TokenRequestor setup depends on the cluster types involved (Self-Hosted Shoot, Garden-Runtime, Seed).
+	// TODO(timuthy): Drop the default namespace after Gardener v1.156 has been released. Assuming a default namespace is too confusing since the TokenRequestor setup depends on the cluster types involved (Self-Hosted Shoot, Garden-Runtime, Seed).
 	TargetDefaultNamespace TargetDefaultNamespaceFn
 }
 
