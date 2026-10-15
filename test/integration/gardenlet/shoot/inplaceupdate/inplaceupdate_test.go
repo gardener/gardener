@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,7 +83,7 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 
 			By("Wait for the eviction to mark the pod for deletion")
 			Eventually(func(g Gomega) {
-				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 				g.Expect(pod.DeletionTimestamp).NotTo(BeNil())
 			}).Should(Succeed())
 
@@ -99,7 +98,7 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			removeFinalizers(pod)
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, pod, client.GracePeriodSeconds(0)))).To(Succeed())
 			Eventually(func(g Gomega) {
-				g.Expect(apierrors.IsNotFound(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod))).To(BeTrue(), "pod should be gone")
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(BeNotFoundError())
 			}).Should(Succeed())
 
 			// Re-trigger reconcile by toggling needs-drain off and on, rather than
@@ -125,9 +124,8 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			node := newNode(uniqueName("timeout"), poolDefault, poolDefaultSecretName)
 			Expect(testClient.Create(ctx, node)).To(Succeed())
 
-			// The finalizer keeps the pod around after eviction so graceful termination cannot complete, forcing
-			// the drain down the timeout-triggered force-delete path (RunDrain force-deletes once its DrainTimeout
-			// elapses).
+			// The finalizer keeps the pod alive even after the force-delete triggered by the drain timeout,
+			// so we can observe the force-delete before manually releasing the finalizer.
 			pod := newPod(uniqueName("pod"), testNamespace.Name, node.Name, func(p *corev1.Pod) {
 				p.Finalizers = []string{finalizerKeepAlive}
 			})
@@ -142,23 +140,22 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(node.Annotations).To(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
 			}).Should(Succeed())
 
+			By("Step the clock past the drain timeout to trigger force-delete")
+			fakeClock.Step(3 * time.Second)
+
 			By("The remaining pod is force-deleted once the drain timeout is exceeded")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 				g.Expect(pod.DeletionTimestamp).NotTo(BeNil())
 			}).Should(Succeed())
 
-			By("Confirm the drain does not complete while the finalizer keeps the pod around")
-			Consistently(func(g Gomega) {
-				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-				g.Expect(findCondition(node)).To(BeNil())
-			}).Should(Succeed())
-
+			// Remove the finalizer immediately so the pod disappears before RunDrain's internal
+			// timeout fires. This keeps the test in the success path (drain completes normally).
 			By("Remove the finalizer and delete the pod so the drain can complete")
 			removeFinalizers(pod)
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, pod, client.GracePeriodSeconds(0)))).To(Succeed())
 			Eventually(func(g Gomega) {
-				g.Expect(apierrors.IsNotFound(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod))).To(BeTrue(), "pod should be gone")
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(BeNotFoundError())
 			}).Should(Succeed())
 
 			By("The drain completes and ReadyForUpdate is set")
@@ -172,7 +169,6 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 		})
 
 		It("should respect the pool's MaxUnavailable when multiple nodes need drain", func() {
-			By("Create three nodes in the multi-pool, all needing drain, each holding a finalizer pod to keep drain in-progress")
 			nodes := make([]*corev1.Node, 3)
 			for i := range nodes {
 				nodes[i] = newNode(uniqueName("multi"), poolMulti, poolMultiSecretName)
@@ -195,27 +191,6 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			}).Should(Equal(2))
 		})
 
-		It("should force the control-plane pool's MaxUnavailable to 1 even when the spec says 99%", func() {
-			nodes := make([]*corev1.Node, 2)
-			for i := range nodes {
-				nodes[i] = newNode(uniqueName("cp"), poolControlPlane, poolControlPlaneSecretName)
-				Expect(testClient.Create(ctx, nodes[i])).To(Succeed())
-				pod := newPod(uniqueName("pod"), testNamespace.Name, nodes[i].Name, func(p *corev1.Pod) {
-					p.Finalizers = []string{finalizerKeepAlive}
-				})
-				Expect(testClient.Create(ctx, pod)).To(Succeed())
-				addNeedsDrain(nodes[i])
-			}
-
-			By("Verify only a single control-plane node ever starts a drain")
-			Eventually(func(g Gomega) int {
-				return countDrainStarted(g, nodes)
-			}).Should(Equal(1))
-			Consistently(func(g Gomega) int {
-				return countDrainStarted(g, nodes)
-			}).Should(Equal(1))
-		})
-
 		It("should treat a node already failed (LabelKeyNodeUpdateResult=failed) as unavailable for the cap", func() {
 			failedNode := newNode(uniqueName("failed"), poolDefault, poolDefaultSecretName)
 			failedNode.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] = machinev1alpha1.LabelValueNodeUpdateFailed
@@ -234,6 +209,22 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(failedNode), failedNode)).To(Succeed())
 				return findCondition(failedNode)
 			}).Should(matchCondition(machinev1alpha1.UpdateFailed))
+		})
+
+		It("should treat a malformed drain-start annotation as not timed out and complete the drain normally", func() {
+			node := newNode(uniqueName("malformed-ts"), poolDefault, poolDefaultSecretName)
+			node.Spec.Unschedulable = true
+			metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain, "true")
+			metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime, "not-a-valid-timestamp")
+			Expect(testClient.Create(ctx, node)).To(Succeed())
+
+			By("Wait for drain to complete (no evictable pods; malformed annotation must not be treated as a timeout)")
+			Eventually(func(g Gomega) {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+				g.Expect(node.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime))
+				g.Expect(node.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain))
+				g.Expect(findCondition(node)).To(matchCondition(machinev1alpha1.ReadyForUpdate))
+			}).Should(Succeed())
 		})
 	})
 

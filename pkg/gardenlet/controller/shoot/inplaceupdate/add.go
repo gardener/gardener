@@ -81,7 +81,8 @@ func NodeInPlaceUpdateStatePredicate() predicate.Predicate {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return (!nodeNeedsDrain(e.ObjectOld) && nodeNeedsDrain(e.ObjectNew)) ||
 				nodeUpdateResult(e.ObjectOld) != nodeUpdateResult(e.ObjectNew) ||
-				(!nodeDrainStarted(e.ObjectOld) && nodeDrainStarted(e.ObjectNew))
+				(!nodeDrainStarted(e.ObjectOld) && nodeDrainStarted(e.ObjectNew)) ||
+				(nodeHasInPlaceUpdateConditionFromObject(e.ObjectOld) && !nodeHasInPlaceUpdateConditionFromObject(e.ObjectNew))
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
