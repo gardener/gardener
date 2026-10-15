@@ -322,6 +322,8 @@ func (t *ManagedSeedContext) SetManagedSeed(baseShoot *gardencorev1beta1.Shoot, 
 	}
 
 	t.ManagedSeed = managedSeed
+	// Update the SeedContext and ShootContext in place instead of replacing the pointers, because helper functions called
+	// during tree construction (e.g., seed.ItShouldInitializeSeedClient(tc.SeedContext)) have already captured them.
 	*t.SeedContext = *t.ForSeed(seed)
 	*t.ShootContext = *t.ForShoot(baseShoot)
 	t.Log = t.Log.WithValues("managedSeed", client.ObjectKeyFromObject(managedSeed))
