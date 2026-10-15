@@ -127,7 +127,7 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 		DNSNames:                    kubernetesutils.DNSNamesForService(constants.ServiceName, v.namespace),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA))
+	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return fmt.Errorf("failed to generate victoria-logs-server-tls secret: %w", err)
 	}

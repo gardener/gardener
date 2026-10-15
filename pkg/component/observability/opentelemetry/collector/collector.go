@@ -172,7 +172,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			CertType:                    secrets.ServerCert,
 			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
+		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
 		if err != nil {
 			return err
 		}
