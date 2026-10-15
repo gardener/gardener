@@ -263,12 +263,13 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-							managedresources.LabelKeyOrigin:                     managedresources.LabelValueGardener,
-							v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleSystemComponent,
-							v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyShootToKubelet:   v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+							managedresources.LabelKeyOrigin:                          managedresources.LabelValueGardener,
+							v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleSystemComponent,
+							v1beta1constants.LabelNetworkPolicyShootFromSeed:         v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootFromControlPlane: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootToAPIServer:      v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootToKubelet:        v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:                 v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 					},
 					Spec: corev1.PodSpec{

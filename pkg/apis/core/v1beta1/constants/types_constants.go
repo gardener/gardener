@@ -606,6 +606,9 @@ const (
 	// LabelNetworkPolicyShootFromSeed allows Ingress traffic from the seed cluster (where the shoot's kube-apiserver
 	// runs).
 	LabelNetworkPolicyShootFromSeed = "networking.gardener.cloud/from-seed"
+	// LabelNetworkPolicyShootFromControlPlane allows Ingress traffic from the control plane of a self-hosted shoot
+	// (where the kube-apiserver runs on the same network as the shoot nodes).
+	LabelNetworkPolicyShootFromControlPlane = "networking.gardener.cloud/from-control-plane"
 	// LabelNetworkPolicyShootToAPIServer allows Egress traffic to the shoot's API server.
 	LabelNetworkPolicyShootToAPIServer = "networking.gardener.cloud/to-apiserver"
 	// LabelNetworkPolicyShootToKubelet allows Egress traffic to the kubelets.

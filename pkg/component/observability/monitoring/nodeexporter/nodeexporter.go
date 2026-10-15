@@ -55,6 +55,8 @@ type Values struct {
 	Image string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
+	// IsSelfHosted marks whether the shoot is a self-hosted shoot.
+	IsSelfHosted bool
 }
 
 // New creates a new instance of DeployWaiter for node-exporter.
@@ -317,157 +319,164 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		daemonSet = &appsv1.DaemonSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: metav1.NamespaceSystem,
-				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
-					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
-				}),
-			},
-			Spec: appsv1.DaemonSetSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(),
+		daemonSet = func() *appsv1.DaemonSet {
+			podLabels := utils.MergeStringMaps(getLabels(), map[string]string{
+				v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleMonitoring,
+				managedresources.LabelKeyOrigin:                     managedresources.LabelValueGardener,
+				v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+			})
+			if n.values.IsSelfHosted {
+				podLabels[v1beta1constants.LabelNetworkPolicyShootFromControlPlane] = v1beta1constants.LabelNetworkPolicyAllowed
+			} else {
+				podLabels[v1beta1constants.LabelNetworkPolicyShootFromSeed] = v1beta1constants.LabelNetworkPolicyAllowed
+			}
+			return &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: metav1.NamespaceSystem,
+					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+						v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
+						managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+					}),
 				},
-				RevisionHistoryLimit: new(int32(2)),
-				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
-					Type: appsv1.RollingUpdateDaemonSetStrategyType,
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-							v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleMonitoring,
-							managedresources.LabelKeyOrigin:                     managedresources.LabelValueGardener,
-							v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
-						}),
+				Spec: appsv1.DaemonSetSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: getLabels(),
 					},
-					Spec: corev1.PodSpec{
-						Tolerations: []corev1.Toleration{
-							{
-								Effect:   corev1.TaintEffectNoSchedule,
-								Operator: corev1.TolerationOpExists,
-							},
-							{
-								Effect:   corev1.TaintEffectNoExecute,
-								Operator: corev1.TolerationOpExists,
-							},
+					RevisionHistoryLimit: new(int32(2)),
+					UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+						Type: appsv1.RollingUpdateDaemonSetStrategyType,
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: podLabels,
 						},
-						HostNetwork:                  true,
-						HostPID:                      true,
-						PriorityClassName:            "system-cluster-critical",
-						ServiceAccountName:           serviceAccount.Name,
-						AutomountServiceAccountToken: new(false),
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: new(true),
-							RunAsUser:    new(int64(65534)),
-							SeccompProfile: &corev1.SeccompProfile{
-								Type: corev1.SeccompProfileTypeRuntimeDefault,
-							},
-						},
-						Containers: []corev1.Container{
-							{
-								Name:            name,
-								Image:           n.values.Image,
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command: []string{
-									"/bin/node_exporter",
-									fmt.Sprintf("--web.listen-address=:%d", portMetrics),
-									"--path.procfs=/host/proc",
-									"--path.sysfs=/host/sys",
-									"--path.rootfs=/host",
-									"--path.udev.data=/host/run/udev/data",
-									"--log.level=error",
-									"--collector.disable-defaults",
-									"--collector.conntrack",
-									"--collector.cpu",
-									"--collector.diskstats",
-									"--collector.filefd",
-									"--collector.filesystem",
-									"--collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)",
-									"--collector.loadavg",
-									"--collector.meminfo",
-									"--collector.netstat",
-									"--collector.uname",
-									"--collector.stat",
-									"--collector.pressure",
-									"--collector.textfile",
-									"--collector.textfile.directory=" + volumeMountPathTextFileCollector,
+						Spec: corev1.PodSpec{
+							Tolerations: []corev1.Toleration{
+								{
+									Effect:   corev1.TaintEffectNoSchedule,
+									Operator: corev1.TolerationOpExists,
 								},
-								Ports: []corev1.ContainerPort{
-									{
-										ContainerPort: portMetrics,
-										Protocol:      corev1.ProtocolTCP,
-										HostPort:      portMetrics,
-										Name:          "scrape",
+								{
+									Effect:   corev1.TaintEffectNoExecute,
+									Operator: corev1.TolerationOpExists,
+								},
+							},
+							HostNetwork:                  true,
+							HostPID:                      true,
+							PriorityClassName:            "system-cluster-critical",
+							ServiceAccountName:           serviceAccount.Name,
+							AutomountServiceAccountToken: new(false),
+							SecurityContext: &corev1.PodSecurityContext{
+								RunAsNonRoot: new(true),
+								RunAsUser:    new(int64(65534)),
+								SeccompProfile: &corev1.SeccompProfile{
+									Type: corev1.SeccompProfileTypeRuntimeDefault,
+								},
+							},
+							Containers: []corev1.Container{
+								{
+									Name:            name,
+									Image:           n.values.Image,
+									ImagePullPolicy: corev1.PullIfNotPresent,
+									Command: []string{
+										"/bin/node_exporter",
+										fmt.Sprintf("--web.listen-address=:%d", portMetrics),
+										"--path.procfs=/host/proc",
+										"--path.sysfs=/host/sys",
+										"--path.rootfs=/host",
+										"--path.udev.data=/host/run/udev/data",
+										"--log.level=error",
+										"--collector.disable-defaults",
+										"--collector.conntrack",
+										"--collector.cpu",
+										"--collector.diskstats",
+										"--collector.filefd",
+										"--collector.filesystem",
+										"--collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)",
+										"--collector.loadavg",
+										"--collector.meminfo",
+										"--collector.netstat",
+										"--collector.uname",
+										"--collector.stat",
+										"--collector.pressure",
+										"--collector.textfile",
+										"--collector.textfile.directory=" + volumeMountPathTextFileCollector,
 									},
-								},
-								LivenessProbe: &corev1.Probe{
-									ProbeHandler: corev1.ProbeHandler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path: "/",
-											Port: intstr.FromInt32(portMetrics),
+									Ports: []corev1.ContainerPort{
+										{
+											ContainerPort: portMetrics,
+											Protocol:      corev1.ProtocolTCP,
+											HostPort:      portMetrics,
+											Name:          "scrape",
 										},
 									},
-									InitialDelaySeconds: 5,
-									TimeoutSeconds:      5,
-								},
-								ReadinessProbe: &corev1.Probe{
-									ProbeHandler: corev1.ProbeHandler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path: "/",
-											Port: intstr.FromInt32(portMetrics),
+									LivenessProbe: &corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path: "/",
+												Port: intstr.FromInt32(portMetrics),
+											},
+										},
+										InitialDelaySeconds: 5,
+										TimeoutSeconds:      5,
+									},
+									ReadinessProbe: &corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path: "/",
+												Port: intstr.FromInt32(portMetrics),
+											},
+										},
+										InitialDelaySeconds: 5,
+										TimeoutSeconds:      5,
+									},
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("3m"),
+											corev1.ResourceMemory: resource.MustParse("50Mi"),
 										},
 									},
-									InitialDelaySeconds: 5,
-									TimeoutSeconds:      5,
-								},
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("3m"),
-										corev1.ResourceMemory: resource.MustParse("50Mi"),
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: new(false),
 									},
-								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: new(false),
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      volumeNameHost,
-										ReadOnly:  true,
-										MountPath: volumeMountPathHost,
-									},
-									{
-										Name:      volumeNameTextFileCollector,
-										ReadOnly:  true,
-										MountPath: volumeMountPathTextFileCollector,
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											Name:      volumeNameHost,
+											ReadOnly:  true,
+											MountPath: volumeMountPathHost,
+										},
+										{
+											Name:      volumeNameTextFileCollector,
+											ReadOnly:  true,
+											MountPath: volumeMountPathTextFileCollector,
+										},
 									},
 								},
 							},
-						},
-						Volumes: []corev1.Volume{
-							{
-								Name: volumeNameHost,
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/",
+							Volumes: []corev1.Volume{
+								{
+									Name: volumeNameHost,
+									VolumeSource: corev1.VolumeSource{
+										HostPath: &corev1.HostPathVolumeSource{
+											Path: "/",
+										},
 									},
 								},
-							},
-							{
-								Name: volumeNameTextFileCollector,
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: hostPathTextFileCollector,
+								{
+									Name: volumeNameTextFileCollector,
+									VolumeSource: corev1.VolumeSource{
+										HostPath: &corev1.HostPathVolumeSource{
+											Path: hostPathTextFileCollector,
+										},
 									},
 								},
 							},
 						},
 					},
 				},
-			},
-		}
+			}
+		}()
 
 		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
