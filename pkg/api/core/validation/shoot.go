@@ -1806,9 +1806,6 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, kubernetesVe
 
 	if structuredAuthorization := kubeAPIServer.StructuredAuthorization; structuredAuthorization != nil {
 		structAuthPath := fldPath.Child("structuredAuthorization")
-		if value, ok := kubeAPIServer.FeatureGates["StructuredAuthorizationConfiguration"]; ok && !value {
-			allErrs = append(allErrs, field.Forbidden(structAuthPath, "requires feature gate StructuredAuthorizationConfiguration to be enabled"))
-		}
 		if len(structuredAuthorization.ConfigMapName) == 0 {
 			allErrs = append(allErrs, field.Forbidden(structAuthPath.Child("configMapName"), "must provide a name"))
 		}

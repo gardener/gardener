@@ -4980,23 +4980,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid setting structured authorization when feature gate is disabled", func() {
-				shoot.Spec.Kubernetes.Version = "v1.31.0"
-				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
-					ConfigMapName: "foo",
-					Kubeconfigs:   []core.AuthorizerKubeconfigReference{{}},
-				}
-				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = map[string]bool{
-					"StructuredAuthorizationConfiguration": false,
-				}
-
-				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization"),
-					"Detail": Equal("requires feature gate StructuredAuthorizationConfiguration to be enabled"),
-				}))))
-			})
-
 			It("should allow when config is valid", func() {
 				shoot.Spec.Kubernetes.Version = "v1.31.0"
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
