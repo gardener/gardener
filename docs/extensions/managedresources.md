@@ -1,5 +1,5 @@
 ---
-title: ManagedResources
+title: Deploy Resources to the Shoot Cluster
 ---
 
 # Deploy Resources to the Shoot Cluster
