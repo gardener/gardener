@@ -1,3 +1,7 @@
+---
+title: Infrastructure
+---
+
 # Contract: `Infrastructure` Resource
 
 Every Kubernetes cluster requires some low-level infrastructure to be setup in order to work properly.

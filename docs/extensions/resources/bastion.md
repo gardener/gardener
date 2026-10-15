@@ -1,3 +1,7 @@
+---
+title: Bastion
+---
+
 # Contract: `Bastion` Resource
 
 The Gardener project allows users to connect to Shoot worker nodes via SSH. As nodes are usually firewalled and not directly accessible from the public internet, [GEP-0015](https://github.com/gardener/enhancements/tree/main/geps/0015-bastion-management) introduced the concept of "Bastions". A bastion is a dedicated server that only serves to allow SSH ingress to the worker nodes.

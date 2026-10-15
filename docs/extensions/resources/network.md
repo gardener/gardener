@@ -1,3 +1,7 @@
+---
+title: Network
+---
+
 # Contract: `Network` Resource
 
 Gardener is an open-source project that provides a nested user model. Basically, there are two types of services provided by Gardener to its users:
