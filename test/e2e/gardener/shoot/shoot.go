@@ -225,6 +225,8 @@ func ItShouldGetResponsibleSeed(tc *ShootContext) {
 			g.Expect(tc.GardenKomega.Get(tc.Seed)()).To(Succeed())
 		}).Should(Succeed())
 
+		// Update the SeedContext in place instead of replacing the pointer, because helper functions called during tree
+		// construction (e.g., seed.ItShouldInitializeSeedClient(tc.SeedContext)) have already captured it.
 		*tc.SeedContext = *tc.ForSeed(tc.Seed)
 	}, SpecTimeout(time.Minute))
 }
