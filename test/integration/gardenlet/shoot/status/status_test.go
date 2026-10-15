@@ -170,6 +170,22 @@ var _ = Describe("Shoot Status controller tests", func() {
 							},
 							UpdateStrategy: new(gardencorev1beta1.ManualInPlaceUpdate),
 						},
+						{
+							Name:    "worker6",
+							Minimum: 2,
+							Maximum: 2,
+							Machine: gardencorev1beta1.Machine{
+								Type: "large",
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name:    "image-2",
+									Version: new("1.2.0"),
+								},
+							},
+							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+								Version: new("1.30.1"),
+							},
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
+						},
 					},
 				},
 				Networking: &gardencorev1beta1.Networking{
@@ -297,7 +313,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 		shoot.Status.TechnicalID = shootTechnicalID
 		shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{
 			PendingWorkerUpdates: &gardencorev1beta1.PendingWorkerUpdates{
-				AutoInPlaceUpdate:   []string{"worker2"},
+				AutoInPlaceUpdate:   []string{"worker2", "worker6"},
 				ManualInPlaceUpdate: []string{"worker1", "worker3", "worker5"},
 			},
 		}
@@ -306,11 +322,12 @@ var _ = Describe("Shoot Status controller tests", func() {
 		waitForManagerToObserveUpdatedShootStatus(shoot)
 	})
 
-	It("should not remove the manual in-place update workers from Shoot status if the pool is not present in the worker status or the hash doesn't match", func() {
+	It("should keep in-place update workers whose hash is absent or mismatched and remove those whose hash matches (both manual and auto)", func() {
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
 			"worker2": "ecb9f30b6995e60d",
 			"worker3": "different-hash",
+			"worker6": "different-hash",
 		}
 
 		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
@@ -321,22 +338,19 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
 			// worker3 hash does not match, worker5 is not present in the worker status
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("worker3", "worker5"))
-			// No change for auto in-place update workers
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			// worker2 hash matches so it is removed, worker6 hash does not match so it stays
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker6"))
 			g.Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate))
 		}).Should(Succeed())
 	})
 
-	It("should remove the manual in-place update workers from Shoot status and remove the force-update annotation if all hashes match", func() {
-		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
-		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
-
-		waitForManagerToObserveUpdatedShootStatus(shoot)
-
+	It("should remove all in-place update workers from Shoot status and remove the force-update annotation once every hash matches", func() {
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
+			"worker2": "ecb9f30b6995e60d",
 			"worker3": "981b8e740cbbf058",
 			"worker5": "2c12ce1fbb06b184",
+			"worker6": "379eb03958bc83d0",
 		}
 
 		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
@@ -345,25 +359,6 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Status.InPlaceUpdates).To(BeNil())
 			g.Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
-		}).Should(Succeed())
-	})
-
-	It("should not remove the force-update annotation if auto-inplace update workers are present", func() {
-		workerPoolHashMap := map[string]string{
-			"worker1": "ef492a9674e2778a",
-			"worker3": "981b8e740cbbf058",
-			"worker5": "2c12ce1fbb06b184",
-		}
-
-		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
-
-		Eventually(func(g Gomega) {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeNil())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
-			g.Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate))
 		}).Should(Succeed())
 	})
 
@@ -394,8 +389,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
-			// No change for auto in-place update workers
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2", "worker6"))
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeEmpty())
 			g.Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 		}).Should(Succeed())
@@ -452,6 +446,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
+			"worker2": "different-hash",
 			"worker3": "981b8e740cbbf058",
 			"worker5": "different-hash",
 		}
@@ -462,8 +457,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
-			// No change for auto in-place update workers
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2", "worker6"))
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("worker5"))
 			g.Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 		}).Should(Succeed())
@@ -496,8 +490,8 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
-			// No change for auto in-place update workers
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			// worker2 (auto in-place) stays pending because its hash is absent from the worker status hash map
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2", "worker6"))
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeEmpty())
 			g.Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 		}).Should(Succeed())
@@ -540,8 +534,8 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
-			// No change for auto in-place update workers
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			// worker2 (auto in-place) stays pending because its hash is absent from the worker status hash map
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2", "worker6"))
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeEmpty())
 			g.Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 		}).Should(Succeed())

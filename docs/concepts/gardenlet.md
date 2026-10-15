@@ -546,7 +546,7 @@ Please refer to [GEP-0022: Improved Usage of the `ShootState` API](https://githu
 
 ### ["Status" Reconciler](../../pkg/gardenlet/controller/shoot/status)
 
-This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if its `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. A worker pool is removed from `status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate` field in the `Shoot` if the hash of the worker pool in the `Shoot` spec and the `Worker` status field matches. This indicates that all the nodes of that worker pool are successfully updated and are no longer pending manual in-place updates.
+This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if its `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. A worker pool is removed from the `status.inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate` or `status.inPlaceUpdates.pendingWorkerUpdates.autoInPlaceUpdate` field in the `Shoot` (depending on its update strategy) if the hash of the worker pool in the `Shoot` spec and the `Worker` status field matches. This indicates that all the nodes of that worker pool are successfully updated and are no longer pending an in-place update. Both update strategies are handled independently of each other, so a completed worker pool is cleared even if an unrelated worker pool is still failing.
 
 ### [`SelfHostedShootExposure` Reconciler](../../pkg/gardenlet/controller/shoot/selfhostedshootexposure)
 

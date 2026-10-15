@@ -26,7 +26,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// Reconciler updates the Shoot status with Manual In-Place pending workers from the Worker extension status.
+// Reconciler updates the Shoot status with in-place pending workers from the Worker extension status.
 type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
@@ -34,7 +34,7 @@ type Reconciler struct {
 	SeedName     string
 }
 
-// Reconcile updates the Shoot status with Manual In-Place pending workers from the Worker extension status.
+// Reconcile updates the Shoot status with in-place pending workers from the Worker extension status.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -72,8 +72,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	// If there are no manual in-place update workers in the shoot status, then nothing to do
-	if shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil || len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+	// If there are no in-place pending workers in the shoot status, then nothing to prune.
+	if shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil ||
+		(len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0) {
 		if needsReconcile(shoot) {
 			log.Info("No manual in-place pending workers in Shoot status, but credentials rotation phases are not set to Prepared, triggering a Shoot reconciliation")
 			patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
@@ -85,17 +86,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
-		log.Info("No manual in-place pending workers in Shoot status, nothing to update")
+		log.Info("No in-place pending workers in Shoot status, nothing to update")
 		return reconcile.Result{}, nil
 	}
 
 	var (
 		manualInPlacePendingWorkers  = sets.New[string]()
+		autoInPlacePendingWorkers    = sets.New[string]()
 		inPlaceUpdatesWorkerPoolHash = worker.Status.InPlaceUpdates.WorkerPoolToHashMap
 	)
 
 	for _, pool := range shoot.Spec.Provider.Workers {
-		if !v1beta1helper.IsUpdateStrategyManualInPlace(pool.UpdateStrategy) {
+		if !v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
 			continue
 		}
 
@@ -125,15 +127,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, fmt.Errorf("failed to calculate worker pool %q hash: %w", pool.Name, err)
 		}
 
-		// If the pool is not at all present in the worker status or the hash is different, then add it to the manual in-place pending workers
+		// If the pool is not at all present in the worker status or the hash is different, then it is still pending an in-place update.
 		if workerStatusWorkerPoolHash, ok := inPlaceUpdatesWorkerPoolHash[pool.Name]; !ok || workerStatusWorkerPoolHash != shootWorkerPoolHash {
-			manualInPlacePendingWorkers.Insert(pool.Name)
+			if v1beta1helper.IsUpdateStrategyManualInPlace(pool.UpdateStrategy) {
+				manualInPlacePendingWorkers.Insert(pool.Name)
+			} else {
+				autoInPlacePendingWorkers.Insert(pool.Name)
+			}
 		}
 	}
 
-	// If both the slices are equal, then nothing to do here
-	if sets.New(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...).Equal(manualInPlacePendingWorkers) {
-		log.Info("Manual in-place pending workers are already up-to-date")
+	// If both the pending worker lists are already up-to-date, then nothing to do here.
+	if sets.New(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...).Equal(manualInPlacePendingWorkers) &&
+		sets.New(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...).Equal(autoInPlacePendingWorkers) {
+		log.Info("In-place pending workers are already up-to-date")
 		return reconcile.Result{}, nil
 	}
 
@@ -143,25 +150,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(pool string) bool {
 		return !manualInPlacePendingWorkers.Has(pool)
 	})
+	shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, func(pool string) bool {
+		return !autoInPlacePendingWorkers.Has(pool)
+	})
 
 	var (
 		noManualInPlacePendingWorkers = len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0
-		noInPlacePendingWorkers       = noManualInPlacePendingWorkers && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0
+		noAutoInPlacePendingWorkers   = len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0
+		noInPlacePendingWorkers       = noManualInPlacePendingWorkers && noAutoInPlacePendingWorkers
 		shootNeedsReconcile           = false
 	)
 
 	if noManualInPlacePendingWorkers {
 		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
-
-		if noInPlacePendingWorkers {
-			shoot.Status.InPlaceUpdates = nil
-		}
+	}
+	if noAutoInPlacePendingWorkers {
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
+	}
+	if noInPlacePendingWorkers {
+		shoot.Status.InPlaceUpdates = nil
 	}
 
-	if noManualInPlacePendingWorkers {
-		log.Info("No manual in-place pending workers remaining, updating Shoot status")
+	if noInPlacePendingWorkers {
+		log.Info("No in-place pending workers remaining, updating Shoot status")
 	} else {
-		log.Info("Updating Shoot status with manual in-place pending workers", "manualInPlacePendingWorkers", sets.List(manualInPlacePendingWorkers))
+		log.Info("Updating Shoot status with in-place pending workers",
+			"manualInPlacePendingWorkers", sets.List(manualInPlacePendingWorkers),
+			"autoInPlacePendingWorkers", sets.List(autoInPlacePendingWorkers))
 	}
 	if err := r.GardenClient.Status().Patch(ctx, shoot, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to patch Shoot status: %w", err)
