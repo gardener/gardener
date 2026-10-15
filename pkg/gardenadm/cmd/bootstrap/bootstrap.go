@@ -269,6 +269,7 @@ func run(ctx context.Context, opts *Options) error {
 		_ = g.Add(flow.Task{
 			Name:         "Destroying bastion host",
 			Fn:           component.OpDestroyAndWait(b.Shoot.Components.Bastion).Destroy,
+			SkipIf:       opts.SkipBastionDeletion,
 			Dependencies: flow.NewTaskIDs(fetchKubeconfig),
 		})
 
