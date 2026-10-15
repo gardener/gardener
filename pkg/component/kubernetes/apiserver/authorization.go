@@ -7,7 +7,6 @@ package apiserver
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,16 +31,7 @@ const (
 	DataKeyConfigMapAuthorizationConfig = "config.yaml"
 )
 
-func (k *kubeAPIServer) useStructuredAuthorization() bool {
-	value, ok := k.values.FeatureGates["StructuredAuthorizationConfiguration"]
-	return !ok || value
-}
-
 func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if !k.useStructuredAuthorization() {
-		return nil
-	}
-
 	authorizationConfiguration := &apiserverv1beta1.AuthorizationConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiserverv1beta1.ConfigSchemeGroupVersion.String(),
@@ -86,45 +76,20 @@ func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Contex
 }
 
 func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deployment, configMapAuthorizationConfig *corev1.ConfigMap, secretWebhooksKubeconfigs *corev1.Secret) {
-	if !k.useStructuredAuthorization() {
-		// TODO: Delete this branch and everything related to it once we only support a Kubernetes version which
-		//  promotes the StructuredAuthorizationConfiguration feature gate to GA (1.32+ or higher).
-		authModes := []string{"RBAC"}
-
-		if !k.values.IsWorkerless {
-			authModes = append([]string{"Node"}, authModes...)
-		}
-
-		if len(k.values.AuthorizationWebhooks) > 0 {
-			authModes = append(authModes, "Webhook")
-
-			webhook := k.values.AuthorizationWebhooks[0] // only one authz webhook supported in this case
-
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathStructuredAuthorizationWebhookKubeconfigs, authorizationWebhookKubeconfigFilename(webhook.Name)))
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", webhook.AuthorizedTTL.Duration.String()))
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", webhook.UnauthorizedTTL.Duration.String()))
-			if v := webhook.SubjectAccessReviewVersion; v != "" {
-				deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-version=%s", v))
-			}
-		}
-
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--authorization-mode="+strings.Join(authModes, ","))
-	} else {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-config=%s/%s", volumeMountPathStructuredAuthorizationConfig, DataKeyConfigMapAuthorizationConfig))
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      volumeNameStructuredAuthorizationConfig,
-			MountPath: volumeMountPathStructuredAuthorizationConfig,
-			ReadOnly:  true,
-		})
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: volumeNameStructuredAuthorizationConfig,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{
-					Name: configMapAuthorizationConfig.Name,
-				}},
-			},
-		})
-	}
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-config=%s/%s", volumeMountPathStructuredAuthorizationConfig, DataKeyConfigMapAuthorizationConfig))
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      volumeNameStructuredAuthorizationConfig,
+		MountPath: volumeMountPathStructuredAuthorizationConfig,
+		ReadOnly:  true,
+	})
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: volumeNameStructuredAuthorizationConfig,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{
+				Name: configMapAuthorizationConfig.Name,
+			}},
+		},
+	})
 
 	if len(k.values.AuthorizationWebhooks) > 0 {
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{

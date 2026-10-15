@@ -2059,27 +2059,6 @@ rules:
 			})
 
 			Context("authorization configuration", func() {
-				It("should do nothing when the feature gate is disabled", func() {
-					version := semver.MustParse("1.32.0")
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-							FeatureGates: map[string]bool{
-								"StructuredAuthorizationConfiguration": false,
-							},
-						},
-						Version: version,
-					})
-
-					configMapAuthorization = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-config", Namespace: namespace}}
-					Expect(kubernetesutils.MakeUnique(configMapAuthorization)).To(Succeed())
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
-				})
-
 				It("should successfully deploy the configmap resource w/o webhooks", func() {
 					version := semver.MustParse("1.32.0")
 

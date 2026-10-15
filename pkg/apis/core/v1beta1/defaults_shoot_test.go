@@ -1082,7 +1082,6 @@ var _ = Describe("Shoot defaulting", func() {
 				EmitPerNodeGroupMetrics:         new(true),
 				Verbosity:                       new(int32(4)),
 				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:              new(int32(20)),
 				MaxScaleDownParallelism:         new(int32(15)),
 				MaxDrainParallelism:             new(int32(5)),
 				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
@@ -1106,59 +1105,12 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.EmitPerNodeGroupMetrics).To(PointTo(Equal(true)))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(4))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 1})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(20))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(15))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(5))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxBinpackingTime).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
-		})
-
-		It("should sync MaxScaleDownParallelism value with MaxEmptyBulkDelete when the latter is set and the former is not", func() {
-			obj.Spec.Kubernetes.ClusterAutoscaler = &ClusterAutoscaler{
-				ScaleDownDelayAfterAdd:          &metav1.Duration{Duration: 1 * time.Hour},
-				ScaleDownDelayAfterDelete:       &metav1.Duration{Duration: 2 * time.Hour},
-				ScaleDownDelayAfterFailure:      &metav1.Duration{Duration: 3 * time.Hour},
-				ScaleDownUnneededTime:           &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold:   new(0.8),
-				ScanInterval:                    &metav1.Duration{Duration: 5 * time.Hour},
-				Expander:                        &expanderRandom,
-				MaxNodeProvisionTime:            &metav1.Duration{Duration: 6 * time.Hour},
-				MaxGracefulTerminationSeconds:   new(int32(60 * 60 * 24)),
-				IgnoreDaemonsetsUtilization:     new(true),
-				EmitPerNodeGroupMetrics:         new(true),
-				Verbosity:                       new(int32(4)),
-				NewPodScaleUpDelay:              &metav1.Duration{Duration: 1},
-				MaxEmptyBulkDelete:              new(int32(17)),
-				MaxDrainParallelism:             new(int32(5)),
-				InitialNodeGroupBackoffDuration: &metav1.Duration{Duration: 10 * time.Minute},
-				MaxNodeGroupBackoffDuration:     &metav1.Duration{Duration: 20 * time.Minute},
-				NodeGroupBackoffResetTimeout:    &metav1.Duration{Duration: 1 * time.Hour},
-			}
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterDelete).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterFailure).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime).To(PointTo(Equal(metav1.Duration{Duration: 4 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUtilizationThreshold).To(PointTo(Equal(0.8)))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Expander).To(PointTo(Equal(ClusterAutoscalerExpanderRandom)))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(60 * 60 * 24))))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.IgnoreDaemonsetsUtilization).To(PointTo(Equal(true)))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.EmitPerNodeGroupMetrics).To(PointTo(Equal(true)))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(4))))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 1})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(17))))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(17))))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(5))))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.InitialNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeGroupBackoffDuration).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NodeGroupBackoffResetTimeout).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxBinpackingTime).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 		})
 	})
 

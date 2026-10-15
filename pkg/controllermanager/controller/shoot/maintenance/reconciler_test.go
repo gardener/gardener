@@ -2400,11 +2400,11 @@ var _ = Describe("Shoot Maintenance", func() {
 			Entry("multiple operations",
 				entry{
 					operations: []string{
-						".spec.kubernetes.kubeControllerManager.podEvictionTimeout is set to nil. Reason: deprecated",
-						".spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: deprecated",
 						`Added "reconcile" operation annotation`,
+						`Added "rotate-credentials-start;reconcile" operation annotation`,
+						`Added "rotate-ssh-keypair;reconcile" operation annotation`,
 					},
-					expectedDesc: `All maintenance operations successful. .spec.kubernetes.kubeControllerManager.podEvictionTimeout is set to nil. Reason: deprecated, .spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete is set to nil. Reason: deprecated, Added "reconcile" operation annotation`,
+					expectedDesc: `All maintenance operations successful. Added "reconcile" operation annotation, Added "rotate-credentials-start;reconcile" operation annotation, Added "rotate-ssh-keypair;reconcile" operation annotation`,
 				},
 			),
 			Entry("successful cp update combined with operations",

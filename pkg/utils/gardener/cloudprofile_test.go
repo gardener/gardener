@@ -576,29 +576,6 @@ var _ = Describe("CloudProfile", func() {
 					Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
 				})
 
-				Describe("and shoot k8s version < v1.33", func() {
-					BeforeEach(func() {
-						shoot.Spec.Kubernetes.Version = "v1.32.3"
-					})
-
-					It("should default the cloudProfileName to the cloudProfile value and to kind CloudProfile", func() {
-						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
-						gardenerutils.SyncCloudProfileFields(nil, shoot)
-						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
-						Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
-						Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
-					})
-
-					It("should keep changes to the cloudProfile reference if it changes from a NamespacedCloudProfile to a CloudProfile to enable further validations to return an error", func() {
-						oldShoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
-						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile", Kind: "CloudProfile"}
-						gardenerutils.SyncCloudProfileFields(oldShoot, shoot)
-						Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
-						Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
-						Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
-					})
-				})
-
 				Describe("and shoot k8s version >= v1.33.0", func() {
 					It("should not default the cloudProfileName to the cloudProfile value but add default kind CloudProfile", func() {
 						shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}

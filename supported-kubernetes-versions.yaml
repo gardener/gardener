@@ -1,8 +1,4 @@
 versions:
-- version: "1.32"
-  addedIn: "1.113.0"
-  startDate: 2025-02-24
-  endDate: 2026-04-24
 - version: "1.33"
   addedIn: "1.122.0"
   startDate: 2025-06-27
