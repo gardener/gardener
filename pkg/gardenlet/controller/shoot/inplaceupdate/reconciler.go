@@ -57,17 +57,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	for _, node := range nodeList.Items {
+		nodeLog := log.WithValues("node", node.Name)
 		switch {
 		case node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateSuccessful:
-			if err := r.cleanupAfterSuccessfulUpdate(ctx, log, &node); err != nil {
+			if err := r.cleanupAfterSuccessfulUpdate(ctx, nodeLog, &node); err != nil {
 				return reconcile.Result{}, err
 			}
 		case node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed:
-			if err := r.handleUpdateFailed(ctx, log, &node); err != nil {
+			if err := r.handleUpdateFailed(ctx, nodeLog, &node); err != nil {
 				return reconcile.Result{}, err
 			}
 		case r.isUpdateTimedOut(&node):
-			if err := r.markUpdateTimedOut(ctx, log, &node); err != nil {
+			if err := r.markUpdateTimedOut(ctx, nodeLog, &node); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -127,6 +128,7 @@ func (r *Reconciler) requeueForUpdateTimeout(nodeList *corev1.NodeList) reconcil
 	return reconcile.Result{RequeueAfter: requeueAfter}
 }
 
+// drainPendingNodes drains all cordoned nodes that are awaiting eviction in parallel.
 func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) (bool, error) {
 	var (
 		drainFns     []flow.TaskFn
@@ -144,9 +146,10 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 			defer cancel()
 			if err := r.drainAndMarkReady(ctx, log, &node); err != nil {
 				if ctx.Err() != nil {
-					return fmt.Errorf("context cancelled while draining node %s: %w", node.Name, ctx.Err())
+					log.Info("Drain attempt timed out, will retry", "node", node.Name)
+				} else {
+					log.Info("Drain not complete yet, will retry", "node", node.Name, "reason", err.Error())
 				}
-				log.Info("Drain not complete yet, will retry", "node", node.Name, "reason", err.Error())
 				requeueMu.Lock()
 				needsRequeue = true
 				requeueMu.Unlock()
@@ -165,7 +168,7 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 // NodeInPlaceUpdateOngoingOrFailed returns true if the node is currently unavailable for
 // in-place update purposes (cordoned and draining/conditioned, or marked failed).
 func NodeInPlaceUpdateOngoingOrFailed(node *corev1.Node) bool {
-	return (node.Spec.Unschedulable && (node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || nodeHasInPlaceUpdateCondition(node))) ||
+	return (node.Spec.Unschedulable && (node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || nodeHasActiveInPlaceUpdateCondition(node))) ||
 		node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] == machinev1alpha1.LabelValueNodeUpdateFailed
 }
 
@@ -182,6 +185,7 @@ func MaxUnavailableForPool(workers []gardencorev1beta1.Worker, poolName string, 
 				return maxUnavailable
 			}
 		}
+		break
 	}
 	return 1
 }
@@ -302,6 +306,7 @@ func ShouldEvictPod(pod corev1.Pod) bool {
 	})
 }
 
+// cordonNodesForUpdate cordons nodes that need draining.
 func (r *Reconciler) cordonNodesForUpdate(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) error {
 	workers, err := r.workersFromCluster(ctx)
 	if err != nil {
@@ -353,9 +358,8 @@ func (r *Reconciler) workersFromCluster(ctx context.Context) ([]gardencorev1beta
 	return cluster.Shoot.Spec.Provider.Workers, nil
 }
 
+// cleanupAfterSuccessfulUpdate handles the case where GNA has set the update-result=successful label.
 func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	log = log.WithValues("node", node.Name)
-
 	patch := client.StrategicMergeFrom(node.DeepCopy())
 	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateSuccessful, "In-place update completed successfully")
 	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
@@ -374,20 +378,18 @@ func (r *Reconciler) cleanupAfterSuccessfulUpdate(ctx context.Context, log logr.
 
 // handleUpdateFailed handles the case where GNA has set the update-result=failed label.
 func (r *Reconciler) handleUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	log = log.WithValues("node", node.Name)
-
-	reason := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
-	if reason == "" {
-		reason = "GNA reported in-place update failure"
+	message := node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason]
+	if message == "" {
+		message = "GNA reported in-place update failure"
 	}
 
 	patch := client.StrategicMergeFrom(node.DeepCopy())
-	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, reason)
+	r.setNodeInPlaceUpdateCondition(node, machinev1alpha1.UpdateFailed, message)
 	if err := r.ShootClient.Status().Patch(ctx, node, patch); err != nil {
 		return fmt.Errorf("failed to update NodeInPlaceUpdate condition to failed on node %s: %w", node.Name, err)
 	}
 
-	log.Info("Recorded GNA-reported update failure in condition", "reason", reason)
+	log.Info("Recorded GNA-reported update failure in condition", "reason", message)
 	return nil
 }
 
@@ -397,9 +399,8 @@ func (r *Reconciler) isUpdateTimedOut(node *corev1.Node) bool {
 	})
 }
 
+// markUpdateTimedOut sets the update-result=failed label and the UpdateFailed condition on a node that exceeded the UpdateTimeout.
 func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	log = log.WithValues("node", node.Name)
-
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
 	if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
@@ -416,6 +417,7 @@ func (r *Reconciler) markUpdateTimedOut(ctx context.Context, log logr.Logger, no
 	return nil
 }
 
+// updateShootPoolHashAndClearAutoInPlaceUpdate updates the shoot status to record that the pool completed its in-place update.
 func (r *Reconciler) updateShootPoolHashAndClearAutoInPlaceUpdate(ctx context.Context, log logr.Logger, poolName string) error {
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.GardenClient.Get(ctx, r.ShootNamespacedName, shoot); err != nil {
