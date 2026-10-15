@@ -13,12 +13,14 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardenadm/app"
 	"github.com/gardener/gardener/cmd/utils"
+	apiserverfeatures "github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/gardenadm/features"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
+	apiserverfeatures.RegisterFeatureGates()
 
 	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
 		os.Exit(1)
