@@ -262,10 +262,12 @@ func (r *Reconciler) drainTimedOut(node *corev1.Node) bool {
 	if startStr == "" {
 		return false
 	}
+
 	startTime, err := time.Parse(time.RFC3339, startStr)
 	if err != nil {
-		return true
+		return false
 	}
+
 	return r.Clock.Since(startTime) > r.Config.DrainTimeout.Duration
 }
 
