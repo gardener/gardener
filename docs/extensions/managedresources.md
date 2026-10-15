@@ -1,3 +1,7 @@
+---
+title: Deploy Resources to the Shoot Cluster
+---
+
 # Deploy Resources to the Shoot Cluster
 
 We have introduced a component called [`gardener-resource-manager`](../concepts/resource-manager.md) that is deployed as part of every shoot control plane in the seed.

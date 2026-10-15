@@ -1,3 +1,7 @@
+---
+title: Worker
+---
+
 # Contract: `Worker` Resource
 
 While the control plane of a shoot cluster is living in the seed and deployed as native Kubernetes workload, the worker nodes of the shoot clusters are normal virtual machines (VMs) in the end-users infrastructure account.

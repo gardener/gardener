@@ -1,3 +1,7 @@
+---
+title: Extension
+---
+
 # Contract: `Extension` Resource
 
 Gardener defines common procedures which must be passed to create a functioning shoot cluster. Well known steps are represented by special resources like `Infrastructure`, `OperatingSystemConfig` or `DNS`. These resources are typically reconciled by dedicated controllers setting up the infrastructure on the hyperscaler or managing DNS entries, etc.
