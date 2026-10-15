@@ -209,7 +209,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			}, SpecTimeout(time.Minute))
 
 			gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, RunInMachine)
-			gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, RunInMachine, RunInNode)
+			gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, RunInMachine)
 
 			Context("gardenlet in-place update orchestration", Ordered, Label("inplace-update"), func() {
 				var nextVersion string
