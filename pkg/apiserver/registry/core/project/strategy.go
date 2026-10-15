@@ -41,6 +41,8 @@ func (projectStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	project.Generation = 1
 	project.Status = core.ProjectStatus{}
+
+	reconcileOwnerRole(project)
 }
 
 func (projectStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -51,6 +53,8 @@ func (projectStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obje
 	if !apiequality.Semantic.DeepEqual(oldProject.Spec, newProject.Spec) {
 		newProject.Generation = oldProject.Generation + 1
 	}
+
+	reconcileOwnerRole(newProject)
 }
 
 func (projectStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
@@ -58,27 +62,7 @@ func (projectStrategy) Validate(_ context.Context, obj runtime.Object) field.Err
 	return validation.ValidateProject(project)
 }
 
-func (projectStrategy) Canonicalize(obj runtime.Object) {
-	var (
-		project = obj.(*core.Project)
-		owner   = project.Spec.Owner
-	)
-
-	if owner == nil {
-		return
-	}
-
-	for i, member := range project.Spec.Members {
-		if member.Name == owner.Name && member.APIGroup == owner.APIGroup && member.Kind == owner.Kind {
-			if !slices.Contains(member.Roles, core.ProjectMemberOwner) {
-				project.Spec.Members[i].Roles = append(project.Spec.Members[i].Roles, core.ProjectMemberOwner)
-			}
-		} else {
-			project.Spec.Members[i].Roles = slices.DeleteFunc(member.Roles, func(r string) bool {
-				return r == core.ProjectMemberOwner
-			})
-		}
-	}
+func (projectStrategy) Canonicalize(_ runtime.Object) {
 }
 
 func (projectStrategy) AllowCreateOnUpdate(_ context.Context) bool {
@@ -158,4 +142,26 @@ func NamespaceTriggerFunc(obj runtime.Object) string {
 		return ""
 	}
 	return ptr.Deref(project.Spec.Namespace, "")
+}
+
+// reconcileOwnerRole ensures the owner and only the owner as a member has the 'owner' role.
+func reconcileOwnerRole(project *core.Project) {
+	owner := project.Spec.Owner
+
+	if owner == nil {
+		return
+	}
+
+	for i, member := range project.Spec.Members {
+		if member.APIGroup == owner.APIGroup && member.Kind == owner.Kind &&
+			member.Name == owner.Name && member.Namespace == owner.Namespace {
+			if !slices.Contains(member.Roles, core.ProjectMemberOwner) {
+				project.Spec.Members[i].Roles = append(project.Spec.Members[i].Roles, core.ProjectMemberOwner)
+			}
+		} else {
+			project.Spec.Members[i].Roles = slices.DeleteFunc(member.Roles, func(r string) bool {
+				return r == core.ProjectMemberOwner
+			})
+		}
+	}
 }
