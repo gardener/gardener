@@ -588,6 +588,17 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		shoot.Status.SeedName = shoot.Spec.SeedName
 	}
 
+	// Due to an issue the `status.hibernated` of a hibernated Shoot was incorrectly reset to `false` when the
+	// migrate phase of its control plane migration succeeded. On the destination Seed the restore flow then wedged
+	// because it thinks that the hibernation is disabled and assumes the Shoot is woken up. At the start of a
+	// Restore operation the Shoot spec is authoritative and immutable, so if the spec requests hibernation we can
+	// safely restore `status.hibernated` to `true` to unblock such Shoots.
+	//
+	// TODO(plkokanov): Remove this if block after gardener v1.156 has been released.
+	if operationType == gardencorev1beta1.LastOperationTypeRestore && v1beta1helper.HibernationIsEnabled(shoot) {
+		shoot.Status.IsHibernated = v1beta1helper.HibernationIsEnabled(shoot)
+	}
+
 	shoot.Status.LastErrors = v1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 	shoot.Status.Gardener = *r.Identity
 	shoot.Status.ObservedGeneration = shoot.Generation
