@@ -76,13 +76,13 @@ func MapNodeToPool(_ context.Context, obj client.Object) []reconcile.Request {
 func NodeInPlaceUpdateStatePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return nodeNeedsDrain(e.Object) || nodeUpdateResult(e.Object) != "" || nodeHasInPlaceUpdateConditionFromObject(e.Object)
+			return nodeNeedsDrain(e.Object) || nodeUpdateResult(e.Object) != "" || nodeHasActiveInPlaceUpdateConditionFromObject(e.Object)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return (!nodeNeedsDrain(e.ObjectOld) && nodeNeedsDrain(e.ObjectNew)) ||
 				nodeUpdateResult(e.ObjectOld) != nodeUpdateResult(e.ObjectNew) ||
 				(!nodeDrainStarted(e.ObjectOld) && nodeDrainStarted(e.ObjectNew)) ||
-				(nodeHasInPlaceUpdateConditionFromObject(e.ObjectOld) && !nodeHasInPlaceUpdateConditionFromObject(e.ObjectNew))
+				(nodeHasActiveInPlaceUpdateConditionFromObject(e.ObjectOld) && !nodeHasActiveInPlaceUpdateConditionFromObject(e.ObjectNew))
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
@@ -101,15 +101,15 @@ func nodeUpdateResult(obj client.Object) string {
 	return obj.GetLabels()[machinev1alpha1.LabelKeyNodeUpdateResult]
 }
 
-func nodeHasInPlaceUpdateConditionFromObject(obj client.Object) bool {
+func nodeHasActiveInPlaceUpdateConditionFromObject(obj client.Object) bool {
 	node, ok := obj.(*corev1.Node)
 	if !ok {
 		return false
 	}
-	return nodeHasInPlaceUpdateCondition(node)
+	return nodeHasActiveInPlaceUpdateCondition(node)
 }
 
-func nodeHasInPlaceUpdateCondition(node *corev1.Node) bool {
+func nodeHasActiveInPlaceUpdateCondition(node *corev1.Node) bool {
 	return slices.ContainsFunc(node.Status.Conditions, func(cond corev1.NodeCondition) bool {
 		return cond.Type == machinev1alpha1.NodeInPlaceUpdate && cond.Reason != machinev1alpha1.UpdateSuccessful
 	})
