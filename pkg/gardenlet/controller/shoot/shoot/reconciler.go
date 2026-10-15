@@ -814,11 +814,16 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
 
-	isHibernated, err := r.isHibernationActive(ctx, v1beta1helper.ControlPlaneNamespaceForShoot(shoot))
-	if err != nil {
-		return fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %w", shoot.Namespace, shoot.Name, err)
+	// During the migrate phase of control plane migration or during live control plane migration the Cluster in the source Seed is deleted
+	// before the operation succeeds. The Shoot spec is immutable and the `spec.hibernation.enabled` field cannot be changed during the operation.
+	// Hence we do not need to check the Cluster resource whether hibernation is enabled or not.
+	if operationType != gardencorev1beta1.LastOperationTypeMigrate && operationType != gardencorev1beta1.LastOperationTypeLiveMigrate {
+		isHibernated, err := r.isHibernationActiveForShootInClusterResource(ctx, v1beta1helper.ControlPlaneNamespaceForShoot(shoot))
+		if err != nil {
+			return fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %w", shoot.Namespace, shoot.Name, err)
+		}
+		shoot.Status.IsHibernated = isHibernated
 	}
-	shoot.Status.IsHibernated = isHibernated
 
 	if setConditionsToProgressing {
 		for i, cond := range shoot.Status.Conditions {
@@ -1059,10 +1064,10 @@ func (r *Reconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1be
 	return kubernetesutils.ResourcesExist(ctx, r.GardenClient, &operationsv1alpha1.BastionList{}, r.GardenClient.Scheme(), client.MatchingFields{operations.BastionShootName: shoot.Name})
 }
 
-// isHibernationActive uses the Cluster resource in the Seed to determine whether the Shoot is hibernated
+// isHibernationActiveForShootInClusterResource uses the Cluster resource in the Seed to determine whether the Shoot is hibernated
 // The Cluster contains the actual or "active" spec of the Shoot resource for this reconciliation
 // as the Shoot resources field `spec.hibernation.enabled` might have changed during the reconciliation.
-func (r *Reconciler) isHibernationActive(ctx context.Context, clusterName string) (bool, error) {
+func (r *Reconciler) isHibernationActiveForShootInClusterResource(ctx context.Context, clusterName string) (bool, error) {
 	cluster, err := gardenerextensions.GetCluster(ctx, r.SeedClientSet.Client(), clusterName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1073,7 +1078,7 @@ func (r *Reconciler) isHibernationActive(ctx context.Context, clusterName string
 
 	shoot := cluster.Shoot
 	if shoot == nil {
-		return false, fmt.Errorf("shoot is missing in cluster resource: %w", err)
+		return false, fmt.Errorf("shoot is missing in cluster resource %q", clusterName)
 	}
 
 	return v1beta1helper.HibernationIsEnabled(shoot), nil
