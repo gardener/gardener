@@ -361,12 +361,12 @@ func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []exten
 		return []extensionsv1alpha1.File{
 			{
 				Path:        filepath.Join(path, secretsutils.DataKeyCertificateCA),
-				Permissions: new(uint32(0600)),
+				Permissions: new(int32(0600)),
 				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(data[secretsutils.DataKeyCertificateCA])}},
 			},
 			{
 				Path:        filepath.Join(path, secretsutils.DataKeyPrivateKeyCA),
-				Permissions: new(uint32(0600)),
+				Permissions: new(int32(0600)),
 				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(data[secretsutils.DataKeyPrivateKeyCA])}},
 			},
 		}

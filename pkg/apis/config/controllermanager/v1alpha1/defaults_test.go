@@ -506,11 +506,10 @@ var _ = Describe("Defaults", func() {
 
 		It("should not default fields that are set", func() {
 			for i := 10; i <= 11; i++ {
-				v := int32(i)
 				obj = &ControllerManagerConfiguration{
 					Controllers: ControllerManagerControllerConfiguration{
 						CredentialsBinding: &CredentialsBindingControllerConfiguration{
-							ConcurrentSyncs: &v,
+							ConcurrentSyncs: new(int32(i)),
 						},
 					},
 				}
