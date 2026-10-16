@@ -14,6 +14,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -399,6 +400,52 @@ var _ = Describe("Warnings", func() {
 				ContainElement(Equal("you are setting the spec.dns.providers[0].secretName field. The field is deprecated and is forbidden to be set starting from Kubernetes 1.35. Use spec.dns.providers[0].credentialsRef instead.")),
 			),
 		)
+
+		Describe("spec.provider.workers[].machineControllerManagerSettings.autoPreserveFailedMachineMax", func() {
+			It("should return a warning when autoPreserveFailedMachineMax is less than the number of zones", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1", "zone2", "zone3"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: ptr.To(int32(2)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("machineControllerManagerSettings.autoPreserveFailedMachineMax")))
+			})
+
+			It("should not return a warning when autoPreserveFailedMachineMax equals the number of zones", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1", "zone2"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: ptr.To(int32(2)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+
+			It("should not return a warning when autoPreserveFailedMachineMax is zero", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1", "zone2", "zone3"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: ptr.To(int32(0)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+
+			It("should not return a warning when autoPreserveFailedMachineMax is greater than the number of zones", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: ptr.To(int32(2)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+		})
 
 		It("should not return a suppressed secretName warning", func() {
 			shoot.Spec.DNS = &core.DNS{
