@@ -308,7 +308,7 @@ kind2-up: kind-single-node2-up
 kind2-down: kind-single-node2-down
 
 # gind-{up,down}
-gind-up gind-down: $(YQ)
+gind-up gind-down: $(KIND) $(YQ)
 	$(DEV_SETUP)/gind.sh $(subst gind-,,$@)
 
 # gink-{up,down}
