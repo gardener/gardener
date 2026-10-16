@@ -29,6 +29,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -38,6 +39,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2egardener "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/utils/access"
 	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
@@ -65,6 +67,102 @@ func ItShouldCreateGardenClient(gardenClientSet *kubernetes.Interface) {
 	GinkgoHelper()
 	It("should create a client for garden cluster", func(ctx SpecContext) {
 		initClientSet(ctx, gardenClientSet, GardenClusterKubeconfigPathOnHost, client.Options{Scheme: kubernetes.GardenScheme})
+	})
+}
+
+// ItShouldPromoteSelfHostedShootToSeed verifies that the self-hosted shoot can be promoted to a seed.
+func ItShouldPromoteSelfHostedShootToSeed(gardenClientSet, shootClientSet *kubernetes.Interface, shoot *gardencorev1beta1.Shoot) {
+	GinkgoHelper()
+
+	Context("self-hosted shoot -> seed promotion", Ordered, Label("seed"), func() {
+		ItShouldCreateShootClient(shootClientSet)
+		ItShouldCreateGardenClient(gardenClientSet)
+
+		It("should ensure the ManagedSeed is healthy", func(ctx SpecContext) {
+			managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace}}
+			Eventually(ctx, func(g Gomega) {
+				g.Expect((*gardenClientSet).Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				g.Expect(health.CheckManagedSeed(managedSeed)).To(Succeed())
+			}).Should(Succeed())
+		}, SpecTimeout(5*time.Minute))
+
+		It("should ensure the Seed is healthy", func(ctx SpecContext) {
+			seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: shoot.Name}}
+			Eventually(ctx, func(g Gomega) {
+				g.Expect((*gardenClientSet).Client().Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				g.Expect(health.CheckSeed(seed, seed.Status.Gardener)).To(Succeed())
+			}).Should(Succeed())
+		}, SpecTimeout(5*time.Minute))
+
+		It("should ensure the seed gardenlet runs in the garden namespace", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) []corev1.Pod {
+				podList := &corev1.PodList{}
+				g.Expect((*shootClientSet).Client().List(ctx, podList, client.InNamespace("garden"), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})).To(Succeed())
+				return podList.Items
+			}).ShouldNot(BeEmpty())
+		}, SpecTimeout(2*time.Minute))
+	})
+}
+
+// ItShouldCreateHostedShootOnPromotedSeed verifies that a hosted shoot can be created, used and deleted on the promoted seed.
+func ItShouldCreateHostedShootOnPromotedSeed(gardenClientSet *kubernetes.Interface) {
+	GinkgoHelper()
+
+	Context("hosted shoot on promoted seed", Ordered, Label("hosted-shoot"), func() {
+		var s *e2egardener.ShootContext
+
+		ItShouldCreateGardenClient(gardenClientSet)
+
+		It("should setup the test context", func() {
+			hostedShoot := e2egardener.DefaultShoot("e2e-gardenadm")
+			s = (&e2egardener.TestContext{
+				GardenClientSet: *gardenClientSet,
+				GardenClient:    (*gardenClientSet).Client(),
+				GardenKomega:    New((*gardenClientSet).Client()),
+			}).ForShoot(hostedShoot)
+		})
+
+		It("should create the hosted shoot", func(ctx SpecContext) {
+			Eventually(ctx, func() error {
+				return s.GardenClient.Create(ctx, s.Shoot)
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should wait for the hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+				completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
+				g.Expect(completed).To(BeTrue(), reason)
+			}).WithPolling(30 * time.Second).Should(Succeed())
+		}, SpecTimeout(30*time.Minute))
+
+		It("should initialize the shoot client", func(ctx SpecContext) {
+			Eventually(ctx, func() error {
+				clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+				if err != nil {
+					return err
+				}
+				s.WithShootClientSet(clientSet)
+				return nil
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should verify shoot access using admin kubeconfig", func(ctx SpecContext) {
+			Eventually(ctx, s.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should delete the hosted shoot", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Shoot)).To(Succeed())
+				g.Expect(s.GardenClient.Delete(ctx, s.Shoot)).To(Succeed())
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should wait for the hosted shoot to be deleted", func(ctx SpecContext) {
+			Eventually(ctx, func() error {
+				return s.GardenKomega.Get(s.Shoot)()
+			}).WithPolling(30 * time.Second).Should(BeNotFoundError())
+		}, SpecTimeout(20*time.Minute))
 	})
 }
 
