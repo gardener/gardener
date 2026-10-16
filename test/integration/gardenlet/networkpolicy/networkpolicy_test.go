@@ -388,6 +388,31 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
 				}).Should(BeNotFoundError())
 			})
+
+			It("should delete a network policy managed by Gardener under a different prefix", func() {
+				networkPolicy := &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:   fooNamespace.Name,
+						Name:        networkpolicycontroller.NetworkPolicyNamePrefixOperator + attrs.networkPolicyName,
+						Annotations: map[string]string{v1beta1constants.GardenerDescription: "Disables all ingress and egress traffic."},
+					},
+				}
+
+				By("Create network policy with a different Gardener prefix")
+				Expect(testClient.Create(ctx, networkPolicy)).To(Succeed())
+
+				DeferCleanup(func() {
+					By("Delete network policy")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, networkPolicy))).To(Succeed())
+				})
+
+				triggerReconciliation()
+
+				By("Wait for controller to delete the network policy")
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
+				}).Should(BeNotFoundError())
+			})
 		})
 	}
 
