@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/version"
@@ -21,7 +19,6 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -83,7 +80,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client: %w", err)
 	}
 
-	if err := ensureNoGardenletOrOperator(ctx, clientSet.Client()); err != nil {
+	if err := cmd.EnsureNoGardenletOrOperator(ctx, clientSet.Client(), "bootstrap"); err != nil {
 		return err
 	}
 
@@ -321,30 +318,6 @@ infrastructure resources are left behind:
   kubectl delete bastion -n %[1]s %[2]s
 `, b.Shoot.GetInfo().Status.TechnicalID, b.Shoot.Components.Bastion.Values.Name)
 	}
-	return nil
-}
-
-// ensureNoGardenletOrOperator is a safety check that prevents operators from accidentally executing
-// `gardenadm bootstrap` on a cluster that is already used as a runtime cluster with gardener-operator or as a seed
-// cluster. Doing so would lead to conflicts when `gardenadm bootstrap` starts deploying components like provider
-// extensions.
-func ensureNoGardenletOrOperator(ctx context.Context, c client.Reader) error {
-	for _, key := range []client.ObjectKey{
-		{Namespace: v1beta1constants.GardenNamespace, Name: "gardener-operator"},
-		{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet"},
-	} {
-		if err := c.Get(ctx, key, &appsv1.Deployment{}); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return fmt.Errorf("failed checking if %q deployment exists: %w", key, err)
-		}
-
-		return fmt.Errorf("deployment %q exists on the targeted cluster. "+
-			"`gardenadm bootstrap` does not support targeting a cluster that is already used as a runtime cluster with gardener-operator or as a seed cluster. "+
-			"Please consult the gardenadm documentation", key)
-	}
-
 	return nil
 }
 
