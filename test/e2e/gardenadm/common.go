@@ -24,12 +24,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -309,5 +312,36 @@ func ItShouldBeReconciledByGardenlet(
 				Expect(gnaConfig.Controllers.OperatingSystemConfig.SecretName).To(Equal(expectedSecretName), "GNA config on node %s has wrong secret name", node.Name)
 			}
 		}, SpecTimeout(time.Minute))
+
+		It("should deploy the Istio ingress gateway for the self-hosted shoot", func(ctx SpecContext) {
+			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
+				Name:      istio.SelfHostedShootNamePrefix + "istio",
+				Namespace: v1beta1constants.IstioSystemNamespace,
+			}}
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+				g.Expect(health.CheckManagedResource(mr)).To(Succeed())
+			}).Should(Succeed())
+		}, SpecTimeout(5*time.Minute))
+
+		It("should deploy the ingress DNS record for the self-hosted shoot", func(ctx SpecContext) {
+			var providers []gardencorev1beta1.DNSProvider
+			if shoot.Spec.DNS != nil {
+				providers = shoot.Spec.DNS.Providers
+			}
+			primaryProvider := v1beta1helper.FindPrimaryDNSProvider(providers)
+			if primaryProvider == nil || (primaryProvider.Type != nil && *primaryProvider.Type == "unmanaged") {
+				Skip("shoot has no managed DNS provider, ingress DNS record is not deployed")
+			}
+
+			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{
+				Name:      shoot.Name + "-" + v1beta1constants.LabelDNSRecordIngress,
+				Namespace: controlPlaneNamespace,
+			}}
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(dnsRecord), dnsRecord)).To(Succeed())
+				g.Expect(health.CheckExtensionObject(dnsRecord)).To(Succeed())
+			}).Should(Succeed())
+		}, SpecTimeout(5*time.Minute))
 	})
 }
