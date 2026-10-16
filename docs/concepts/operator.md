@@ -273,6 +273,7 @@ Besides those, the `gardener-operator` is able to deploy the following optional 
  - [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server) when `.spec.virtualCluster.gardener.gardenerDiscoveryServer` is set.
  The service account issuer of shoots will be calculated in the format `https://discovery.<.spec.runtimeCluster.ingress.domains[0]>/projects/<project-name>/shoots/<shoot-uid>/issuer`.
  This configuration applies for all seeds registered with the Garden cluster. Once set it should not be modified.
+ A custom domain can be configured via `.spec.virtualCluster.gardener.gardenerDiscoveryServer.domain`. If `.spec.dns` is configured, a dedicated `DNSRecord` is created for it, even if it is a subdomain of a runtime ingress domain (see the dashboard's [`domain` field](#gardener-dashboard) for the reasoning).
 
 The reconciler also manages a few observability-related components:
 
@@ -403,7 +404,7 @@ This section highlights the most prominent fields:
 - `domain`: Allows configuring a custom domain (and optionally a DNS provider) for the gardener-dashboard.
   If set, the dashboard is exposed on this single domain only.
   If not set, the dashboard is exposed on each configured runtime ingress domain via the `dashboard.<ingress-domain>` subdomain pattern.
-  A dedicated `DNSRecord` is always created for an explicitly configured `domain`, even if it is a subdomain of a runtime ingress domain and would otherwise already be covered by the wildcard `DNSRecord`. This avoids ACME DNS-01 certificate renewal issues with some DNS providers (e.g. Google Cloud DNS), where the wildcard's renewal TXT record can shadow the one needed for the dashboard domain.
+  If `.spec.dns` is configured, a dedicated `DNSRecord` is created for an explicitly configured `domain`, even if it is a subdomain of a runtime ingress domain and would otherwise already be covered by the wildcard `DNSRecord`. This avoids ACME DNS-01 certificate renewal issues with some DNS providers (e.g. Google Cloud DNS), where the wildcard's renewal TXT record can shadow the one needed for the dashboard domain.
 - `tlsSecretName`: Allows specifying the name of a `Secret` in the `garden` namespace containing a trusted TLS certificate for the dashboard domain.
   If not configured, Gardener falls back to the wildcard certificate (or generates a self-signed certificate if no wildcard certificate is available).
 

@@ -343,16 +343,11 @@ func GetIngressWildcardDomains(garden *operatorv1alpha1.Garden) []operatorv1alph
 func GetAllIngressDomains(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSDomain {
 	allIngressDomains := GetIngressWildcardDomains(garden)
 
-	var customDomains []operatorv1alpha1.DNSDomain
 	if c := garden.Spec.VirtualCluster.Gardener.Dashboard; c != nil && c.Domain != nil {
-		customDomains = append(customDomains, *c.Domain)
+		allIngressDomains = append(allIngressDomains, *c.Domain.DeepCopy())
 	}
 	if c := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; c != nil && c.Domain != nil {
-		customDomains = append(customDomains, *c.Domain)
-	}
-
-	for _, domain := range customDomains {
-		allIngressDomains = append(allIngressDomains, *domain.DeepCopy())
+		allIngressDomains = append(allIngressDomains, *c.Domain.DeepCopy())
 	}
 
 	return allIngressDomains
