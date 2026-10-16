@@ -120,15 +120,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
 			}
-		} else {
-			networkPolicyLogger.V(1).Info("Reconciling NetworkPolicy")
-			if err := policyConfig.reconcileFunc(ctx, log, networkPolicy); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to reconcile NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
+
+			if err := r.deleteLegacyNetworkPolicy(ctx, log, request.Name, policyConfig.name); err != nil {
+				return reconcile.Result{}, err
 			}
-			networkPolicyLogger.Info("Successfully reconciled NetworkPolicy")
+
+			continue
 		}
 
-		if err := r.deleteLegacyNetworkPolicy(ctx, networkPolicyLogger, request.Name, policyConfig.name); err != nil {
+		networkPolicyLogger.V(1).Info("Reconciling NetworkPolicy")
+		if err := policyConfig.reconcileFunc(ctx, log, networkPolicy); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to reconcile NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
+		}
+		networkPolicyLogger.Info("Successfully reconciled NetworkPolicy")
+
+		// Delete the legacy NetworkPolicy only after the prefixed one has been reconciled, so the namespace is never
+		// left without a NetworkPolicy.
+		if err := r.deleteLegacyNetworkPolicy(ctx, log, request.Name, policyConfig.name); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -169,10 +177,11 @@ func (r *Reconciler) networkPolicyName(name string) string {
 	return r.NetworkPolicyNamePrefix + name
 }
 
-// deleteLegacyNetworkPolicy deletes a NetworkPolicy using the old unprefixed name if it was created by Gardener. This
-// only serves to clean up NetworkPolicies created before the name prefixes were introduced and should be removed again
-// with the next Gardener version. NetworkPolicies without the Gardener description annotation are not managed by
-// Gardener and are left untouched.
+// deleteLegacyNetworkPolicy cleans up a NetworkPolicy that is still stored under the old unprefixed name if it was
+// created by Gardener. NetworkPolicies without the Gardener description annotation are not managed by Gardener and are
+// left untouched.
+//
+// TODO(mehrabix): Remove this function and its call sites with the next Gardener version.
 func (r *Reconciler) deleteLegacyNetworkPolicy(ctx context.Context, log logr.Logger, namespace, name string) error {
 	if r.NetworkPolicyNamePrefix == "" {
 		return nil
@@ -191,8 +200,13 @@ func (r *Reconciler) deleteLegacyNetworkPolicy(ctx context.Context, log logr.Log
 		return nil
 	}
 
+	log = log.WithValues("networkPolicy", key)
 	log.Info("Deleting legacy NetworkPolicy")
-	return kubernetesutils.DeleteObject(ctx, r.RuntimeClient, legacyNetworkPolicy)
+	if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, legacyNetworkPolicy); err != nil {
+		return fmt.Errorf("failed to delete legacy NetworkPolicy %s: %w", key, err)
+	}
+
+	return nil
 }
 
 type networkPolicyConfig struct {
