@@ -74,7 +74,7 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 		},
 	}
 
-	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, false) {
+	if k.values.StaticTokenKubeconfig != nil {
 		staticTokenSecretConfig.Tokens[UserNameClusterAdmin] = secretsutils.TokenConfig{
 			Username: UserNameClusterAdmin,
 			UserID:   UserNameClusterAdmin,
@@ -86,6 +86,10 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 }
 
 func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken *corev1.Secret) error {
+	if k.values.StaticTokenKubeconfig == nil {
+		return nil
+	}
+
 	caBundleSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
@@ -103,7 +107,7 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 
 	_, err = k.secretsManager.Generate(ctx, &secretsutils.KubeconfigSecretConfig{
 		Name:        SecretNameUserKubeconfig,
-		ContextName: k.namespace,
+		ContextName: ptr.Deref(k.values.StaticTokenKubeconfig.ContextName, k.namespace),
 		Namespace:   k.namespace,
 		Cluster: clientcmdv1.Cluster{
 			Server:                   k.values.ExternalHostname,

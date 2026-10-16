@@ -86,15 +86,15 @@ func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 }
 
 // EnableStaticTokenKubeconfig mocks base method.
-func (m *MockInterface) EnableStaticTokenKubeconfig() {
+func (m *MockInterface) EnableStaticTokenKubeconfig(arg0 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EnableStaticTokenKubeconfig")
+	m.ctrl.Call(m, "EnableStaticTokenKubeconfig", arg0)
 }
 
 // EnableStaticTokenKubeconfig indicates an expected call of EnableStaticTokenKubeconfig.
-func (mr *MockInterfaceMockRecorder) EnableStaticTokenKubeconfig() *gomock.Call {
+func (mr *MockInterfaceMockRecorder) EnableStaticTokenKubeconfig(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableStaticTokenKubeconfig", reflect.TypeOf((*MockInterface)(nil).EnableStaticTokenKubeconfig))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableStaticTokenKubeconfig", reflect.TypeOf((*MockInterface)(nil).EnableStaticTokenKubeconfig), arg0)
 }
 
 // GetAutoscalingReplicas mocks base method.
