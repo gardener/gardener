@@ -16,6 +16,9 @@ import (
 // ComputeOperationType determines which operation should be executed when acting on the given shoot.
 func ComputeOperationType(shoot *gardencorev1beta1.Shoot) gardencorev1beta1.LastOperationType {
 	if v1beta1helper.ShouldPrepareShootForMigration(shoot) {
+		if v1beta1helper.HasLiveMigrationAnnotation(shoot.Annotations) {
+			return gardencorev1beta1.LastOperationTypeLiveMigrate
+		}
 		return gardencorev1beta1.LastOperationTypeMigrate
 	}
 

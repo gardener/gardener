@@ -15,6 +15,7 @@ spec:
       VPNBondingModeRoundRobin: true
       PrometheusHealthChecks: true
       VictoriaLogsBackend: true
+      LiveControlPlaneMigration: true
     controllers:
       shoot:
         reconcileInMaintenanceOnly: true

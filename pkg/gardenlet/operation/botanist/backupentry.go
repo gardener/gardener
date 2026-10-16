@@ -81,6 +81,10 @@ func (b *Botanist) SourceBackupEntry() corebackupentry.Interface {
 // DeploySourceBackupEntry deploys the source BackupEntry and sets its bucketName to be equal to the bucketName of the shoot's original
 // BackupEntry if the source BackupEntry doesn't already exist.
 func (b *Botanist) DeploySourceBackupEntry(ctx context.Context) error {
+	if _, err := b.Shoot.Components.BackupEntry.Get(ctx); err != nil {
+		return fmt.Errorf("failed to get backup entry: %w", err)
+	}
+
 	bucketName := b.Shoot.Components.BackupEntry.GetActualBucketName()
 	if _, err := b.Shoot.Components.SourceBackupEntry.Get(ctx); err == nil {
 		bucketName = b.Shoot.Components.SourceBackupEntry.GetActualBucketName()
