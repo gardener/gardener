@@ -114,6 +114,7 @@ func (p *memberExposure) Deploy(ctx context.Context) error {
 	if p.values.ClientHost != "" {
 		allClientHosts = append(allClientHosts, p.values.ClientHost)
 	}
+
 	for _, m := range p.values.Members {
 		if m.ClientSNIHost != "" {
 			allClientHosts = append(allClientHosts, m.ClientSNIHost)
@@ -129,14 +130,19 @@ func (p *memberExposure) Deploy(ctx context.Context) error {
 		clientVirtualService := p.emptyVirtualServiceFor(p.clientName())
 		virtualServiceWithClientSNIMatch(clientVirtualService, getLabels(p.values.Role), []string{p.values.IstioIngressGatewayNamespace}, p.values.ClientHost, clientGateway.Name, p.clientServiceHost(), p.values.Members)()
 
-		clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
-		serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)() // #nosec G115 -- Port constants are positive values well within uint32 range.
+		resources = append(resources, clientGateway, clientVirtualService)
 
-		resources = append(resources, clientGateway, clientVirtualService, clientServiceEntry)
+		if p.values.ClientHost != "" {
+			clientServiceEntry := p.emptyServiceEntryFor(p.clientName())
+			serviceEntryForExport(clientServiceEntry, getLabels(p.values.Role), p.clientServiceHost(), p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)() // #nosec G115 -- Port constants are positive values well within uint32 range.
+			resources = append(resources, clientServiceEntry)
+		}
+
 		for i, m := range p.values.Members {
 			if m.ClientSNIHost == "" {
 				continue
 			}
+
 			memberClientServiceEntry := p.emptyServiceEntryFor(fmt.Sprintf("%s-%d", p.clientName(), i))
 			serviceEntryForExport(memberClientServiceEntry, getLabels(p.values.Role), m.PodFQDN, p.values.IstioIngressGatewayNamespace, uint32(etcdconstants.PortEtcdClient), etcdconstants.ServicePortNameEtcdClient)() // #nosec G115 -- Port constants are positive values well within uint32 range.
 			resources = append(resources, memberClientServiceEntry)
@@ -309,6 +315,7 @@ func virtualServiceWithClientSNIMatch(virtualService *istionetworkingv1beta1.Vir
 			if m.ClientSNIHost == "" {
 				continue
 			}
+
 			allHosts = append(allHosts, m.ClientSNIHost)
 			routes = append(routes, &istioapinetworkingv1beta1.TLSRoute{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{

@@ -179,7 +179,7 @@ type LiveMigrationValues struct {
 	// certificates carry the local service SAN, not the Istio-exposed hostname.
 	SkipClientSANVerification bool
 	// AdditionalAdvertisedURLs holds per-member extra peer and client URLs for live control plane migration so that
-	// each seed's etcd members advertise their external Istio ingress endpoints. OverrideDefaultURL must be true on
+	// each etcd members advertise their external Istio ingress endpoints. OverrideDefaultURL must be true on
 	// each sub-spec so that only the external URLs are advertised, suppressing the internal service DNS name that
 	// would collide with the other cluster's internal DNS name.
 	AdditionalAdvertisedURLs *druidcorev1alpha1.AdditionalAdvertiseURLsSpec

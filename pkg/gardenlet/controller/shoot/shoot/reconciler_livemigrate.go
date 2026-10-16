@@ -178,8 +178,8 @@ func sourceEtcdPreparedForPeerJoinTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 		g = flow.NewTaskGroup(taskGroupSourceEtcdPreparedForPeerJoin)
 
 		deployEtcdPeerExposure = g.Add(flow.Task{
-			Name: "Deploying etcd peer exposure",
-			Fn:   b.DeployEtcdPeerExposure,
+			Name: "Deploying etcd member exposure",
+			Fn:   b.DeployEtcdMemberExposure,
 		})
 		persistShootState = g.Add(flow.Task{
 			Name: "Persisting shoot state",
@@ -231,8 +231,8 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 			Fn:   b.DeployControlPlaneNamespace,
 		})
 		deployEtcdPeerExposure = g.Add(flow.Task{
-			Name:         "Deploying etcd peer exposure",
-			Fn:           b.DeployEtcdPeerExposure,
+			Name:         "Deploying etcd member exposure",
+			Fn:           b.DeployEtcdMemberExposure,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneNamespace),
 		})
 		initSecretsManagement = g.Add(flow.Task{

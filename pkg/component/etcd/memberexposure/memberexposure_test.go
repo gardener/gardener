@@ -361,6 +361,10 @@ var _ = Describe("MemberExposure", func() {
 					Expect(se.Spec.Ports[0].Number).To(Equal(uint32(2379)))
 				}
 			})
+
+			It("should not include a ServiceEntry for the etcd client Service when ClientHost is unset", func() {
+				Expect(objs).NotTo(HaveKey("ServiceEntry/etcd-main-client"))
+			})
 		})
 	})
 
