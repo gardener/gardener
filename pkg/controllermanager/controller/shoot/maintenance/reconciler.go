@@ -106,6 +106,8 @@ type updateResult struct {
 func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	log.Info("Maintaining Shoot")
 
+	now := metav1.Time{Time: r.Clock.Now()}
+
 	var (
 		maintainedShoot = shoot.DeepCopy()
 		// for maintenance operations unrelated to machine images and Kubernetes versions
@@ -325,9 +327,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		)
 
 		shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{
-			Description:   description,
-			TriggeredTime: metav1.Time{Time: r.Clock.Now()},
-			State:         gardencorev1beta1.LastOperationStateProcessing,
+			Description:    description,
+			TriggeredTime:  now,
+			LastUpdateTime: &now,
+			State:          gardencorev1beta1.LastOperationStateProcessing,
 		}
 
 		// if any maintenance operation failed, set the status to 'Failed' and retry in the next maintenance cycle
@@ -382,14 +385,28 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// if the maintenance patch is not required and the last maintenance operation state is failed,
-	// this means the maintenance was retried and succeeded. Alternatively, changes could have been made
-	// outside of the maintenance window to fix the maintenance error. In either case, remove the failed state.
-	if !requirePatch && shoot.Status.LastMaintenance != nil && shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateFailed {
+	// On an idle maintenance run (no patch required), no LastMaintenance struct was constructed above.
+	// Still record that maintenance ran by stamping TriggeredTime, creating the struct if necessary, and
+	// resolving any lingering Failed/Processing state from a previous run. LastUpdateTime is left untouched
+	// because the Shoot spec was not updated.
+	if !requirePatch {
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
-		shoot.Status.LastMaintenance.Description = "Maintenance succeeded"
-		shoot.Status.LastMaintenance.FailureReason = nil
+
+		if shoot.Status.LastMaintenance == nil {
+			shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{
+				Description: "Maintenance succeeded, no changes required",
+				State:       gardencorev1beta1.LastOperationStateSucceeded,
+			}
+		} else if shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateFailed {
+			// if the last maintenance operation state is failed, this means the maintenance was retried and
+			// succeeded. Alternatively, changes could have been made outside of the maintenance window to fix
+			// the maintenance error. In either case, remove the failed state.
+			shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
+			shoot.Status.LastMaintenance.Description = "Maintenance succeeded"
+			shoot.Status.LastMaintenance.FailureReason = nil
+		}
+
+		shoot.Status.LastMaintenance.TriggeredTime = now
 
 		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 			return err
