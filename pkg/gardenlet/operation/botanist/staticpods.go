@@ -290,6 +290,18 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 		return nil, "", fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
 	}
 
+	// Wait for the OperatingSystemConfig (without the additional static pod files) to be reconciled before patching
+	// the additional files. This avoids a race where the extension controller clears the operation=reconcile annotation
+	// between Deploy() and the subsequent patch: without this Wait(), the merge-from base in the patch still carries
+	// the annotation (set by Deploy()), so the diff is a no-op for the annotation and the extension never sees the
+	// updated file set. Skipped during `gardenadm init` (useBootstrapEtcd=true) where no extension controller is
+	// running — the GNA applies the OSC locally, so no external controller can clear the annotation.
+	if !useBootstrapEtcd {
+		if err := b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx); err != nil {
+			return nil, "", fmt.Errorf("failed waiting for OperatingSystemConfig to be ready before patching static pod files: %w", err)
+		}
+	}
+
 	controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
 	if controlPlaneWorkerPool == nil {
 		return nil, "", fmt.Errorf("failed fetching the control plane worker pool for the shoot")
