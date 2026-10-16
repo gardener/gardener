@@ -111,8 +111,9 @@ case "$COMMAND" in
 
     docker compose -f "$GIND_COMPOSE_FILE" down --volumes
 
-    # Preserve the shared infra only while the 'gardener-local' kind cluster exists, so the DR flow can reuse it and its
-    # Gardener control plane across gind-up/gind-down cycles. `make kind-down` owns the infra teardown.
+    # Tear down the shared infra only once the 'gardener-local' kind cluster is gone, to allow the kind cluster and the
+    # Gardener control plane running on it to be reused across gind-up/gind-down cycles. If the kind cluster exists,
+    # `make kind-down` owns the infra teardown.
     if kind get clusters 2>/dev/null | grep -q "^gardener-local$"; then
       echo "Kind cluster 'gardener-local' still present; leaving shared infra intact. Run 'make kind-down' to remove it."
     else
