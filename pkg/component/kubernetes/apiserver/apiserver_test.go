@@ -500,8 +500,10 @@ var _ = Describe("KubeAPIServer", func() {
 
 			JustBeforeEach(func() {
 				name := "garden-virtual-garden-kube-apiserver"
+				accessSecretName := "garden-access-prometheus-" + prometheusName
 				if prometheusName == "shoot" {
 					name = "shoot-kube-apiserver"
+					accessSecretName = "shoot-access-prometheus-" + prometheusName
 				}
 
 				expectedServiceMonitor = &monitoringv1.ServiceMonitor{
@@ -525,7 +527,7 @@ var _ = Describe("KubeAPIServer", func() {
 									TLSConfig: &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{InsecureSkipVerify: new(true)}},
 									HTTPConfigWithoutTLS: monitoringv1.HTTPConfigWithoutTLS{
 										Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-" + prometheusName},
+											LocalObjectReference: corev1.LocalObjectReference{Name: accessSecretName},
 											Key:                  "token",
 										}},
 									},

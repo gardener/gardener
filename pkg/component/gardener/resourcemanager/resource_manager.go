@@ -113,8 +113,6 @@ func init() {
 const (
 	// ManagedResourceName is the name for the ManagedResource containing resources deployed to the shoot cluster.
 	ManagedResourceName = "shoot-core-gardener-resource-manager"
-	// SecretNameShootAccess is the name of the shoot access secret for the gardener-resource-manager.
-	SecretNameShootAccess = gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
 
@@ -205,6 +203,8 @@ type Interface interface {
 	GetValues() Values
 	// SetBootstrapControlPlaneNode sets the BootstrapControlPlaneNode field in the Values.
 	SetBootstrapControlPlaneNode(bool)
+	// NewClusterAccessSecret creates a new instance of the cluster access secret.
+	NewClusterAccessSecret() *gardenerutils.AccessSecret
 }
 
 // New creates a new instance of the gardener-resource-manager.
@@ -314,6 +314,8 @@ type Values struct {
 	// service. This value is only applicable for the GRM that is deployed in the Shoot control plane (when
 	// ResponsibilityMode=ForShootOrVirtualGarden).
 	TopologyAwareRoutingEnabled bool
+	// IsGardenCluster specifies whether the cluster is a garden cluster.
+	IsGardenCluster bool
 	// IsWorkerless specifies whether the cluster has workers.
 	IsWorkerless bool
 	// NodeAgentReconciliationMaxDelay specifies the maximum delay duration for the node-agent reconciliation of
@@ -363,8 +365,8 @@ const (
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
 	if r.responsibleForHostedShootOrVirtualGarden() {
-		r.secrets.shootAccess = r.newShootAccessSecret()
-		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
+		r.secrets.clusterAccess = r.NewClusterAccessSecret()
+		if err := r.secrets.clusterAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
 			return err
 		}
 	} else if r.values.ResponsibilityMode == ForRuntime {
@@ -422,7 +424,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		}
 
 		objectsToDelete = append(objectsToDelete,
-			r.newShootAccessSecret().Secret,
+			r.NewClusterAccessSecret().Secret,
 			r.emptyRoleInWatchedNamespace(),
 			r.emptyRoleBindingInWatchedNamespace(),
 		)
@@ -1075,13 +1077,13 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					Name:      volumeNameBootstrapKubeconfig,
 					ReadOnly:  true,
 				})
-			} else if r.secrets.shootAccess != nil {
+			} else if r.secrets.clusterAccess != nil {
 				genericTokenKubeconfigSecret, found := r.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 				if !found {
 					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 				}
 
-				utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
+				utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.clusterAccess.Secret.Name))
 			}
 		}
 
@@ -1315,7 +1317,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context, config *reso
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      r.secrets.shootAccess.ServiceAccountName,
+				Name:      r.secrets.clusterAccess.ServiceAccountName,
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}); err != nil {
@@ -1337,8 +1339,12 @@ func (r *resourceManager) ensureShootResources(ctx context.Context, config *reso
 	return managedresources.CreateForShootWithLabels(ctx, r.client, r.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, r.values.ManagedResourceLabels, data)
 }
 
-func (r *resourceManager) newShootAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
+// NewClusterAccessSecret returns a new AccessSecret for the cluster resource-manager is targeting.
+func (r *resourceManager) NewClusterAccessSecret() *gardenerutils.AccessSecret {
+	if r.values.IsGardenCluster {
+		return gardenerutils.NewGardenAccessSecret(v1beta1constants.DeploymentNameGardenerResourceManager, r.namespace)
+	}
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameGardenerResourceManager, r.namespace)
 }
 
 func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
@@ -2187,7 +2193,7 @@ type Secrets struct {
 	// token requestor controller will request a JWT token for itself with this kubeconfig.
 	BootstrapKubeconfig *component.Secret
 
-	shootAccess *gardenerutils.AccessSecret
+	clusterAccess *gardenerutils.AccessSecret
 }
 
 func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) {

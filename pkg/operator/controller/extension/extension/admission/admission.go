@@ -95,7 +95,7 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		return fmt.Errorf("failed pulling Helm chart from OCI repository %q: %w", extension.Spec.Deployment.AdmissionDeployment.RuntimeCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
-	accessSecret := d.getVirtualClusterAccessSecret(resourceName(extension))
+	accessSecret := d.getClusterAccessSecret(resourceName(extension))
 	if err := accessSecret.Reconcile(ctx, d.runtimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret: %w", err)
 	}
@@ -191,7 +191,7 @@ func (d *deployment) deleteAdmissionRuntimeClusterResources(ctx context.Context,
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
 	}
 
-	accessSecret := d.getVirtualClusterAccessSecret(resourceName(extension)).Secret
+	accessSecret := d.getClusterAccessSecret(resourceName(extension)).Secret
 
 	log.Info("Deleting admission access secret for virtual cluster", "secret", client.ObjectKeyFromObject(accessSecret))
 	return kubernetesutils.DeleteObjects(ctx, d.runtimeClientSet.Client(), accessSecret)
@@ -203,7 +203,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 		return fmt.Errorf("failed pulling Helm chart from OCI repository %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
-	accessSecret := d.getVirtualClusterAccessSecret(resourceName(extension))
+	accessSecret := d.getClusterAccessSecret(resourceName(extension))
 
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
@@ -285,8 +285,8 @@ func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context,
 	return nil
 }
 
-func (d *deployment) getVirtualClusterAccessSecret(name string) *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(name, d.gardenNamespace)
+func (d *deployment) getClusterAccessSecret(name string) *gardenerutils.AccessSecret {
+	return gardenerutils.NewGardenAccessSecret(name, d.gardenNamespace)
 }
 
 func resourceName(extension *operatorv1alpha1.Extension) string {

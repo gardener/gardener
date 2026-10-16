@@ -29,7 +29,7 @@ const (
 )
 
 func (g *gardenerDiscoveryServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(deploymentName, g.namespace)
+	return gardenerutils.NewGardenAccessSecret(deploymentName, g.namespace)
 }
 
 func (g *gardenerDiscoveryServer) newServiceAccountIssuerConfigSecret() *corev1.Secret {

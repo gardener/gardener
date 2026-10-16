@@ -7,6 +7,7 @@ package operator_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/component-base/version"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -63,6 +64,28 @@ var _ = Describe("GardenStatus", func() {
 			}
 
 			Expect(IsGardenSuccessfullyReconciled(garden)).Should(BeTrue())
+		})
+	})
+
+	Describe("#IsGardenUpToDate", func() {
+		var garden *operatorv1alpha1.Garden
+
+		BeforeEach(func() {
+			garden = &operatorv1alpha1.Garden{
+				Status: operatorv1alpha1.GardenStatus{
+					Gardener: &gardencorev1beta1.Gardener{},
+				},
+			}
+		})
+
+		It("should return false if the garden version does not match the operator version", func() {
+			garden.Status.Gardener.Version = "v0.0.0-outdated"
+			Expect(IsGardenUpToDate(garden)).Should(BeFalse())
+		})
+
+		It("should return true if the garden version matches the operator version", func() {
+			garden.Status.Gardener.Version = version.Get().GitVersion
+			Expect(IsGardenUpToDate(garden)).Should(BeTrue())
 		})
 	})
 })
