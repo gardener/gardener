@@ -1087,10 +1087,13 @@ var _ = Describe("Etcd", func() {
 			Expect(actual.Spec.MemberNamePrefix).To(BeNil())
 		})
 
-		It("should set spec.etcd.additionalAdvertisePeerURLs from the values", func() {
-			additionalPeerURLs := []druidcorev1alpha1.MemberURLs{
-				{Name: "src-etcd-main-0", URLs: []string{"https://src-etcd-main-0.example.com:2380"}},
-				{Name: "src-etcd-main-1", URLs: []string{"https://src-etcd-main-1.example.com:2380"}},
+		It("should set spec.etcd.additionalAdvertisedURLs from the values", func() {
+			additionalPeerURLsSpec := &druidcorev1alpha1.AdditionalURLsSpec{
+				OverrideDefaultURL: new(true),
+				Members: []druidcorev1alpha1.MemberURLs{
+					{Name: "src-etcd-main-0", URLs: []string{"https://src-etcd-main-0.example.com:2380"}},
+					{Name: "src-etcd-main-1", URLs: []string{"https://src-etcd-main-1.example.com:2380"}},
+				},
 			}
 
 			etcd = New(log, c, testNamespace, sm, Values{
@@ -1106,7 +1109,11 @@ var _ = Describe("Etcd", func() {
 				HighAvailabilityEnabled: highAvailabilityEnabled,
 				BackupConfig:            backupConfig,
 				StaticPodConfig:         staticPodConfig,
-				LiveMigration:           &LiveMigrationValues{AdditionalAdvertisePeerURLs: additionalPeerURLs},
+				LiveMigration: &LiveMigrationValues{
+					AdditionalAdvertisedURLs: &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+						PeerURLs: additionalPeerURLsSpec,
+					},
+				},
 			})
 
 			Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1114,7 +1121,7 @@ var _ = Describe("Etcd", func() {
 			actual := &druidcorev1alpha1.Etcd{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, actual)).To(Succeed())
 			Expect(actual.Spec.Etcd.AdditionalAdvertisedURLs).To(Equal(&druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
-				PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{Members: additionalPeerURLs},
+				PeerURLs: additionalPeerURLsSpec,
 			}))
 		})
 

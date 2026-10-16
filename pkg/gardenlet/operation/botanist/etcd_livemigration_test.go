@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
-	"github.com/gardener/gardener/pkg/component/etcd/peerexposure"
+	"github.com/gardener/gardener/pkg/component/etcd/memberexposure"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -51,21 +51,21 @@ var _ = Describe("Etcd LiveMigration", func() {
 		values       *etcd.Values
 		gardenReader client.Client
 
-		peerExposureComponent *mockcomponent.MockDeployWaiter
+		memberExposureComponent *mockcomponent.MockDeployWaiter
 
 		actualNamespace string
-		actualValues    peerexposure.Values
+		actualValues    memberexposure.Values
 
 		b *Botanist
 	)
 
-	Describe("#DeployEtcdPeerExposure", func() {
+	Describe("#DeployEtcdMemberExposure", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			peerExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
+			memberExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
 
 			actualNamespace = ""
-			actualValues = peerexposure.Values{}
+			actualValues = memberexposure.Values{}
 		})
 
 		JustBeforeEach(func() {
@@ -100,35 +100,36 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should deploy with correct namespace, members and Istio config (no ClientHost when not source seed)", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx)
+			memberExposureComponent.EXPECT().Deploy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, ns string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, ns string, vals memberexposure.Values) component.DeployWaiter {
 				actualNamespace = ns
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualNamespace).To(Equal(namespace))
 			Expect(actualValues.Role).To(Equal(v1beta1constants.ETCDRoleMain))
 			Expect(actualValues.Members).To(HaveLen(1))
-			Expect(actualValues.Members[0].SNIHost).To(Equal("etcd-main-peer-0-9bd85b.ingress.seed.example.com"))
+			Expect(actualValues.Members[0].PeerSNIHost).To(Equal("etcd-main-peer-0-9bd85b.ingress.seed.example.com"))
 			Expect(actualValues.Members[0].PodFQDN).To(Equal("etcd-main-0.etcd-main-peer.shoot--p1--foo.svc.cluster.local"))
 			Expect(actualValues.Members[0].ExternalPort).To(Equal(uint32(etcdconstants.PortEtcdPeerExternal)))
 			Expect(actualValues.ClientHost).To(BeEmpty())
+			Expect(actualValues.Members[0].ClientSNIHost).ToNot(BeEmpty())
 			Expect(actualValues.IstioIngressGatewayNamespace).To(Equal("istio-ingress"))
 			Expect(actualValues.IstioIngressGatewayLabels).To(HaveKeyWithValue("istio", "ingressgateway"))
 		})
 
-		It("should set ClientHost when seed is the source of a live migration", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx)
+		It("should set ClientHost and ClientMemberHosts when seed is the source of a live migration", func() {
+			memberExposureComponent.EXPECT().Deploy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, vals memberexposure.Values) component.DeployWaiter {
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
 			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -138,31 +139,63 @@ var _ = Describe("Etcd LiveMigration", func() {
 				Spec:   gardencorev1beta1.ShootSpec{SeedName: new(dstSeedName)},
 				Status: gardencorev1beta1.ShootStatus{SeedName: new(seedName)},
 			})
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualValues.ClientHost).To(Equal("etcd-main-client-44d4fb.ingress.seed.example.com"))
+			Expect(actualValues.Members[0].ClientSNIHost).To(Equal(
+				LiveMigrationEtcdClientMemberHost(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain, 0),
+			))
+		})
+
+		It("should set ClientMemberHosts (but no ClientHost) when seed is the destination of a live migration", func() {
+			memberExposureComponent.EXPECT().Deploy(ctx)
+
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, vals memberexposure.Values) component.DeployWaiter {
+				actualValues = vals
+				return memberExposureComponent
+			}))
+
+			b.Seed.SetInfo(&gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{Name: dstSeedName},
+				Spec:       gardencorev1beta1.SeedSpec{Ingress: &gardencorev1beta1.Ingress{Domain: dstIngress}},
+			})
+			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "true"},
+				},
+				Spec:   gardencorev1beta1.ShootSpec{SeedName: new(dstSeedName)},
+				Status: gardencorev1beta1.ShootStatus{SeedName: new(seedName)},
+			})
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
+
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
+
+			Expect(actualValues.ClientHost).To(BeEmpty())
+			Expect(actualValues.Members[0].ClientSNIHost).To(Equal(
+				LiveMigrationEtcdClientMemberHost(dstSeedName, namespace, dstIngress, v1beta1constants.ETCDRoleMain, 0),
+			))
 		})
 
 		It("should return an error when Deploy fails", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx).Return(testErr)
+			memberExposureComponent.EXPECT().Deploy(ctx).Return(testErr)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, _ peerexposure.Values) component.DeployWaiter {
-				return peerExposureComponent
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, _ memberexposure.Values) component.DeployWaiter {
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
 		})
 
 		It("should compute 3 members for an HA shoot", func() {
-			peerExposureComponent.EXPECT().Deploy(ctx)
+			memberExposureComponent.EXPECT().Deploy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, vals memberexposure.Values) component.DeployWaiter {
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
 			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -175,9 +208,9 @@ var _ = Describe("Etcd LiveMigration", func() {
 				},
 			})
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DeployEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DeployEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualValues.Members).To(HaveLen(int(etcdconstants.HAReplicaCount)))
 			for i := 0; i < int(etcdconstants.HAReplicaCount); i++ {
@@ -189,10 +222,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 	Describe("#DestroyEtcdPeerExposure", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			peerExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
+			memberExposureComponent = mockcomponent.NewMockDeployWaiter(ctrl)
 
 			actualNamespace = ""
-			actualValues = peerexposure.Values{}
+			actualValues = memberexposure.Values{}
 		})
 
 		JustBeforeEach(func() {
@@ -227,17 +260,17 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should destroy with correct namespace, members and Istio config (no ClientHost)", func() {
-			peerExposureComponent.EXPECT().Destroy(ctx)
+			memberExposureComponent.EXPECT().Destroy(ctx)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, ns string, vals peerexposure.Values) component.DeployWaiter {
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, ns string, vals memberexposure.Values) component.DeployWaiter {
 				actualNamespace = ns
 				actualValues = vals
-				return peerExposureComponent
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DestroyEtcdPeerExposure(ctx)).To(Succeed())
+			Expect(b.DestroyEtcdMemberExposure(ctx)).To(Succeed())
 
 			Expect(actualNamespace).To(Equal(namespace))
 			Expect(actualValues.Role).To(Equal(v1beta1constants.ETCDRoleMain))
@@ -247,15 +280,15 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		It("should return an error when Destroy fails", func() {
-			peerExposureComponent.EXPECT().Destroy(ctx).Return(testErr)
+			memberExposureComponent.EXPECT().Destroy(ctx).Return(testErr)
 
-			DeferCleanup(test.WithVar(&NewPeerExposure, func(_ client.Client, _ string, _ peerexposure.Values) component.DeployWaiter {
-				return peerExposureComponent
+			DeferCleanup(test.WithVar(&NewMemberExposure, func(_ client.Client, _ string, _ memberexposure.Values) component.DeployWaiter {
+				return memberExposureComponent
 			}))
 
-			b.Shoot.Components.ControlPlane.EtcdPeerExposure = b.DefaultEtcdPeerExposure()
+			b.Shoot.Components.ControlPlane.EtcdMemberExposure = b.DefaultEtcdMemberExposure()
 
-			Expect(b.DestroyEtcdPeerExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
+			Expect(b.DestroyEtcdMemberExposure(ctx)).To(MatchError(ContainSubstring(testErr.Error())))
 		})
 	})
 
@@ -343,15 +376,25 @@ var _ = Describe("Etcd LiveMigration", func() {
 				b.Shoot.SetInfo(liveMigratingShoot(seedName, dstSeedName))
 			})
 
-			It("should set AdditionalAdvertisePeerURLs, ExtraClientServiceDNSNames, ExtraPeerServiceDNSNames and SkipClientSANVerification", func() {
+			It("should set AdditionalAdvertisedURLs, ExtraClientServiceDNSNames, ExtraPeerServiceDNSNames and SkipClientSANVerification", func() {
 				Expect(SetLiveMigrationEtcdValues(b, ctx, values, v1beta1constants.ETCDRoleMain)).To(Succeed())
 
 				Expect(values.LiveMigration).NotTo(BeNil())
 				Expect(values.LiveMigration.SkipClientSANVerification).To(BeTrue())
-				Expect(values.LiveMigration.AdditionalAdvertisePeerURLs).To(Equal(ComputeMemberPeerURLs(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain, 1)))
-				Expect(values.LiveMigration.ExtraClientServiceDNSNames).To(ConsistOf(
+				Expect(values.LiveMigration.AdditionalAdvertisedURLs).To(Equal(&druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+					PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+						OverrideDefaultURL: new(true),
+						Members:            ComputeMemberPeerURLs(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain, 1),
+					},
+					ClientURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+						OverrideDefaultURL: new(true),
+						Members:            ComputeMemberClientURLs(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain, 1),
+					},
+				}))
+				Expect(values.LiveMigration.ExtraClientServiceDNSNames).To(ConsistOf(append(
+					CrossSeedClientMemberHosts(seedName, ingress, dstSeedName, dstIngress, namespace, v1beta1constants.ETCDRoleMain, 1),
 					LiveMigrationEtcdClientHost(seedName, namespace, ingress, v1beta1constants.ETCDRoleMain),
-				))
+				)))
 				Expect(values.LiveMigration.ExtraPeerServiceDNSNames).To(Equal(CrossSeedPeerHostnames(
 					seedName, ingress, dstSeedName, dstIngress, namespace, v1beta1constants.ETCDRoleMain, 1,
 				)))
@@ -377,16 +420,27 @@ var _ = Describe("Etcd LiveMigration", func() {
 				b.Shoot.SetInfo(liveMigratingShoot(seedName, dstSeedName))
 			})
 
-			It("should set BootstrapWithExistingCluster, ExtraPeerServiceDNSNames, AdditionalAdvertisePeerURLs and SkipClientSANVerification", func() {
+			It("should set BootstrapWithExistingCluster, ExtraPeerServiceDNSNames, AdditionalAdvertisedURLs, ExtraClientServiceDNSNames and SkipClientSANVerification", func() {
 				Expect(SetLiveMigrationEtcdValues(b, ctx, values, v1beta1constants.ETCDRoleMain)).To(Succeed())
 
 				Expect(values.LiveMigration).NotTo(BeNil())
 				Expect(values.LiveMigration.SkipClientSANVerification).To(BeTrue())
-				Expect(values.LiveMigration.AdditionalAdvertisePeerURLs).To(Equal(ComputeMemberPeerURLs(dstSeedName, namespace, dstIngress, v1beta1constants.ETCDRoleMain, 1)))
+				Expect(values.LiveMigration.AdditionalAdvertisedURLs).To(Equal(&druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+					PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+						OverrideDefaultURL: new(true),
+						Members:            ComputeMemberPeerURLs(dstSeedName, namespace, dstIngress, v1beta1constants.ETCDRoleMain, 1),
+					},
+					ClientURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+						OverrideDefaultURL: new(true),
+						Members:            ComputeMemberClientURLs(dstSeedName, namespace, dstIngress, v1beta1constants.ETCDRoleMain, 1),
+					},
+				}))
 				Expect(values.LiveMigration.ExtraPeerServiceDNSNames).To(Equal(CrossSeedPeerHostnames(
 					seedName, ingress, dstSeedName, dstIngress, namespace, v1beta1constants.ETCDRoleMain, 1,
 				)))
-				Expect(values.LiveMigration.ExtraClientServiceDNSNames).To(BeNil())
+				Expect(values.LiveMigration.ExtraClientServiceDNSNames).To(ConsistOf(
+					CrossSeedClientMemberHosts(seedName, ingress, dstSeedName, dstIngress, namespace, v1beta1constants.ETCDRoleMain, 1),
+				))
 				Expect(values.LiveMigration.BootstrapWithExistingCluster).NotTo(BeNil())
 				Expect(values.LiveMigration.BootstrapWithExistingCluster.Members).To(HaveLen(1))
 				Expect(values.LiveMigration.BootstrapWithExistingCluster.Members[0].Name).To(Equal("src-seed-etcd-main-0"))
@@ -457,10 +511,34 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 	})
 
-	Describe("#LiveMigrationEtcdClientHost", func() {
-		It("should compose the cross-seed etcd client SNI host from seed name, shoot namespace, ingress domain and role", func() {
-			Expect(LiveMigrationEtcdClientHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main")).
-				To(Equal("etcd-main-client-44d4fb.ingress.seed.example.com"))
+	Describe("#LiveMigrationEtcdClientMemberHost", func() {
+		It("should compose a stable per-ordinal cross-seed client SNI host with ordinal and hash in the left-most label", func() {
+			Expect(LiveMigrationEtcdClientMemberHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 0)).To(Equal("etcd-main-client-0-9bd85b.ingress.seed.example.com"))
+			Expect(LiveMigrationEtcdClientMemberHost("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 1)).To(Equal("etcd-main-client-1-18879a.ingress.seed.example.com"))
+		})
+
+		It("should produce distinct labels per ordinal, role, seed and namespace", func() {
+			label := func(host string) string { l, _, _ := strings.Cut(host, "."); return l }
+			hosts := []string{
+				LiveMigrationEtcdClientMemberHost("src-seed", "shoot--p1--foo", "d", "main", 0),
+				LiveMigrationEtcdClientMemberHost("src-seed", "shoot--p1--foo", "d", "main", 1),
+				LiveMigrationEtcdClientMemberHost("src-seed", "shoot--p1--foo", "d", "events", 0),
+				LiveMigrationEtcdClientMemberHost("dst-seed", "shoot--p1--foo", "d", "main", 0),
+				LiveMigrationEtcdClientMemberHost("src-seed", "shoot--p1--bar", "d", "main", 0),
+			}
+			seen := map[string]bool{}
+			for _, h := range hosts {
+				Expect(seen[label(h)]).To(BeFalse(), "label %q must be unique", label(h))
+				seen[label(h)] = true
+			}
+		})
+
+		It("should keep the left-most DNS label within 63 characters even for maximal-length inputs", func() {
+			longSeed := strings.Repeat("s", 63)
+			longNamespace := "shoot--" + strings.Repeat("p", 10) + "--" + strings.Repeat("f", 11)
+			host := LiveMigrationEtcdClientMemberHost(longSeed, longNamespace, "ingress.seed.example.com", "events", 9)
+			label, _, _ := strings.Cut(host, ".")
+			Expect(len(label)).To(BeNumerically("<=", 63))
 		})
 	})
 
@@ -475,6 +553,20 @@ var _ = Describe("Etcd LiveMigration", func() {
 
 		It("should return an empty slice for zero replicas", func() {
 			Expect(ComputeMemberPeerURLs("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 0)).To(BeEmpty())
+		})
+	})
+
+	Describe("#ComputeMemberClientURLs", func() {
+		It("should compute one entry per member each with a distinct per-ordinal client SNI host", func() {
+			Expect(ComputeMemberClientURLs("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 3)).To(Equal([]druidcorev1alpha1.MemberURLs{
+				{Name: "src-seed-etcd-main-0", URLs: []string{"https://etcd-main-client-0-9bd85b.ingress.seed.example.com:443"}},
+				{Name: "src-seed-etcd-main-1", URLs: []string{"https://etcd-main-client-1-18879a.ingress.seed.example.com:443"}},
+				{Name: "src-seed-etcd-main-2", URLs: []string{"https://etcd-main-client-2-26b70e.ingress.seed.example.com:443"}},
+			}))
+		})
+
+		It("should return an empty slice for zero replicas", func() {
+			Expect(ComputeMemberClientURLs("src-seed", "shoot--p1--foo", "ingress.seed.example.com", "main", 0)).To(BeEmpty())
 		})
 	})
 
@@ -494,6 +586,25 @@ var _ = Describe("Etcd LiveMigration", func() {
 
 		It("should return an empty slice for zero replicas", func() {
 			Expect(CrossSeedPeerHostnames("src-seed", "ingress.src.example.com", "dst-seed", "ingress.dst.example.com", "shoot--p1--foo", "main", 0)).To(BeEmpty())
+		})
+	})
+
+	Describe("#CrossSeedClientMemberHosts", func() {
+		It("should list source per-ordinal hostnames first then destination per-ordinal hostnames", func() {
+			Expect(CrossSeedClientMemberHosts(
+				"src-seed", "ingress.src.example.com",
+				"dst-seed", "ingress.dst.example.com",
+				"shoot--p1--foo", "main", 2,
+			)).To(Equal([]string{
+				"etcd-main-client-0-9bd85b.ingress.src.example.com",
+				"etcd-main-client-1-18879a.ingress.src.example.com",
+				"etcd-main-client-0-7ba53a.ingress.dst.example.com",
+				"etcd-main-client-1-20a72c.ingress.dst.example.com",
+			}))
+		})
+
+		It("should return an empty slice for zero replicas", func() {
+			Expect(CrossSeedClientMemberHosts("src-seed", "ingress.src.example.com", "dst-seed", "ingress.dst.example.com", "shoot--p1--foo", "main", 0)).To(BeEmpty())
 		})
 	})
 })
