@@ -362,11 +362,6 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 			v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation, "true")
 	}
 
-	if !b.Shoot.HasManagedInfrastructure() && v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-		metav1.SetMetaDataAnnotation(&oscSecret.ObjectMeta,
-			v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
-	}
-
 	resources, err := managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
 		AddAllAndSerialize(oscSecret)

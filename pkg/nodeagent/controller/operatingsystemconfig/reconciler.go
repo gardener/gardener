@@ -194,14 +194,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
 
-	gardenletOrchestratedInPlaceUpdate, err := r.isGardenletOrchestratedInPlaceUpdate(log, osc, secret, oscChecksum, osVersion)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Serial reconciliation lease serializes CP pool node reconciliations. For gardenlet-orchestrated
-	// in-place updates the lease is held throughout drain and update so that only one CP node
-	// gets updated at a time.
+	// Serial reconciliation lease serializes control-plane pool node reconciliations. For in-place updates the
+	// lease is held throughout drain and update so that only one control-plane node gets updated at a time.
 	if serialReconciliation(secret) {
 		log.Info("OperatingSystemConfig reconciliation is serial")
 
@@ -219,13 +213,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
 		}
 
-		// For gardenlet-orchestrated in-place updates, the lease has no timeout and is only released
-		// on success. If a control plane node fails to update, it keeps the lease and blocks other control plane nodes
-		// from updating. As operator intervention is required to resolve the issue.
-		// For regular serial reconciliation, a 600s timeout ensures a crashed node does not block others.
-		var leaseDurationSeconds *int32
-		if !gardenletOrchestratedInPlaceUpdate {
-			leaseDurationSeconds = new(int32(600))
+		// For control-plane nodes doing an in-place update the lease has no timeout and is only released on success.
+		// If a control-plane node fails to update, it keeps the lease and blocks others — operator intervention is required.
+		// In all other cases a 600s timeout ensures a crashed node does not block others.
+		leaseDurationSeconds := new(int32(600))
+		if isControlPlaneNode {
+			if inPlaceUpdate, err := r.isInPlaceUpdatePending(log, osc, oscChecksum, osVersion); err != nil {
+				return reconcile.Result{}, err
+			} else if inPlaceUpdate {
+				leaseDurationSeconds = nil
+			}
 		}
 
 		if err := serialReconciliationLease.tryAcquireOrRenew(ctx, leaseDurationSeconds); err != nil {
@@ -305,7 +302,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				// If reconciliation fails and GNA restarts, it re-detects the mismatch and re-signals —
 				// making the flow self-healing. The gardenlet cannot autonomously determine this because
 				// once it deploys the OSC secret, subsequent reconciliations see no diff from its perspective.
-				if gardenletOrchestratedInPlaceUpdate {
+				if isControlPlaneNode {
 					if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" {
 						log.Info("Requesting drain from gardenlet", "node", node.Name)
 						patch := client.MergeFrom(node.DeepCopy())
@@ -861,8 +858,8 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (r *Reconciler) isGardenletOrchestratedInPlaceUpdate(log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, secret *corev1.Secret, oscChecksum string, osVersion *string) (bool, error) {
-	if osc.Spec.InPlaceUpdates == nil || secret.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated] != "true" {
+func (r *Reconciler) isInPlaceUpdatePending(log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscChecksum string, osVersion *string) (bool, error) {
+	if osc.Spec.InPlaceUpdates == nil {
 		return false, nil
 	}
 
