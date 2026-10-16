@@ -26,6 +26,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"k8s.io/utils/ptr"
 )
 
 // ControllerName is the name of this controller.
@@ -51,7 +52,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, shootCluster cluster.Clus
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 5,
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		WatchesRawSource(source.Kind[client.Object](
