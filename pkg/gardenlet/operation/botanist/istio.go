@@ -60,7 +60,7 @@ func (b *Botanist) DefaultIstio(ctx context.Context) (istio.Interface, error) {
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.ChartRenderer(),
 		// Use a dedicated name prefix so this Istio installation can co-exist with a seed/virtual-garden one.
-		"self-hosted-shoot-",
+		istio.SelfHostedShootNamePrefix,
 		v1beta1constants.DefaultSNIIngressNamespace,
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		istiodEnabled,
