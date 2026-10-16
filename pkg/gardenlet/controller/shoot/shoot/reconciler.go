@@ -590,7 +590,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		shoot.Status.SeedName = shoot.Spec.SeedName
 	}
 
-	// Due to an issue the `status.hibernated` of a hibernated Shoot was incorrectly reset to `false` when the
+	// Due to an issue, the `status.hibernated` of a hibernated Shoot was incorrectly reset to `false` when the
 	// migrate phase of its control plane migration succeeded. On the destination Seed the restore flow then wedged
 	// because it thinks that the hibernation is disabled and assumes the Shoot is woken up. At the start of a
 	// Restore operation the Shoot spec is authoritative and immutable, so if the spec requests hibernation we can
@@ -827,7 +827,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
 
-	// During the migrate phase of control plane migration or during live control plane migration the Cluster in the source Seed is deleted
+	// During the migrate phase of control plane migration or during live control plane migration, the Cluster in the source Seed is deleted
 	// before the operation succeeds. The Shoot spec is immutable and the `spec.hibernation.enabled` field cannot be changed during the operation.
 	// Hence we do not need to check the Cluster resource whether hibernation is enabled or not.
 	if operationType != gardencorev1beta1.LastOperationTypeMigrate && operationType != gardencorev1beta1.LastOperationTypeLiveMigrate {
