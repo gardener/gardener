@@ -5950,7 +5950,7 @@ func schema_pkg_apis_core_v1beta1_LastMaintenance(ref common.ReferenceCallback) 
 					},
 					"triggeredTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "TriggeredTime is the time when maintenance was triggered.",
+							Description: "TriggeredTime is the time when the last maintenance run was triggered. It is set on every maintenance run, including runs that performed no changes.",
 							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
 						},
 					},
@@ -5967,6 +5967,12 @@ func schema_pkg_apis_core_v1beta1_LastMaintenance(ref common.ReferenceCallback) 
 							Description: "FailureReason holds the information about the last maintenance operation failure reason.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"lastUpdateTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastUpdateTime is the time when maintenance last updated the Shoot spec. It is nil if maintenance has never updated the Shoot spec.",
+							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
 						},
 					},
 				},

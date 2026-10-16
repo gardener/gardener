@@ -2010,7 +2010,8 @@ message LastMaintenance {
   // A human-readable message containing details about the operations performed in the last maintenance.
   optional string description = 1;
 
-  // TriggeredTime is the time when maintenance was triggered.
+  // TriggeredTime is the time when the last maintenance run was triggered. It is set on every maintenance run,
+  // including runs that performed no changes.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time triggeredTime = 2;
 
   // Status of the last maintenance operation, one of Processing, Succeeded, Error.
@@ -2019,6 +2020,11 @@ message LastMaintenance {
   // FailureReason holds the information about the last maintenance operation failure reason.
   // +optional
   optional string failureReason = 4;
+
+  // LastUpdateTime is the time when maintenance last updated the Shoot spec. It is nil if maintenance
+  // has never updated the Shoot spec.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastUpdateTime = 5;
 }
 
 // LastOperation indicates the type and the state of the last operation, along with a description
