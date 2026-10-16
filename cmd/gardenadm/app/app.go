@@ -5,10 +5,12 @@
 package app
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	componentbaseversion "k8s.io/component-base/version"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
@@ -34,7 +36,11 @@ func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   Name,
 		Short: Name + " bootstraps and manages self-hosted shoot clusters in the Gardener project.",
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+		PersistentPreRunE: func(c *cobra.Command, _ []string) error {
+			if c.Name() != "version" {
+				fmt.Fprintf(opts.ErrOut, "gardenadm version %s\n", componentbaseversion.Get())
+			}
+
 			if err := opts.Validate(); err != nil {
 				return err
 			}
