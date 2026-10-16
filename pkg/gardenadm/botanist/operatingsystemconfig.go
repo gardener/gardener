@@ -60,12 +60,19 @@ func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx co
 	}
 
 	if poolName != "" {
-		if shoot := b.Shoot.GetInfo(); shoot != nil && !v1beta1helper.HasManagedInfrastructure(shoot) {
+		if shoot := b.Shoot.GetInfo(); shoot != nil {
 			if i := slices.IndexFunc(shoot.Spec.Provider.Workers, func(w gardencorev1beta1.Worker) bool {
 				return w.Name == poolName
-			}); i >= 0 && v1beta1helper.IsUpdateStrategyInPlace(shoot.Spec.Provider.Workers[i].UpdateStrategy) {
-				metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
-					v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
+			}); i >= 0 {
+				worker := shoot.Spec.Provider.Workers[i]
+				if worker.ControlPlane != nil {
+					metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
+						v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation, "true")
+				}
+				if !v1beta1helper.HasManagedInfrastructure(shoot) && v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+					metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
+						v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
+				}
 			}
 		}
 	}

@@ -184,20 +184,19 @@ func (r *Reconciler) cordonNodesForUpdate(ctx context.Context, log logr.Logger, 
 		}
 	}
 
-	for i := range nodeList.Items {
+	for _, node := range nodeList.Items {
 		if inProgress >= maxUnavailable {
 			break
 		}
 
-		node := &nodeList.Items[i]
-		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" || node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || NodeInPlaceUpdateOngoingOrFailed(node) {
+		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" || node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" || NodeInPlaceUpdateOngoingOrFailed(&node) {
 			continue
 		}
 
 		patch := client.MergeFrom(node.DeepCopy())
 		node.Spec.Unschedulable = true
 		metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime, r.Clock.Now().UTC().Format(time.RFC3339))
-		if err := r.ShootClient.Patch(ctx, node, patch); err != nil {
+		if err := r.ShootClient.Patch(ctx, &node, patch); err != nil {
 			return fmt.Errorf("failed to cordon node %s: %w", node.Name, err)
 		}
 		log.Info("Cordoned node for in-place update", "node", node.Name)
@@ -251,7 +250,12 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 		needsRequeue bool
 	)
 
-	for _, node := range nodeList.Items {
+	for _, n := range nodeList.Items {
+		node := &corev1.Node{}
+		if err := r.ShootClient.Get(ctx, client.ObjectKeyFromObject(&n), node); err != nil {
+			return false, fmt.Errorf("failed to get node %s: %w", n.Name, err)
+		}
+
 		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] == "" || !node.Spec.Unschedulable {
 			continue
 		}
@@ -259,7 +263,7 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 		drainFns = append(drainFns, func(ctx context.Context) error {
 			ctx, cancel := context.WithTimeout(ctx, time.Minute)
 			defer cancel()
-			if err := r.drainAndMarkReady(ctx, log, &node); err != nil {
+			if err := r.drainAndMarkReady(ctx, log, node); err != nil {
 				if ctx.Err() != nil {
 					log.Info("Drain attempt timed out, will retry", "node", node.Name)
 				} else {
