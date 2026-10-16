@@ -339,6 +339,9 @@ func validateTokenRequestorWorkloadIdentityControllerConfiguration(cfg *gardenle
 func validateShootInPlaceUpdateControllerConfiguration(cfg *gardenletconfigv1alpha1.ShootInPlaceUpdateControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if cfg.ConcurrentSyncs != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
 	if cfg.DrainTimeout != nil && cfg.DrainTimeout.Duration <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("drainTimeout"), *cfg.DrainTimeout, "must be positive"))
 	}

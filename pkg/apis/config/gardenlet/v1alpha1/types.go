@@ -410,6 +410,9 @@ type ShootStatusControllerConfiguration struct {
 // ShootInPlaceUpdateControllerConfiguration defines the configuration of the ShootInPlaceUpdate controller. It orchestrates
 // in-place node updates for self-hosted shoots (cordon, drain, and completion tracking).
 type ShootInPlaceUpdateControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// DrainTimeout is the overall maximum duration for a node drain before remaining pods are force-deleted.
 	// +optional
 	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`
