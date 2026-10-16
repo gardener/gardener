@@ -69,10 +69,6 @@ func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx co
 					metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
 						v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation, "true")
 				}
-				if !v1beta1helper.HasManagedInfrastructure(shoot) && v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-					metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
-						v1beta1constants.AnnotationNodeAgentInPlaceUpdateGardenletOrchestrated, "true")
-				}
 			}
 		}
 	}
