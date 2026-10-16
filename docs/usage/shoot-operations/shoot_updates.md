@@ -192,6 +192,18 @@ kubectl patch node <node-name> --subresource=status --type=json \
   -p='[{"op":"add","path":"/status/conditions/-","value":{"type":"InPlaceUpdate","status":"True","reason":"ReadyForUpdate","message":"Retrying failed in-place update"}}]'
 ```
 
+#### Unblocking a Stuck CP Pool (Self-Hosted Shoots with unmanaged-infra)
+
+For self-hosted shoots with unmanaged-infra, control-plane pool nodes use a serial Kubernetes `Lease` to ensure only one CP node updates at a time. The lease has no timeout and is only released when the update succeeds. This means a failed or permanently dead GNA on a control-plane node will hold the lease indefinitely and block the rest of the pool.
+
+To unblock the pool, delete the lease object in the shoot cluster:
+
+```bash
+kubectl -n kube-system delete lease <osc-secret-name>
+```
+
+After deletion, the next waiting control-plane node will acquire the lease and proceed with its update.
+
 > ⚠️ Changing the update strategy from `AutoRollingUpdate` to `AutoInPlaceUpdate`/`ManualInPlaceUpdate` (and vice versa) is not allowed. However, switching between `AutoInPlaceUpdate` and `ManualInPlaceUpdate` is permitted.
 
 #### Automatic In-Place Updates

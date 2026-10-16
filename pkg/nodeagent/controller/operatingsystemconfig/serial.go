@@ -113,7 +113,12 @@ func (l *leaderElector) renewedInTime() bool {
 		return false
 	}
 
-	if ptr.Deref(l.lease.Spec.LeaseDurationSeconds, 0) < 0 || l.lease.Spec.RenewTime == nil {
+	// No timeout means the lease is held indefinitely until explicitly released.
+	if l.lease.Spec.LeaseDurationSeconds == nil {
+		return l.acquiredByAnotherInstance()
+	}
+
+	if *l.lease.Spec.LeaseDurationSeconds < 0 || l.lease.Spec.RenewTime == nil {
 		return false
 	}
 	return l.lease.Spec.RenewTime.Add(l.leaseDuration()).UTC().After(l.clock.Now().UTC())
@@ -124,7 +129,12 @@ func (l *leaderElector) durationUntilLeaseExpires() time.Duration {
 		return 0
 	}
 
-	if ptr.Deref(l.lease.Spec.LeaseDurationSeconds, 0) < 0 || l.lease.Spec.RenewTime == nil {
+	// No timeout — return a fixed retry interval as fallback; the Lease watch handles the fast path.
+	if l.lease.Spec.LeaseDurationSeconds == nil {
+		return 5 * time.Minute
+	}
+
+	if *l.lease.Spec.LeaseDurationSeconds < 0 || l.lease.Spec.RenewTime == nil {
 		return 0
 	}
 	return l.lease.Spec.RenewTime.UTC().Add(l.leaseDuration()).UTC().Sub(l.clock.Now().UTC())
@@ -138,7 +148,7 @@ func (l *leaderElector) reload(ctx context.Context) error {
 	return client.IgnoreNotFound(l.client.Get(ctx, client.ObjectKeyFromObject(l.lease), l.lease))
 }
 
-func (l *leaderElector) tryAcquireOrRenew(ctx context.Context) error {
+func (l *leaderElector) tryAcquireOrRenew(ctx context.Context, leaseDurationSeconds *int32) error {
 	if l.lease == nil {
 		return errors.New("cannot acquire or renew Lease because it is not set")
 	}
@@ -148,9 +158,9 @@ func (l *leaderElector) tryAcquireOrRenew(ctx context.Context) error {
 	setLeaseSpec := func() {
 		if !l.acquiredByMe() {
 			l.lease.Spec.HolderIdentity = &l.identity
-			l.lease.Spec.LeaseDurationSeconds = new(int32(600))
 			l.lease.Spec.AcquireTime = &metav1.MicroTime{Time: l.clock.Now().UTC()}
 		}
+		l.lease.Spec.LeaseDurationSeconds = leaseDurationSeconds
 		l.lease.Spec.RenewTime = &metav1.MicroTime{Time: l.clock.Now().UTC()}
 	}
 

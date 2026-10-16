@@ -194,17 +194,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
 
-	// Determine if this is a gardenlet-orchestrated in-place update before acquiring the serial lease,
-	// so the lease can be skipped when gardenlet is coordinating.
 	gardenletOrchestratedInPlaceUpdate, err := r.isGardenletOrchestratedInPlaceUpdate(log, osc, secret, oscChecksum, osVersion)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Serial reconciliation lease serializes CP pool node reconciliations. Skip it entirely for
-	// gardenlet-orchestrated in-place updates: gardenlet's maxUnavailable gate is the coordinator,
-	// so acquiring the lease here would only block other CP nodes unnecessarily.
-	if serialReconciliation(secret) && !gardenletOrchestratedInPlaceUpdate {
+	// Serial reconciliation lease serializes CP pool node reconciliations. For gardenlet-orchestrated
+	// in-place updates the lease is held throughout drain and update so that only one CP node
+	// gets updated at a time.
+	if serialReconciliation(secret) {
 		log.Info("OperatingSystemConfig reconciliation is serial")
 
 		if err := serialReconciliationLease.reload(ctx); err != nil {
@@ -221,7 +219,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
 		}
 
-		if err := serialReconciliationLease.tryAcquireOrRenew(ctx); err != nil {
+		// For gardenlet-orchestrated in-place updates, the lease has no timeout and is only released
+		// on success. If a control plane node fails to update, it keeps the lease and blocks other control plane nodes
+		// from updating. As operator intervention is required to resolve the issue.
+		// For regular serial reconciliation, a 600s timeout ensures a crashed node does not block others.
+		var leaseDurationSeconds *int32
+		if !gardenletOrchestratedInPlaceUpdate {
+			leaseDurationSeconds = new(int32(600))
+		}
+
+		if err := serialReconciliationLease.tryAcquireOrRenew(ctx, leaseDurationSeconds); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed acquiring or renewing lease: %w", err)
 		}
 
@@ -320,7 +327,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			// ReadyForUpdate condition is stale from the just-completed update. Gardenlet will cleanup the in-place update labels.
 			// Wait before starting the next update so the node is drained again first.
 			log.Info("Waiting for gardenlet to cleanup in-place update labels after successful in-place update")
-			return reconcile.Result{}, nil
+			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 
 		log.Info("In-place update is in progress", "osUpdate", oscChanges.InPlaceUpdates.OperatingSystem,
