@@ -18,7 +18,7 @@ import (
 )
 
 func (g *gardenerDashboard) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(deploymentName, g.namespace)
+	return gardenerutils.NewGardenAccessSecret(deploymentName, g.namespace)
 }
 
 func (g *gardenerDashboard) reconcileSessionSecret(ctx context.Context) (*corev1.Secret, error) {

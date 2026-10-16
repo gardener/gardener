@@ -13,10 +13,7 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -283,7 +280,8 @@ func (r *Reconciler) reconcile(
 	} else {
 		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
 			WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
-			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name}).
+			WithServiceAccountNamespace(gardenerutils.ComputeGardenNamespace(seed.Name))
 	}
 
 	featureToEnabled := make(map[featuregate.Feature]bool)
@@ -395,7 +393,7 @@ func (r *Reconciler) reconcile(
 	conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "chart could be rendered successfully.")
 	secretData := release.AsSecretData()
 
-	mustInjectGardenKubeconfig, err := needsGardenKubeconfig(injectGardenKubeconfig, secretData)
+	mustInjectGardenKubeconfig, err := gardenerutils.NeedsGardenKubeconfig(injectGardenKubeconfig, secretData)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to check whether garden kubeconfig injection is needed: %w", err)
 	}
@@ -412,7 +410,7 @@ func (r *Reconciler) reconcile(
 			[]string{appsv1.GroupName, batchv1.GroupName},
 			// Inject generic kubeconfig
 			func(obj runtime.Object) error {
-				if !objectEnablesGardenKubeconfig(obj) {
+				if !gardenerutils.ObjectEnablesGardenKubeconfig(obj) {
 					return nil
 				}
 				return gardenerutils.InjectGenericGardenKubeconfig(obj, genericGardenKubeconfigSecretName, gardenAccessSecret.Secret.Name, gardenerutils.VolumeMountPathGenericGardenKubeconfig)
@@ -652,60 +650,6 @@ func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, names
 	utilruntime.Must(kubernetesutils.MakeUnique(kubeconfigSecret))
 
 	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
-}
-
-func needsGardenKubeconfig(injectGardenKubeconfig bool, secretData map[string][]byte) (bool, error) {
-	if !injectGardenKubeconfig {
-		return false, nil
-	}
-
-	objects, err := gardenerutils.ObjectsInSecretData(secretData)
-	if err != nil {
-		return false, fmt.Errorf("failed reading objects in secret data: %w", err)
-	}
-
-	for _, o := range objects {
-		switch o.GetObjectKind().GroupVersionKind() {
-		case corev1.SchemeGroupVersion.WithKind("Pod"):
-			fallthrough
-		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
-			fallthrough
-		case appsv1beta2.SchemeGroupVersion.WithKind("Deployment"):
-			fallthrough
-		case appsv1beta1.SchemeGroupVersion.WithKind("Deployment"):
-			fallthrough
-		case appsv1.SchemeGroupVersion.WithKind("StatefulSet"):
-			fallthrough
-		case appsv1beta2.SchemeGroupVersion.WithKind("StatefulSet"):
-			fallthrough
-		case appsv1beta1.SchemeGroupVersion.WithKind("StatefulSet"):
-			fallthrough
-		case appsv1.SchemeGroupVersion.WithKind("DaemonSet"):
-			fallthrough
-		case appsv1beta2.SchemeGroupVersion.WithKind("DaemonSet"):
-			fallthrough
-		case batchv1.SchemeGroupVersion.WithKind("Job"):
-			fallthrough
-		case batchv1.SchemeGroupVersion.WithKind("CronJob"):
-			fallthrough
-		case batchv1beta1.SchemeGroupVersion.WithKind("CronJob"):
-			if objectEnablesGardenKubeconfig(o) {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
-
-func objectEnablesGardenKubeconfig(o runtime.Object) bool {
-	obj, ok := o.(client.Object)
-	if !ok {
-		return false
-	}
-
-	v, ok := obj.GetLabels()[v1beta1constants.LabelInjectGardenKubeconfig]
-	return !ok || v == "true"
 }
 
 // MutateSpecForSelfHostedShootExtensions adapts host network, replicas, tolerations and usable ports range for

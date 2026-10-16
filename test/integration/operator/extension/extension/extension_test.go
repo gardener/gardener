@@ -6,15 +6,18 @@ package extension_test
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -25,9 +28,12 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension/extension"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardeneroperator "github.com/gardener/gardener/pkg/utils/gardener/operator"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/kubernetes"
 )
 
 var _ = Describe("Extension controller tests", func() {
@@ -44,6 +50,7 @@ var _ = Describe("Extension controller tests", func() {
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&managedresources.IntervalWait, 100*time.Millisecond))
 		DeferCleanup(test.WithVar(&extensioncontroller.RequeueGardenResourceNotReady, 100*time.Millisecond))
+		DeferCleanup(test.WithVar(&extensioncontroller.RequeueGardenAPIServerNotAvailable, 100*time.Millisecond))
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -121,6 +128,7 @@ var _ = Describe("Extension controller tests", func() {
 								OCIRepository: &ociRepositoryProviderLocalChart,
 							},
 						},
+						InjectGardenKubeconfig: new(true),
 					},
 				},
 			},
@@ -316,6 +324,9 @@ var _ = Describe("Extension controller tests", func() {
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
 		garden.Status = operatorv1alpha1.GardenStatus{
+			Gardener: &gardencorev1beta1.Gardener{
+				Version: version.Get().GitVersion,
+			},
 			LastOperation: &gardencorev1beta1.LastOperation{
 				LastUpdateTime: metav1.Now(),
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
@@ -324,6 +335,24 @@ var _ = Describe("Extension controller tests", func() {
 			},
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
+
+		By("Create API server deployments for the garden cluster")
+		for _, deploymentName := range []string{"virtual-garden-kube-apiserver", "gardener-apiserver"} {
+			deployment := kubernetes.NewDeployment(deploymentName, testNamespace.Name, "", testID, testRunID)
+			Expect(testClient.Create(ctx, deployment)).To(Succeed(), "Failed to create deployment %s", deploymentName)
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, deployment))).To(Succeed(), "Failed to delete deployment %s", deploymentName)
+			})
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+				patch := client.MergeFrom(deployment.DeepCopy())
+				deployment.Status.ObservedGeneration = deployment.Generation
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+				g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+			}).Should(Succeed())
+		}
 
 		By("Wait until extension is successfully reconciled")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
@@ -442,6 +471,30 @@ var _ = Describe("Extension controller tests", func() {
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+
+		By("Verify garden kubeconfig injection for extension foo in runtime cluster")
+		barRuntimeNamespace := gardeneroperator.ExtensionRuntimeNamespaceName("provider-bar")
+
+		By("Verify garden access secret is created in extension foo runtime namespace")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKey{
+				Namespace: barRuntimeNamespace,
+				Name:      gardenerutils.SecretNamePrefixGardenAccess + "extension",
+			}, &corev1.Secret{})
+		}).Should(Succeed())
+
+		By("Verify generic garden kubeconfig secret is created in extension foo runtime namespace")
+		Eventually(func(g Gomega) {
+			secretList := &corev1.SecretList{}
+			g.Expect(testClient.List(ctx, secretList, client.InNamespace(barRuntimeNamespace))).To(Succeed())
+			var kubeconfigSecrets []corev1.Secret
+			for _, s := range secretList.Items {
+				if strings.HasPrefix(s.Name, v1beta1constants.SecretNameGenericGardenKubeconfig+"-") {
+					kubeconfigSecrets = append(kubeconfigSecrets, s)
+				}
+			}
+			g.Expect(kubeconfigSecrets).To(HaveLen(1))
+		}).Should(Succeed())
 
 		By("Deploy extension foo in runtime cluster by marking it as required")
 		Eventually(func() error {

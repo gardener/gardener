@@ -6,18 +6,25 @@ package gardener_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
+	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -1050,6 +1057,134 @@ var _ = Describe("Garden", func() {
 			result, err := ClusterIsSelfHostedShoot(ctx, fakeClient)
 			Expect(err).To(BeNotFoundError())
 			Expect(result).To(BeFalse())
+		})
+	})
+
+	Describe("#ObjectEnablesGardenKubeconfig", func() {
+		It("should return false when the object is not a client.Object", func() {
+			Expect(ObjectEnablesGardenKubeconfig(&metav1.Status{})).To(BeFalse())
+		})
+
+		It("should return true when the label is not set (default enabled)", func() {
+			Expect(ObjectEnablesGardenKubeconfig(&appsv1.Deployment{})).To(BeTrue())
+		})
+
+		It("should return true when the label is set to 'true'", func() {
+			Expect(ObjectEnablesGardenKubeconfig(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{constants.LabelInjectGardenKubeconfig: "true"},
+			}})).To(BeTrue())
+		})
+
+		It("should return false when the label is set to 'false'", func() {
+			Expect(ObjectEnablesGardenKubeconfig(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{constants.LabelInjectGardenKubeconfig: "false"},
+			}})).To(BeFalse())
+		})
+
+		It("should return false when the label is set to an arbitrary value", func() {
+			Expect(ObjectEnablesGardenKubeconfig(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{constants.LabelInjectGardenKubeconfig: "foo"},
+			}})).To(BeFalse())
+		})
+	})
+
+	Describe("#NeedsGardenKubeconfig", func() {
+		var (
+			objectWithGVK = func(gvk schema.GroupVersionKind, labels map[string]string) client.Object {
+				obj := &unstructured.Unstructured{}
+				obj.SetGroupVersionKind(gvk)
+				obj.SetName("foo")
+				obj.SetNamespace("bar")
+				obj.SetLabels(labels)
+				return obj
+			}
+
+			secretDataForObjects = func(objects ...client.Object) map[string][]byte {
+				secretData := make(map[string][]byte, len(objects))
+				for i, obj := range objects {
+					data, err := yaml.Marshal(obj)
+					Expect(err).NotTo(HaveOccurred())
+					secretData[fmt.Sprintf("res%d", i)] = data
+				}
+				return secretData
+			}
+		)
+
+		It("should return false when injectGardenKubeconfig is false", func() {
+			secretData := secretDataForObjects(objectWithGVK(appsv1.SchemeGroupVersion.WithKind("Deployment"), nil))
+
+			needs, err := NeedsGardenKubeconfig(false, secretData)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(needs).To(BeFalse())
+		})
+
+		It("should return an error when the secret data cannot be read", func() {
+			needs, err := NeedsGardenKubeconfig(true, map[string][]byte{"res0": []byte("not: [valid")})
+			Expect(err).To(HaveOccurred())
+			Expect(needs).To(BeFalse())
+		})
+
+		It("should return false when no objects are contained in the secret data", func() {
+			needs, err := NeedsGardenKubeconfig(true, map[string][]byte{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(needs).To(BeFalse())
+		})
+
+		DescribeTable("supported workload kinds enable injection",
+			func(gvk schema.GroupVersionKind) {
+				secretData := secretDataForObjects(objectWithGVK(gvk, nil))
+
+				needs, err := NeedsGardenKubeconfig(true, secretData)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(needs).To(BeTrue())
+			},
+
+			Entry("core/v1 Pod", corev1.SchemeGroupVersion.WithKind("Pod")),
+			Entry("apps/v1 Deployment", appsv1.SchemeGroupVersion.WithKind("Deployment")),
+			Entry("apps/v1beta2 Deployment", appsv1beta2.SchemeGroupVersion.WithKind("Deployment")),
+			Entry("apps/v1beta1 Deployment", appsv1beta1.SchemeGroupVersion.WithKind("Deployment")),
+			Entry("apps/v1 StatefulSet", appsv1.SchemeGroupVersion.WithKind("StatefulSet")),
+			Entry("apps/v1beta2 StatefulSet", appsv1beta2.SchemeGroupVersion.WithKind("StatefulSet")),
+			Entry("apps/v1beta1 StatefulSet", appsv1beta1.SchemeGroupVersion.WithKind("StatefulSet")),
+			Entry("apps/v1 DaemonSet", appsv1.SchemeGroupVersion.WithKind("DaemonSet")),
+			Entry("apps/v1beta2 DaemonSet", appsv1beta2.SchemeGroupVersion.WithKind("DaemonSet")),
+			Entry("batch/v1 Job", batchv1.SchemeGroupVersion.WithKind("Job")),
+			Entry("batch/v1 CronJob", batchv1.SchemeGroupVersion.WithKind("CronJob")),
+			Entry("batch/v1beta1 CronJob", batchv1beta1.SchemeGroupVersion.WithKind("CronJob")),
+		)
+
+		It("should return false for a supported workload kind which disables injection via label", func() {
+			secretData := secretDataForObjects(objectWithGVK(
+				appsv1.SchemeGroupVersion.WithKind("Deployment"),
+				map[string]string{constants.LabelInjectGardenKubeconfig: "false"},
+			))
+
+			needs, err := NeedsGardenKubeconfig(true, secretData)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(needs).To(BeFalse())
+		})
+
+		It("should return false for unsupported object kinds even if the label enables injection", func() {
+			secretData := secretDataForObjects(objectWithGVK(
+				corev1.SchemeGroupVersion.WithKind("ConfigMap"),
+				map[string]string{constants.LabelInjectGardenKubeconfig: "true"},
+			))
+
+			needs, err := NeedsGardenKubeconfig(true, secretData)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(needs).To(BeFalse())
+		})
+
+		It("should return true when at least one of multiple objects enables injection", func() {
+			secretData := secretDataForObjects(
+				objectWithGVK(corev1.SchemeGroupVersion.WithKind("ConfigMap"), nil),
+				objectWithGVK(appsv1.SchemeGroupVersion.WithKind("Deployment"), map[string]string{constants.LabelInjectGardenKubeconfig: "false"}),
+				objectWithGVK(appsv1.SchemeGroupVersion.WithKind("StatefulSet"), nil),
+			)
+
+			needs, err := NeedsGardenKubeconfig(true, secretData)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(needs).To(BeTrue())
 		})
 	})
 })

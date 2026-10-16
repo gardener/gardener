@@ -12,6 +12,11 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -432,6 +437,62 @@ func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string) *re
 		gardenClientRestConfig.Host = *address
 	}
 	return gardenClientRestConfig
+}
+
+// NeedsGardenKubeconfig checks if the given secret data contains any objects that require the garden kubeconfig to be injected.
+func NeedsGardenKubeconfig(injectGardenKubeconfig bool, secretData map[string][]byte) (bool, error) {
+	if !injectGardenKubeconfig {
+		return false, nil
+	}
+
+	objects, err := ObjectsInSecretData(secretData)
+	if err != nil {
+		return false, fmt.Errorf("failed reading objects in secret data: %w", err)
+	}
+
+	for _, o := range objects {
+		switch o.GetObjectKind().GroupVersionKind() {
+		case corev1.SchemeGroupVersion.WithKind("Pod"):
+			fallthrough
+		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
+			fallthrough
+		case appsv1beta2.SchemeGroupVersion.WithKind("Deployment"):
+			fallthrough
+		case appsv1beta1.SchemeGroupVersion.WithKind("Deployment"):
+			fallthrough
+		case appsv1.SchemeGroupVersion.WithKind("StatefulSet"):
+			fallthrough
+		case appsv1beta2.SchemeGroupVersion.WithKind("StatefulSet"):
+			fallthrough
+		case appsv1beta1.SchemeGroupVersion.WithKind("StatefulSet"):
+			fallthrough
+		case appsv1.SchemeGroupVersion.WithKind("DaemonSet"):
+			fallthrough
+		case appsv1beta2.SchemeGroupVersion.WithKind("DaemonSet"):
+			fallthrough
+		case batchv1.SchemeGroupVersion.WithKind("Job"):
+			fallthrough
+		case batchv1.SchemeGroupVersion.WithKind("CronJob"):
+			fallthrough
+		case batchv1beta1.SchemeGroupVersion.WithKind("CronJob"):
+			if ObjectEnablesGardenKubeconfig(o) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// ObjectEnablesGardenKubeconfig checks if the given object has the label "gardener.cloud/inject-garden-kubeconfig" set to "true".
+func ObjectEnablesGardenKubeconfig(o runtime.Object) bool {
+	obj, ok := o.(client.Object)
+	if !ok {
+		return false
+	}
+
+	v, ok := obj.GetLabels()[v1beta1constants.LabelInjectGardenKubeconfig]
+	return !ok || v == "true"
 }
 
 // DefaultGardenerGVKsForEncryption returns the list of [schema.GroupVersionKind] served by Gardener API Server which are encrypted by default.

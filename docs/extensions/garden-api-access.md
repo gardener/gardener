@@ -12,6 +12,22 @@ For extensions with an admission controller deployment, `gardener-operator` inje
 The token is valid for `12h`, automatically renewed, and associated with a dedicated `ServiceAccount` in the garden cluster.
 The path to this kubeconfig is revealed under the `GARDEN_KUBECONFIG` environment variable, also added to the pod spec(s).
 
+## Extensions on the Garden Runtime Cluster
+
+Extensions that are deployed to the garden runtime cluster via `gardener-operator` (i.e., by setting `.spec.deployment.extension.runtimeClusterValues` in the [`Extension` resource](../concepts/operator.md#extension-deployment)) can request `gardener-operator` to inject a kubeconfig and a token for the (virtual) garden cluster.
+
+In order to do so, `injectGardenKubeconfig` must be set to `true` in `.spec.deployment.extension.injectGardenKubeconfig` of the `Extension` resource.
+If it should still be disabled for an individual workload resource (`Deployment`, `StatefulSet`, etc.), they must be labeled with `extensions.gardener.cloud/inject-garden-kubeconfig=false`.
+
+When enabled, `gardener-operator` injects `volume`, `volumeMounts`, and environment variables into all containers in all objects in the `apps` and `batch` API groups — the same way `gardenlet` does it for `ControllerInstallation`s on seed clusters (see [below](#using-gardenlet-managed-garden-access)).
+The environment variable `GARDEN_KUBECONFIG` points to a projected kubeconfig volume that combines a static kubeconfig skeleton (pointing at the `virtual-garden-kube-apiserver`) with a short-lived token (valid for `12h`) from a dedicated `ServiceAccount` in the virtual garden cluster.
+The token is automatically renewed by the operator's [`TokenRequestor` controller](../concepts/operator.md#tokenrequestor-controller).
+
+Note that kubeconfig injection requires the virtual garden cluster to be available.
+
+> [!NOTE]
+> If the virtual garden API server is not yet reachable when the extension is first reconciled, the injection is skipped and the extension reconciliation is requeued until the virtual cluster becomes ready.
+
 ## Extensions on `Seed` Clusters
 
 Extensions that are installed on seed clusters via a `ControllerInstallation` can request `gardenlet` to inject a kubeconfig and a token for the garden cluster.
@@ -136,6 +152,7 @@ metadata:
     resources.gardener.cloud/class: garden
   annotations:
     serviceaccount.resources.gardener.cloud/name: example
+    serviceaccount.resources.gardener.cloud/namespace: seed-<seed-name>
 type: Opaque
 ```
 
