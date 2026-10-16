@@ -390,11 +390,11 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			})
 
 			It("should delete a network policy managed by Gardener under a different prefix", func() {
+				// A Gardener prefix is enough to identify a managed NetworkPolicy, no description annotation required.
 				networkPolicy := &networkingv1.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace:   fooNamespace.Name,
-						Name:        networkpolicycontroller.NetworkPolicyNamePrefixOperator + attrs.networkPolicyName,
-						Annotations: map[string]string{v1beta1constants.GardenerDescription: "Disables all ingress and egress traffic."},
+						Namespace: fooNamespace.Name,
+						Name:      networkpolicycontroller.NetworkPolicyNamePrefixOperator + attrs.networkPolicyName,
 					},
 				}
 
