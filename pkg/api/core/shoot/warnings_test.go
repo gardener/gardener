@@ -400,6 +400,52 @@ var _ = Describe("Warnings", func() {
 			),
 		)
 
+		Describe("spec.provider.workers[].machineControllerManagerSettings.autoPreserveFailedMachineMax", func() {
+			It("should return a warning when autoPreserveFailedMachineMax is less than the number of zones", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1", "zone2", "zone3"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: new(int32(2)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("machineControllerManagerSettings.autoPreserveFailedMachineMax")))
+			})
+
+			It("should not return a warning when autoPreserveFailedMachineMax equals the number of zones", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1", "zone2"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: new(int32(2)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+
+			It("should not return a warning when autoPreserveFailedMachineMax is zero", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1", "zone2", "zone3"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: new(int32(0)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+
+			It("should not return a warning when autoPreserveFailedMachineMax is greater than the number of zones", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name:  "test",
+					Zones: []string{"zone1"},
+					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
+						AutoPreserveFailedMachineMax: new(int32(2)),
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+		})
+
 		It("should not return a suppressed secretName warning", func() {
 			shoot.Spec.DNS = &core.DNS{
 				Providers: []core.DNSProvider{
