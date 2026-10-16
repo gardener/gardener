@@ -183,10 +183,6 @@ func (r *Reconciler) networkPolicyName(name string) string {
 //
 // TODO(mehrabix): Remove this function and its call sites with the next Gardener version.
 func (r *Reconciler) deleteLegacyNetworkPolicy(ctx context.Context, log logr.Logger, namespace, name string) error {
-	if r.NetworkPolicyNamePrefix == "" {
-		return nil
-	}
-
 	legacyNetworkPolicy := &networkingv1.NetworkPolicy{}
 	key := client.ObjectKey{Namespace: namespace, Name: name}
 	if err := r.RuntimeClient.Get(ctx, key, legacyNetworkPolicy); err != nil {
@@ -314,7 +310,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 	}
 
 	if !r.Resolver.HasSynced() {
-		log.Info("Resolver has not synced yet - skipping update of NetworkPolicy", "networkPolicyName", "allow-to-runtime-apiserver")
+		log.Info("Resolver has not synced yet - skipping update of NetworkPolicy", "networkPolicyName", networkPolicy.Name)
 		// The resolver triggers an event after it has been synced, which starts a new reconciliation.
 		// No need to raise an error here.
 		return nil

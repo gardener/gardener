@@ -229,49 +229,51 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 	}
 
 	defaultTests := func(attrs testAttributes) {
+		networkPolicyName := prefixedNetworkPolicyName(attrs.networkPolicyName)
+
 		Context("reconciliation", func() {
 			It("should create the network policy in the correct namespaces", func() {
 				By("Wait for controller to create the network policy in expected namespaces")
 				Eventually(func(g Gomega) {
 					if attrs.inShootNamespaces {
 						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(shootNamespace.Name)))
 					}
 
 					if attrs.inGardenNamespace {
 						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(gardenNamespace.Name)))
 					}
 
 					if attrs.inIstioSystemNamespace {
 						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(istioSystemNamespace.Name)))
 					}
 
 					if attrs.inIstioIngressNamespace {
 						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(istioIngressNamespace.Name)))
 					}
 
 					if attrs.inIstioExposureClassNamespace {
 						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(istioExposureClassNamespace.Name)))
 					}
 
 					if attrs.inExtensionNamespaces {
 						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(extensionNamespace.Name)))
 					}
 
 					if attrs.inCustomNamespace {
 						networkPolicy := &networkingv1.NetworkPolicy{}
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: customNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: customNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(customNamespace.Name)))
 					}
 				}).Should(Succeed())
@@ -279,40 +281,48 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				By("Ensure controller does not create the network policy in unexpected namespaces")
 				Consistently(func(g Gomega) {
 					if !attrs.inShootNamespaces {
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: shootNamespace.Name, Name: networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
 					if !attrs.inGardenNamespace {
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
 					if !attrs.inIstioSystemNamespace {
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioSystemNamespace.Name, Name: networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
 					if !attrs.inIstioIngressNamespace {
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioIngressNamespace.Name, Name: networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
 					if !attrs.inIstioExposureClassNamespace {
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: istioExposureClassNamespace.Name, Name: networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
 					if !attrs.inExtensionNamespaces {
-						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace.Name, Name: networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 					}
 
-					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: attrs.networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: fooNamespace.Name, Name: networkPolicyName}, &networkingv1.NetworkPolicy{})).Should(BeNotFoundError())
 				}).Should(Succeed())
 			})
 		})
 
 		Context("deletion", func() {
+			// NetworkPolicies which are not prefixed do not trigger the controller's predicate, so update the namespace to
+			// make the controller reconcile it again.
+			triggerReconciliation := func() {
+				By("Trigger reconciliation by updating the namespace")
+				fooNamespace.Labels["foo"] = "bar"
+				Expect(testClient.Update(ctx, fooNamespace)).To(Succeed())
+			}
+
 			It("should delete the network policy in foo namespace", func() {
 				networkPolicy := &networkingv1.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: fooNamespace.Name,
-						Name:      attrs.networkPolicyName,
+						Name:      networkPolicyName,
 					},
 				}
 
@@ -334,7 +344,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				networkPolicy := &networkingv1.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: fooNamespace.Name,
-						Name:      "deny-all",
+						Name:      attrs.networkPolicyName,
 					},
 				}
 
@@ -346,22 +356,24 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, networkPolicy))).To(Succeed())
 				})
 
+				triggerReconciliation()
+
 				By("Ensure controller does not delete the user-managed network policy")
 				Consistently(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
 				}).Should(Succeed())
 			})
 
-			It("should delete a legacy network policy managed by Gardener", func() {
+			It("should delete a network policy managed by Gardener without the prefix", func() {
 				networkPolicy := &networkingv1.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:   fooNamespace.Name,
-						Name:        "deny-all",
+						Name:        attrs.networkPolicyName,
 						Annotations: map[string]string{v1beta1constants.GardenerDescription: "Disables all ingress and egress traffic."},
 					},
 				}
 
-				By("Create legacy network policy")
+				By("Create unprefixed network policy")
 				Expect(testClient.Create(ctx, networkPolicy)).To(Succeed())
 
 				DeferCleanup(func() {
@@ -369,11 +381,9 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 					Expect(client.IgnoreNotFound(testClient.Delete(ctx, networkPolicy))).To(Succeed())
 				})
 
-				By("Trigger reconciliation by updating the namespace")
-				fooNamespace.Labels["foo"] = "bar"
-				Expect(testClient.Update(ctx, fooNamespace)).To(Succeed())
+				triggerReconciliation()
 
-				By("Wait for controller to delete the legacy network policy")
+				By("Wait for controller to delete the unprefixed network policy")
 				Eventually(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
 				}).Should(BeNotFoundError())
@@ -383,7 +393,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 	Describe("deny-all", func() {
 		defaultTests(testAttributes{
-			networkPolicyName: prefixedNetworkPolicyName("deny-all"),
+			networkPolicyName: "deny-all",
 			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec {
 				return networkingv1.NetworkPolicySpec{
 					PodSelector: metav1.LabelSelector{},
@@ -418,7 +428,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		})
 
 		defaultTests(testAttributes{
-			networkPolicyName:         prefixedNetworkPolicyName("allow-to-runtime-apiserver"),
+			networkPolicyName:         "allow-to-runtime-apiserver",
 			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
 			inGardenNamespace:         true,
 			inIstioSystemNamespace:    true,
@@ -431,7 +441,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 	Describe("allow-to-public-networks", func() {
 		var (
-			networkPolicyName         = prefixedNetworkPolicyName("allow-to-public-networks")
+			networkPolicyName         = "allow-to-public-networks"
 			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
 				Egress: []networkingv1.NetworkPolicyEgressRule{{
@@ -472,7 +482,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 	Describe("allow-to-private-networks", func() {
 		defaultTests(testAttributes{
-			networkPolicyName: prefixedNetworkPolicyName("allow-to-private-networks"),
+			networkPolicyName: "allow-to-private-networks",
 			expectedNetworkPolicySpec: func(namespaceName string) networkingv1.NetworkPolicySpec {
 				out := networkingv1.NetworkPolicySpec{
 					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
@@ -509,7 +519,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 	Describe("allow-to-blocked-cidrs", func() {
 		var (
-			networkPolicyName         = prefixedNetworkPolicyName("allow-to-blocked-cidrs")
+			networkPolicyName         = "allow-to-blocked-cidrs"
 			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToBlockedCIDRs: v1beta1constants.LabelNetworkPolicyAllowed}},
 				PolicyTypes: []networkingv1.PolicyType{"Egress"},
@@ -529,7 +539,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 	Describe("allow-to-dns", func() {
 		defaultTests(testAttributes{
-			networkPolicyName: prefixedNetworkPolicyName("allow-to-dns"),
+			networkPolicyName: "allow-to-dns",
 			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec {
 				return networkingv1.NetworkPolicySpec{
 					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}},
