@@ -314,7 +314,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(seed)
+	c.victoriaLogs, err = r.newVictoriaLogs(seed, secretsManager)
 	if err != nil {
 		return
 	}
@@ -643,7 +643,7 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 	return deployer, err
 }
 
-func (r *Reconciler) newVictoriaLogs(seed *seedpkg.Seed) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(seed *seedpkg.Seed, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.VictoriaLogs != nil && r.Config.Logging.VictoriaLogs.Garden != nil {
 		storage = r.Config.Logging.VictoriaLogs.Garden.Storage
@@ -666,6 +666,8 @@ func (r *Reconciler) newVictoriaLogs(seed *seedpkg.Seed) (component.DeployWaiter
 			Enabled:     pvcAutoscalerEnabled,
 			MaxCapacity: resource.MustParse("200Gi"),
 		},
+		secretsManager,
+		v1beta1constants.SecretNameCASeed,
 	)
 	if err != nil {
 		return nil, err

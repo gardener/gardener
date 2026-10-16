@@ -44,6 +44,7 @@ func NewOpenTelemetryCollector(
 	return collector.New(
 		c,
 		gardenNamespaceName,
+		secretsManager,
 		collector.Values{
 			Image:                   collectorImage.String(),
 			KubeRBACProxyImage:      kubeRBACProxyImage.String(),
@@ -57,6 +58,5 @@ func NewOpenTelemetryCollector(
 			VictoriaLogsBackend:     victoriaLogsBackend,
 			RemoveVali:              removeVali,
 		},
-		secretsManager,
 	), nil
 }

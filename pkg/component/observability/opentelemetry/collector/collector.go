@@ -56,6 +56,9 @@ const (
 	tlsMountPath             = "/tls"
 	tlsCertificateVolumeName = "tls-certificate"
 
+	caBundleVolumeName = "ca-bundle"
+	caBundleMountPath  = "/etc/otel/tls"
+
 	metricsPort                    = 8888
 	timeoutWaitForManagedResources = 2 * time.Minute
 )
@@ -99,8 +102,8 @@ type Values struct {
 type otelCollector struct {
 	client         client.Client
 	namespace      string
-	values         Values
 	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 // Interface is the interface for the OpenTelemetry Collector deployer.
@@ -114,14 +117,14 @@ type Interface interface {
 func New(
 	client client.Client,
 	namespace string,
-	values Values,
 	secretsManager secretsmanager.Interface,
+	values Values,
 ) Interface {
 	return &otelCollector{
 		client:         client,
 		namespace:      namespace,
-		values:         values,
 		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
@@ -143,6 +146,15 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		seedObjects                      = []client.Object{}
 	)
 
+	if o.values.SecretNameServerCA == "" {
+		return fmt.Errorf("secretNameServerCA must be set")
+	}
+
+	caBundle, found := o.secretsManager.Get(o.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("the CA trust bundle for %q was not found", o.values.SecretNameServerCA)
+	}
+
 	if o.values.ClusterType == component.ClusterTypeShoot {
 		if o.values.WithRBACProxy {
 			if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, o.client); err != nil {
@@ -160,14 +172,9 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 			CertType:                    secrets.ServerCert,
 			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA))
+		}, secretsmanager.SignedByCA(o.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
 		if err != nil {
 			return err
-		}
-
-		caBundle, found := o.secretsManager.Get(o.values.SecretNameServerCA)
-		if !found {
-			return fmt.Errorf("secret %q not found", o.values.SecretNameServerCA)
 		}
 
 		genericTokenKubeconfigSecret, found := o.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -214,7 +221,7 @@ func (o *otelCollector) Deploy(ctx context.Context) error {
 		}
 	}
 
-	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName, ingressTLSSecret))
+	seedObjects = append(seedObjects, o.openTelemetryCollector(o.namespace, o.values.LokiEndpoint, genericTokenKubeconfigSecretName, ingressTLSSecret, caBundle))
 	seedObjects = append(seedObjects, o.serviceMonitor())
 	seedObjects = append(seedObjects, o.serviceAccount())
 	seedObjects = append(seedObjects, o.vpa())
@@ -388,7 +395,7 @@ func (o *otelCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
 	}
 }
 
-func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string, ingressTLSSecret *corev1.Secret) *otelv1beta1.OpenTelemetryCollector {
+func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericTokenKubeconfigSecretName string, ingressTLSSecret *corev1.Secret, caBundle *corev1.Secret) *otelv1beta1.OpenTelemetryCollector {
 	obj := &otelv1beta1.OpenTelemetryCollector{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      collectorconstants.OpenTelemetryCollectorResourceName,
@@ -420,6 +427,27 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 					AllowPrivilegeEscalation: new(false),
 				},
 				ServiceAccount: collectorconstants.ServiceAccountName,
+				Volumes: []corev1.Volume{
+					{
+						Name: caBundleVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: caBundle.Name,
+								Items: []corev1.KeyToPath{{
+									Key:  secrets.DataKeyCertificateBundle,
+									Path: secrets.DataKeyCertificateBundle,
+								}},
+							},
+						},
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      caBundleVolumeName,
+						MountPath: caBundleMountPath,
+						ReadOnly:  true,
+					},
+				},
 			},
 			// TODO(rrhubenov): Remove `Vali` references and switch to only using VictoriaLogs components when the `VictoriaLogsBackend` feature gate is promoted to GA.
 			Config: otelv1beta1.Config{
@@ -538,9 +566,12 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 							"verbosity": "basic",
 						},
 						"otlphttp/victorialogs": map[string]any{
-							"logs_endpoint": "http://" + victorialogsconstants.ServiceName + ":" + strconv.Itoa(victorialogsconstants.VictoriaLogsPort) + victorialogsconstants.PushEndpoint,
+							"logs_endpoint": fmt.Sprintf("https://%s:%d%s", victorialogsconstants.ServiceName, victorialogsconstants.VictoriaLogsPort, victorialogsconstants.PushEndpoint),
 							"headers": map[string]any{
 								"VL-Stream-Fields": "host.name,k8s.node.name,k8s.namespace.name,k8s.pod.name,k8s.container.name,k8s.deployment.name,k8s.daemonset.name,k8s.statefulset.name,severity,unit,origin,service.name,job",
+							},
+							"tls": map[string]any{
+								"ca_file": path.Join(caBundleMountPath, secrets.DataKeyCertificateBundle),
 							},
 						},
 					},
@@ -698,9 +729,7 @@ func (o *otelCollector) injectInsecureRBACProxy(obj *otelv1beta1.OpenTelemetryCo
 	o.injectRBACProxyContainers(obj, o.insecureValiRBACProxyArgs(), o.insecureOTLPRBACProxyArgs())
 
 	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
-	obj.Spec.Volumes = []corev1.Volume{
-		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
-	}
+	obj.Spec.Volumes = append(obj.Spec.Volumes, gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"))
 	obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
 	obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount}
 }
@@ -710,9 +739,9 @@ func (o *otelCollector) injectSecureRBACProxy(obj *otelv1beta1.OpenTelemetryColl
 
 	kubeconfigVolumeMount := gardenerutils.GenerateGenericKubeconfigVolumeMount("kubeconfig", gardenerutils.VolumeMountPathGenericKubeconfig)
 	tlsVolumeMount := corev1.VolumeMount{Name: tlsCertificateVolumeName, MountPath: tlsMountPath, ReadOnly: true}
-	obj.Spec.Volumes = []corev1.Volume{
+	obj.Spec.Volumes = append(obj.Spec.Volumes,
 		gardenerutils.GenerateGenericKubeconfigVolume(genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, "kubeconfig"),
-		{
+		corev1.Volume{
 			Name: tlsCertificateVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -720,7 +749,7 @@ func (o *otelCollector) injectSecureRBACProxy(obj *otelv1beta1.OpenTelemetryColl
 				},
 			},
 		},
-	}
+	)
 	obj.Spec.AdditionalContainers[0].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount, tlsVolumeMount}
 	obj.Spec.AdditionalContainers[1].VolumeMounts = []corev1.VolumeMount{kubeconfigVolumeMount, tlsVolumeMount}
 }
