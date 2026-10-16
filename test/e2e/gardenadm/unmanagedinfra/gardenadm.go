@@ -17,21 +17,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/e2e/gardenadm"
-	e2egardener "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/utils/access"
-	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gardenadm", "unmanaged-infra"), func() {
@@ -212,91 +205,8 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, RunInMachine, RunInNode)
 		})
 
-		Context("self-hosted shoot -> seed promotion", Ordered, Label("seed"), func() {
-			gardenadm.ItShouldCreateShootClient(&shootClientSet)
-			gardenadm.ItShouldCreateGardenClient(&gardenClientSet)
-
-			It("should ensure the ManagedSeed is healthy", func(ctx SpecContext) {
-				managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
-				Eventually(ctx, func(g Gomega) {
-					g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-					g.Expect(health.CheckManagedSeed(managedSeed)).To(Succeed())
-				}).Should(Succeed())
-			}, SpecTimeout(5*time.Minute))
-
-			It("should ensure the Seed is healthy", func(ctx SpecContext) {
-				seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: shootName}}
-				Eventually(ctx, func(g Gomega) {
-					g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-					g.Expect(health.CheckSeed(seed, seed.Status.Gardener)).To(Succeed())
-				}).Should(Succeed())
-			}, SpecTimeout(5*time.Minute))
-
-			It("should ensure the seed gardenlet runs in the garden namespace", func(ctx SpecContext) {
-				Eventually(ctx, func(g Gomega) []corev1.Pod {
-					podList := &corev1.PodList{}
-					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("garden"), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})).To(Succeed())
-					return podList.Items
-				}).ShouldNot(BeEmpty())
-			}, SpecTimeout(2*time.Minute))
-		})
-
-		Context("hosted shoot on promoted seed", Ordered, Label("hosted-shoot"), func() {
-			var s *e2egardener.ShootContext
-
-			gardenadm.ItShouldCreateGardenClient(&gardenClientSet)
-
-			It("should setup the test context", func() {
-				hostedShoot := e2egardener.DefaultShoot("e2e-gardenadm")
-				s = (&e2egardener.TestContext{
-					GardenClientSet: gardenClientSet,
-					GardenClient:    gardenClientSet.Client(),
-					GardenKomega:    New(gardenClientSet.Client()),
-				}).ForShoot(hostedShoot)
-			})
-
-			It("should create the hosted shoot", func(ctx SpecContext) {
-				Eventually(ctx, func() error {
-					return s.GardenClient.Create(ctx, s.Shoot)
-				}).Should(Succeed())
-			}, SpecTimeout(time.Minute))
-
-			It("should wait for the hosted shoot to be reconciled and healthy", func(ctx SpecContext) {
-				Eventually(ctx, func(g Gomega) {
-					g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
-					completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
-					g.Expect(completed).To(BeTrue(), reason)
-				}).WithPolling(30 * time.Second).Should(Succeed())
-			}, SpecTimeout(30*time.Minute))
-
-			It("should initialize the shoot client", func(ctx SpecContext) {
-				Eventually(ctx, func() error {
-					clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
-					if err != nil {
-						return err
-					}
-					s.WithShootClientSet(clientSet)
-					return nil
-				}).Should(Succeed())
-			}, SpecTimeout(time.Minute))
-
-			It("should verify shoot access using admin kubeconfig", func(ctx SpecContext) {
-				Eventually(ctx, s.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
-			}, SpecTimeout(time.Minute))
-
-			It("should delete the hosted shoot", func(ctx SpecContext) {
-				Eventually(ctx, func(g Gomega) {
-					g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Shoot)).To(Succeed())
-					g.Expect(s.GardenClient.Delete(ctx, s.Shoot)).To(Succeed())
-				}).Should(Succeed())
-			}, SpecTimeout(time.Minute))
-
-			It("should wait for the hosted shoot to be deleted", func(ctx SpecContext) {
-				Eventually(ctx, func() error {
-					return s.GardenKomega.Get(s.Shoot)()
-				}).WithPolling(30 * time.Second).Should(BeNotFoundError())
-			}, SpecTimeout(20*time.Minute))
-		})
+		gardenadm.ItShouldPromoteSelfHostedShootToSeed(&gardenClientSet, &shootClientSet, shoot)
+		gardenadm.ItShouldCreateHostedShootOnPromotedSeed(&gardenClientSet)
 	})
 })
 
