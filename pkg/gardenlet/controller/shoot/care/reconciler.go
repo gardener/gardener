@@ -121,12 +121,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		internalDomain, err := gardenerutils.ReadGardenInternalDomain(
 			careCtx,
 			r.GardenClient,
-			gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
-			true,
 			seed.Spec.DNS.Internal,
 		)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domain secret: %w", err)
+			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domain: %w", err)
 		}
 
 		defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
