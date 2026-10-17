@@ -182,3 +182,13 @@ var _ = DescribeTable("#ToCIDRStrings",
 			{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)},
 		}, []string{"10.0.0.0/8", "2001:db8::/64"}),
 )
+
+var _ = DescribeTable("#DefaultNodeCIDRMaskSizeIPv6",
+	func(podCIDRMaskSize int, expected int32) {
+		Expect(DefaultNodeCIDRMaskSizeIPv6(podCIDRMaskSize)).To(Equal(expected))
+	},
+	Entry("should derive /80 from a /64 pod CIDR", 64, int32(80)),
+	Entry("should derive /64 from a /48 pod CIDR", 48, int32(64)),
+	Entry("should cap at /124 for a /112 pod CIDR", 112, int32(124)),
+	Entry("should cap at /124 for a /120 pod CIDR", 120, int32(124)),
+)
