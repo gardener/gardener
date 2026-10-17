@@ -93,22 +93,22 @@ var istioManagedResourceList = []string{
 }
 
 // ItShouldCreateGarden creates the garden object
-func ItShouldCreateGarden(s *GardenContext) {
+func ItShouldCreateGarden(tc *GardenContext) {
 	GinkgoHelper()
 
 	It("Create Garden", func(ctx SpecContext) {
-		s.Log.Info("Creating Backup Secret")
+		tc.Log.Info("Creating Backup Secret")
 		Eventually(ctx, func() error {
-			if err := s.GardenClient.Create(ctx, s.BackupSecret); !apierrors.IsAlreadyExists(err) {
+			if err := tc.GardenClient.Create(ctx, backupSecretForGarden(tc.Garden)); !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 			return StopTrying("backup secret already exists")
 		}).Should(Succeed())
 
-		s.Log.Info("Creating Garden")
+		tc.Log.Info("Creating Garden")
 
 		Eventually(ctx, func() error {
-			if err := s.GardenClient.Create(ctx, s.Garden); !apierrors.IsAlreadyExists(err) {
+			if err := tc.GardenClient.Create(ctx, tc.Garden); !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 			return StopTrying("garden already exists")
@@ -117,71 +117,71 @@ func ItShouldCreateGarden(s *GardenContext) {
 }
 
 // ItShouldWaitForGardenToBeReconciledAndHealthy waits for the garden to be reconciled successfully and healthy
-func ItShouldWaitForGardenToBeReconciledAndHealthy(s *GardenContext) {
+func ItShouldWaitForGardenToBeReconciledAndHealthy(tc *GardenContext) {
 	GinkgoHelper()
 
 	It("Wait for Garden to be reconciled", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) bool {
-			g.Expect(s.GardenKomega.Get(s.Garden)()).To(Succeed())
+			g.Expect(tc.GardenKomega.Get(tc.Garden)()).To(Succeed())
 
-			completed, reason := gardenReconciliationSuccessful(s.Garden)
+			completed, reason := gardenReconciliationSuccessful(tc.Garden)
 			if !completed {
-				s.Log.Info("Waiting for reconciliation and healthiness", "lastOperation", s.Garden.Status.LastOperation, "reason", reason)
+				tc.Log.Info("Waiting for reconciliation and healthiness", "lastOperation", tc.Garden.Status.LastOperation, "reason", reason)
 			}
 			return completed
 		}).WithPolling(30 * time.Second).Should(BeTrue())
 
-		s.Log.Info("Garden has been reconciled and is healthy")
+		tc.Log.Info("Garden has been reconciled and is healthy")
 	}, SpecTimeout(15*time.Minute))
 }
 
 // ItShouldAnnotateGarden sets the given annotation within the garden metadata to the specified value and patches the garden object
-func ItShouldAnnotateGarden(s *GardenContext, annotations map[string]string) {
+func ItShouldAnnotateGarden(tc *GardenContext, annotations map[string]string) {
 	GinkgoHelper()
 
 	It("Annotate Garden", func(ctx SpecContext) {
-		patch := client.MergeFrom(s.Garden.DeepCopy())
+		patch := client.MergeFrom(tc.Garden.DeepCopy())
 
 		for key, value := range annotations {
-			s.Log.Info("Setting annotation", "annotation", key, "value", value)
-			metav1.SetMetaDataAnnotation(&s.Garden.ObjectMeta, key, value)
+			tc.Log.Info("Setting annotation", "annotation", key, "value", value)
+			metav1.SetMetaDataAnnotation(&tc.Garden.ObjectMeta, key, value)
 		}
 
 		Eventually(ctx, func() error {
-			return s.GardenClient.Patch(ctx, s.Garden, patch)
+			return tc.GardenClient.Patch(ctx, tc.Garden, patch)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldInitializeVirtualClusterClient initialized the contexts virtual cluster client from the "gardener" secret in the garden namespace
-func ItShouldInitializeVirtualClusterClient(s *GardenContext) {
+func ItShouldInitializeVirtualClusterClient(tc *GardenContext) {
 	GinkgoHelper()
 
 	It("Initialize virtual cluster client", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			virtualClusterClient, err := kubernetes.NewClientFromSecret(ctx, s.GardenClient, v1beta1constants.GardenNamespace, "gardener",
+			virtualClusterClient, err := kubernetes.NewClientFromSecret(ctx, tc.GardenClient, v1beta1constants.GardenNamespace, "gardener",
 				kubernetes.WithDisabledCachedClient(),
 				kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
 			)
 			g.Expect(err).NotTo(HaveOccurred())
-			s.WithVirtualClusterClientSet(virtualClusterClient)
+			tc.SetVirtualClusterClientSet(virtualClusterClient)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldVerifyGardenManagedResourcesAndAwaitHealthiness verifies that the managed resources in the "garden" namespace are the ones we expect and waits for their healthiness
-func ItShouldVerifyGardenManagedResourcesAndAwaitHealthiness(s *GardenContext) {
+func ItShouldVerifyGardenManagedResourcesAndAwaitHealthiness(tc *GardenContext) {
 	GinkgoHelper()
-	itShouldVerifyManagedResourcesAndAwaitHealthiness(s, v1beta1constants.GardenNamespace, gardenManagedResourceList)
+	itShouldVerifyManagedResourcesAndAwaitHealthiness(tc, v1beta1constants.GardenNamespace, gardenManagedResourceList)
 }
 
 // ItShouldVerifyIstioManagedResourcesAndAwaitHealthiness verifies that the managed resources in the "istio-system" namespace are the ones we expect and waits for their healthiness
-func ItShouldVerifyIstioManagedResourcesAndAwaitHealthiness(s *GardenContext) {
+func ItShouldVerifyIstioManagedResourcesAndAwaitHealthiness(tc *GardenContext) {
 	GinkgoHelper()
-	itShouldVerifyManagedResourcesAndAwaitHealthiness(s, v1beta1constants.IstioSystemNamespace, istioManagedResourceList)
+	itShouldVerifyManagedResourcesAndAwaitHealthiness(tc, v1beta1constants.IstioSystemNamespace, istioManagedResourceList)
 }
 
-func itShouldVerifyManagedResourcesAndAwaitHealthiness(s *GardenContext, namespace string, managedResourceNames []string) {
+func itShouldVerifyManagedResourcesAndAwaitHealthiness(tc *GardenContext, namespace string, managedResourceNames []string) {
 	managedResourceList := []resourcesv1alpha1.ManagedResource{}
 	for _, managedResource := range managedResourceNames {
 		managedResourceList = append(managedResourceList, resourcesv1alpha1.ManagedResource{
@@ -192,23 +192,23 @@ func itShouldVerifyManagedResourcesAndAwaitHealthiness(s *GardenContext, namespa
 		})
 	}
 
-	equalsManagedResourcesInNamespace(s, namespace, managedResourceList...)
-	waitForManagedResourcesToBeHealthy(s, managedResourceList)
+	equalsManagedResourcesInNamespace(tc, namespace, managedResourceList...)
+	waitForManagedResourcesToBeHealthy(tc, managedResourceList)
 }
 
-func equalsManagedResourcesInNamespace(s *GardenContext, namespace string, expectedManagedResources ...resourcesv1alpha1.ManagedResource) {
+func equalsManagedResourcesInNamespace(tc *GardenContext, namespace string, expectedManagedResources ...resourcesv1alpha1.ManagedResource) {
 	It(fmt.Sprintf("Verify ManagedResources in namespace %s equal expected resources", namespace), func(ctx SpecContext) {
 		managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-		Eventually(ctx, s.GardenKomega.List(managedResourceList, client.InNamespace(namespace))).Should(Succeed())
+		Eventually(ctx, tc.GardenKomega.List(managedResourceList, client.InNamespace(namespace))).Should(Succeed())
 		Expect(managedResourceList.Items).To(ConsistOf(managedResourceNames(expectedManagedResources)))
 	}, SpecTimeout(time.Minute))
 }
 
-func waitForManagedResourcesToBeHealthy(s *GardenContext, managedResourceList []resourcesv1alpha1.ManagedResource) {
+func waitForManagedResourcesToBeHealthy(tc *GardenContext, managedResourceList []resourcesv1alpha1.ManagedResource) {
 	for _, managedResource := range managedResourceList {
 		It(fmt.Sprintf("Wait for ManagedResource %s/%s to be healthy", managedResource.Namespace, managedResource.Name), func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
-				g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(&managedResource), &managedResource)).To(Succeed())
+				g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(&managedResource), &managedResource)).To(Succeed())
 				g.Expect(managedResource).To(beHealthyManagedResource())
 			}).WithPolling(15 * time.Second).Should(Succeed())
 		}, SpecTimeout(5*time.Minute))
@@ -216,60 +216,60 @@ func waitForManagedResourcesToBeHealthy(s *GardenContext, managedResourceList []
 }
 
 // ItShouldDeleteGarden deletes the garden object
-func ItShouldDeleteGarden(s *GardenContext) {
+func ItShouldDeleteGarden(tc *GardenContext) {
 	GinkgoHelper()
 
 	It("Delete Garden", func(ctx SpecContext) {
-		s.Log.Info("Deleting Garden")
+		tc.Log.Info("Deleting Garden")
 
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Garden)).To(Succeed())
-			g.Expect(s.GardenClient.Delete(ctx, s.Garden)).To(Succeed())
+			g.Expect(gardenerutils.ConfirmDeletion(ctx, tc.GardenClient, tc.Garden)).To(Succeed())
+			g.Expect(tc.GardenClient.Delete(ctx, tc.Garden)).To(Succeed())
 		}).Should(Succeed())
 
-		s.Log.Info("Deleting Backup Secret")
+		tc.Log.Info("Deleting Backup Secret")
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenClient.Delete(ctx, s.BackupSecret)).To(Succeed())
+			g.Expect(tc.GardenClient.Delete(ctx, backupSecretForGarden(tc.Garden))).To(Succeed())
 		}).Should(Succeed())
 	})
 }
 
 // ItShouldWaitForGardenToBeDeleted waits for the garden object to be gone
-func ItShouldWaitForGardenToBeDeleted(s *GardenContext) {
+func ItShouldWaitForGardenToBeDeleted(tc *GardenContext) {
 	GinkgoHelper()
 
 	It("Wait for Garden to be deleted", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			err := s.GardenKomega.Get(s.Garden)()
+			err := tc.GardenKomega.Get(tc.Garden)()
 			if err == nil {
-				s.Log.Info("Waiting for deletion", "lastOperation", s.Garden.Status.LastOperation)
+				tc.Log.Info("Waiting for deletion", "lastOperation", tc.Garden.Status.LastOperation)
 			}
 			return err
 		}).WithPolling(30 * time.Second).Should(BeNotFoundError())
 
-		s.Log.Info("Garden has been deleted")
+		tc.Log.Info("Garden has been deleted")
 	}, SpecTimeout(15*time.Minute))
 }
 
 // ItShouldCleanUp cleans up any remaining volumes and etcd encryption configs
-func ItShouldCleanUp(s *GardenContext) {
-	itShouldCleanupVolumes(s)
-	itShouldCleanupEtcdEncryptionConfig(s)
+func ItShouldCleanUp(tc *GardenContext) {
+	itShouldCleanupVolumes(tc)
+	itShouldCleanupEtcdEncryptionConfig(tc)
 }
 
-func itShouldCleanupVolumes(s *GardenContext) {
+func itShouldCleanupVolumes(tc *GardenContext) {
 	GinkgoHelper()
 
 	It("Delete all persistent volume claims in garden namespace", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(v1beta1constants.GardenNamespace))).To(Succeed())
+			g.Expect(tc.GardenClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(v1beta1constants.GardenNamespace))).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
 	It("Wait for PersistentVolumes to be cleaned up", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) bool {
 			pvList := &corev1.PersistentVolumeList{}
-			g.Expect(s.GardenClient.List(ctx, pvList)).To(Succeed())
+			g.Expect(tc.GardenClient.List(ctx, pvList)).To(Succeed())
 
 			for _, pv := range pvList.Items {
 				if pv.Spec.ClaimRef != nil &&
@@ -285,19 +285,19 @@ func itShouldCleanupVolumes(s *GardenContext) {
 	}, SpecTimeout(5*time.Minute))
 }
 
-func itShouldCleanupEtcdEncryptionConfig(s *GardenContext) {
+func itShouldCleanupEtcdEncryptionConfig(tc *GardenContext) {
 	GinkgoHelper()
 
 	It("Delete etcd-encryption-configurations", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
-			g.Expect(s.GardenClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"role": "gardener-apiserver-etcd-encryption-configuration"})).To(Succeed())
+			g.Expect(tc.GardenClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
+			g.Expect(tc.GardenClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"role": "gardener-apiserver-etcd-encryption-configuration"})).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldWaitForExtensionToReportDeletion waits for the specified extension to report DeleteSuccessful
-func ItShouldWaitForExtensionToReportDeletion(s *GardenContext, extensionName string) {
+func ItShouldWaitForExtensionToReportDeletion(tc *GardenContext, extensionName string) {
 	extension := &operatorv1alpha1.Extension{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: extensionName,
@@ -306,7 +306,7 @@ func ItShouldWaitForExtensionToReportDeletion(s *GardenContext, extensionName st
 
 	It(fmt.Sprintf("Wait for extension %s to report deletion", extensionName), func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+			g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
 			g.Expect(extension.Status.Conditions).Should(ContainCondition(
 				OfType(operatorv1alpha1.ExtensionInstalled),
 				WithStatus(gardencorev1beta1.ConditionFalse),
@@ -362,23 +362,23 @@ func beHealthyManagedResource() gomegatypes.GomegaMatcher {
 }
 
 // ItShouldCreatePrometheusRuleForGarden creates a PrometheusRule and makes sure it is created.
-func ItShouldCreatePrometheusRuleForGarden(s *GardenContext, rule *monitoringv1.PrometheusRule) {
+func ItShouldCreatePrometheusRuleForGarden(tc *GardenContext, rule *monitoringv1.PrometheusRule) {
 	GinkgoHelper()
 
 	It("Create PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenClient.Create(ctx, rule)).To(Succeed())
+			g.Expect(tc.GardenClient.Create(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldDeletePrometheusRuleForGarden deletes a PrometheusRule and makes sure it is deleted.
-func ItShouldDeletePrometheusRuleForGarden(s *GardenContext, rule *monitoringv1.PrometheusRule) {
+func ItShouldDeletePrometheusRuleForGarden(tc *GardenContext, rule *monitoringv1.PrometheusRule) {
 	GinkgoHelper()
 
 	It("Delete PrometheusRule "+rule.Namespace+"/"+rule.Name, func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(s.GardenClient.Delete(ctx, rule)).To(Succeed())
+			g.Expect(tc.GardenClient.Delete(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
