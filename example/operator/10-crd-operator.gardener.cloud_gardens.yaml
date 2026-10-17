@@ -308,6 +308,12 @@ spec:
                               externally-facing addresses.
                               Defaults to "Cluster". Can be set to "Local" when the load balancer is transparent (preserves client IP).
                             type: string
+                          loadBalancerSourceRanges:
+                            description: LoadBalancerSourceRanges is a list of allowed
+                              IP sources for the virtual garden load balancer service
+                            items:
+                              type: string
+                            type: array
                           proxyProtocol:
                             description: |-
                               ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
