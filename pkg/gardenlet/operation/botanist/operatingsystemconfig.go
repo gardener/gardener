@@ -357,6 +357,11 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 		return nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
 	}
 
+	if worker.ControlPlane != nil {
+		metav1.SetMetaDataAnnotation(&oscSecret.ObjectMeta,
+			v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation, "true")
+	}
+
 	resources, err := managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
 		AddAllAndSerialize(oscSecret)

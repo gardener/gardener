@@ -1156,6 +1156,12 @@ const (
 	// If they have the lock, they reconcile and release the Lease at the end. If they don't have the lock, they
 	// wait until it is removed again.
 	AnnotationNodeAgentSerialOSCReconciliation = "reconciliation.osc.node-agent.gardener.cloud/serial"
+	// AnnotationNodeAgentInPlaceUpdateNeedsDrain is an annotation key set by gardener-node-agent on a Node object to
+	// signal the gardenlet that the node must be drained before the in-place update can proceed.
+	AnnotationNodeAgentInPlaceUpdateNeedsDrain = "in-place-update.node-agent.gardener.cloud/needs-drain"
+	// AnnotationNodeAgentInPlaceUpdateDrainStartTime is an annotation key set by the gardenlet on a Node object
+	// to record when the drain operation started. Used to enforce the drain timeout.
+	AnnotationNodeAgentInPlaceUpdateDrainStartTime = "in-place-update.node-agent.gardener.cloud/drain-start-time"
 	// NodeAgentsGroup is the identity group for gardener-node-agents when authenticating to the API server.
 	NodeAgentsGroup = "gardener.cloud:node-agents"
 	// NodeAgentUserNamePrefix is the identity username prefix for gardener-node-agent when authenticating to the API server.

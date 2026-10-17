@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
@@ -55,6 +57,20 @@ func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx co
 	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, poolName, false)
 	if err != nil {
 		return fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", poolName, err)
+	}
+
+	if poolName != "" {
+		if shoot := b.Shoot.GetInfo(); shoot != nil {
+			if i := slices.IndexFunc(shoot.Spec.Provider.Workers, func(w gardencorev1beta1.Worker) bool {
+				return w.Name == poolName
+			}); i >= 0 {
+				worker := shoot.Spec.Provider.Workers[i]
+				if worker.ControlPlane != nil {
+					metav1.SetMetaDataAnnotation(&b.operatingSystemConfigSecret.ObjectMeta,
+						v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation, "true")
+				}
+			}
+		}
 	}
 
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
@@ -92,8 +108,9 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
 	_, err = (&operatingsystemconfigcontroller.Reconciler{
-		APIReader: b.SeedClientSet.APIReader(),
-		Client:    b.SeedClientSet.Client(),
+		APIReader:   b.SeedClientSet.APIReader(),
+		Client:      b.SeedClientSet.Client(),
+		LeaseClient: b.SeedClientSet.Client(),
 		Config: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 			SyncPeriod:        &metav1.Duration{Duration: time.Minute},
 			SecretName:        b.operatingSystemConfigSecret.Name,
