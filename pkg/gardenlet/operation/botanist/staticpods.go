@@ -93,7 +93,7 @@ func (b *Botanist) deployBootstrapETCD(role string, bootstrapEtcdBackupPath stri
 
 func (b *Botanist) deployKubeAPIServer(ctx context.Context, useShootAccessTokens bool) error {
 	if !useShootAccessTokens {
-		b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
+		b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig(b.Shoot.GetInfo().Status.TechnicalID)
 	}
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(new(int32(0)))

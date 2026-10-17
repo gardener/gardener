@@ -26,7 +26,6 @@ import (
 	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -64,7 +63,7 @@ type Interface interface {
 	//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
 	AppendAuthorizationWebhook(AuthorizationWebhook, logr.Logger)
 	// EnableStaticTokenKubeconfig enables the static token kubeconfig.
-	EnableStaticTokenKubeconfig()
+	EnableStaticTokenKubeconfig(string)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
 	// SetNodeNetworkCIDRs sets the node CIDRs of the shoot network.
@@ -133,8 +132,9 @@ type Values struct {
 	ServiceNetworkCIDRs []net.IPNet
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
-	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
-	StaticTokenKubeconfigEnabled *bool
+	// StaticTokenKubeconfig contains information for the static token kubeconfig secret (will only be created for a
+	// shoot if non-nil).
+	StaticTokenKubeconfig *StaticTokenKubeconfig
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
@@ -245,6 +245,13 @@ type SNIConfig struct {
 	AdvertiseAddress string
 	// TLS contains information for configuring the TLS SNI settings for the kube-apiserver.
 	TLS []TLSSNIConfig
+}
+
+// StaticTokenKubeconfig contains configuration for the static token kubeconfig.
+type StaticTokenKubeconfig struct {
+	// ContextName is the name of the context in the static token kubeconfig. If not set, we will fall back to the
+	// namespace of the kube-apiserver component.
+	ContextName *string
 }
 
 // TLSSNIConfig contains information for configuring the TLS SNI settings for the kube-apiserver.
@@ -456,10 +463,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, false) {
-		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken); err != nil {
-			return err
-		}
+	if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken); err != nil {
+		return err
 	}
 
 	if err := k.reconcileServiceMonitor(ctx, k.emptyServiceMonitor()); err != nil {
@@ -589,8 +594,8 @@ func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook,
 	k.values.AuthorizationWebhooks = append(k.values.AuthorizationWebhooks, webhook)
 }
 
-func (k *kubeAPIServer) EnableStaticTokenKubeconfig() {
-	k.values.StaticTokenKubeconfigEnabled = new(true)
+func (k *kubeAPIServer) EnableStaticTokenKubeconfig(contextName string) {
+	k.values.StaticTokenKubeconfig = &StaticTokenKubeconfig{ContextName: &contextName}
 }
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
