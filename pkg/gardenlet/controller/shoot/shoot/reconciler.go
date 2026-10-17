@@ -1331,6 +1331,10 @@ func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time
 }
 
 func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, duration time.Duration) {
+	if operationType != gardencorev1beta1.LastOperationTypeCreate && operationType != gardencorev1beta1.LastOperationTypeDelete {
+		return
+	}
+
 	var (
 		workerless = utils.IifString(v1beta1helper.IsWorkerless(shoot), "true", "false")
 		hibernated = utils.IifString(v1beta1helper.HibernationIsEnabled(shoot), "true", "false")
@@ -1338,7 +1342,7 @@ func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1bet
 
 	gardenletmetrics.ShootOperationDurationSeconds.
 		WithLabelValues(string(operationType), workerless, hibernated).
-		Observe(float64(duration.Seconds()))
+		Observe(duration.Seconds())
 }
 
 func manualInPlacePendingWorkersPresent(inPlaceUpdates *gardencorev1beta1.InPlaceUpdatesStatus) bool {
