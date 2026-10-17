@@ -187,9 +187,10 @@ func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, 
 func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+	// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
 	// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
-	if version.Classification != nil && helper.VersionIsSupported(version) {
+	if (version.Classification != nil && helper.VersionIsSupported(version)) ||
+		(len(version.Lifecycle) > 0 && helper.SupportedLifecycleClassification(version).Classification == core.ClassificationSupported) {
 		currentSemVer, err := semver.NewVersion(version.Version)
 		if err != nil {
 			// check is already performed by caller, avoid duplicate error
@@ -215,7 +216,7 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 	return allErrs
 }
 
-// supportedVersionsOverlapping checks whether supported classifications do overlap. Start time equality is not deemed an overlap in this context.
+// supportedVersionsOverlapping checks whether supported periods overlap. Adjacent periods do not overlap.
 func supportedVersionsOverlapping(v1, v2 core.ExpirableVersion) bool {
 	if len(v1.Lifecycle) == 0 || len(v2.Lifecycle) == 0 {
 		return true
@@ -230,12 +231,16 @@ func supportedVersionsOverlapping(v1, v2 core.ExpirableVersion) bool {
 		supportedStage.Classification != supportedStage2.Classification {
 		return false
 	}
-	if nextStage == nil && nextStage2 == nil || // Eventually both supported classifications will be supported simultaneously
-		nextStage == nil && (supportedStage.StartTime == nil || supportedStage.StartTime.Before(nextStage2.StartTime)) || // supportedStage has no subsequent classification and starts before nextStage2
-		nextStage2 == nil && (supportedStage2.StartTime == nil || supportedStage2.StartTime.Before(nextStage.StartTime)) { // supportedStage2 has no subsequent classification and starts before nextStage
-		return true
+	// Missing start times are unbounded in the past; missing next stages are unbounded in the future.
+	// Invalid or empty periods cannot overlap. Their validity is checked separately.
+	if nextStage != nil && (nextStage.StartTime == nil || (supportedStage.StartTime != nil && !supportedStage.StartTime.Before(nextStage.StartTime))) {
+		return false
 	}
-	return false
+	if nextStage2 != nil && (nextStage2.StartTime == nil || (supportedStage2.StartTime != nil && !supportedStage2.StartTime.Before(nextStage2.StartTime))) {
+		return false
+	}
+	return (nextStage2 == nil || supportedStage.StartTime == nil || supportedStage.StartTime.Before(nextStage2.StartTime)) &&
+		(nextStage == nil || supportedStage2.StartTime == nil || supportedStage2.StartTime.Before(nextStage.StartTime))
 }
 
 func findLifecycleStageAbove(version core.ExpirableVersion, classification core.VersionClassification) *core.LifecycleStage {
@@ -479,7 +484,7 @@ func checkImageSupport(bastionImageName string, imageVersions []core.MachineImag
 			archSupported = true
 		}
 
-		// TODO(rapsnx): There is a regression in old classifications, which allowed to bypass validations.
+		// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
 		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
 		if version.Classification != nil && helper.VersionIsSupported(version.ExpirableVersion) {
 			validClassification = true

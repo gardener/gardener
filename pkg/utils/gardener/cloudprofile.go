@@ -163,8 +163,36 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 			return err
 		}
 
-		// Check that the target cloud profile still supports the currently used machine types, machine images and volume types.
-		// No need to check for Kubernetes versions, as the NamespacedCloudProfile could have only extended a version so with the next maintenance the Shoot will be updated to a supported version.
+		// Check that the target cloud profile still supports the currently used Kubernetes versions,
+		// machine types, machine images, and volume types.
+		for _, version := range newCloudProfileSpecCore.Kubernetes.Versions {
+			if !gardencorehelper.VersionIsUnavailable(version) {
+				continue
+			}
+
+			if version.Version == newShoot.Spec.Kubernetes.Version {
+				return fmt.Errorf(
+					"newly referenced cloud profile marks kubernetes version %q currently in use by shoot %q as unavailable",
+					version.Version,
+					newShoot.Name,
+				)
+			}
+
+			for _, worker := range newShoot.Spec.Provider.Workers {
+				if worker.Kubernetes == nil || worker.Kubernetes.Version == nil {
+					continue
+				}
+
+				if *worker.Kubernetes.Version == version.Version {
+					return fmt.Errorf(
+						"newly referenced cloud profile marks kubernetes version %q currently in use by worker %q as unavailable",
+						version.Version,
+						worker.Name,
+					)
+				}
+			}
+		}
+
 		diff := gardencorehelper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
 		removedMachineImageVersions := diff.RemovedVersions
 		machineTypes := utils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
@@ -176,6 +204,24 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 					if removedVersions.Has(w.Machine.Image.Version) {
 						return fmt.Errorf("newly referenced cloud profile does not contain the machine image version \"%s@%s\" currently in use by worker \"%s\"", w.Machine.Image.Name, w.Machine.Image.Version, w.Name)
 					}
+				}
+			}
+
+			if w.Machine.Image != nil {
+				for _, image := range newCloudProfileSpecCore.MachineImages {
+					if image.Name != w.Machine.Image.Name {
+						continue
+					}
+					for _, version := range image.Versions {
+						if version.Version == w.Machine.Image.Version && gardencorehelper.VersionIsUnavailable(version.ExpirableVersion) {
+							return fmt.Errorf(
+								"newly referenced cloud profile marks the machine image version %q currently in use by worker %q as unavailable",
+								fmt.Sprintf("%s@%s", image.Name, version.Version),
+								w.Name,
+							)
+						}
+					}
+					break
 				}
 			}
 
