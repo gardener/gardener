@@ -88,7 +88,7 @@ func run(ctx context.Context, opts *Options) error {
 	// connection to the control plane is established and before the bootstrap secrets are imported.
 	b, err := initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath, opts.PriorNodeName, true)
 	if err != nil {
-		return fmt.Errorf("failed to bootstrap control plane (1st recovery phase): %w", err)
+		return fmt.Errorf("failed to bootstrap control plane: %w", err)
 	}
 
 	if err := initcmd.RunInitFlow(ctx, b, initOpts); err != nil {
