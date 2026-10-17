@@ -339,33 +339,15 @@ func GetIngressWildcardDomains(garden *operatorv1alpha1.Garden) []operatorv1alph
 }
 
 // GetAllIngressDomains returns all domains already covered by GetIngressWildcardDomains plus
-// the dashboard and discovery server domains (if specified with a custom domain and not already covered by the
-// wildcard domains).
+// the dashboard and discovery server domains, if explicitly configured with a custom domain.
 func GetAllIngressDomains(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSDomain {
 	allIngressDomains := GetIngressWildcardDomains(garden)
 
-	var customDomains []operatorv1alpha1.DNSDomain
 	if c := garden.Spec.VirtualCluster.Gardener.Dashboard; c != nil && c.Domain != nil {
-		customDomains = append(customDomains, *c.Domain)
+		allIngressDomains = append(allIngressDomains, *c.Domain.DeepCopy())
 	}
 	if c := garden.Spec.VirtualCluster.Gardener.DiscoveryServer; c != nil && c.Domain != nil {
-		customDomains = append(customDomains, *c.Domain)
-	}
-
-	for _, domain := range customDomains {
-		// Cut the first segment of the custom domain to get the parent domain.
-		parentDomain := domain.Name
-		if idx := strings.IndexByte(parentDomain, '.'); idx != -1 {
-			parentDomain = parentDomain[idx+1:]
-		}
-
-		// Check if the custom domain is a subdomain of the ingress domains, i.e., if the domain is already
-		// covered by the wildcard domains. If not, add the custom domain as well.
-		if !slices.ContainsFunc(garden.Spec.RuntimeCluster.Ingress.Domains, func(d operatorv1alpha1.DNSDomain) bool {
-			return d.Name == parentDomain
-		}) {
-			allIngressDomains = append(allIngressDomains, *domain.DeepCopy())
-		}
+		allIngressDomains = append(allIngressDomains, *c.Domain.DeepCopy())
 	}
 
 	return allIngressDomains
