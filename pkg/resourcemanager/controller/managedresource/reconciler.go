@@ -622,6 +622,10 @@ func keepObject(meta metav1.Object) bool {
 	return keyExistsAndValueTrue(meta.GetAnnotations(), resourcesv1alpha1.KeepObject)
 }
 
+func forceDeletion(mr *resourcesv1alpha1.ManagedResource) bool {
+	return keyExistsAndValueTrue(mr.GetAnnotations(), resourcesv1alpha1.ForceDeletion)
+}
+
 func isGarbageCollectableResource(obj *unstructured.Unstructured) bool {
 	return keyExistsAndValueTrue(obj.GetLabels(), references.LabelKeyGarbageCollectable) &&
 		obj.GetAPIVersion() == "v1" && sets.New("ConfigMap", "Secret").Has(obj.GetKind())
@@ -665,6 +669,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 		results         = make(chan *output)
 		wg              sync.WaitGroup
 		deletePVCs      = mr.Spec.DeletePersistentVolumeClaims != nil && *mr.Spec.DeletePersistentVolumeClaims
+		isForceDeletion = forceDeletion(mr)
 		deletionPending = false
 		errorList       = &multierror.Error{
 			ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("Could not clean all old resources"),
@@ -718,12 +723,16 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 				}
 
 				deleteOptions := &client.DeleteOptions{}
+				if isForceDeletion {
+					gracePeriodSeconds := int64(0)
+					deleteOptions.GracePeriodSeconds = &gracePeriodSeconds
+				}
 
 				// only delete resources in specific API groups with foreground deletion propagation
 				// see https://github.com/kubernetes/kubernetes/issues/91621, https://github.com/kubernetes/kubernetes/issues/91287
 				// and similar, because of which some objects (e.g `rbac/*` or `v1/Service`) cannot be deleted reliably
 				// with foreground deletion propagation.
-				if foregroundDeletionAPIGroups.Has(obj.GroupVersionKind().Group) {
+				if !isForceDeletion && foregroundDeletionAPIGroups.Has(obj.GroupVersionKind().Group) {
 					// delete with DeletePropagationForeground to be sure to cleanup all resources (e.g. batch/v1beta1.CronJob
 					// defaults PropagationPolicy to Orphan for backwards compatibility, so it will orphan its Jobs)
 					deleteOptions.PropagationPolicy = &deletePropagationForeground
@@ -739,8 +748,26 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 					return
 				}
 
-				if err := finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj); err != nil {
-					logger.Error(err, "Error when finalizing resource if necessary")
+				var err error
+				if isForceDeletion {
+					// Forcefully remove all finalizers to unblock deletion of resources because shoot is being deleted anyways.
+					if hasFinalizers, _ := utilclient.NewFinalizer().HasFinalizers(obj); hasFinalizers {
+						if err = utilclient.NewFinalizer().Finalize(ctx, r.TargetClient, obj); err != nil {
+							logger.Error(err, "Error when removing metadata.finalizers")
+							results <- &output{obj, true, err}
+							return
+						}
+					}
+					// Namespace resources additionally have spec.finalizers which must be cleared.
+					if obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace" {
+						err = clearNamespaceSpecFinalizers(ctx, r.TargetClient, obj)
+					}
+				} else {
+					err = finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj)
+				}
+
+				if err != nil {
+					logger.Error(err, "Error when finalizing resource")
 					results <- &output{obj, true, err}
 					return
 				}
@@ -1033,9 +1060,6 @@ func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client
 	log.Info("Found resources.gardener.cloud/finalize-deletion-after annotation", "gracePeriod", finalizeDeletionAfter)
 
 	finalizer := utilclient.NewFinalizer()
-	if obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace" {
-		finalizer = utilclient.NewNamespaceFinalizer()
-	}
 
 	if obj.GetDeletionTimestamp() == nil || obj.GetDeletionTimestamp().Time.UTC().Add(finalizeDeletionAfter).After(clock.Now().UTC()) {
 		log.Info("Cannot finalize resource yet since grace period has not yet elapsed", "deletionTimestamp", obj.GetDeletionTimestamp(), "gracePeriod", finalizeDeletionAfter)
@@ -1049,5 +1073,33 @@ func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client
 	}
 
 	log.Info("Removing finalizers from resource since grace period has elapsed", "deletionTimestamp", obj.GetDeletionTimestamp(), "gracePeriod", finalizeDeletionAfter)
-	return finalizer.Finalize(ctx, cl, obj)
+	if err := finalizer.Finalize(ctx, cl, obj); err != nil {
+		return err
+	}
+
+	// Namespace resources additionally have spec.finalizers which must be cleared via the /finalize subresource.
+	if obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace" {
+		return clearNamespaceSpecFinalizers(ctx, cl, obj)
+	}
+	return nil
+}
+
+// clearNamespaceSpecFinalizers clears spec.finalizers on namespace resources via the /finalize subresource.
+// This works with *unstructured.Unstructured objects (unlike NewNamespaceFinalizer which requires *corev1.Namespace).
+func clearNamespaceSpecFinalizers(ctx context.Context, cl client.Client, obj client.Object) error {
+	// Read current state to check if spec.finalizers is non-empty.
+	namespace := &corev1.Namespace{}
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(obj), namespace); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get namespace %s: %w", obj.GetName(), err)
+	}
+
+	if len(namespace.Spec.Finalizers) == 0 {
+		return nil
+	}
+
+	namespace.Spec.Finalizers = nil
+	return cl.SubResource("finalize").Update(ctx, namespace)
 }
