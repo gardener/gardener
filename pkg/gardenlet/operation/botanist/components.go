@@ -46,6 +46,7 @@ func (b *Botanist) instantiateComponentsExtensions(ctx context.Context) (err err
 		return err
 	}
 	b.Shoot.Components.Extensions.ExternalDNSRecord = b.DefaultExternalDNSRecord()
+	b.Shoot.Components.Extensions.PriorExternalDNSRecord = b.DefaultPriorExternalDNSRecord()
 	b.Shoot.Components.Extensions.InternalDNSRecord = b.DefaultInternalDNSRecord()
 	b.Shoot.Components.Extensions.IngressDNSRecord = b.DefaultIngressDNSRecord()
 	b.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure()

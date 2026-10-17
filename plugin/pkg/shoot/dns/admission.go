@@ -28,6 +28,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -207,6 +208,14 @@ func isShootDomainSet(shoot *core.Shoot) bool {
 	return shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil
 }
 
+func isShootDomainChanged(oldShoot, newShoot *core.Shoot) bool {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return false
+	}
+
+	return isShootDomainSet(oldShoot) && isShootDomainSet(newShoot) && *oldShoot.Spec.DNS.Domain != *newShoot.Spec.DNS.Domain
+}
+
 func isDefaultDomain(domain string, defaultDomains []string) bool {
 	for _, defaultDomain := range defaultDomains {
 		if strings.HasSuffix(domain, "."+defaultDomain) {
@@ -372,13 +381,18 @@ func (d *DNS) Validate(_ context.Context, a admission.Attributes, _ admission.Ob
 		// There is also a possibility that an old shoot had an invalid domain, but was never assigned to a seed. This is why we check
 		// if the shoot was previously not assigned to a seed and if the shoot's domain is invalid, the update is denied so that the invalid
 		// domain does not get created.
-		if (oldShoot.Spec.SeedName == nil || !isShootDomainSet(oldShoot)) && isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
+		if (oldShoot.Spec.SeedName == nil || !isShootDomainSet(oldShoot) || isShootDomainChanged(oldShoot, shoot)) && isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
 			errs, err := checkDefaultDomainFormat(shoot, d.projectLister, defaultDomains)
 			if err != nil {
 				return err
 			}
 
 			allErrs = append(allErrs, errs...)
+		}
+
+		if isShootDomainChanged(oldShoot, shoot) && !helper.ShootUsesUnmanagedDNS(shoot) &&
+			!isDefaultDomain(*shoot.Spec.DNS.Domain, defaultDomains) && helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers) == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dns", "domain"), *shoot.Spec.DNS.Domain, "the domain must be a default domain of the seed, or the shoot must have a primary DNS provider"))
 		}
 	}
 
