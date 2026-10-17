@@ -85,6 +85,8 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 				// Override bastion ingress CIDR to a fixed value to avoid relying on public IP detection in e2e tests.
 				// Restricting bastion ingress traffic does not work in provider-local anyway.
 				"--bastion-ingress-cidr", "1.2.3.4/32",
+				// Keep the bastion in the first run, the second run below covers its deletion.
+				"--skip-bastion-deletion",
 			)
 		})
 
@@ -350,12 +352,23 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 		It("should finish successfully", func(ctx SpecContext) {
 			Wait(ctx, session)
-			Eventually(ctx, session.Out).Should(gbytes.Say("work in progress"))
+			Eventually(ctx, session.Out).Should(gbytes.Say("kubectl get nodes"))
+		}, SpecTimeout(time.Minute))
+
+		It("should keep the bastion and print a warning", func(ctx SpecContext) {
+			Eventually(ctx, session.Out).Should(gbytes.Say("the bastion host has been kept"))
+
+			bastion := &extensionsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-bootstrap", Namespace: technicalID}}
+			Consistently(ctx, Get(bastion)).WithTimeout(10 * time.Second).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("should run successfully a second time (should be idempotent)", func(ctx SpecContext) {
 			RunAndWait(ctx, "bootstrap", "-d", configDir, "--bastion-ingress-cidr", "1.2.3.4/32")
 		}, SpecTimeout(10*time.Minute))
+
+		It("should destroy the bastion in the second run", func(ctx SpecContext) {
+			Eventually(ctx, ObjectList(&extensionsv1alpha1.BastionList{}, client.InNamespace(technicalID))).Should(HaveField("Items", BeEmpty()))
+		}, SpecTimeout(time.Minute))
 	})
 
 	Context("gardenadm connect", Ordered, Label("connect"), func() {

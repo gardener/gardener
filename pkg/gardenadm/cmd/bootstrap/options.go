@@ -31,6 +31,8 @@ type Options struct {
 	// BastionIngressCIDRs is a list of CIDRs to be allowed for accessing the created bastion host.
 	// If not given, the system's public IPs are detected using PublicIPDetector.
 	BastionIngressCIDRs []string
+	// SkipBastionDeletion keeps the bastion host after the control plane has been bootstrapped successfully.
+	SkipBastionDeletion bool
 
 	// exposed for testing, defaults to publicip.IpifyDetector
 	PublicIPDetector publicip.Detector
@@ -107,4 +109,5 @@ func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the bootstrap cluster")
 	fs.StringVar(&o.KubeconfigOutput, "kubeconfig-output", "", "Path where the kubeconfig file for the shoot cluster should be written to. If not set, the kubeconfig is not written to disk. Set to '-' to write to stdout.")
 	fs.StringSliceVar(&o.BastionIngressCIDRs, "bastion-ingress-cidr", nil, "Restrict bastion host ingress to the given CIDRs. Defaults to your system's public IPs (IPv4 and/or IPv6) as detected using https://ipify.org/.")
+	fs.BoolVar(&o.SkipBastionDeletion, "skip-bastion-deletion", false, "Keep the bastion host after the control plane has been bootstrapped successfully. Delete it while the bootstrap cluster still exists, otherwise its infrastructure resources are left behind.")
 }
