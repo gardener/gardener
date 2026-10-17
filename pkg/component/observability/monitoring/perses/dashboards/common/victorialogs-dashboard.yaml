@@ -1,0 +1,304 @@
+kind: Dashboard
+metadata:
+  name: victorialogs
+  project: garden
+spec:
+  display:
+    name: VictoriaLogs
+  variables:
+    - kind: ListVariable
+      spec:
+        display:
+          hidden: false
+        allowAllValue: false
+        allowMultiple: false
+        plugin:
+          kind: DatasourceVariable
+          spec:
+            datasourcePluginKind: PrometheusDatasource
+        name: datasource
+  panels:
+    "0_0":
+      kind: Panel
+      spec:
+        display:
+          name: HTTP requests rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(rate(vl_http_requests_total[$__rate_interval])) by (path)
+                  seriesNameFormat: '{{path}}'
+    "0_1":
+      kind: Panel
+      spec:
+        display:
+          name: Query timeouts
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(rate(vl_concurrent_select_limit_timeout_total[$__rate_interval])) by (instance)
+                  seriesNameFormat: '{{instance}}'
+    "1_0":
+      kind: Panel
+      spec:
+        display:
+          name: Free disk space
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: bytes
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: max(vl_free_disk_space_bytes) by (instance)
+                  seriesNameFormat: '{{instance}}'
+    "1_1":
+      kind: Panel
+      spec:
+        display:
+          name: Streams creation rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(rate(vl_streams_created_total[$__rate_interval])) by (instance)
+                  seriesNameFormat: '{{instance}}'
+    "2_0":
+      kind: Panel
+      spec:
+        display:
+          name: Logs ingestion rate
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(rate(vl_rows_ingested_total[$__rate_interval])) by (type)
+                  seriesNameFormat: '{{type}}'
+    "2_1":
+      kind: Panel
+      spec:
+        display:
+          name: Dropped logs
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(rate(vl_rows_dropped_total[$__rate_interval])) by (reason)
+                  seriesNameFormat: '{{reason}}'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(rate(vl_too_long_lines_skipped_total[$__rate_interval]))
+                  seriesNameFormat: too_long_lines
+    "3_0":
+      kind: Panel
+      spec:
+        display:
+          name: Active merges
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(vl_active_merges) by (type)
+                  seriesNameFormat: '{{type}}'
+    "3_1":
+      kind: Panel
+      spec:
+        display:
+          name: Pending rows
+        plugin:
+          kind: TimeSeriesChart
+          spec:
+            yAxis:
+              format:
+                unit: decimal
+            legend:
+              position: bottom
+              mode: table
+              values:
+                - mean
+                - last
+                - max
+        queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource: $datasource
+                  query: sum(vl_pending_rows) by (type)
+                  seriesNameFormat: '{{type}}'
+  layouts:
+    - kind: Grid
+      spec:
+        items:
+          - x: 0
+            "y": 0
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_0'
+          - x: 12
+            "y": 0
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/0_1'
+          - x: 0
+            "y": 8
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_0'
+          - x: 12
+            "y": 8
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/1_1'
+          - x: 0
+            "y": 16
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_0'
+          - x: 12
+            "y": 16
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/2_1'
+          - x: 0
+            "y": 24
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_0'
+          - x: 12
+            "y": 24
+            width: 12
+            height: 8
+            content:
+              $ref: '#/spec/panels/3_1'
+        display:
+          title: ""
+          collapse:
+            open: true
+  duration: 30m
+  annotations: []
+  refreshInterval: 0s
+  links: []
