@@ -1665,16 +1665,85 @@ var _ = Describe("Shoot Maintenance", func() {
 			Entry("completing", gardencorev1beta1.RotationCompleting),
 		)
 
-		It("should not attempt etcd encryption key rotation when shoot is hibernated", func() {
+		It("should attempt etcd encryption key rotation when the previous rotation is completed", func() {
 			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
 			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration = 0
-			shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-				Enabled: new(true),
+			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+					ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+						Phase:              gardencorev1beta1.RotationCompleted,
+						LastCompletionTime: &metav1.Time{Time: now.Add(-48 * time.Hour)},
+					},
+				},
 			}
 			results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
 
-			Expect(results).To(BeEmpty())
+			Expect(results).To(Equal(map[string]updateResult{
+				"rotate-etcd-encryption-key": {
+					description:  "ETCD Encryption key rotation started",
+					reason:       "Automatic rotation of etcd encryption key configured",
+					isSuccessful: true,
+				},
+			}))
 		})
+
+		hibernationWithEnabled := func(enabled bool) *gardencorev1beta1.Hibernation {
+			return &gardencorev1beta1.Hibernation{Enabled: new(enabled)}
+		}
+
+		DescribeTable("should decide etcd encryption key rotation based on the shoot's hibernation state",
+			func(hibernation *gardencorev1beta1.Hibernation, isHibernated, expectETCDEncryptionKeyRotation bool) {
+				shoot.Spec.Hibernation = hibernation
+				shoot.Status.IsHibernated = isHibernated
+
+				results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
+
+				Expect(results).To(HaveKey("rotate-ssh-keypair"))
+				Expect(results).To(HaveKey("rotate-observability-credentials"))
+				if expectETCDEncryptionKeyRotation {
+					Expect(results).To(HaveLen(3))
+					Expect(results).To(HaveKey("rotate-etcd-encryption-key"))
+				} else {
+					Expect(results).To(HaveLen(2))
+					Expect(results).NotTo(HaveKey("rotate-etcd-encryption-key"))
+				}
+			},
+
+			Entry("when shoot is hibernating", hibernationWithEnabled(true), false, false),
+			Entry("when shoot is hibernated", hibernationWithEnabled(true), true, false),
+			Entry("when shoot is waking up", hibernationWithEnabled(false), true, false),
+			Entry("when shoot is waking up without hibernation section", nil, true, false),
+			Entry("when shoot is awake", hibernationWithEnabled(false), false, true),
+		)
+
+		DescribeTable("should decide etcd encryption key rotation based on its own last completion",
+			func(etcdEncryptionKeyLastCompletedAgo, otherCredentialsLastCompletedAgo time.Duration, expectETCDEncryptionKeyRotation bool) {
+				shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+						SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{
+							LastCompletionTime: &metav1.Time{Time: now.Add(-otherCredentialsLastCompletedAgo)},
+						},
+						Observability: &gardencorev1beta1.ObservabilityRotation{
+							LastCompletionTime: &metav1.Time{Time: now.Add(-otherCredentialsLastCompletedAgo)},
+						},
+						ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+							LastCompletionTime: &metav1.Time{Time: now.Add(-etcdEncryptionKeyLastCompletedAgo)},
+						},
+					},
+				}
+
+				results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
+
+				if expectETCDEncryptionKeyRotation {
+					Expect(results).To(HaveKey("rotate-etcd-encryption-key"))
+				} else {
+					Expect(results).NotTo(HaveKey("rotate-etcd-encryption-key"))
+				}
+			},
+
+			Entry("when only the etcd encryption key rotation period has passed", 48*time.Hour, time.Hour, true),
+			Entry("when only the SSH keypair and observability rotation periods have passed", time.Hour, 48*time.Hour, false),
+		)
 
 		It("should not return results when the rotation period has not passed", func() {
 			shoot.CreationTimestamp = metav1.Time{Time: now.Add(-48 * time.Hour)}
