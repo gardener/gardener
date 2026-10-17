@@ -695,6 +695,38 @@ var _ = Describe("dns", func() {
 				))
 			})
 
+			Context("self-hosted shoot using a default domain with a primary provider", func() {
+				BeforeEach(func() {
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(defaultDomainSecret)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
+
+					shootDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
+					shoot.Spec.DNS.Domain = &shootDomain
+					shoot.Spec.DNS.Providers = []core.DNSProvider{{Type: new(providerType), Primary: new(true)}}
+					shoot.Spec.Provider.Workers = []core.Worker{{ControlPlane: &core.WorkerControlPlane{}}}
+					shoot.Spec.CredentialsBindingName = new("cloud-credentials")
+				})
+
+				It("should allow a self-hosted shoot with managed infrastructure to retain its primary provider", func() {
+					attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should still forbid a primary provider without a self-hosted control plane", func() {
+					shoot.Spec.Provider.Workers = nil
+
+					attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+					err := admissionHandler.Validate(ctx, attrs, nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field":  Equal("spec.dns.providers[0].primary"),
+						"Detail": ContainSubstring("primary dns provider must not be set when default domain is used"),
+					}))))
+				})
+			})
+
 			It("should allow because the default domain was allowed for the shoot", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(defaultDomainSecret)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)).To(Succeed())

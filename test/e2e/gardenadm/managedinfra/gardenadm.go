@@ -51,7 +51,9 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 	)
 
 	var (
-		shoot = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+		shoot           = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
+		shootClientSet  kubernetes.Interface
+		gardenClientSet kubernetes.Interface
 	)
 
 	runInMachine := func(ctx context.Context, ordinal int, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
@@ -360,9 +362,6 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 	Context("gardenadm connect", Ordered, Label("connect"), func() {
 		var (
-			shootClientSet  kubernetes.Interface
-			gardenClientSet kubernetes.Interface
-
 			clusterAdminStaticToken string
 		)
 
@@ -406,4 +405,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, runInMachine)
 		gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, runInMachine, runInNode)
 	})
+
+	gardenadm.ItShouldPromoteSelfHostedShootToSeed(&gardenClientSet, &shootClientSet, shoot)
+	gardenadm.ItShouldCreateHostedShootOnPromotedSeed(&gardenClientSet)
 })
