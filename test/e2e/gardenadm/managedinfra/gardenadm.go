@@ -57,9 +57,6 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 	runInMachine := func(ctx context.Context, ordinal int, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
 		return RunInMachine(ctx, technicalID, ordinal, cmd...)
 	}
-	runInNode := func(ctx context.Context, nodeName string, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
-		return RunInNode(ctx, technicalID, nodeName, cmd...)
-	}
 
 	Context("gardenadm bootstrap", Ordered, Label("bootstrap"), func() {
 		var (
@@ -404,6 +401,6 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		}, SpecTimeout(5*time.Minute))
 
 		gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, runInMachine)
-		gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, runInMachine, runInNode)
+		gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, runInMachine)
 	})
 })

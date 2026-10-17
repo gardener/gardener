@@ -271,7 +271,7 @@ var _ = Describe("quotavalidator", func() {
 			Expect(err).NotTo(HaveOccurred())
 			fakeClock = testclock.NewFakeClock(now)
 
-			admissionHandler, _ = New(fakeClock)
+			admissionHandler = New(fakeClock)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)

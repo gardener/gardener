@@ -87,7 +87,7 @@ func run(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
+	b, err := gardenadmbotanist.NewGardenadmBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false, true)
 	if err != nil {
 		return err
 	}

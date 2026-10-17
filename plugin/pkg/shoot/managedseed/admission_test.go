@@ -114,7 +114,7 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreClient = &corefake.Clientset{}
@@ -361,8 +361,7 @@ var _ = Describe("ManagedSeed", func() {
 
 	Describe("#New", func() {
 		It("should only handle UPDATE and DELETE operations", func() {
-			admissionHandler, err := New()
-			Expect(err).ToNot(HaveOccurred())
+			admissionHandler := New()
 			Expect(admissionHandler.Handles(admission.Create)).NotTo(BeTrue())
 			Expect(admissionHandler.Handles(admission.Connect)).NotTo(BeTrue())
 			Expect(admissionHandler.Handles(admission.Update)).To(BeTrue())
@@ -372,14 +371,14 @@ var _ = Describe("ManagedSeed", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should fail if the required clients are not set", func() {
-			admissionHandler, _ := New()
+			admissionHandler := New()
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not fail if the required clients are set", func() {
-			admissionHandler, _ := New()
+			admissionHandler := New()
 			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 

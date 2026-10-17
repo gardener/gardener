@@ -10,6 +10,24 @@ If you want to get an overview of the what and why of admission plugins then [th
 
 This document lists all existing admission plugins with a short explanation of what it is responsible for.
 
+## Admission Plugins and `gardenadm`
+
+`gardenadm init` runs a subset of the `gardener-apiserver` admission chain in-process before executing its bootstrap flow (see `pkg/gardenadm/admission/`).
+This ensures the `Shoot` read from the config directory is mutated and validated exactly as it would be by the real `gardener-apiserver`.
+
+**Which plugins run:** Only plugins that are enabled by default (`DefaultOnPlugins` in `plugin/pkg/plugins.go`) and not listed in `GardenadmSkipPlugins` are executed.
+`GardenadmSkipPlugins` excludes plugins that are inapplicable in the offline `gardenadm` context: non-`Shoot` plugins, `DELETE`-only plugins, webhook plugins, and plugins requiring infrastructure that does not exist during bootstrap (namespace lifecycle, RBAC, resource quotas).
+
+**When adding or changing a plugin, check the following:**
+
+- **New default-on plugin** — it will be picked up by `gardenadm` automatically.
+  Verify that running the plugin offline (fake client, no real API server, `CREATE`-only) is safe.
+  If it is not applicable in the `gardenadm` context, add it to `GardenadmSkipPlugins` with a comment explaining why.
+- **New non-default plugin** — no action needed; `gardenadm` only runs default-on plugins.
+- **Plugin changed from non-default to default-on** — treat it as a new default-on plugin (see above).
+- **Plugin mutates state that `gardenadm connect` does not propagate** — add it to `GardenadmSkipPlugins`.
+  `gardenadm connect` registers the on-disk `Shoot` in the garden cluster without re-running the admission chain, so any in-memory mutation applied during `gardenadm init` but absent from the on-disk manifest will cause a divergence between what the gardenlet observes and what `gardenadm` deployed.
+
 <!-- Keep the list of admission plugins in (case-sensitive) lexicographical order. -->
 
 ## `BackupBucketValidator`

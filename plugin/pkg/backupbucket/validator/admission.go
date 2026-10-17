@@ -24,7 +24,7 @@ import (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameBackupBucketValidator, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -43,10 +43,10 @@ var (
 )
 
 // New creates a new ValidateBackupBucket admission plugin.
-func New() (*ValidateBackupBucket, error) {
+func New() *ValidateBackupBucket {
 	return &ValidateBackupBucket{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.
