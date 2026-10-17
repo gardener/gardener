@@ -324,7 +324,6 @@ type SeedSettingZoneSelection struct {
 	// Mode controls the zone selection behavior.
 	// "Prefer" tries to match worker pool zones to seed zones, falling back to random selection on mismatch.
 	// "Enforce" requires worker pool zones to be present in the seed's zone list; scheduling fails otherwise.
-	// +kubebuilder:validation:Enum=Prefer;Enforce
 	Mode ZoneSelectionMode `json:"mode" protobuf:"bytes,1,opt,name=mode,casttype=ZoneSelectionMode"`
 }
 
