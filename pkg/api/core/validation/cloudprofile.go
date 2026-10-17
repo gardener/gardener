@@ -397,27 +397,39 @@ func validateCloudProfileRegions(regions []core.Region, fldPath *field.Path) fie
 }
 
 func validateCloudProfileBastion(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
-	var (
-		allErrs     field.ErrorList
-		machineArch *string
-	)
-
 	if spec.Bastion == nil {
-		return allErrs
+		return nil
 	}
+
+	allErrs := field.ErrorList{}
 
 	if spec.Bastion.MachineType == nil && spec.Bastion.MachineImage == nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, spec.Bastion, "bastion section needs a machine type or machine image"))
 	}
 
-	if spec.Bastion.MachineType != nil {
+	allErrs = append(allErrs, ValidateBastionMachine(spec.Bastion.MachineType, spec.Bastion.MachineImage, spec, fldPath.Child("machineType"), fldPath.Child("machineImage"))...)
+
+	return allErrs
+}
+
+// ValidateBastionMachine validates the given bastion machine type and machine image against the given CloudProfile spec.
+// It checks that the referenced machine type and machine image (optionally pinned to a specific version) exist in the
+// CloudProfile and that the image supports the machine type's architecture and a supported classification. The caller
+// provides the field paths for the machine type and machine image so that errors point to the correct fields.
+func ValidateBastionMachine(machineType *core.BastionMachineType, machineImage *core.BastionMachineImage, spec *core.CloudProfileSpec, machineTypePath, machineImagePath *field.Path) field.ErrorList {
+	var (
+		allErrs     field.ErrorList
+		machineArch *string
+	)
+
+	if machineType != nil {
 		var validationErrors field.ErrorList
-		machineArch, validationErrors = validateBastionMachineType(spec.Bastion.MachineType, spec.MachineTypes, spec.MachineCapabilities, fldPath.Child("machineType"))
+		machineArch, validationErrors = validateBastionMachineType(machineType, spec.MachineTypes, spec.MachineCapabilities, machineTypePath)
 		allErrs = append(allErrs, validationErrors...)
 	}
 
-	if spec.Bastion.MachineImage != nil {
-		allErrs = append(allErrs, validateBastionImage(spec.Bastion.MachineImage, spec.MachineImages, helper.CapabilityDefinitionsToCapabilities(spec.MachineCapabilities), machineArch, fldPath.Child("machineImage"))...)
+	if machineImage != nil {
+		allErrs = append(allErrs, validateBastionImage(machineImage, spec.MachineImages, helper.CapabilityDefinitionsToCapabilities(spec.MachineCapabilities), machineArch, machineImagePath)...)
 	}
 
 	return allErrs

@@ -59,12 +59,35 @@ type BastionSpec struct {
 	UserData []byte `json:"userData"`
 	// Ingress controls from where the created bastion host should be reachable.
 	Ingress []BastionIngressPolicy `json:"ingress"`
+	// Image holds information about the machine image to use for the bastion.
+	// +optional
+	Machine *BastionMachine `json:"machine,omitempty"`
 }
 
 // BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
 type BastionIngressPolicy struct {
 	// IPBlock defines an IP block that is allowed to access the bastion.
 	IPBlock networkingv1.IPBlock `json:"ipBlock"`
+}
+
+// BastionMachine contains information about the machine type and image.
+type BastionMachine struct {
+	// Type is the machine type of the bastion.
+	// +optional
+	Type *string `json:"type,omitempty"`
+	// Image holds information about the machine image to use for the bastion.
+	// +optional
+	Image *BastionMachineImage `json:"image,omitempty"`
+}
+
+// BastionMachineImage defines the name and the version of the bastion's machine image in any environment. Has to be
+// defined in the respective CloudProfile.
+type BastionMachineImage struct {
+	// Name is the name of the image.
+	Name string `json:"name"`
+	// Version is the version of the image.
+	// +optional
+	Version *string `json:"version,omitempty"`
 }
 
 // BastionStatus holds the most recently observed status of the Bastion.
