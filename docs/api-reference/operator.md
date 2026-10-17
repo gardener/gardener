@@ -164,6 +164,42 @@ integer
 </tr>
 <tr>
 <td>
+<code>truncateEnabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TruncateEnabled specifies whether audit event and batch truncation is enabled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>truncateMaxBatchSize</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TruncateMaxBatchSize is the maximum size in bytes of a batch sent to the webhook.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>truncateMaxEventSize</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TruncateMaxEventSize is the maximum size in bytes of an audit event sent to the webhook.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>kubeconfigSecretName</code></br>
 <em>
 string

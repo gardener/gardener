@@ -848,9 +848,12 @@ func (r *Reconciler) computeAPIServerAuditWebhookConfig(ctx context.Context, con
 	}
 
 	return &apiserver.AuditWebhook{
-		Kubeconfig:   kubeconfig,
-		BatchMaxSize: config.BatchMaxSize,
-		Version:      config.Version,
+		Kubeconfig:           kubeconfig,
+		BatchMaxSize:         config.BatchMaxSize,
+		TruncateEnabled:      config.TruncateEnabled,
+		TruncateMaxBatchSize: config.TruncateMaxBatchSize,
+		TruncateMaxEventSize: config.TruncateMaxEventSize,
+		Version:              config.Version,
 	}, nil
 }
 
