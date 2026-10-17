@@ -26,6 +26,13 @@ env: []
 #   defaultNotReadyTolerationSeconds: 60
 #   defaultUnreachableTolerationSeconds: 60
 config:
+  gardenerDiscoveryServer:
+    # TLS serving certificate for the gardener-discovery-server. When both crt and key are set, the operator chart
+    # renders the gardener-discovery-server-tls secret. Left empty by default; the local setup injects the generated
+    # certificate via skaffold setFiles.
+    tls:
+      crt: ""
+      key: ""
   runtimeClientConnection:
     qps: 100
     burst: 130
