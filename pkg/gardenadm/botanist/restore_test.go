@@ -5,9 +5,12 @@
 package botanist
 
 import (
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -172,6 +175,133 @@ var _ = Describe("Restore", func() {
 			Expect(b.FinalizeGardenerNodeAgentManagedResource(ctx, fakeClient)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+		})
+	})
+
+	Describe("#DeleteStaleEtcdMemberLeases", func() {
+		var (
+			etcdClient client.Client
+
+			etcdMain   *druidcorev1alpha1.Etcd
+			etcdEvents *druidcorev1alpha1.Etcd
+
+			mainMemberLease   *coordinationv1.Lease
+			eventsMemberLease *coordinationv1.Lease
+			deltaSnapLease    *coordinationv1.Lease
+			fullSnapLease     *coordinationv1.Lease
+
+			webhookConfig *admissionregistrationv1.ValidatingWebhookConfiguration
+		)
+
+		etcd := func(name, memberAddress string, withMembers bool) *druidcorev1alpha1.Etcd {
+			e := &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: oscSecretNamespace},
+				Spec: druidcorev1alpha1.EtcdSpec{
+					Replicas:                         1,
+					ExternallyManagedMemberAddresses: []string{memberAddress},
+				},
+			}
+			if withMembers {
+				e.Status.Members = []druidcorev1alpha1.EtcdMemberStatus{{
+					Name:   druidcorev1alpha1.GetMemberNameFromAddress(e, memberAddress),
+					Role:   new(druidcorev1alpha1.EtcdRoleLeader),
+					Status: druidcorev1alpha1.EtcdMemberStatusReady,
+					Reason: "member is ready",
+				}}
+			}
+			return e
+		}
+
+		lease := func(name string) *coordinationv1.Lease {
+			return &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: oscSecretNamespace}}
+		}
+
+		BeforeEach(func() {
+			// Status().Patch on the Etcd requires the status subresource to be registered on the fake client.
+			etcdClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.SeedScheme).
+				WithStatusSubresource(&druidcorev1alpha1.Etcd{}).
+				Build()
+
+			etcdMain = etcd("etcd-main", "172.18.0.9", true)
+			etcdEvents = etcd("etcd-events", "172.18.0.9", true)
+
+			// Member leases: etcd-druid derives these from ExternallyManagedMemberAddresses (etcd-<name>-<address>).
+			mainMemberLease = lease(druidcorev1alpha1.GetMemberLeaseNames(etcdMain)[0])
+			eventsMemberLease = lease(druidcorev1alpha1.GetMemberLeaseNames(etcdEvents)[0])
+			// Snapshot leases that etcd-backup-restore depends on - must be retained.
+			deltaSnapLease = lease("etcd-main-delta-snap")
+			fullSnapLease = lease("etcd-main-full-snap")
+
+			webhookConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "etcd-druid"}}
+		})
+
+		It("should succeed and delete the webhook config when no Etcd resources exist", func(ctx SpecContext) {
+			Expect(etcdClient.Create(ctx, webhookConfig)).To(Succeed())
+
+			Expect(b.DeleteStaleEtcdMemberLeases(ctx, etcdClient)).To(Succeed())
+
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(webhookConfig), &admissionregistrationv1.ValidatingWebhookConfiguration{})).To(BeNotFoundError())
+		})
+
+		It("should succeed when nothing exists", func(ctx SpecContext) {
+			Expect(b.DeleteStaleEtcdMemberLeases(ctx, etcdClient)).To(Succeed())
+		})
+
+		It("should delete the member Leases, retain the snapshot Leases, and clear the status members", func(ctx SpecContext) {
+			Expect(etcdClient.Create(ctx, etcdMain)).To(Succeed())
+			Expect(etcdClient.Create(ctx, etcdEvents)).To(Succeed())
+			Expect(etcdClient.Status().Update(ctx, etcdMain)).To(Succeed())
+			Expect(etcdClient.Status().Update(ctx, etcdEvents)).To(Succeed())
+			Expect(etcdClient.Create(ctx, mainMemberLease)).To(Succeed())
+			Expect(etcdClient.Create(ctx, eventsMemberLease)).To(Succeed())
+			Expect(etcdClient.Create(ctx, deltaSnapLease)).To(Succeed())
+			Expect(etcdClient.Create(ctx, fullSnapLease)).To(Succeed())
+			Expect(etcdClient.Create(ctx, webhookConfig)).To(Succeed())
+
+			Expect(b.DeleteStaleEtcdMemberLeases(ctx, etcdClient)).To(Succeed())
+
+			By("The etcd-druid ValidatingWebhookConfiguration is deleted")
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(webhookConfig), &admissionregistrationv1.ValidatingWebhookConfiguration{})).To(BeNotFoundError())
+
+			By("Member Leases are deleted")
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(mainMemberLease), &coordinationv1.Lease{})).To(BeNotFoundError())
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(eventsMemberLease), &coordinationv1.Lease{})).To(BeNotFoundError())
+
+			By("Snapshot Leases are retained")
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(deltaSnapLease), &coordinationv1.Lease{})).To(Succeed())
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(fullSnapLease), &coordinationv1.Lease{})).To(Succeed())
+
+			By("Status members are cleared")
+			gotMain := &druidcorev1alpha1.Etcd{}
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(etcdMain), gotMain)).To(Succeed())
+			Expect(gotMain.Status.Members).To(BeEmpty())
+			gotEvents := &druidcorev1alpha1.Etcd{}
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(etcdEvents), gotEvents)).To(Succeed())
+			Expect(gotEvents.Status.Members).To(BeEmpty())
+		})
+
+		It("should be a no-op for the member Leases that are already absent and still clear the status", func(ctx SpecContext) {
+			Expect(etcdClient.Create(ctx, etcdMain)).To(Succeed())
+			Expect(etcdClient.Status().Update(ctx, etcdMain)).To(Succeed())
+
+			Expect(b.DeleteStaleEtcdMemberLeases(ctx, etcdClient)).To(Succeed())
+
+			got := &druidcorev1alpha1.Etcd{}
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(etcdMain), got)).To(Succeed())
+			Expect(got.Status.Members).To(BeEmpty())
+		})
+
+		It("should not delete member Leases of Etcds in a different namespace", func(ctx SpecContext) {
+			otherEtcd := etcd("etcd-main", "172.18.0.9", true)
+			otherEtcd.Namespace = "other-namespace"
+			otherLease := &coordinationv1.Lease{ObjectMeta: metav1.ObjectMeta{Name: mainMemberLease.Name, Namespace: "other-namespace"}}
+			Expect(etcdClient.Create(ctx, otherEtcd)).To(Succeed())
+			Expect(etcdClient.Create(ctx, otherLease)).To(Succeed())
+
+			Expect(b.DeleteStaleEtcdMemberLeases(ctx, etcdClient)).To(Succeed())
+
+			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(otherLease), &coordinationv1.Lease{})).To(Succeed())
 		})
 	})
 })
