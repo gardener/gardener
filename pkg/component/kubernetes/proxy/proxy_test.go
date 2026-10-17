@@ -638,6 +638,19 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											SuccessThreshold:    1,
 											FailureThreshold:    2,
 										},
+										LivenessProbe: &corev1.Probe{
+											ProbeHandler: corev1.ProbeHandler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   "/livez",
+													Port:   intstr.FromInt32(10256),
+													Scheme: corev1.URISchemeHTTP,
+												},
+											},
+											InitialDelaySeconds: 15,
+											TimeoutSeconds:      15,
+											SuccessThreshold:    1,
+											FailureThreshold:    6,
+										},
 										Resources: corev1.ResourceRequirements{
 											Requests: map[corev1.ResourceName]resource.Quantity{
 												corev1.ResourceCPU:    resource.MustParse("20m"),
