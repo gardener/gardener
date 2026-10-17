@@ -281,6 +281,7 @@ linters:
               - "*"
             enable:
               - defaultorrequired
+              - duplicatemarkers
               - jsontags
               - nonullable
               - optionalfields
