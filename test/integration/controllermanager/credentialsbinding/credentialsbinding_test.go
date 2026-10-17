@@ -110,7 +110,12 @@ var _ = Describe("CredentialsBinding controller test", func() {
 			// Otherwise, the controller might clean up the CredentialsBinding too early because it thinks all referencing shoots
 			// are gone. Similar to https://github.com/gardener/gardener/issues/6486
 			By("Create Shoot")
-			Expect(testClient.Create(ctx, shoot)).To(Succeed())
+			// Retry the creation: when the first spec of the suite runs, the gardener API server might
+			// still be warming up (e.g., the quota admission plugin has not registered its evaluator
+			// for the resource yet) and can reject the request with 503 ServiceUnavailable.
+			Eventually(func() error {
+				return testClient.Create(ctx, shoot)
+			}).Should(Succeed())
 			log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 			By("Wait until manager has observed shoot")
@@ -124,11 +129,17 @@ var _ = Describe("CredentialsBinding controller test", func() {
 		log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret))
 
 		By("Create Quota")
-		Expect(testClient.Create(ctx, quota)).To(Succeed())
+		// Quota is also served by the gardener API server, so retry it for the same reason.
+		Eventually(func() error {
+			return testClient.Create(ctx, quota)
+		}).Should(Succeed())
 		log.Info("Created Quota for test", "quota", client.ObjectKeyFromObject(quota))
 
 		By("Create CredentialsBinding")
-		Expect(testClient.Create(ctx, credentialsBinding)).To(Succeed())
+		// Retry the creation, see the comment above about the gardener API server warm-up.
+		Eventually(func() error {
+			return testClient.Create(ctx, credentialsBinding)
+		}).Should(Succeed())
 		log.Info("Created CredentialsBinding for test", "credentialsBinding", client.ObjectKeyFromObject(credentialsBinding))
 
 		DeferCleanup(func() {
