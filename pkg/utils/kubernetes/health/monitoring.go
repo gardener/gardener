@@ -41,7 +41,7 @@ func IsPrometheusHealthy(ctx context.Context, endpoint string, port int) (Promet
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	result, warnings, err := v1api.Query(ctx, "healthcheck:up", time.Now())
+	result, warnings, _, err := v1api.Query(ctx, "healthcheck:up", time.Now())
 	if err != nil {
 		return PrometheusHealthCheckResult{}, fmt.Errorf("query failed: %w", err)
 	}
