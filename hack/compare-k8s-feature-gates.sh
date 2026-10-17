@@ -46,6 +46,9 @@ for version in "${versions[@]}"; do
   fi
   wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/test/compatibility_lifecycle/reference/versioned_feature_list.yaml" > "${out_dir}/versioned_featuregates_${version}.yaml"
   yq '.[] | .name' "${out_dir}/versioned_featuregates_${version}.yaml" > "${out_dir}/featuregates_list_${version}.yaml"
+  # client-go feature gates are not part of versioned_feature_list.yaml, so fetch the Go source and extract their names too.
+  wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/staging/src/k8s.io/client-go/features/known_features.go" > "${out_dir}/known_features_${version}.go"
+  grep -E '^[[:space:]]*[A-Za-z].*Feature = "' "${out_dir}/known_features_${version}.go" | sed -E 's/.*Feature = "([^"]+)".*/\1/' >> "${out_dir}/featuregates_list_${version}.yaml"
   # Sort feature gate list for the diff to function correctly
   sort -o "${out_dir}/featuregates_list_${version}.yaml" "${out_dir}/featuregates_list_${version}.yaml"
 done
@@ -56,10 +59,16 @@ echo
 echo "Feature gates removed in $2 compared to $1:"
 diff "${out_dir}/featuregates_list_${1}.yaml" "${out_dir}/featuregates_list_${2}.yaml" | grep '<' | awk '{print $2}'
 echo
+
 echo "Feature gates locked to default true in $2 compared to $1:"
 # Get all feature gate names that have a version spec containing $2, are locked to default with default value of true
 yq '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == true)) | .name' "${out_dir}/versioned_featuregates_${version}.yaml"
+# client-go feature gates are not in the yaml, so parse their lock state from the Go source.
+awk -v ver="$2" '/^[[:space:]]+[A-Za-z][A-Za-z0-9_]*: \{$/ { gate=$1; sub(/:$/, "", gate) } $0 ~ ("MustParse\\(\"" ver "\"") && /LockToDefault: true/ && / Default: true/ { print gate }' "${out_dir}/known_features_${2}.go"
 echo
 echo "Feature gates locked to default false in $2 compared to $1:"
+
 # Get all feature gate names that have a version spec containing $2, are locked to default with default value of false
 yq '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == false)) | .name' "${out_dir}/versioned_featuregates_${version}.yaml"
+# client-go feature gates are not in the yaml, so parse their lock state from the Go source.
+awk -v ver="$2" '/^[[:space:]]+[A-Za-z][A-Za-z0-9_]*: \{$/ { gate=$1; sub(/:$/, "", gate) } $0 ~ ("MustParse\\(\"" ver "\"") && /LockToDefault: true/ && / Default: false/ { print gate }' "${out_dir}/known_features_${2}.go"
