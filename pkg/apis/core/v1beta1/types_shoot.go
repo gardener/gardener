@@ -237,13 +237,18 @@ type ShootStatus struct {
 type LastMaintenance struct {
 	// A human-readable message containing details about the operations performed in the last maintenance.
 	Description string `json:"description" protobuf:"bytes,1,opt,name=description"`
-	// TriggeredTime is the time when maintenance was triggered.
+	// TriggeredTime is the time when the last maintenance run was triggered. It is set on every maintenance run,
+	// including runs that performed no changes.
 	TriggeredTime metav1.Time `json:"triggeredTime" protobuf:"bytes,2,opt,name=triggeredTime"`
 	// Status of the last maintenance operation, one of Processing, Succeeded, Error.
 	State LastOperationState `json:"state" protobuf:"bytes,3,opt,name=state,casttype=LastOperationState"`
 	// FailureReason holds the information about the last maintenance operation failure reason.
 	// +optional
 	FailureReason *string `json:"failureReason,omitempty" protobuf:"bytes,4,opt,name=failureReason"`
+	// LastUpdateTime is the time when maintenance last updated the Shoot spec. It is nil if maintenance
+	// has never updated the Shoot spec.
+	// +optional
+	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty" protobuf:"bytes,5,opt,name=lastUpdateTime"`
 }
 
 // NetworkingStatus contains information about cluster networking such as CIDRs.
