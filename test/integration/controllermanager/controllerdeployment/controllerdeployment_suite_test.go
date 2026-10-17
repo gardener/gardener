@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&controllerdeploymentcontroller.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ControllerDeploymentControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), 100*time.Millisecond),

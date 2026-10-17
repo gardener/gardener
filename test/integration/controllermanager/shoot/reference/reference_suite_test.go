@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect(reference.AddToManager(mgr, controllermanagerconfigv1alpha1.ShootReferenceControllerConfiguration{
-		ConcurrentSyncs: new(5),
+		ConcurrentSyncs: new(int32(5)),
 	})).To(Succeed())
 
 	By("Start manager")

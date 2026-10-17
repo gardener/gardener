@@ -121,7 +121,7 @@ func AddToManager(
 		// (b) the gardenlet is responsible for a seed that is not a self-hosted shoot (since here the shoot gardenlet already
 		//     runs the controller, see (a)).
 		if err := (&tokenrequestor.Reconciler{
-			ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0),
+			ConcurrentSyncs: int(ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0)),
 			Class:           new(resourcesv1alpha1.ResourceManagerClassGarden),
 			TargetNamespace: targetNamespaceForTokenRequestorController(cfg),
 		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {

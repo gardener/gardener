@@ -119,7 +119,7 @@ var _ = Describe("Controller", func() {
 			SeedClient:   seedClient,
 			Recorder:     &events.FakeRecorder{},
 			Config: gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
-				ConcurrentSyncs: new(5),
+				ConcurrentSyncs: new(int32(5)),
 			},
 			Clock:           fakeClock,
 			GardenNamespace: gardenNamespaceName,

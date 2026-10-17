@@ -64,7 +64,7 @@ func (in *ExtensionCareControllerConfiguration) DeepCopyInto(out *ExtensionCareC
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -95,7 +95,7 @@ func (in *ExtensionControllerConfiguration) DeepCopyInto(out *ExtensionControlle
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -116,7 +116,7 @@ func (in *ExtensionReferenceControllerConfiguration) DeepCopyInto(out *Extension
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -137,7 +137,7 @@ func (in *ExtensionRequiredRuntimeControllerConfiguration) DeepCopyInto(out *Ext
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -158,7 +158,7 @@ func (in *ExtensionRequiredVirtualControllerConfiguration) DeepCopyInto(out *Ext
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -205,7 +205,7 @@ func (in *GardenControllerConfig) DeepCopyInto(out *GardenControllerConfig) {
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.SyncPeriod != nil {
@@ -236,7 +236,7 @@ func (in *GardenletDeployerControllerConfig) DeepCopyInto(out *GardenletDeployer
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return
@@ -257,7 +257,7 @@ func (in *NetworkPolicyControllerConfiguration) DeepCopyInto(out *NetworkPolicyC
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.AdditionalNamespaceSelectors != nil {
@@ -401,7 +401,7 @@ func (in *VPAEvictionRequirementsControllerConfiguration) DeepCopyInto(out *VPAE
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	return

@@ -81,7 +81,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 		Named(ControllerName).
 		For(&operatorv1alpha1.Garden{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, r.HasOperationAnnotation()))).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Garden.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.Controllers.Garden.ConcurrentSyncs, 0)),
 		}).
 		Watches(&operatorv1alpha1.Extension{},
 			handler.EnqueueRequestsFromMapFunc(r.MapToGarden(mgr.GetLogger().WithValues("controller", ControllerName))),

@@ -245,7 +245,7 @@ var _ = BeforeSuite(func() {
 		Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
 			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				WaitSyncPeriod:   &metav1.Duration{Duration: 5 * time.Millisecond},
-				ConcurrentSyncs:  new(5),
+				ConcurrentSyncs:  new(int32(5)),
 				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
 				// This controller is pretty heavy-weight, so use a higher duration.
 				SyncPeriod: &metav1.Duration{Duration: time.Minute},

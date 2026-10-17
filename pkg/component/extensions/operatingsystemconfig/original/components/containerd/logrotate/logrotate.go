@@ -32,7 +32,7 @@ func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit,
 
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
-		Permissions: new(uint32(0644)),
+		Permissions: new(int32(0644)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Data: pathLogFiles + ` {

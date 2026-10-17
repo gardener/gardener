@@ -96,7 +96,7 @@ func SetDefaults_ResourceManagerControllerConfiguration(obj *ResourceManagerCont
 // SetDefaults_CSRApproverControllerConfig sets defaults for the CSRApproverControllerConfig object.
 func SetDefaults_CSRApproverControllerConfig(obj *CSRApproverControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(1)
+		obj.ConcurrentSyncs = new(int32(1))
 	}
 }
 
@@ -110,21 +110,21 @@ func SetDefaults_GarbageCollectorControllerConfig(obj *GarbageCollectorControlle
 // SetDefaults_NetworkPolicyControllerConfig sets defaults for the NetworkPolicyControllerConfig object.
 func SetDefaults_NetworkPolicyControllerConfig(obj *NetworkPolicyControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 }
 
 // SetDefaults_IstioClusterConfigurationControllerConfig sets defaults for the IstioClusterConfigurationControllerConfig object.
 func SetDefaults_IstioClusterConfigurationControllerConfig(obj *IstioClusterConfigurationControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 }
 
 // SetDefaults_HealthControllerConfig sets defaults for the HealthControllerConfig object.
 func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
@@ -134,7 +134,7 @@ func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 // SetDefaults_ManagedResourceControllerConfig sets defaults for the ManagedResourceControllerConfig object.
 func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerConfig) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
@@ -150,7 +150,7 @@ func SetDefaults_ManagedResourceControllerConfig(obj *ManagedResourceControllerC
 // SetDefaults_TokenRequestorControllerConfig sets defaults for the TokenRequestorControllerConfig object.
 func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 }
 
@@ -158,7 +158,7 @@ func SetDefaults_TokenRequestorControllerConfig(obj *TokenRequestorControllerCon
 func SetDefaults_NodeCriticalComponentsControllerConfig(obj *NodeCriticalComponentsControllerConfig) {
 	if obj.Enabled {
 		if obj.ConcurrentSyncs == nil {
-			obj.ConcurrentSyncs = new(5)
+			obj.ConcurrentSyncs = new(int32(5))
 		}
 		if obj.Backoff == nil {
 			obj.Backoff = &metav1.Duration{Duration: 10 * time.Second}

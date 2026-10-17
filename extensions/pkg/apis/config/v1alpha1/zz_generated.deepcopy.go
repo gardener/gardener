@@ -45,7 +45,7 @@ func (in *RESTOptions) DeepCopyInto(out *RESTOptions) {
 	}
 	if in.Burst != nil {
 		in, out := &in.Burst, &out.Burst
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.Timeout != nil {

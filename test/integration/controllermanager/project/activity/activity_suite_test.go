@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&activity.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())

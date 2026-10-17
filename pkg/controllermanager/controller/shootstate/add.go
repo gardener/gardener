@@ -41,7 +41,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.Config.ConcurrentSyncs, 0)),
 		}).
 		Watches(
 			&gardencorev1beta1.Shoot{},

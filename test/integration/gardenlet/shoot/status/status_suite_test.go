@@ -136,7 +136,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&status.Reconciler{
 		Config: gardenletconfigv1alpha1.ShootStatusControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		SeedName: seedName,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())

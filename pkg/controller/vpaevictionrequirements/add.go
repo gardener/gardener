@@ -48,7 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: int(ptr.Deref(r.ConcurrentSyncs, 0)),
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		}).
 		WatchesRawSource(source.Kind[client.Object](

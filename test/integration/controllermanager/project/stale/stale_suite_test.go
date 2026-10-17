@@ -121,12 +121,16 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 
+	minLifetimeDays := int32(minimumLifetimeDays)
+	stalePeriodDays := int32(staleGracePeriodDays)
+	staleExpirDays := int32(staleExpirationTimeDays)
+
 	Expect((&stale.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-			ConcurrentSyncs:         new(5),
-			MinimumLifetimeDays:     new(minimumLifetimeDays),
-			StaleGracePeriodDays:    new(staleGracePeriodDays),
-			StaleExpirationTimeDays: new(staleExpirationTimeDays),
+			ConcurrentSyncs:         new(int32(5)),
+			MinimumLifetimeDays:     &minLifetimeDays,
+			StaleGracePeriodDays:    &stalePeriodDays,
+			StaleExpirationTimeDays: &staleExpirDays,
 			StaleSyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock: fakeClock,
