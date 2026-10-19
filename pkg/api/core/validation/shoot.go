@@ -2875,13 +2875,13 @@ func ValidateWorkers(workers []core.Worker, hasManagedInfrastructure bool, fldPa
 		}
 	}
 
-	if isShootSelfHosted && !hasManagedInfrastructure {
+	if isShootSelfHosted {
 		var totalMinimum int32
 		for _, worker := range workers {
 			totalMinimum += worker.Minimum
 		}
 		if totalMinimum < 2 {
-			allErrs = append(allErrs, field.Invalid(fldPath, totalMinimum, "self-hosted shoots with unmanaged infrastructure must have a total minimum of at least 2 worker nodes (increase the control plane pool's minimum to >1 or add a worker pool with minimum>0)"))
+			allErrs = append(allErrs, field.Invalid(fldPath, totalMinimum, "self-hosted shoots must have a total minimum of at least 2 worker nodes (increase the control plane pool's minimum to >1 or add a worker pool with minimum>0)"))
 		}
 	}
 

@@ -102,7 +102,7 @@ var _ = Describe("Secrets", func() {
 		})
 
 		It("should generate the expected secret", func() {
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true, false)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, gardencorev1beta1.Worker{Name: workerPoolName}, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -147,7 +147,7 @@ status:
 		})
 
 		It("should preserve secretRef when resolveSecretRefs is false", func() {
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, false, false)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, gardencorev1beta1.Worker{Name: workerPoolName}, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			oscYAML := string(secret.Data["osc.yaml"])
@@ -156,8 +156,8 @@ status:
 			Expect(secret.Annotations).To(HaveKeyWithValue("checksum/data-script", utils.ComputeSHA256Hex(secret.Data["osc.yaml"])))
 		})
 
-		It("should set the serial-reconciliation annotation when serialOSCReconciliation is true", func() {
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, false, true)
+		It("should set the serial-reconciliation annotation when worker is a control-plane pool", func() {
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, gardencorev1beta1.Worker{Name: workerPoolName, ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Annotations).To(HaveKeyWithValue("reconciliation.osc.node-agent.gardener.cloud/serial", "true"))
 		})
@@ -173,7 +173,7 @@ status:
 				},
 			})
 
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true, false)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, gardencorev1beta1.Worker{Name: workerPoolName}, true)
 			Expect(err).To(MatchError(ContainSubstring(`cannot resolve secret ref from osc: secrets "non-existing" not found`)))
 			Expect(secret).To(BeNil())
 		})

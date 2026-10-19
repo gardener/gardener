@@ -569,25 +569,39 @@ var _ = Describe("ControllerInstallation-Seed controller test", func() {
 						// Use a different provider type so that the shoot's required extensions do not overlap
 						// with the seed's providerType extensions, leaving those for the seed reconciler to handle.
 						Type: selfHostedProviderType,
-						Workers: []gardencorev1beta1.Worker{{
-							Name:         "control-plane",
-							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
-							Minimum:      1,
-							Maximum:      1,
-							Machine: gardencorev1beta1.Machine{
-								Type: "large",
-								Image: &gardencorev1beta1.ShootMachineImage{
-									Name:    selfHostedProviderType,
-									Version: new("0.0.0"),
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name:         "control-plane",
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+								Minimum:      1,
+								Maximum:      1,
+								Machine: gardencorev1beta1.Machine{
+									Type: "large",
+									Image: &gardencorev1beta1.ShootMachineImage{
+										Name:    selfHostedProviderType,
+										Version: new("0.0.0"),
+									},
+								},
+								CRI: &gardencorev1beta1.CRI{
+									Name: gardencorev1beta1.CRINameContainerD,
+									ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{
+										Type: selfHostedProviderType,
+									}},
 								},
 							},
-							CRI: &gardencorev1beta1.CRI{
-								Name: gardencorev1beta1.CRINameContainerD,
-								ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{
-									Type: selfHostedProviderType,
-								}},
+							{
+								Name:    "worker-2",
+								Minimum: 1,
+								Maximum: 1,
+								Machine: gardencorev1beta1.Machine{
+									Type: "large",
+									Image: &gardencorev1beta1.ShootMachineImage{
+										Name:    selfHostedProviderType,
+										Version: new("0.0.0"),
+									},
+								},
 							},
-						}},
+						},
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.31.1",
