@@ -138,27 +138,26 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
-	Alertmanager                    alertmanager.Interface
-	BlackboxExporter                component.DeployWaiter
-	ClusterAutoscaler               clusterautoscaler.Interface
-	EtcdDruid                       component.DeployWaiter
-	EtcdMain                        etcd.Interface
-	EtcdEvents                      etcd.Interface
-	EtcdMemberExposure              component.DeployWaiter
-	EtcdCopyBackupsTask             etcdcopybackupstask.Interface
-	EventLogger                     component.Deployer
-	Istio                           istio.Interface
-	IstioBasicAuthServer            component.DeployWaiter
-	SelfHostedShootIngressDNSRecord dnsrecord.Interface
-	KubeAPIServerService            component.DeployWaiter
-	KubeAPIServerSNI                component.DeployWaiter
-	KubeAPIServer                   kubeapiserver.Interface
-	KubeScheduler                   component.DeployWaiter
-	KubeControllerManager           kubecontrollermanager.Interface
-	KubeStateMetrics                component.DeployWaiter
-	MachineControllerManager        machinecontrollermanager.Interface
-	Plutono                         plutono.Interface
-	Prometheus                      prometheus.Interface
+	Alertmanager             alertmanager.Interface
+	BlackboxExporter         component.DeployWaiter
+	ClusterAutoscaler        clusterautoscaler.Interface
+	EtcdDruid                component.DeployWaiter
+	EtcdMain                 etcd.Interface
+	EtcdEvents               etcd.Interface
+	EtcdMemberExposure       component.DeployWaiter
+	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
+	EventLogger              component.Deployer
+	Istio                    istio.Interface
+	IstioBasicAuthServer     component.DeployWaiter
+	KubeAPIServerService     component.DeployWaiter
+	KubeAPIServerSNI         component.DeployWaiter
+	KubeAPIServer            kubeapiserver.Interface
+	KubeScheduler            component.DeployWaiter
+	KubeControllerManager    kubecontrollermanager.Interface
+	KubeStateMetrics         component.DeployWaiter
+	MachineControllerManager machinecontrollermanager.Interface
+	Plutono                  plutono.Interface
+	Prometheus               prometheus.Interface
 	// RuntimeResourceManager is the gardener-resource-manager instance responsible for runtime operations running in
 	// the garden namespace (only set for self-hosted shoots).
 	RuntimeResourceManager resourcemanager.Interface
@@ -172,17 +171,18 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
-	ContainerRuntime        containerruntime.Interface
-	ControlPlane            controlplane.Interface
-	ExternalDNSRecord       dnsrecord.Interface
-	InternalDNSRecord       dnsrecord.Interface
-	IngressDNSRecord        dnsrecord.Interface
-	Extension               extension.Interface
-	Infrastructure          infrastructure.Interface
-	Network                 network.Interface
-	OperatingSystemConfig   operatingsystemconfig.Interface
-	SelfHostedShootExposure *selfhostedshootexposure.SelfHostedShootExposure
-	Worker                  worker.Interface
+	ContainerRuntime                containerruntime.Interface
+	ControlPlane                    controlplane.Interface
+	ExternalDNSRecord               dnsrecord.Interface
+	InternalDNSRecord               dnsrecord.Interface
+	IngressDNSRecord                dnsrecord.Interface
+	SelfHostedShootIngressDNSRecord dnsrecord.Interface
+	Extension                       extension.Interface
+	Infrastructure                  infrastructure.Interface
+	Network                         network.Interface
+	OperatingSystemConfig           operatingsystemconfig.Interface
+	SelfHostedShootExposure         *selfhostedshootexposure.SelfHostedShootExposure
+	Worker                          worker.Interface
 }
 
 // SystemComponents contains references to system components.

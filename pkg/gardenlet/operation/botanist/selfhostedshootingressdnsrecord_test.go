@@ -75,7 +75,7 @@ var _ = Describe("SelfHostedShootIngressDNSRecord", func() {
 	})
 
 	Describe("#DefaultSelfHostedShootIngressDNSRecord", func() {
-		Context("when the shoot is not self-hosted", func() {
+		When("the shoot is not self-hosted", func() {
 			BeforeEach(func() {
 				shootInfo = newShootInfo(false, true)
 				externalDomain = &gardenerutils.Domain{Domain: domain, Provider: provider}
@@ -86,7 +86,7 @@ var _ = Describe("SelfHostedShootIngressDNSRecord", func() {
 			})
 		})
 
-		Context("when the self-hosted shoot does not need external DNS", func() {
+		When("the self-hosted shoot does not need external DNS", func() {
 			BeforeEach(func() {
 				// No DNS domain => NeedsExternalDNS() is false.
 				shootInfo = newShootInfo(true, false)
@@ -98,7 +98,7 @@ var _ = Describe("SelfHostedShootIngressDNSRecord", func() {
 			})
 		})
 
-		Context("when the self-hosted shoot uses an unmanaged DNS provider", func() {
+		When("the self-hosted shoot uses an unmanaged DNS provider", func() {
 			BeforeEach(func() {
 				shootInfo = newShootInfo(true, true)
 				externalDomain = &gardenerutils.Domain{Domain: domain, Provider: "unmanaged"}
@@ -109,7 +109,7 @@ var _ = Describe("SelfHostedShootIngressDNSRecord", func() {
 			})
 		})
 
-		Context("when the self-hosted shoot needs external DNS", func() {
+		When("the self-hosted shoot needs external DNS", func() {
 			BeforeEach(func() {
 				shootInfo = newShootInfo(true, true)
 				externalDomain = &gardenerutils.Domain{
@@ -140,7 +140,7 @@ var _ = Describe("SelfHostedShootIngressDNSRecord", func() {
 			})
 		})
 
-		Context("when the external domain has no zone", func() {
+		When("the external domain has no zone", func() {
 			BeforeEach(func() {
 				shootInfo = newShootInfo(true, true)
 				externalDomain = &gardenerutils.Domain{Domain: domain, Provider: provider}

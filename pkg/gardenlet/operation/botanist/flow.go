@@ -228,7 +228,7 @@ func (b *Botanist) ReconcileIstioTaskGroup(skipReadiness bool) flow.TaskGroup {
 			Name:         "Deploying self-hosted ingress DNS record",
 			Fn:           b.DeploySelfHostedShootIngressDNSRecord,
 			SkipIf:       b.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(deployIstio, waitUntilIstioReady),
+			Dependencies: flow.NewTaskIDs(waitUntilIstioReady),
 		})
 	)
 

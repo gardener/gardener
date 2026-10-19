@@ -48,6 +48,7 @@ func (b *Botanist) instantiateComponentsExtensions(ctx context.Context) (err err
 	b.Shoot.Components.Extensions.ExternalDNSRecord = b.DefaultExternalDNSRecord()
 	b.Shoot.Components.Extensions.InternalDNSRecord = b.DefaultInternalDNSRecord()
 	b.Shoot.Components.Extensions.IngressDNSRecord = b.DefaultIngressDNSRecord()
+	b.Shoot.Components.Extensions.SelfHostedShootIngressDNSRecord = b.DefaultSelfHostedShootIngressDNSRecord()
 	b.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure()
 	b.Shoot.Components.Extensions.Network = b.DefaultNetwork()
 	b.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig()
@@ -89,7 +90,6 @@ func (b *Botanist) instantiateComponentsControlPlane(ctx context.Context) (err e
 	if err != nil {
 		return err
 	}
-	b.Shoot.Components.ControlPlane.SelfHostedShootIngressDNSRecord = b.DefaultSelfHostedShootIngressDNSRecord()
 	b.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServerSNI()
 	b.Shoot.Components.ControlPlane.KubeAPIServer, err = b.DefaultKubeAPIServer(ctx)

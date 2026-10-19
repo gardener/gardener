@@ -60,7 +60,7 @@ func (b *Botanist) DefaultSelfHostedShootIngressDNSRecord() extensionsdnsrecord.
 // gateway and deploys the ingress DNSRecord pointing to it. It is a no-op if no deployer was instantiated (i.e. for
 // non-self-hosted shoots or shoots without managed external DNS).
 func (b *Botanist) DeploySelfHostedShootIngressDNSRecord(ctx context.Context) error {
-	dnsRecord := b.Shoot.Components.ControlPlane.SelfHostedShootIngressDNSRecord
+	dnsRecord := b.Shoot.Components.Extensions.SelfHostedShootIngressDNSRecord
 	if dnsRecord == nil {
 		return nil
 	}
