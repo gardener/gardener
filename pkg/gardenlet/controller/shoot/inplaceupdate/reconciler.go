@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	needsRequeue, err := r.drainPendingNodes(ctx, log, nodeList)
+	needsRequeue, err := r.drainPendingNodes(ctx, log, poolSecretName)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -243,19 +243,21 @@ func NodeInPlaceUpdateOngoingOrFailed(node *corev1.Node) bool {
 }
 
 // drainPendingNodes drains all cordoned nodes that are awaiting eviction in parallel.
-func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nodeList *corev1.NodeList) (bool, error) {
+func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, poolSecretName string) (bool, error) {
+	nodeList := &corev1.NodeList{}
+	if err := r.ShootClient.List(ctx, nodeList, client.MatchingLabels{
+		v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: poolSecretName,
+	}); err != nil {
+		return false, fmt.Errorf("failed to list nodes for pool %s: %w", poolSecretName, err)
+	}
+
 	var (
 		drainFns     []flow.TaskFn
 		requeueMu    sync.Mutex
 		needsRequeue bool
 	)
 
-	for _, n := range nodeList.Items {
-		node := &corev1.Node{}
-		if err := r.ShootClient.Get(ctx, client.ObjectKeyFromObject(&n), node); err != nil {
-			return false, fmt.Errorf("failed to get node %s: %w", n.Name, err)
-		}
-
+	for _, node := range nodeList.Items {
 		if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] == "" || !node.Spec.Unschedulable {
 			continue
 		}
@@ -263,7 +265,7 @@ func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, nod
 		drainFns = append(drainFns, func(ctx context.Context) error {
 			ctx, cancel := context.WithTimeout(ctx, time.Minute)
 			defer cancel()
-			if err := r.drainAndMarkReady(ctx, log, node); err != nil {
+			if err := r.drainAndMarkReady(ctx, log, &node); err != nil {
 				if ctx.Err() != nil {
 					log.Info("Drain attempt timed out, will retry", "node", node.Name)
 				} else {

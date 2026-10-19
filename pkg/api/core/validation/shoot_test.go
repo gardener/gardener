@@ -2007,6 +2007,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should allow not referencing a SecretBinding and CredentialsBinding", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{
+						Name:             "worker2",
+						Minimum:          1,
+						Maximum:          1,
+						MaxSurge:         &maxSurge,
+						MaxUnavailable:   &maxUnavailable,
+						SystemComponents: systemComponents,
+						Machine: core.Machine{
+							Type: "large",
+							Image: &core.ShootMachineImage{
+								Name:    "image-name",
+								Version: "1.0.0",
+							},
+							Architecture: new("amd64"),
+						},
+					})
 					shoot.Spec.SecretBindingName = nil
 					shoot.Spec.CredentialsBindingName = nil
 
@@ -9854,8 +9870,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should fail because more than one worker pool is marked for control plane components", func() {
 			workers := []core.Worker{
-				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
-				{Name: "worker2", ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker1", Minimum: 1, ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", Minimum: 1, ControlPlane: &core.WorkerControlPlane{}},
 			}
 
 			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(ConsistOf(
@@ -9869,8 +9885,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should fail because a self-hosted shoot with unmanaged infra uses a non-AutoInPlaceUpdate strategy", func() {
 			autoRolling := core.AutoRollingUpdate
 			workers := []core.Worker{
-				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
-				{Name: "worker2", UpdateStrategy: &autoRolling},
+				{Name: "worker1", Minimum: 1, ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", Minimum: 1, UpdateStrategy: &autoRolling},
 			}
 
 			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(ConsistOf(
@@ -9884,8 +9900,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should succeed for a self-hosted shoot with unmanaged infra and AutoInPlaceUpdate strategy", func() {
 			autoInPlace := core.AutoInPlaceUpdate
 			workers := []core.Worker{
-				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
-				{Name: "worker2", UpdateStrategy: &autoInPlace},
+				{Name: "worker1", Minimum: 1, ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", Minimum: 1, UpdateStrategy: &autoInPlace},
 			}
 
 			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(BeEmpty())
@@ -9896,6 +9912,51 @@ var _ = Describe("Shoot Validation Tests", func() {
 			workers := []core.Worker{
 				{Name: "worker1", ControlPlane: &core.WorkerControlPlane{}},
 				{Name: "worker2", UpdateStrategy: &autoRolling},
+			}
+
+			Expect(ValidateWorkers(workers, true, field.NewPath("workers"))).To(BeEmpty())
+		})
+
+		It("should fail for a self-hosted shoot with unmanaged infra when total minimum is less than 2", func() {
+			workers := []core.Worker{
+				{Name: "worker1", Minimum: 1, ControlPlane: &core.WorkerControlPlane{}},
+			}
+
+			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers"),
+					"Detail": ContainSubstring("must have a total minimum of at least 2 worker nodes"),
+				})),
+			))
+		})
+
+		It("should fail for a self-hosted shoot with unmanaged infra when control-plane pool min=1 and additional pool min=0", func() {
+			workers := []core.Worker{
+				{Name: "worker1", Minimum: 1, ControlPlane: &core.WorkerControlPlane{}},
+				{Name: "worker2", Minimum: 0},
+			}
+
+			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("workers"),
+					"Detail": ContainSubstring("must have a total minimum of at least 2 worker nodes"),
+				})),
+			))
+		})
+
+		It("should succeed for a self-hosted shoot with unmanaged infra when control-plane pool has min>1", func() {
+			workers := []core.Worker{
+				{Name: "worker1", Minimum: 2, ControlPlane: &core.WorkerControlPlane{}},
+			}
+
+			Expect(ValidateWorkers(workers, false, field.NewPath("workers"))).To(BeEmpty())
+		})
+
+		It("should not enforce minimum node count for a self-hosted shoot with managed infra", func() {
+			workers := []core.Worker{
+				{Name: "worker1", Minimum: 1, ControlPlane: &core.WorkerControlPlane{}},
 			}
 
 			Expect(ValidateWorkers(workers, true, field.NewPath("workers"))).To(BeEmpty())

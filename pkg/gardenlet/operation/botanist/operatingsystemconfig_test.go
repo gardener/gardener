@@ -25,7 +25,6 @@ import (
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -315,7 +314,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				})
 
 				It("should fail because the secret data generation function fails", func() {
-					DeferCleanup(test.WithVar(&NodeAgentOSCSecretFn, func(context.Context, client.Client, *extensionsv1alpha1.OperatingSystemConfig, string, string, bool) (*corev1.Secret, error) {
+					DeferCleanup(test.WithVar(&NodeAgentOSCSecretFn, func(context.Context, client.Client, *extensionsv1alpha1.OperatingSystemConfig, string, string, bool, bool) (*corev1.Secret, error) {
 						return nil, fakeErr
 					}))
 
@@ -346,7 +345,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					By("Execute DeployManagedResourceForGardenerNodeAgent function")
 					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, false)).To(Succeed())
 
-					expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true)
+					expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true, false)
 					Expect(err).NotTo(HaveOccurred())
 					expectedOSCSecretWorker1Raw, err := runtime.Encode(codec, expectedOSCSecretWorker1)
 					Expect(err).NotTo(HaveOccurred())
@@ -365,7 +364,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					}
 					utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretWorker1))
 
-					expectedOSCSecretWorker2, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker2Name].Original.Object, worker2Key, worker2Name, true)
+					expectedOSCSecretWorker2, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker2Name].Original.Object, worker2Key, worker2Name, true, false)
 					Expect(err).NotTo(HaveOccurred())
 					expectedOSCSecretWorker2Raw, err := runtime.Encode(codec, expectedOSCSecretWorker2)
 					Expect(err).NotTo(HaveOccurred())
@@ -557,7 +556,6 @@ var _ = Describe("operatingsystemconfig", func() {
 						"reconciliation.osc.node-agent.gardener.cloud/serial"),
 						"non-CP pool should not have serial-reconciliation annotation")
 				})
-
 			})
 
 			When("forControlPlanePoolOnly is true", func() {
@@ -601,9 +599,8 @@ var _ = Describe("operatingsystemconfig", func() {
 						By("Execute DeployManagedResourceForGardenerNodeAgent function")
 						Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, true)).To(Succeed())
 
-						expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true)
+						expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true, true)
 						Expect(err).NotTo(HaveOccurred())
-						metav1.SetMetaDataAnnotation(&expectedOSCSecretWorker1.ObjectMeta, v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation, "true")
 
 						versions := schema.GroupVersions([]schema.GroupVersion{corev1.SchemeGroupVersion})
 						codec := kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)

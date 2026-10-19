@@ -28,6 +28,7 @@ func OperatingSystemConfigSecret(
 	secretName string,
 	workerPoolName string,
 	resolveSecretRefs bool,
+	serialOSCReconciliation bool,
 ) (
 	*corev1.Secret,
 	error,
@@ -76,13 +77,18 @@ func OperatingSystemConfigSecret(
 		return nil, fmt.Errorf("failed encoding OperatingSystemConfig: %w", err)
 	}
 
+	annotations := map[string]string{
+		nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: utils.ComputeSHA256Hex(operatingSystemConfigRaw),
+	}
+	if serialOSCReconciliation {
+		annotations[v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation] = "true"
+	}
+
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: metav1.NamespaceSystem,
-			Annotations: map[string]string{
-				nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: utils.ComputeSHA256Hex(operatingSystemConfigRaw),
-			},
+			Name:        secretName,
+			Namespace:   metav1.NamespaceSystem,
+			Annotations: annotations,
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:      v1beta1constants.GardenRoleOperatingSystemConfig,
 				v1beta1constants.LabelWorkerPool: workerPoolName,
