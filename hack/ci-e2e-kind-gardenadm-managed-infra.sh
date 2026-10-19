@@ -19,7 +19,7 @@ trap "
   ( [[ -s $KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER ]] && { export KUBECONFIG=$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER; export_artifacts_for_cluster 'self-hosted-shoot'; export_resource_yamls_for garden; } || true )
   ( [[ -s $KUBECONFIG_VIRTUAL_GARDEN_CLUSTER ]] && { export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots managedseeds controllerinstallations; } || true )
   ( [[ -s $KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER ]] && make seed-down KUBECONFIG=$KUBECONFIG_SELFHOSTEDSHOOT_CLUSTER || true )
-  ( make gardenadm-down SCENARIO=managed-infra )
+  ( make gardenadm-down SCENARIO=connect )
   ( make kind-down )
 " EXIT
 
