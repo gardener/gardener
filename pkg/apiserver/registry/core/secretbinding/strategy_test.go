@@ -12,6 +12,8 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -111,6 +113,43 @@ var _ = Describe("Strategy", func() {
 			expected := "SecretBinding is deprecated in favour of CredentialsBinding. For migration instructions, see: https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md"
 			Expect(warnings).To(HaveLen(1))
 			Expect(warnings[0]).To(Equal(expected))
+		})
+	})
+
+	Describe("#ToSelectableFields", func() {
+		It("should return the secretRef name and namespace", func() {
+			result := secretbindingregistry.ToSelectableFields(secretBinding)
+
+			Expect(result.Get(core.SecretBindingSecretRefName)).To(Equal("my-secret"))
+			Expect(result.Get(core.SecretBindingSecretRefNamespace)).To(Equal("my-namespace"))
+			Expect(result.Get("metadata.name")).To(Equal("profile"))
+			Expect(result.Get("metadata.namespace")).To(Equal("garden"))
+		})
+	})
+
+	Describe("#GetAttrs", func() {
+		It("should return an error when the object is not a SecretBinding", func() {
+			_, _, err := secretbindingregistry.GetAttrs(&core.Seed{})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return the selectable fields", func() {
+			_, fs, err := secretbindingregistry.GetAttrs(secretBinding)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fs.Get(core.SecretBindingSecretRefName)).To(Equal("my-secret"))
+			Expect(fs.Get(core.SecretBindingSecretRefNamespace)).To(Equal("my-namespace"))
+		})
+	})
+
+	Describe("#MatchSecretBinding", func() {
+		It("should return the predicate with the given selectors", func() {
+			ls := labels.SelectorFromSet(labels.Set{"foo": "bar"})
+			fs := fields.OneTermEqualSelector(core.SecretBindingSecretRefName, "my-secret")
+
+			result := secretbindingregistry.MatchSecretBinding(ls, fs)
+
+			Expect(result.Label).To(Equal(ls))
+			Expect(result.Field).To(Equal(fs))
 		})
 	})
 })
