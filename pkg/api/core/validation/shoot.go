@@ -1087,7 +1087,7 @@ func validateDNSCredentialsRef(provider core.DNSProvider, kubernetesVersion stri
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretName"), "must not be set when `credentialsRef` is not set"))
 		}
 	} else {
-		allErrs = append(allErrs, ValidateLocalCredentialsRef(*provider.CredentialsRef, fldPath.Child("credentialsRef"))...)
+		allErrs = append(allErrs, ValidateLocalCredentialsRef(*provider.CredentialsRef, SecretWorkloadIdentityGVKs, fldPath.Child("credentialsRef"))...)
 
 		if provider.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() && provider.CredentialsRef.Kind == "Secret" {
 			if versionutils.ConstraintK8sLess135.CheckVersion(kubernetesVersion) &&
@@ -2894,7 +2894,7 @@ func ValidateWorkerControlPlane(controlPlane *core.WorkerControlPlane, shootName
 		if backup.CredentialsRef == nil {
 			allErrs = append(allErrs, field.Required(fldPath.Child("backup", "credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
 		} else {
-			allErrs = append(allErrs, ValidateCredentialsRef(*backup.CredentialsRef, fldPath.Child("backup", "credentialsRef"))...)
+			allErrs = append(allErrs, ValidateCredentialsRef(*backup.CredentialsRef, SecretWorkloadIdentityGVKs, fldPath.Child("backup", "credentialsRef"))...)
 			if backup.CredentialsRef.Namespace != shootNamespace {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "credentialsRef", "namespace"), "must reference credentials in the same namespace as the Shoot"))
 			}

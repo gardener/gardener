@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -772,10 +773,24 @@ func ValidateValuesTemplates(rawValues []byte, resources []core.NamedResourceRef
 	return allErrs
 }
 
-// ValidateCredentialsRef ensures that a resource of GVK v1.Secret, core.gardener.cloud/v1beta1.InternalSecret, or
-// security.gardener.cloud/v1alpha1.WorkloadIdentity is referred, and its name and namespace are properly set.
-func ValidateCredentialsRef(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
-	return validateCredentialsRef(ref, true, fldPath)
+var (
+	secretGVK           = corev1.SchemeGroupVersion.WithKind("Secret")
+	internalSecretGVK   = gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret")
+	workloadIdentityGVK = securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
+
+	// SecretWorkloadIdentityGVKs is the set of GroupVersionKinds allowed for credentialsRef fields that only support
+	// v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity (i.e. everything except CredentialsBinding).
+	SecretWorkloadIdentityGVKs = sets.New(secretGVK, workloadIdentityGVK)
+	// SecretInternalSecretWorkloadIdentityGVKs is the set of GroupVersionKinds allowed for credentialsRef fields that
+	// additionally support core.gardener.cloud/v1beta1.InternalSecret. Only CredentialsBinding supports InternalSecret.
+	SecretInternalSecretWorkloadIdentityGVKs = sets.New(secretGVK, internalSecretGVK, workloadIdentityGVK)
+)
+
+// ValidateCredentialsRef ensures that the referenced resource is one of the given allowed GroupVersionKinds, and its
+// name and namespace are properly set. Callers must pass the set of GVKs they support (e.g. SecretWorkloadIdentityGVKs
+// or SecretInternalSecretWorkloadIdentityGVKs).
+func ValidateCredentialsRef(ref corev1.ObjectReference, allowedGVKs sets.Set[schema.GroupVersionKind], fldPath *field.Path) field.ErrorList {
+	return validateCredentialsRef(ref, true, allowedGVKs, fldPath)
 }
 
 // ValidateObjectReferenceNameAndNamespace ensures the name in the ObjectReference is set.
@@ -802,9 +817,9 @@ func ValidateObjectReferenceNameAndNamespace(ref corev1.ObjectReference, fldPath
 	return allErrs
 }
 
-// ValidateLocalCredentialsRef ensures that a resource of GVK v1.Secret or security.gardener.cloud/v1alpha1.WorkloadIdentity
-// is referred, and its name is properly set.
-func ValidateLocalCredentialsRef(ref autoscalingv1.CrossVersionObjectReference, fldPath *field.Path) field.ErrorList {
+// ValidateLocalCredentialsRef ensures that the referenced resource is one of the given allowed GroupVersionKinds, and
+// its name is properly set (the namespace must not be set). Callers must pass the set of GVKs they support.
+func ValidateLocalCredentialsRef(ref autoscalingv1.CrossVersionObjectReference, allowedGVKs sets.Set[schema.GroupVersionKind], fldPath *field.Path) field.ErrorList {
 	return validateCredentialsRef(
 		corev1.ObjectReference{
 			APIVersion: ref.APIVersion,
@@ -812,11 +827,12 @@ func ValidateLocalCredentialsRef(ref autoscalingv1.CrossVersionObjectReference, 
 			Name:       ref.Name,
 		},
 		false,
+		allowedGVKs,
 		fldPath,
 	)
 }
 
-func validateCredentialsRef(ref corev1.ObjectReference, requireNamespace bool, fldPath *field.Path) field.ErrorList {
+func validateCredentialsRef(ref corev1.ObjectReference, requireNamespace bool, allowedGVKs sets.Set[schema.GroupVersionKind], fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(ref.APIVersion) == 0 {
@@ -849,16 +865,12 @@ func validateCredentialsRef(ref corev1.ObjectReference, requireNamespace bool, f
 		}
 	}
 
-	var (
-		secret           = corev1.SchemeGroupVersion.WithKind("Secret")
-		internalSecret   = gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret")
-		workloadIdentity = securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
-
-		allowedGVKs = sets.New(secret, internalSecret, workloadIdentity)
-		validGVKs   = []string{secret.String(), internalSecret.String(), workloadIdentity.String()}
-	)
-
 	if !allowedGVKs.Has(ref.GroupVersionKind()) {
+		validGVKs := make([]string, 0, allowedGVKs.Len())
+		for gvk := range allowedGVKs {
+			validGVKs = append(validGVKs, gvk.String())
+		}
+		slices.Sort(validGVKs)
 		allErrs = append(allErrs, field.NotSupported(fldPath, ref.String(), validGVKs))
 	}
 

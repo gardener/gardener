@@ -13,6 +13,8 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
@@ -594,24 +596,48 @@ var _ = Describe("Utils tests", func() {
 	})
 
 	DescribeTable("#ValidateCredentialsRef",
-		func(ref corev1.ObjectReference, matcher gomegatypes.GomegaMatcher) {
-			Expect(ValidateCredentialsRef(ref, field.NewPath("credentialsRef"))).To(matcher)
+		func(ref corev1.ObjectReference, allowedGVKs sets.Set[schema.GroupVersionKind], matcher gomegatypes.GomegaMatcher) {
+			Expect(ValidateCredentialsRef(ref, allowedGVKs, field.NewPath("credentialsRef"))).To(matcher)
 		},
 
 		Entry("should allow v1.Secret",
 			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"},
-			BeEmpty(),
-		),
-		Entry("should allow core.gardener.cloud/v1beta1.InternalSecret",
-			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "InternalSecret", Name: "foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
 			BeEmpty(),
 		),
 		Entry("should allow security.gardener.cloud/v1alpha1.WorkloadIdentity",
 			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
+			BeEmpty(),
+		),
+		Entry("should forbid core.gardener.cloud/v1beta1.InternalSecret when it is not in the allowed set",
+			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "InternalSecret", Name: "foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+		Entry("should allow core.gardener.cloud/v1beta1.InternalSecret when it is in the allowed set",
+			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "InternalSecret", Name: "foo", Namespace: "bar"},
+			SecretInternalSecretWorkloadIdentityGVKs,
+			BeEmpty(),
+		),
+		Entry("should allow v1.Secret when InternalSecret is additionally allowed",
+			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"},
+			SecretInternalSecretWorkloadIdentityGVKs,
+			BeEmpty(),
+		),
+		Entry("should allow security.gardener.cloud/v1alpha1.WorkloadIdentity when InternalSecret is additionally allowed",
+			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"},
+			SecretInternalSecretWorkloadIdentityGVKs,
 			BeEmpty(),
 		),
 		Entry("should forbid v1.Secret with non DNS1123 name",
 			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "Foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
@@ -622,6 +648,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid core.gardener.cloud/v1beta1.InternalSecret with non DNS1123 name",
 			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "InternalSecret", Name: "Foo", Namespace: "bar"},
+			SecretInternalSecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
@@ -632,6 +659,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid security.gardener.cloud/v1alpha1.WorkloadIdentity with non DNS1123 namespace",
 			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar?"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
@@ -642,6 +670,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid credentialsRef with empty apiVersion, kind, name, or namespace",
 			corev1.ObjectReference{APIVersion: "", Kind: "", Name: "", Namespace: ""},
+			SecretWorkloadIdentityGVKs,
 			ContainElements(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -663,6 +692,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid v1.ConfigMap",
 			corev1.ObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -672,6 +702,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid core.gardener.cloud/v1beta1.Quota",
 			corev1.ObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "Quota", Name: "foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -681,6 +712,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid security.gardener.cloud/v1alpha1.FooBar",
 			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "FooBar", Name: "foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -690,6 +722,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid security.gardener.cloud/v2alpha1.WorkloadIdentity",
 			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v2alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -700,21 +733,34 @@ var _ = Describe("Utils tests", func() {
 	)
 
 	DescribeTable("#ValidateLocalCredentialsRef",
-		func(ref autoscalingv1.CrossVersionObjectReference, matcher gomegatypes.GomegaMatcher) {
+		func(ref autoscalingv1.CrossVersionObjectReference, allowedGVKs sets.Set[schema.GroupVersionKind], matcher gomegatypes.GomegaMatcher) {
 			fldPath := field.NewPath("credentialsRef")
-			errList := ValidateLocalCredentialsRef(ref, fldPath)
+			errList := ValidateLocalCredentialsRef(ref, allowedGVKs, fldPath)
 			Expect(errList).To(matcher)
 		},
 		Entry("should allow v1.Secret",
 			autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"},
+			SecretWorkloadIdentityGVKs,
 			BeEmpty(),
 		),
 		Entry("should allow security.gardener.cloud/v1alpha1.WorkloadIdentity",
 			autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo"},
+			SecretWorkloadIdentityGVKs,
 			BeEmpty(),
+		),
+		Entry("should forbid core.gardener.cloud/v1beta1.InternalSecret",
+			autoscalingv1.CrossVersionObjectReference{APIVersion: "core.gardener.cloud/v1beta1", Kind: "InternalSecret", Name: "foo"},
+			SecretWorkloadIdentityGVKs,
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
 		),
 		Entry("should forbid v1.Secret with non DNS1123 name",
 			autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "Foo"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
@@ -726,6 +772,7 @@ var _ = Describe("Utils tests", func() {
 
 		Entry("should forbid credentialsRef with empty apiVersion, kind, or name",
 			autoscalingv1.CrossVersionObjectReference{APIVersion: "", Kind: "", Name: ""},
+			SecretWorkloadIdentityGVKs,
 			ContainElements(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -743,6 +790,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid v1.ConfigMap",
 			autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -752,6 +800,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid security.gardener.cloud/v1alpha1.FooBar",
 			autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "FooBar", Name: "foo"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -761,6 +810,7 @@ var _ = Describe("Utils tests", func() {
 		),
 		Entry("should forbid security.gardener.cloud/v2alpha1.WorkloadIdentity",
 			autoscalingv1.CrossVersionObjectReference{APIVersion: "security.gardener.cloud/v2alpha1", Kind: "WorkloadIdentity", Name: "foo"},
+			SecretWorkloadIdentityGVKs,
 			ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),

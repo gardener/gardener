@@ -241,7 +241,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		if dnsProvider.CredentialsRef == nil {
 			allErrs = append(allErrs, field.Required(dnsProviderPath.Child("credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
 		} else {
-			allErrs = append(allErrs, ValidateCredentialsRef(*dnsProvider.CredentialsRef, dnsProviderPath.Child("credentialsRef"))...)
+			allErrs = append(allErrs, ValidateCredentialsRef(*dnsProvider.CredentialsRef, SecretWorkloadIdentityGVKs, dnsProviderPath.Child("credentialsRef"))...)
 		}
 	}
 
@@ -285,7 +285,7 @@ func validateSeedBackup(seedBackup *core.Backup, seedProviderType string, fldPat
 	if seedBackup.CredentialsRef == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
 	} else {
-		allErrs = append(allErrs, ValidateCredentialsRef(*seedBackup.CredentialsRef, fldPath.Child("credentialsRef"))...)
+		allErrs = append(allErrs, ValidateCredentialsRef(*seedBackup.CredentialsRef, SecretWorkloadIdentityGVKs, fldPath.Child("credentialsRef"))...)
 	}
 
 	return allErrs
@@ -490,7 +490,7 @@ func validateSeedDNSProviderConfig(dnsConfig core.SeedDNSProviderConfig, fldPath
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "cannot be empty"))
 	}
 
-	allErrs = append(allErrs, ValidateCredentialsRef(dnsConfig.CredentialsRef, fldPath.Child("credentialsRef"))...)
+	allErrs = append(allErrs, ValidateCredentialsRef(dnsConfig.CredentialsRef, SecretWorkloadIdentityGVKs, fldPath.Child("credentialsRef"))...)
 
 	return allErrs
 }
