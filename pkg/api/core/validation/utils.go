@@ -868,11 +868,18 @@ func validateCredentialsRef(ref corev1.ObjectReference, requireNamespace bool, a
 	if !allowedGVKs.Has(ref.GroupVersionKind()) {
 		validGVKs := make([]string, 0, allowedGVKs.Len())
 		for gvk := range allowedGVKs {
-			validGVKs = append(validGVKs, gvk.String())
+			validGVKs = append(validGVKs, formatGVK(gvk))
 		}
 		slices.Sort(validGVKs)
-		allErrs = append(allErrs, field.NotSupported(fldPath, ref.String(), validGVKs))
+		allErrs = append(allErrs, field.NotSupported(fldPath, formatGVK(ref.GroupVersionKind()), validGVKs))
 	}
 
 	return allErrs
+}
+
+// formatGVK returns a comma-free, human-readable representation of the given GroupVersionKind in the form
+// "<apiVersion>/<kind>" (e.g. "v1/Secret" or "core.gardener.cloud/v1beta1/InternalSecret"). It is used in validation
+// errors so that the values do not contain commas, which field.NotSupported uses as the separator between values.
+func formatGVK(gvk schema.GroupVersionKind) string {
+	return gvk.GroupVersion().String() + "/" + gvk.Kind
 }
