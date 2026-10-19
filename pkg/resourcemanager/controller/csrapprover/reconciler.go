@@ -247,6 +247,14 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 }
 
 func (r *Reconciler) mustApproveGardenerNodeAgentCSR(ctx context.Context, csr *certificatesv1.CertificateSigningRequest, x509cr *x509.CertificateRequest) (string, decision, error) {
+	if len(x509cr.Subject.Organization) != 1 || !slices.Contains(x509cr.Subject.Organization, v1beta1constants.NodeAgentsGroup) {
+		return "organization in CSR does not match node-agents group", csrDenied, nil
+	}
+
+	if len(x509cr.DNSNames) > 0 || len(x509cr.EmailAddresses) > 0 || len(x509cr.IPAddresses) > 0 || len(x509cr.URIs) > 0 {
+		return "CSR must not contain any SANs", csrDenied, nil
+	}
+
 	var (
 		machineName = strings.TrimPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix)
 		nodeName    = machineName

@@ -289,8 +289,10 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 		BeforeEach(func() {
 			csr.Spec.SignerName = certificatesv1.KubeAPIServerClientSignerName
 			certificateSubject = &pkix.Name{
-				CommonName: userNameNodeAgent,
+				CommonName:   userNameNodeAgent,
+				Organization: []string{"gardener.cloud:node-agents"},
 			}
+			dnsNames, ips = nil, nil
 		})
 
 		Context("gardener-node-agent user", func() {
@@ -329,6 +331,47 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 					})
 				})
 
+				Context("organization is empty", func() {
+					BeforeEach(func() {
+						certificateSubject.Organization = nil
+					})
+
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientNodeAgent, csr, "organization in CSR does not match node-agents group")
+					})
+				})
+
+				Context("organization contains too many items", func() {
+					BeforeEach(func() {
+						certificateSubject.Organization = []string{"gardener.cloud:node-agents", "extra-group"}
+					})
+
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientNodeAgent, csr, "organization in CSR does not match node-agents group")
+					})
+				})
+
+				Context("organization does not contain node-agents group", func() {
+					BeforeEach(func() {
+						certificateSubject.Organization = []string{"gardener.cloud:system:admins"}
+					})
+
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientNodeAgent, csr, "organization in CSR does not match node-agents group")
+					})
+				})
+
+				Context("CSR contains SANs", func() {
+					BeforeEach(func() {
+						ips = []net.IP{net.ParseIP(ip1)}
+						createMachine(machine, false)
+					})
+
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientNodeAgent, csr, "CSR must not contain any SANs")
+					})
+				})
+
 				Context("a certificate for a different machine is requested", func() {
 					var otherMachineName string
 
@@ -337,7 +380,8 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 						machine2.Name = "foo-bar-machine"
 						otherMachineName = "gardener.cloud:node-agent:machine:" + machine2.Name
 						certificateSubject = &pkix.Name{
-							CommonName: otherMachineName,
+							CommonName:   otherMachineName,
+							Organization: []string{"gardener.cloud:node-agents"},
 						}
 						createMachine(machine, false)
 						createMachine(machine2, false)
@@ -400,6 +444,27 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 				Context("no machine", func() {
 					It("should deny the CSR", func() {
 						runDenyNodeAgentCSRTest(testClientBootstrap, csr, "machine %q does not exist", &machineName)
+					})
+				})
+
+				Context("organization does not contain node-agents group", func() {
+					BeforeEach(func() {
+						certificateSubject.Organization = []string{"gardener.cloud:system:admins"}
+					})
+
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientBootstrap, csr, "organization in CSR does not match node-agents group")
+					})
+				})
+
+				Context("CSR contains SANs", func() {
+					BeforeEach(func() {
+						ips = []net.IP{net.ParseIP(ip1)}
+						createMachine(machine, false)
+					})
+
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientBootstrap, csr, "CSR must not contain any SANs")
 					})
 				})
 
