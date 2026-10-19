@@ -13,6 +13,7 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // DeployBootstrapDNSRecord deploys the external DNSRecord pointing to the first control plane machine for bootstrapping
@@ -25,9 +26,9 @@ func (b *GardenadmBotanist) DeployBootstrapDNSRecord(ctx context.Context) error 
 		return err
 	}
 
-	machineAddr, err := PreferredNodeAddress(machine.Status.Addresses)
-	if err != nil {
-		return fmt.Errorf("failed getting preferred address for machine %q: %w", machine.Name, err)
+	machineAddr, found := gardenerutils.PreferredNodeAddress(machine.Status.Addresses)
+	if !found {
+		return fmt.Errorf("no addresses found for machine %q", machine.Name)
 	}
 
 	b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(machineAddr))

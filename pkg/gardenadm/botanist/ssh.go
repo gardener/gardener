@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	rootcertificates "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/gardenadm"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	sshutils "github.com/gardener/gardener/pkg/utils/ssh"
@@ -37,9 +38,9 @@ func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) er
 		return err
 	}
 
-	machineAddr, err := PreferredNodeAddress(machine.Status.Addresses)
-	if err != nil {
-		return fmt.Errorf("failed getting preferred address for machine %q: %w", machine.Name, err)
+	machineAddr, found := gardenerutils.PreferredNodeAddress(machine.Status.Addresses)
+	if !found {
+		return fmt.Errorf("no addresses found for machine %q: %w", machine.Name, err)
 	}
 	sshAddr := net.JoinHostPort(machineAddr, "22")
 
