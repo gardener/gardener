@@ -45,6 +45,8 @@ const (
 	RoleSeed = "seed"
 	// RoleShoot is the label value for the (self-hosted) shoot ingress gateway pods.
 	RoleShoot = "shoot"
+	// SelfHostedShootNamePrefix is the name prefix used for the istio namespace in self-hosted shoot clusters.
+	SelfHostedShootNamePrefix = "self-hosted-shoot-"
 	// IstiodServiceName is the name of the istiod service.
 	IstiodServiceName = "istiod"
 	// IstiodPort is the port of the istiod service.

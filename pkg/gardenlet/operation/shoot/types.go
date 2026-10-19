@@ -171,17 +171,18 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
-	ContainerRuntime        containerruntime.Interface
-	ControlPlane            controlplane.Interface
-	ExternalDNSRecord       dnsrecord.Interface
-	InternalDNSRecord       dnsrecord.Interface
-	IngressDNSRecord        dnsrecord.Interface
-	Extension               extension.Interface
-	Infrastructure          infrastructure.Interface
-	Network                 network.Interface
-	OperatingSystemConfig   operatingsystemconfig.Interface
-	SelfHostedShootExposure *selfhostedshootexposure.SelfHostedShootExposure
-	Worker                  worker.Interface
+	ContainerRuntime                containerruntime.Interface
+	ControlPlane                    controlplane.Interface
+	ExternalDNSRecord               dnsrecord.Interface
+	InternalDNSRecord               dnsrecord.Interface
+	IngressDNSRecord                dnsrecord.Interface
+	SelfHostedShootIngressDNSRecord dnsrecord.Interface
+	Extension                       extension.Interface
+	Infrastructure                  infrastructure.Interface
+	Network                         network.Interface
+	OperatingSystemConfig           operatingsystemconfig.Interface
+	SelfHostedShootExposure         *selfhostedshootexposure.SelfHostedShootExposure
+	Worker                          worker.Interface
 }
 
 // SystemComponents contains references to system components.

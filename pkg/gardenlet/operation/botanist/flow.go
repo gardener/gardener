@@ -216,13 +216,19 @@ func (b *Botanist) ReconcileIstioTaskGroup(skipReadiness bool) flow.TaskGroup {
 			Name: "Deploying Istio",
 			Fn:   b.DeployIstio,
 		})
-		_ = g.Add(flow.Task{
+		waitUntilIstioReady = g.Add(flow.Task{
 			Name: "Waiting until Istio is ready",
 			Fn: func(ctx context.Context) error {
 				return b.Shoot.Components.ControlPlane.Istio.Wait(ctx)
 			},
 			SkipIf:       skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployIstio),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying self-hosted ingress DNS record",
+			Fn:           b.DeploySelfHostedShootIngressDNSRecord,
+			SkipIf:       b.Shoot.HibernationEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilIstioReady),
 		})
 	)
 
