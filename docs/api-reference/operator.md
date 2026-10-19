@@ -2508,7 +2508,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Domain overrides the default ingress domain and optionally the DNS provider for the gardener-dashboard.<br />If not set, the dashboard is exposed on each configured runtime ingress domain via the<br />"dashboard.<ingress-domain>" subdomain pattern.</p>
+<p>Domain overrides the default ingress domain and optionally the DNS provider for the gardener-dashboard.<br />If not set, the dashboard is exposed on each configured runtime ingress domain via the<br />"dashboard.<ingress-domain>" subdomain pattern.<br />If .spec.dns is configured, a dedicated DNSRecord is created for this domain, even if it is a subdomain of a<br />runtime ingress domain.</p>
 </td>
 </tr>
 <tr>
@@ -2582,7 +2582,7 @@ GardenerDiscoveryServerConfig contains configuration settings for the gardener-d
 </td>
 <td>
 <em>(Optional)</em>
-<p>Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.<br />This field is optional, but once the gardener-discovery-server is enabled, its domain cannot be changed anymore.<br />Defaults to "discovery.<first-runtime-ingress-domain>".</p>
+<p>Domain overrides the default ingress domain and optionally the DNS provider for the gardener-discovery-server.<br />This field is optional, but once the gardener-discovery-server is enabled, its domain cannot be changed anymore.<br />Defaults to "discovery.<first-runtime-ingress-domain>".<br />If .spec.dns is configured, a dedicated DNSRecord is created for this domain, even if it is a subdomain of a<br />runtime ingress domain.</p>
 </td>
 </tr>
 <tr>

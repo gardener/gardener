@@ -665,7 +665,7 @@ var _ = Describe("helper", func() {
 				}
 			})
 
-			It("should only return the ingress wildcard domains but not the discovery server domain", func() {
+			It("should return the ingress wildcard domains and a dedicated discovery server domain", func() {
 				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.ingress.local.gardener.cloud",
@@ -674,6 +674,10 @@ var _ = Describe("helper", func() {
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.secondary.local.gardener.cloud",
 						Provider: new("secondary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name,
+						Provider: new("primary"),
 					},
 				))
 			})
@@ -717,7 +721,7 @@ var _ = Describe("helper", func() {
 				}
 			})
 
-			It("should only return the ingress wildcard domains but not the dashboard domain", func() {
+			It("should return the ingress wildcard domains and a dedicated dashboard domain", func() {
 				Expect(GetAllIngressDomains(garden)).To(ConsistOf(
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.ingress.local.gardener.cloud",
@@ -726,6 +730,10 @@ var _ = Describe("helper", func() {
 					operatorv1alpha1.DNSDomain{
 						Name:     "*.secondary.local.gardener.cloud",
 						Provider: new("secondary"),
+					},
+					operatorv1alpha1.DNSDomain{
+						Name:     "dashboard." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name,
+						Provider: new("primary"),
 					},
 				))
 			})
