@@ -25,6 +25,7 @@ gardenadm bootstrap --config-dir /path/to/manifests
   -h, --help                           help for bootstrap
   -k, --kubeconfig string              Path to the kubeconfig file pointing to the bootstrap cluster
       --kubeconfig-output string       Path where the kubeconfig file for the shoot cluster should be written to. If not set, the kubeconfig is not written to disk. Set to '-' to write to stdout.
+      --skip-bastion-deletion          Keep the bastion host after the control plane has been bootstrapped successfully. Delete it while the bootstrap cluster still exists, otherwise its infrastructure resources are left behind.
 ```
 
 ### Options inherited from parent commands

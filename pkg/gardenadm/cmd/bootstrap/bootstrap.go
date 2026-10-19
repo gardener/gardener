@@ -205,7 +205,6 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			Dependencies: flow.NewTaskIDs(reconcileInfrastructure),
 		})
-		// TODO(timebertt): destroy Bastion after successfully bootstrapping the control plane
 
 		connectToMachine = g.Add(flow.Task{
 			Name:         "Connecting to the first control plane machine",
@@ -264,7 +263,27 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(bootstrapControlPlane),
 		})
 
-		_ = fetchKubeconfig
+		closeSSHConnection = g.Add(flow.Task{
+			Name: "Closing SSH connection to the first control plane machine",
+			Fn: func(_ context.Context) error {
+				// close SSH connection on a best-effort basis
+				if err := b.SSHConnection().Close(); err != nil {
+					b.Logger.Error(err, "Failed closing SSH connection to the first control plane machine")
+				}
+				return nil
+			},
+			Dependencies: flow.NewTaskIDs(fetchKubeconfig),
+		})
+
+		// The Bastion is only needed for connecting to the first control plane machine. Destroy it once the control plane
+		// has been bootstrapped successfully, so that it doesn't keep running (and incurring costs) after the bootstrap
+		// cluster has been thrown away. If the flow fails earlier, the Bastion is kept for re-running the flow.
+		_ = g.Add(flow.Task{
+			Name:         "Destroying bastion host",
+			Fn:           component.OpDestroyAndWait(b.Shoot.Components.Bastion).Destroy,
+			SkipIf:       opts.SkipBastionDeletion,
+			Dependencies: flow.NewTaskIDs(closeSSHConnection),
+		})
 
 		// In contrast to the usual Shoot migrate flow, we don't delete the shoot control plane namespace at the end.
 		// The bootstrap cluster is designed to be temporary and thrown away after successfully executing
@@ -281,9 +300,7 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	fmt.Fprintf(opts.Out, `
-Warning: this command is work in progress.
-
-For now, you can connect to the self-hosted Shoot cluster control-plane by
+You can connect to the self-hosted Shoot cluster control-plane by
 fetching the kubeconfig from the secret "%[1]s/kubeconfig"
 on the bootstrap cluster:
 
@@ -291,6 +308,19 @@ on the bootstrap cluster:
   export KUBECONFIG=$PWD/%[1]s-kubeconfig.yaml
   kubectl get nodes
 `, b.Shoot.GetInfo().Status.TechnicalID)
+
+	if opts.SkipBastionDeletion {
+		fmt.Fprintf(opts.Out, `
+Warning: the bastion host has been kept because --skip-bastion-deletion is set.
+
+The Bastion "%[1]s/%[2]s" only exists on the bootstrap cluster.
+Delete it there before throwing away the bootstrap cluster, otherwise its
+infrastructure resources are left behind:
+
+  kubectl annotate bastion -n %[1]s %[2]s confirmation.gardener.cloud/deletion=true
+  kubectl delete bastion -n %[1]s %[2]s
+`, b.Shoot.GetInfo().Status.TechnicalID, b.Shoot.Components.Bastion.Values.Name)
+	}
 	return nil
 }
 
