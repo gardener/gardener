@@ -30,18 +30,16 @@ func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 		BucketName:     string(b.Shoot.GetInfo().Status.UID),
 	}
 
-	seedInfo := b.Seed.GetInfo()
-	if !b.Shoot.IsSelfHosted() {
-		values.BucketName = string(seedInfo.UID)
-	}
-
 	if b.Shoot.IsSelfHosted() {
 		values.SeedName = nil
 		values.Shoot = b.Shoot.GetInfo()
-	}
+	} else {
+		seedInfo := b.Seed.GetInfo()
+		values.BucketName = string(seedInfo.UID)
 
-	if seedInfo.Spec.Backup != nil && seedInfo.Spec.Backup.BucketName != nil {
-		values.BucketName = *seedInfo.Spec.Backup.BucketName
+		if seedInfo.Spec.Backup != nil && seedInfo.Spec.Backup.BucketName != nil {
+			values.BucketName = *seedInfo.Spec.Backup.BucketName
+		}
 	}
 
 	return corebackupentry.New(
