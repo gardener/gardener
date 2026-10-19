@@ -170,7 +170,13 @@ func (v *vpnSeedServer) GetValues() Values {
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
-	envoyConfig, err := envoy.GetEnvoyConfig()
+	// Restrict the CONNECT proxy to the shoot's own node, pod, and service networks.
+	allowedDestinationCIDRs := append(append(append([]net.IPNet{},
+		v.values.Network.NodeCIDRs...),
+		v.values.Network.PodCIDRs...),
+		v.values.Network.ServiceCIDRs...)
+
+	envoyConfig, err := envoy.GetEnvoyConfig(allowedDestinationCIDRs)
 	if err != nil {
 		return err
 	}
