@@ -352,14 +352,9 @@ func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 	map[string][]byte,
 	error,
 ) {
-	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, oscDataOriginal.GardenerNodeAgentSecretName, worker.Name, true)
+	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, oscDataOriginal.GardenerNodeAgentSecretName, worker.Name, true, worker.ControlPlane != nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
-	}
-
-	if worker.ControlPlane != nil {
-		metav1.SetMetaDataAnnotation(&oscSecret.ObjectMeta,
-			v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation, "true")
 	}
 
 	resources, err := managedresources.

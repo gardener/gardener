@@ -102,7 +102,7 @@ var _ = Describe("Secrets", func() {
 		})
 
 		It("should generate the expected secret", func() {
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -147,13 +147,19 @@ status:
 		})
 
 		It("should preserve secretRef when resolveSecretRefs is false", func() {
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, false)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, false, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			oscYAML := string(secret.Data["osc.yaml"])
 			Expect(oscYAML).To(ContainSubstring("secretRef:"))
 			Expect(oscYAML).NotTo(ContainSubstring("inline:"))
 			Expect(secret.Annotations).To(HaveKeyWithValue("checksum/data-script", utils.ComputeSHA256Hex(secret.Data["osc.yaml"])))
+		})
+
+		It("should set the serial-reconciliation annotation when serialOSCReconciliation is true", func() {
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, false, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Annotations).To(HaveKeyWithValue("reconciliation.osc.node-agent.gardener.cloud/serial", "true"))
 		})
 
 		It("should return an error because a referenced secret cannot be found", func() {
@@ -167,7 +173,7 @@ status:
 				},
 			})
 
-			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true)
+			secret, err := OperatingSystemConfigSecret(ctx, fakeClient, osc, secretName, workerPoolName, true, false)
 			Expect(err).To(MatchError(ContainSubstring(`cannot resolve secret ref from osc: secrets "non-existing" not found`)))
 			Expect(secret).To(BeNil())
 		})
