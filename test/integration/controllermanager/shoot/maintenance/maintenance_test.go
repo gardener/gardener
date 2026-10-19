@@ -1027,6 +1027,12 @@ var _ = DescribeTableSubtree("Shoot Maintenance controller tests", func(isCapabi
 					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
 					Machine:      shoot.Spec.Provider.Workers[0].Machine,
 				},
+				{
+					Name:    "worker-2",
+					Minimum: 1,
+					Maximum: 1,
+					Machine: shoot.Spec.Provider.Workers[0].Machine,
+				},
 			}
 			selfHostedShoot.Spec.Provider.Workers[0].Machine.Image = testMachineImage.DeepCopy()
 			selfHostedShoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = new(true)

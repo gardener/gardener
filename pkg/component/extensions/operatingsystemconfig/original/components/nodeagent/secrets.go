@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -26,9 +27,8 @@ func OperatingSystemConfigSecret(
 	seedClient client.Client,
 	osc *extensionsv1alpha1.OperatingSystemConfig,
 	secretName string,
-	workerPoolName string,
+	worker gardencorev1beta1.Worker,
 	resolveSecretRefs bool,
-	serialOSCReconciliation bool,
 ) (
 	*corev1.Secret,
 	error,
@@ -80,7 +80,7 @@ func OperatingSystemConfigSecret(
 	annotations := map[string]string{
 		nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: utils.ComputeSHA256Hex(operatingSystemConfigRaw),
 	}
-	if serialOSCReconciliation {
+	if worker.ControlPlane != nil {
 		annotations[v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation] = "true"
 	}
 
@@ -91,7 +91,7 @@ func OperatingSystemConfigSecret(
 			Annotations: annotations,
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:      v1beta1constants.GardenRoleOperatingSystemConfig,
-				v1beta1constants.LabelWorkerPool: workerPoolName,
+				v1beta1constants.LabelWorkerPool: worker.Name,
 			},
 		},
 		Data: map[string][]byte{nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig: operatingSystemConfigRaw},

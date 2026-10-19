@@ -314,7 +314,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				})
 
 				It("should fail because the secret data generation function fails", func() {
-					DeferCleanup(test.WithVar(&NodeAgentOSCSecretFn, func(context.Context, client.Client, *extensionsv1alpha1.OperatingSystemConfig, string, string, bool, bool) (*corev1.Secret, error) {
+					DeferCleanup(test.WithVar(&NodeAgentOSCSecretFn, func(context.Context, client.Client, *extensionsv1alpha1.OperatingSystemConfig, string, gardencorev1beta1.Worker, bool) (*corev1.Secret, error) {
 						return nil, fakeErr
 					}))
 
@@ -345,7 +345,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					By("Execute DeployManagedResourceForGardenerNodeAgent function")
 					Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, false)).To(Succeed())
 
-					expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true, false)
+					expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, gardencorev1beta1.Worker{Name: worker1Name}, true)
 					Expect(err).NotTo(HaveOccurred())
 					expectedOSCSecretWorker1Raw, err := runtime.Encode(codec, expectedOSCSecretWorker1)
 					Expect(err).NotTo(HaveOccurred())
@@ -364,7 +364,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					}
 					utilruntime.Must(kubernetesutils.MakeUnique(expectedMRSecretWorker1))
 
-					expectedOSCSecretWorker2, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker2Name].Original.Object, worker2Key, worker2Name, true, false)
+					expectedOSCSecretWorker2, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker2Name].Original.Object, worker2Key, gardencorev1beta1.Worker{Name: worker2Name}, true)
 					Expect(err).NotTo(HaveOccurred())
 					expectedOSCSecretWorker2Raw, err := runtime.Encode(codec, expectedOSCSecretWorker2)
 					Expect(err).NotTo(HaveOccurred())
@@ -599,7 +599,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						By("Execute DeployManagedResourceForGardenerNodeAgent function")
 						Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, true)).To(Succeed())
 
-						expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, worker1Name, true, true)
+						expectedOSCSecretWorker1, err := NodeAgentOSCSecretFn(ctx, fakeClient, workerNameToOperatingSystemConfigMaps[worker1Name].Original.Object, worker1Key, gardencorev1beta1.Worker{Name: worker1Name, ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}, true)
 						Expect(err).NotTo(HaveOccurred())
 
 						versions := schema.GroupVersions([]schema.GroupVersion{corev1.SchemeGroupVersion})

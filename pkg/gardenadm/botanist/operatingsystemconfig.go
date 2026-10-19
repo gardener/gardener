@@ -51,13 +51,17 @@ func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx co
 }
 
 func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, secretName, poolName string) error {
-	shoot := b.Shoot.GetInfo()
-	isControlPlane := poolName != "" && shoot != nil && slices.ContainsFunc(shoot.Spec.Provider.Workers, func(w gardencorev1beta1.Worker) bool {
-		return w.Name == poolName && w.ControlPlane != nil
-	})
+	worker := gardencorev1beta1.Worker{Name: poolName}
+	if shoot := b.Shoot.GetInfo(); poolName != "" && shoot != nil {
+		if i := slices.IndexFunc(shoot.Spec.Provider.Workers, func(w gardencorev1beta1.Worker) bool {
+			return w.Name == poolName
+		}); i >= 0 {
+			worker = shoot.Spec.Provider.Workers[i]
+		}
+	}
 
 	var err error
-	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, poolName, false, isControlPlane)
+	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, worker, false)
 	if err != nil {
 		return fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", poolName, err)
 	}
