@@ -59,7 +59,7 @@ const internalVersionErrorMsg = "must not use apiVersion 'internal'"
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameShootValidator, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -92,10 +92,10 @@ var (
 )
 
 // New creates a new ValidateShoot admission plugin.
-func New() (*ValidateShoot, error) {
+func New() *ValidateShoot {
 	return &ValidateShoot{
 		Handler: admission.NewHandler(admission.Create, admission.Update, admission.Delete),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

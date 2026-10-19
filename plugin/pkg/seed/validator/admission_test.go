@@ -76,10 +76,7 @@ var _ = Describe("validator", func() {
 			seed = seedBase
 			shoot = *shootBase.DeepCopy()
 
-			var err error
-			admissionHandler, err = New()
-			Expect(err).ToNot(HaveOccurred())
-
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			securityInformerFactory = gardensecurityinformers.NewSharedInformerFactory(nil, 0)
@@ -409,8 +406,7 @@ var _ = Describe("validator", func() {
 
 	Describe("#New", func() {
 		It("should handle only CREATE, UPDATE, and DELETE operations", func() {
-			dr, err := New()
-			Expect(err).ToNot(HaveOccurred())
+			dr := New()
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).To(BeFalse())
@@ -420,7 +416,7 @@ var _ = Describe("validator", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if no ShootLister is set", func() {
-			dr, _ := New()
+			dr := New()
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
@@ -430,7 +426,7 @@ var _ = Describe("validator", func() {
 		})
 
 		It("should return error if no WorkloadIdentityLister is set", func() {
-			dr, _ := New()
+			dr := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
@@ -441,7 +437,7 @@ var _ = Describe("validator", func() {
 		})
 
 		It("should not return error if all listers are set", func() {
-			dr, _ := New()
+			dr := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
@@ -452,7 +448,7 @@ var _ = Describe("validator", func() {
 		})
 
 		It("should return error if no SecretLister is set", func() {
-			dr, _ := New()
+			dr := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 

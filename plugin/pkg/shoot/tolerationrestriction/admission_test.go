@@ -36,7 +36,7 @@ var _ = Describe("toleration restriction", func() {
 		BeforeEach(func() {
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
-			admissionHandler, _ = New(&shoottolerationrestriction.Configuration{})
+			admissionHandler = New(&shoottolerationrestriction.Configuration{})
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
@@ -78,7 +78,7 @@ var _ = Describe("toleration restriction", func() {
 					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Defaults: []gardencorev1beta1.Toleration{{Key: "bar"}}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
-					admissionHandler, _ = New(config)
+					admissionHandler = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
 					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
@@ -93,7 +93,7 @@ var _ = Describe("toleration restriction", func() {
 					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Defaults: []gardencorev1beta1.Toleration{{Key: "bar"}, {Key: "baz", Value: new("foo")}}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
-					admissionHandler, _ = New(config)
+					admissionHandler = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
 					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
@@ -110,7 +110,7 @@ var _ = Describe("toleration restriction", func() {
 					project.Spec.Tolerations = &gardencorev1beta1.ProjectTolerations{Whitelist: []gardencorev1beta1.Toleration{{Key: "bar"}}}
 					shoot.Spec.Tolerations = []core.Toleration{{Key: "baz"}}
 
-					admissionHandler, _ = New(config)
+					admissionHandler = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
 					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
@@ -176,7 +176,7 @@ var _ = Describe("toleration restriction", func() {
 						{Key: "bar", Value: new("baz")},
 					}}
 
-					admissionHandler, _ = New(config)
+					admissionHandler = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
 					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
@@ -198,7 +198,7 @@ var _ = Describe("toleration restriction", func() {
 						{Key: "bar", Value: new("baz")},
 					}}
 
-					admissionHandler, _ = New(config)
+					admissionHandler = New(config)
 					admissionHandler.AssignReadyFunc(func() bool { return true })
 					admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
@@ -293,9 +293,8 @@ var _ = Describe("toleration restriction", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE or UPDATE operations", func() {
-			dr, err := New(&shoottolerationrestriction.Configuration{})
+			dr := New(&shoottolerationrestriction.Configuration{})
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).NotTo(BeTrue())
@@ -305,14 +304,14 @@ var _ = Describe("toleration restriction", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if no ProjectLister is set", func() {
-			dr, _ := New(&shoottolerationrestriction.Configuration{})
+			dr := New(&shoottolerationrestriction.Configuration{})
 
 			err := dr.ValidateInitialization()
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not return error if ProjectLister is set", func() {
-			dr, _ := New(&shoottolerationrestriction.Configuration{})
+			dr := New(&shoottolerationrestriction.Configuration{})
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()

@@ -41,8 +41,7 @@ var _ = Describe("mutator", func() {
 
 	Describe("#New", func() {
 		It("should handle CREATE and UPDATE operations", func() {
-			admissionHandler, err := New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler := New()
 			Expect(admissionHandler.Handles(admission.Create)).To(BeTrue())
 			Expect(admissionHandler.Handles(admission.Update)).To(BeTrue())
 			Expect(admissionHandler.Handles(admission.Connect)).To(BeFalse())
@@ -52,16 +51,14 @@ var _ = Describe("mutator", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if a lister is missing", func() {
-			admissionHandler, err := New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler := New()
 
-			err = admissionHandler.ValidateInitialization()
+			err := admissionHandler.ValidateInitialization()
 			Expect(err).To(MatchError("missing cloudProfile lister"))
 		})
 
 		It("should not return error if all listers are set", func() {
-			admissionHandler, err := New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler := New()
 			coreInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 
@@ -159,9 +156,7 @@ var _ = Describe("mutator", func() {
 				},
 			}
 
-			var err error
-			admissionHandler, err = New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)

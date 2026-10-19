@@ -35,7 +35,7 @@ var _ = Describe("exposureclass", func() {
 		BeforeEach(func() {
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			admissionHandler.SetCoreInformerFactory(gardenCoreInformerFactory)
 
