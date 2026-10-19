@@ -17,8 +17,7 @@ import (
 const TaskGroupCleanUpStaleRestoredResources flow.TaskID = "TaskGroupCleanUpStaleRestoredResources"
 
 // CleanUpStaleRestoredResourcesTaskGroup returns the flow.TaskGroup that cleans up the stale resources restored from the
-// ETCD snapshot during `gardenadm restore`: it deletes the stale gardener-node-agent OperatingSystemConfig Secret and
-// deletes the prior control plane Node together with the Pods that were running on it.
+// ETCD snapshot during `gardenadm restore`.
 //
 // clientSet is a pointer because the control plane client set is not yet initialized while the graph is being built; the
 // tasks dereference it only from within their Fn (i.e. at flow run time), after the connection has been established.
@@ -51,6 +50,12 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 		Name: "Force deleting Pods running on the prior control plane Node",
 		Fn: func(ctx context.Context) error {
 			return b.ForceDeletePriorNodePods(ctx, (*clientSet).Client(), priorNodeName)
+		},
+	})
+	_ = g.Add(flow.Task{
+		Name: "Deleting stale etcd member Leases",
+		Fn: func(ctx context.Context) error {
+			return b.DeleteStaleEtcdMemberLeases(ctx, (*clientSet).Client())
 		},
 	})
 
