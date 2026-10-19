@@ -26,6 +26,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -269,10 +270,10 @@ func (b *Botanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Conte
 
 // DeployOperatingSystemConfigWithStaticPods deploys and waits for the OperatingSystemConfig containing the files for the control
 // plane components running as static pods.
-func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) (*operatingsystemconfig.Data, string, error) {
+func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) (*operatingsystemconfig.Data, *gardencorev1beta1.Worker, error) {
 	pods, err := b.staticControlPlanePods(ctx, useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
+		return nil, nil, fmt.Errorf("failed computing files for static control plane pods: %w", err)
 	}
 
 	appendAdminKubeconfigFunc := b.appendStaticAdminKubeconfigToFiles
@@ -282,12 +283,12 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 
 	files, err := appendAdminKubeconfigFunc(pods.allFiles())
 	if err != nil {
-		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
+		return nil, nil, fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
 	files = b.appendEtcdCAsToFiles(files)
 
 	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
-		return nil, "", fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
+		return nil, nil, fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
 	}
 
 	// Wait for the OperatingSystemConfig (without the additional static pod files) to be reconciled before patching
@@ -298,18 +299,18 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 	// running — the GNA applies the OSC locally, so no external controller can clear the annotation.
 	if !useBootstrapEtcd {
 		if err := b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx); err != nil {
-			return nil, "", fmt.Errorf("failed waiting for OperatingSystemConfig to be ready before patching static pod files: %w", err)
+			return nil, nil, fmt.Errorf("failed waiting for OperatingSystemConfig to be ready before patching static pod files: %w", err)
 		}
 	}
 
 	controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo().Spec.Provider.Workers)
 	if controlPlaneWorkerPool == nil {
-		return nil, "", fmt.Errorf("failed fetching the control plane worker pool for the shoot")
+		return nil, nil, fmt.Errorf("failed fetching the control plane worker pool for the shoot")
 	}
 
 	oscData, ok := b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerPoolNameToOperatingSystemConfigsMap()[controlPlaneWorkerPool.Name]
 	if !ok {
-		return nil, "", fmt.Errorf("failed fetching the generated OperatingSystemConfig data for the control plane worker pool %q", controlPlaneWorkerPool.Name)
+		return nil, nil, fmt.Errorf("failed fetching the generated OperatingSystemConfig data for the control plane worker pool %q", controlPlaneWorkerPool.Name)
 	}
 	osc := oscData.Original.Object
 
@@ -318,16 +319,16 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 	metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 	metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().Format(time.RFC3339Nano))
 	if err := b.SeedClientSet.Client().Patch(ctx, osc, patch); err != nil {
-		return nil, "", fmt.Errorf("failed patching OperatingSystemConfig with additional files for static control plane pods: %w", err)
+		return nil, nil, fmt.Errorf("failed patching OperatingSystemConfig with additional files for static control plane pods: %w", err)
 	}
 
 	if !useBootstrapEtcd {
 		if err := b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx); err != nil {
-			return nil, "", fmt.Errorf("failed waiting for OperatingSystemConfig to be ready: %w", err)
+			return nil, nil, fmt.Errorf("failed waiting for OperatingSystemConfig to be ready: %w", err)
 		}
 	}
 
-	return &oscData.Original, controlPlaneWorkerPool.Name, nil
+	return &oscData.Original, controlPlaneWorkerPool, nil
 }
 
 func (b *Botanist) appendStaticAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
