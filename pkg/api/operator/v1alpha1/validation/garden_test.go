@@ -3115,8 +3115,8 @@ var _ = Describe("Validation Tests", func() {
 						Main: &operatorv1alpha1.ETCDMain{
 							Backup: &operatorv1alpha1.Backup{
 								Provider:   "foo-provider",
-								BucketName: ptr.To("foo-bucket"),
-								Region:     ptr.To("foo-region"),
+								BucketName: new("foo-bucket"),
+								Region:     new("foo-region"),
 							},
 						},
 					}
@@ -3124,8 +3124,8 @@ var _ = Describe("Validation Tests", func() {
 						Main: &operatorv1alpha1.ETCDMain{
 							Backup: &operatorv1alpha1.Backup{
 								Provider:   "bar-provider",
-								BucketName: ptr.To("bar-bucket"),
-								Region:     ptr.To("bar-region"),
+								BucketName: new("bar-bucket"),
+								Region:     new("bar-region"),
 							},
 						},
 					}
@@ -3151,8 +3151,8 @@ var _ = Describe("Validation Tests", func() {
 						Main: &operatorv1alpha1.ETCDMain{
 							Backup: &operatorv1alpha1.Backup{
 								Provider:   "foo-provider",
-								BucketName: ptr.To("foo-bucket"),
-								Region:     ptr.To("foo-region"),
+								BucketName: new("foo-bucket"),
+								Region:     new("foo-region"),
 							},
 						},
 					}
@@ -3160,8 +3160,8 @@ var _ = Describe("Validation Tests", func() {
 						Main: &operatorv1alpha1.ETCDMain{
 							Backup: &operatorv1alpha1.Backup{
 								Provider:   "bar-provider",
-								BucketName: ptr.To("bar-bucket"),
-								Region:     ptr.To("bar-region"),
+								BucketName: new("bar-bucket"),
+								Region:     new("bar-region"),
 							},
 						},
 					}
