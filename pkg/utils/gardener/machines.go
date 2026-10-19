@@ -29,6 +29,15 @@ const (
 	MachineDeploymentKind = "MachineDeployment"
 	// NodeLeasePrefix describes the Prefix of the lease that this node is corresponding to
 	NodeLeasePrefix = "gardener-node-agent-"
+	// AnnotationKeySuspendInstanceDeletion is the key of the annotation on machines describing that instance deletion
+	// should be suspended after draining a terminating node to ensure it can be removed from the ETCD cluster (used for
+	// control plane worker pools for self-hosted shoots).
+	// TODO(rfranzke): Use machinev1alpha1.AnnotationKeySuspendInstanceDeletionPrefix constant once MCM got revendored.
+	AnnotationKeySuspendInstanceDeletion = "node.machine.sapcloud.io.suspend-instance-deletion" + "/remove-etcd-member"
+	// AnnotationValueSuspendInstanceDeletion is the value of the annotation on machines describing that instance
+	// deletion should be suspended after draining a terminating node to ensure it can be removed from the ETCD cluster
+	// (used for control plane worker pools for self-hosted shoots).
+	AnnotationValueSuspendInstanceDeletion = "gardenlet"
 )
 
 // BuildOwnerToMachinesMap returns a map that associates `MachineSet` names to the given `machines`.
