@@ -1463,6 +1463,42 @@ var _ = Describe("ApplyExpirableVersionOverrides", func() {
 				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &evenLater},
 			}},
 		),
+		Entry("lifecycle/legacy: drops parent stages starting after the overridden expiration date",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &later},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &evenLater},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+		),
+		Entry("lifecycle/legacy: drops parent stages starting at the overridden expiration date",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &later},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &evenLater},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &later},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &later},
+			}},
+		),
+		Entry("lifecycle/legacy: drops multiple parent stages after the overridden expiration date",
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationSupported, StartTime: &later},
+				{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: &evenLater},
+			}},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &now},
+			gardencorev1beta1.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationPreview},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: &now},
+			}},
+		),
 
 		// legacy base / lifecycle override: the override lifecycle is authoritative and replaces the legacy classification fields.
 		Entry("legacy/lifecycle: replaces a bare version with the override lifecycle",

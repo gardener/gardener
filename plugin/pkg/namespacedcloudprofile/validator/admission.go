@@ -200,7 +200,7 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 		return err
 	}
 	if err := validationContext.validateMergeResultForReferencingShoots(mergedStatus); err != nil {
-		return err
+		return admission.NewForbidden(a, err)
 	}
 
 	return nil

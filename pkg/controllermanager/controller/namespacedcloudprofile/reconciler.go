@@ -214,7 +214,7 @@ func getExpirationStage(v *gardencorev1beta1.ExpirableVersion) *gardencorev1beta
 // ApplyExpirableVersionOverrides applies a NamespacedCloudProfile override to a CloudProfile ExpirableVersion.
 // The behavior depends on whether the base and override use the legacy- or lifecycle classification:
 //   - legacy / legacy: preserve existing behavior and only add or replace the expiration date.
-//   - lifecycle / legacy: add or replace only the expired lifecycle stage and preserve all other stages.
+//   - lifecycle / legacy: replace the expired stage and drop stages starting at or after the override expiration date.
 //   - legacy / lifecycle: the override lifecycle is authoritative and replaces the legacy classification fields
 //   - lifecycle / lifecycle: the override lifecycle is authoritative and replaces the base lifecycle
 func ApplyExpirableVersionOverrides(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
@@ -238,15 +238,18 @@ func ApplyExpirableVersionOverrides(base, override gardencorev1beta1.ExpirableVe
 		return base
 	}
 
-	base.Lifecycle = slices.Clone(base.Lifecycle)
-	if baseExpiryStage := getExpirationStage(&base); baseExpiryStage != nil {
-		baseExpiryStage.StartTime = override.ExpirationDate.DeepCopy()
-	} else {
-		base.Lifecycle = append(base.Lifecycle, gardencorev1beta1.LifecycleStage{
-			Classification: gardencorev1beta1.ClassificationExpired,
-			StartTime:      override.ExpirationDate.DeepCopy(),
-		})
-	}
+	base.Lifecycle = slices.DeleteFunc(
+		slices.Clone(base.Lifecycle),
+		func(stage gardencorev1beta1.LifecycleStage) bool {
+			return stage.Classification == gardencorev1beta1.ClassificationExpired ||
+				(stage.StartTime != nil && !stage.StartTime.Before(override.ExpirationDate))
+		},
+	)
+
+	base.Lifecycle = append(base.Lifecycle, gardencorev1beta1.LifecycleStage{
+		Classification: gardencorev1beta1.ClassificationExpired,
+		StartTime:      override.ExpirationDate.DeepCopy(),
+	})
 
 	return base
 }
