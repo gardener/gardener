@@ -605,18 +605,30 @@ func (k *kubeProxy) getKubeProxyContainer(image string, init, controlPlaneNode b
 			Protocol:      corev1.ProtocolTCP,
 		}}
 
-		container.ReadinessProbe = &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/livez",
-					Port:   intstr.FromInt32(portHealthz),
-					Scheme: corev1.URISchemeHTTP,
-				},
+		probeHandler := corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   "/livez",
+				Port:   intstr.FromInt32(portHealthz),
+				Scheme: corev1.URISchemeHTTP,
 			},
+		}
+
+		container.ReadinessProbe = &corev1.Probe{
+			ProbeHandler:        probeHandler,
 			InitialDelaySeconds: 15,
 			TimeoutSeconds:      15,
 			SuccessThreshold:    1,
 			FailureThreshold:    2,
+		}
+		// kube-proxy does not retry a failed initial sync, so it can stay unhealthy for up to an hour until its next
+		// periodic full sync, see https://github.com/gardener/gardener/issues/16003. Restart it in this case, which is what
+		// the `/livez` endpoint is meant for.
+		container.LivenessProbe = &corev1.Probe{
+			ProbeHandler:        probeHandler,
+			InitialDelaySeconds: 15,
+			TimeoutSeconds:      15,
+			SuccessThreshold:    1,
+			FailureThreshold:    6,
 		}
 	}
 
