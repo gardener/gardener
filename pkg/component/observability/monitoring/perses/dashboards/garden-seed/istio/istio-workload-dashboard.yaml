@@ -42,8 +42,8 @@ spec:
         plugin:
           kind: PrometheusPromQLVariable
           spec:
-            expr: (sum(istio_requests_total{destination_workload_namespace=~"$namespace"}) by (destination_workload) or sum(istio_requests_total{source_workload_namespace=~"$namespace"}) by (source_workload)) or (sum(istio_tcp_sent_bytes_total{destination_workload_namespace=~"$namespace"}) by (destination_workload) or sum(istio_tcp_sent_bytes_total{source_workload_namespace=~"$namespace"}) by (source_workload))
-            labelName: source_workload
+            expr: label_replace(sum(istio_requests_total{destination_workload_namespace=~"$namespace"}) by (destination_workload), "workload", "$1", "destination_workload", "(.*)") or label_replace(sum(istio_requests_total{source_workload_namespace=~"$namespace"}) by (source_workload), "workload", "$1", "source_workload", "(.*)") or label_replace(sum(istio_tcp_sent_bytes_total{destination_workload_namespace=~"$namespace"}) by (destination_workload), "workload", "$1", "destination_workload", "(.*)") or label_replace(sum(istio_tcp_sent_bytes_total{source_workload_namespace=~"$namespace"}) by (source_workload), "workload", "$1", "source_workload", "(.*)")
+            labelName: workload
         name: workload
     - kind: ListVariable
       spec:
