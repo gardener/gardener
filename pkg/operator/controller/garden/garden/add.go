@@ -10,6 +10,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -28,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	operatorpredicate "github.com/gardener/gardener/pkg/operator/predicate"
 )
 
@@ -86,6 +88,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 		Watches(&operatorv1alpha1.Extension{},
 			handler.EnqueueRequestsFromMapFunc(r.MapToGarden(mgr.GetLogger().WithValues("controller", ControllerName))),
 			builder.WithPredicates(operatorpredicate.ExtensionResourcesChanged()),
+		).
+		Watches(&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.MapToGarden(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(predicate.And(predicateutils.HasNamespace(r.GardenNamespace), operatorpredicate.GardenWildcardCertificateChanged())),
 		).
 		Complete(r)
 }
