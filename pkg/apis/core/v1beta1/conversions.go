@@ -102,6 +102,20 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
+	if err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("SecretBinding"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", core.SecretBindingSecretRefName, core.SecretBindingSecretRefNamespace:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
