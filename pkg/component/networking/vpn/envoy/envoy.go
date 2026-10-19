@@ -7,6 +7,7 @@ package envoy
 import (
 	_ "embed"
 	"fmt"
+	"net"
 	"strings"
 	"text/template"
 
@@ -46,17 +47,42 @@ func init() {
 	utilruntime.Must(err)
 }
 
-// GetEnvoyConfig returns the Envoy configuration for the VPN proxy. The same configuration is used both in HA or non-HA mode.
-func GetEnvoyConfig() (string, error) {
+// cidrPrefix is a destination CIDR rendered into the Envoy dynamic forward proxy's
+// resolved_address_filter allow-list.
+type cidrPrefix struct {
+	// Address is the network address of the CIDR (e.g. "10.0.0.0").
+	Address string
+	// PrefixLen is the prefix length of the CIDR (e.g. 8).
+	PrefixLen int
+}
+
+// GetEnvoyConfig returns the Envoy configuration for the VPN proxy. The same configuration is used
+// both in HA or non-HA mode.
+//
+// allowedDestinationCIDRs are the shoot's own node, pod, and service networks. The CONNECT proxy is
+// restricted to these destinations via the dynamic forward proxy's resolved_address_filter
+// (allow-list on the resolved upstream IP), preventing it from being abused as a pivot into
+// seed-adjacent networks. An empty slice results in a fail-closed config that denies all connections.
+func GetEnvoyConfig(allowedDestinationCIDRs []net.IPNet) (string, error) {
+	prefixes := make([]cidrPrefix, 0, len(allowedDestinationCIDRs))
+	for _, cidr := range allowedDestinationCIDRs {
+		prefixLen, _ := cidr.Mask.Size()
+		prefixes = append(prefixes, cidrPrefix{
+			Address:   cidr.IP.String(),
+			PrefixLen: prefixLen,
+		})
+	}
+
 	values := map[string]any{
-		"listenAddress":   "0.0.0.0",
-		"listenAddressV6": "::",
-		"dnsLookupFamily": "ALL",
-		"envoyPort":       fmt.Sprintf("%d", envoyPort),
-		"certChain":       volumeMountPathCerts + `/` + secrets.DataKeyCertificate,
-		"privateKey":      volumeMountPathCerts + `/` + secrets.DataKeyPrivateKey,
-		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
-		"metricsPort":     fmt.Sprintf("%d", metricsPort),
+		"listenAddress":           "0.0.0.0",
+		"listenAddressV6":         "::",
+		"dnsLookupFamily":         "ALL",
+		"envoyPort":               fmt.Sprintf("%d", envoyPort),
+		"certChain":               volumeMountPathCerts + `/` + secrets.DataKeyCertificate,
+		"privateKey":              volumeMountPathCerts + `/` + secrets.DataKeyPrivateKey,
+		"caCert":                  volumeMountPathCerts + `/` + fileNameCABundle,
+		"metricsPort":             fmt.Sprintf("%d", metricsPort),
+		"allowedDestinationCIDRs": prefixes,
 	}
 
 	var envoyConfig strings.Builder
