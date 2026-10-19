@@ -86,7 +86,9 @@ func (g *graph) HandleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1
 		credentialsVertex = g.getOrCreateVertex(VertexTypeSecret, backupBucket.Spec.CredentialsRef.Namespace, backupBucket.Spec.CredentialsRef.Name)
 	}
 
-	g.addEdge(credentialsVertex, backupBucketVertex)
+	if credentialsVertex != nil {
+		g.addEdge(credentialsVertex, backupBucketVertex)
+	}
 
 	if backupBucket.Spec.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *backupBucket.Spec.SeedName)

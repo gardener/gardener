@@ -136,7 +136,9 @@ func (g *graph) handleManagedSeedCreateOrUpdateForSeeds(ctx context.Context, man
 				seedTemplate.Spec.Backup.CredentialsRef.Kind == "Secret" {
 				vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 			}
-			g.addEdge(vertex, managedSeedVertex)
+			if vertex != nil {
+				g.addEdge(vertex, managedSeedVertex)
+			}
 		}
 
 		// Add seed resources here so that the seed can register itself.

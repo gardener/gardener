@@ -141,7 +141,9 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
 			cloudProfileVertex = g.getOrCreateVertex(VertexTypeNamespacedCloudProfile, shoot.Namespace, cloudProfileReference.Name)
 		}
-		g.addEdge(cloudProfileVertex, shootVertex)
+		if cloudProfileVertex != nil {
+			g.addEdge(cloudProfileVertex, shootVertex)
+		}
 	}
 
 	if shoot.Spec.SeedName != nil {
@@ -193,7 +195,9 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 				case apiVersion == securityv1alpha1.SchemeGroupVersion.String() && kind == "WorkloadIdentity":
 					credentialsVertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, shoot.Namespace, provider.CredentialsRef.Name)
 				}
-				g.addEdge(credentialsVertex, shootVertex)
+				if credentialsVertex != nil {
+					g.addEdge(credentialsVertex, shootVertex)
+				}
 			}
 		}
 	}

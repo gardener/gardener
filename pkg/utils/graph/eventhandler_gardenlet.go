@@ -117,7 +117,9 @@ func (g *graph) handleGardenletCreateOrUpdateForSeeds(ctx context.Context, garde
 			seedTemplate.Spec.Backup.CredentialsRef.Kind == "Secret" {
 			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
-		g.addEdge(vertex, gardenletVertex)
+		if vertex != nil {
+			g.addEdge(vertex, gardenletVertex)
+		}
 	}
 
 	var allowBootstrap bool
