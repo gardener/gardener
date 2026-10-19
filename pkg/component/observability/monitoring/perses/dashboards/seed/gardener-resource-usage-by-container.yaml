@@ -71,6 +71,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -107,6 +108,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -146,6 +148,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -185,6 +188,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -224,6 +228,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -263,6 +268,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -302,6 +308,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -341,6 +348,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -380,6 +388,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -46,6 +46,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: decbytes
@@ -79,6 +80,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -362,6 +364,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: decimal

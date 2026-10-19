@@ -17,6 +17,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:

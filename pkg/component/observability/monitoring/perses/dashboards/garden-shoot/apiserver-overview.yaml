@@ -178,6 +178,7 @@ spec:
                 - mean
                 - max
                 - last
+              size: small
             yAxis:
               label: latency (s)
         queries:
@@ -234,6 +235,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: event count (total)
         queries:
@@ -299,6 +301,7 @@ spec:
                 - mean
                 - max
                 - last
+              size: small
             yAxis:
               label: requests/s
         queries:
@@ -327,6 +330,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: requests/s
         queries:
@@ -355,6 +359,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: requests/s
         queries:
@@ -383,6 +388,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: requests/s
         queries:
@@ -411,6 +417,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: requests/s
         queries:
@@ -439,6 +446,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: requests/s
         queries:
@@ -471,6 +479,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -500,6 +509,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -529,6 +539,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -553,6 +564,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -582,6 +594,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -612,6 +625,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -637,6 +651,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: rejections/s
         queries:
@@ -664,6 +679,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -702,6 +718,7 @@ spec:
               values:
                 - mean
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -761,6 +778,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -815,6 +833,7 @@ spec:
               values:
                 - mean
                 - last
+              size: small
             yAxis:
               label: inflight requests
         queries:
@@ -840,6 +859,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               label: inqueue requests
         queries:
@@ -868,6 +888,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -898,6 +919,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -922,6 +944,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -971,6 +994,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -996,6 +1020,7 @@ spec:
               values:
                 - mean
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -1021,6 +1046,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: operations/s
         queries:
@@ -1111,6 +1137,7 @@ spec:
               values:
                 - mean
                 - last
+              size: small
             yAxis:
               label: attempts/s
         queries:
@@ -1138,6 +1165,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -1169,6 +1197,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: watch events/s
         queries:
@@ -1196,6 +1225,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -1227,6 +1257,7 @@ spec:
                 - mean
                 - max
                 - last
+              size: small
             yAxis:
               label: watch events/s
         queries:
@@ -1255,6 +1286,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: events/s
         queries:
@@ -1283,6 +1315,7 @@ spec:
               values:
                 - max
                 - last
+              size: small
             yAxis:
               label: events/s
         queries:

@@ -133,6 +133,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -164,6 +165,7 @@ spec:
             legend:
               mode: table
               position: bottom
+              size: small
             radius: 50
             showLabels: true
         queries:
@@ -192,6 +194,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -224,6 +227,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -262,6 +266,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -294,6 +299,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -330,6 +336,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -366,6 +373,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -402,6 +410,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -438,6 +447,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
             yAxis:
               format:
                 unit: decimal

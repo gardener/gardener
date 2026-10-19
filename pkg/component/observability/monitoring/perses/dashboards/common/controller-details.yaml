@@ -77,6 +77,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -107,6 +108,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -137,6 +139,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -168,6 +171,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -216,6 +220,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -247,6 +252,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             querySettings:
               - areaOpacity: 0
                 colorMode: fixed
@@ -317,6 +323,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -348,6 +355,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -379,6 +387,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -410,6 +419,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -441,6 +451,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -490,6 +501,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -542,6 +554,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:

@@ -253,6 +253,7 @@ spec:
             legend:
               position: right
               mode: table
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -284,6 +285,7 @@ spec:
               mode: table
               values:
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:

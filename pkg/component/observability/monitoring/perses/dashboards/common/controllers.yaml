@@ -126,6 +126,7 @@ spec:
             legend:
               mode: table
               position: right
+              size: small
             radius: 50
             showLabels: true
         queries:
@@ -154,6 +155,7 @@ spec:
                 - max
                 - mean
                 - last
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -184,6 +186,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -213,6 +216,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -251,6 +255,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -272,6 +277,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -326,6 +332,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -356,6 +363,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -387,6 +395,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -418,6 +427,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -450,6 +460,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -480,6 +491,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -514,6 +526,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
             yAxis:
               format:
                 unit: decimal

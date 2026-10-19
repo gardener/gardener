@@ -96,6 +96,7 @@ spec:
                 - max
                 - mean
                 - last
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -130,6 +131,7 @@ spec:
                 - max
                 - mean
                 - last
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -163,6 +165,7 @@ spec:
               values:
                 - max
                 - mean
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false
@@ -198,6 +201,7 @@ spec:
                 - max
                 - mean
                 - last
+              size: small
             visual:
               areaOpacity: 0.3
               connectNulls: false

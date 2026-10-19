@@ -30,6 +30,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: decimal

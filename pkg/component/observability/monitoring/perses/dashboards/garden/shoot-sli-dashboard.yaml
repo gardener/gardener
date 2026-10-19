@@ -290,6 +290,7 @@ spec:
               values:
                 - last
                 - min
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -345,6 +346,7 @@ spec:
               values:
                 - last
                 - min
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -559,6 +561,7 @@ spec:
               values:
                 - last
                 - min
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:

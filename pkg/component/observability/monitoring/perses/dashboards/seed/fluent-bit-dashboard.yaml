@@ -213,6 +213,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -250,6 +251,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -287,6 +289,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -323,6 +326,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -360,6 +364,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0.02
               connectNulls: true
@@ -396,6 +401,7 @@ spec:
                 - last
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -430,6 +436,7 @@ spec:
               position: bottom
               values:
                 - last
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -464,6 +471,7 @@ spec:
               position: bottom
               values:
                 - last
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -671,6 +679,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -707,6 +716,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -743,6 +753,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -779,6 +790,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -815,6 +827,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -851,6 +864,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -887,6 +901,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -923,6 +938,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -968,6 +984,7 @@ spec:
               position: bottom
               values:
                 - last-number
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1013,6 +1030,7 @@ spec:
               position: bottom
               values:
                 - last-number
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1069,6 +1087,7 @@ spec:
               position: bottom
               values:
                 - last-number
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1121,6 +1140,7 @@ spec:
               position: bottom
               values:
                 - last-number
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1228,6 +1248,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: true
@@ -1262,6 +1283,7 @@ spec:
               position: bottom
               values:
                 - last-number
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1296,6 +1318,7 @@ spec:
               position: bottom
               values:
                 - last-number
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1330,6 +1353,7 @@ spec:
               position: bottom
               values:
                 - last-number
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1366,6 +1390,7 @@ spec:
                 - last-number
                 - mean
                 - max
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -1398,6 +1423,7 @@ spec:
             legend:
               mode: table
               position: bottom
+              size: small
             visual:
               areaOpacity: 0.1
               connectNulls: true

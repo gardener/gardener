@@ -59,6 +59,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -182,6 +183,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false
@@ -242,6 +244,7 @@ spec:
             legend:
               mode: list
               position: bottom
+              size: small
             visual:
               areaOpacity: 0
               connectNulls: false

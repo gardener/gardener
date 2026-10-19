@@ -133,6 +133,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -171,6 +172,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:

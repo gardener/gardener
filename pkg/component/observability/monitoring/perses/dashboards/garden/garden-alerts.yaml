@@ -226,6 +226,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -253,6 +254,7 @@ spec:
               mode: table
               values:
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:

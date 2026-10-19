@@ -65,6 +65,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -98,6 +99,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: bytes
@@ -131,6 +133,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: decimal
@@ -155,6 +158,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: bytes
@@ -179,6 +183,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: bytes
@@ -203,6 +208,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: bytes
@@ -227,6 +233,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: bytes
@@ -251,6 +258,7 @@ spec:
             legend:
               position: bottom
               mode: list
+              size: small
             yAxis:
               format:
                 unit: bytes
