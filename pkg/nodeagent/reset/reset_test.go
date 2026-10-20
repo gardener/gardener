@@ -6,6 +6,7 @@ package reset_test
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"time"
 
@@ -16,12 +17,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"k8s.io/apimachinery/pkg/runtime"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/util/wait"
 	cri "k8s.io/cri-api/pkg/apis"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
+	apitest "k8s.io/cri-api/pkg/apis/testing"
 	fakecriclient "k8s.io/cri-client/pkg/fake"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	. "github.com/gardener/gardener/pkg/nodeagent/reset"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Reset", func() {
@@ -32,6 +37,8 @@ var _ = Describe("Reset", func() {
 
 			fakeFS   afero.Afero
 			fakeDBus *fakedbus.DBus
+
+			fakeRuntimeService *apitest.FakeRuntimeService
 
 			testEncoder runtime.Encoder
 
@@ -78,9 +85,16 @@ var _ = Describe("Reset", func() {
 
 			testEncoder = &jsonserializer.Serializer{}
 
+			fakeRuntimeService = fakecriclient.NewFakeRemoteRuntime().RuntimeService
+			fakeRuntimeService.SetFakeSandboxes([]*apitest.FakePodSandbox{
+				{PodSandboxStatus: runtimeapi.PodSandboxStatus{Id: "pod-1"}},
+				{PodSandboxStatus: runtimeapi.PodSandboxStatus{Id: "pod-2"}},
+			})
 			NewRemoteRuntimeService = func(_ context.Context, _ string, _ time.Duration, _ trace.TracerProvider, _ bool) (cri.RuntimeService, error) {
-				return fakecriclient.NewFakeRemoteRuntime().RuntimeService, nil
+				return fakeRuntimeService, nil
 			}
+
+			DeferCleanup(test.WithVar(&SandboxStopBackoff, wait.Backoff{Steps: 5}))
 
 			Expect(fakeFS.MkdirAll("/opt/bin", fs.ModeDir)).To(Succeed())
 			Expect(fakeFS.MkdirAll("/my/random/path", fs.ModeDir)).To(Succeed())
@@ -128,6 +142,28 @@ var _ = Describe("Reset", func() {
 			}
 
 			Expect(fakeDBus.Actions).To(Equal(expectedSystemdActions))
+			Expect(fakeRuntimeService.GetCalls()).To(ContainElements("StopPodSandbox", "StopPodSandbox", "RemovePodSandbox", "RemovePodSandbox"))
+			Expect(fakeRuntimeService.Sandboxes).To(BeEmpty())
+		})
+
+		It("should not fail if stopping a pod sandbox permanently fails (best-effort)", func() {
+			// Two pod sandboxes are stopped in parallel, each retrying up to the backoff's number of steps.
+			for range 2 * 5 {
+				fakeRuntimeService.InjectError("StopPodSandbox", fmt.Errorf("fake stop error"))
+			}
+
+			Expect(Reset(ctx, log, fakeFS, fakeDBus)).To(Succeed())
+			Expect(fakeRuntimeService.GetCalls()).To(ContainElements("RemovePodSandbox", "RemovePodSandbox"))
+			Expect(fakeRuntimeService.Sandboxes).To(BeEmpty())
+		})
+
+		It("should fail if removing a pod sandbox permanently fails", func() {
+			// Two pod sandboxes are removed in parallel, each retrying up to the backoff's number of steps.
+			for range 2 * 5 {
+				fakeRuntimeService.InjectError("RemovePodSandbox", fmt.Errorf("fake remove error"))
+			}
+
+			Expect(Reset(ctx, log, fakeFS, fakeDBus)).To(MatchError(ContainSubstring("failed removing pod sandbox")))
 		})
 	})
 })
