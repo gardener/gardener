@@ -325,7 +325,7 @@ func DetermineZone(ctx context.Context, opts *Options, b *gardenadmbotanist.Gard
 
 func waitForNodeToJoinCluster(ctx context.Context, log logr.Logger, c client.Client, hostName string) (*corev1.Node, error) {
 	log.Info("Waiting for node to join the cluster")
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	var node *corev1.Node
