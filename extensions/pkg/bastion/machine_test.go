@@ -183,6 +183,31 @@ var _ = Describe("Bastion VM Details", func() {
 			Expect(details.MachineTypeName).To(DeepEqual("smallerMachine"))
 		})
 
+		It("should skip the smallest machine when its architecture is unsupported by the pinned image", func() {
+			// The pinned image only supports amd64.
+			cloudProfile.Spec.Bastion.MachineType = nil
+			cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{v1beta1constants.ArchitectureAMD64}
+			cloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []gardencorev1beta1.MachineImageFlavor{
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+			}
+
+			// The arm64 machine is the smallest AND the first candidate, so it is considered before the
+			// compatible amd64 machine. It is incompatible with the amd64-only image and must be skipped.
+			cloudProfile.Spec.MachineTypes = append([]gardencorev1beta1.MachineType{{
+				CPU:          resource.MustParse("1"),
+				Name:         "smallest_arm_machine",
+				Architecture: new(v1beta1constants.ArchitectureARM64),
+				Capabilities: gardencorev1beta1.Capabilities{
+					"architecture": []string{v1beta1constants.ArchitectureARM64},
+				},
+			}}, cloudProfile.Spec.MachineTypes...)
+
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details.MachineTypeName).To(Equal(desired.MachineTypeName))
+			Expect(details.Architecture).To(Equal(v1beta1constants.ArchitectureAMD64))
+		})
+
 		It("should ignore unusable machines", func() {
 			cloudProfile.Spec.Bastion.MachineType = nil
 			cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
