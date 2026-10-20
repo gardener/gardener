@@ -111,10 +111,14 @@ spec:
                         type: string
                     required:
                     - name
+                    - version
                     type: object
                   type:
                     description: Type is the machine type of the bastion.
                     type: string
+                required:
+                - image
+                - type
                 type: object
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.

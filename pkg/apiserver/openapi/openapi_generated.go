@@ -11565,6 +11565,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionMachine(ref common.ReferenceCall
 					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type is the machine type of the bastion.",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -11572,10 +11573,12 @@ func schema_pkg_apis_operations_v1alpha1_BastionMachine(ref common.ReferenceCall
 					"image": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Image holds information about the machine image to use for the bastion.",
+							Default:     map[string]interface{}{},
 							Ref:         ref(operationsv1alpha1.BastionMachineImage{}.OpenAPIModelName()),
 						},
 					},
 				},
+				Required: []string{"type", "image"},
 			},
 		},
 		Dependencies: []string{
@@ -11601,12 +11604,13 @@ func schema_pkg_apis_operations_v1alpha1_BastionMachineImage(ref common.Referenc
 					"version": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Version is the version of the image.",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"name"},
+				Required: []string{"name", "version"},
 			},
 		},
 	}

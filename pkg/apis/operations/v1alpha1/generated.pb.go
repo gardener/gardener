@@ -189,25 +189,21 @@ func (m *BastionMachine) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Image != nil {
-		{
-			size, err := m.Image.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
+	{
+		size, err := m.Image.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
-		i--
-		dAtA[i] = 0x12
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
 	}
-	if m.Type != nil {
-		i -= len(*m.Type)
-		copy(dAtA[i:], *m.Type)
-		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Type)))
-		i--
-		dAtA[i] = 0xa
-	}
+	i--
+	dAtA[i] = 0x12
+	i -= len(m.Type)
+	copy(dAtA[i:], m.Type)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Type)))
+	i--
+	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
 }
 
@@ -231,13 +227,11 @@ func (m *BastionMachineImage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Version != nil {
-		i -= len(*m.Version)
-		copy(dAtA[i:], *m.Version)
-		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Version)))
-		i--
-		dAtA[i] = 0x12
-	}
+	i -= len(m.Version)
+	copy(dAtA[i:], m.Version)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Version)))
+	i--
+	dAtA[i] = 0x12
 	i -= len(m.Name)
 	copy(dAtA[i:], m.Name)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Name)))
@@ -462,14 +456,10 @@ func (m *BastionMachine) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Type != nil {
-		l = len(*m.Type)
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	if m.Image != nil {
-		l = m.Image.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
+	l = len(m.Type)
+	n += 1 + l + sovGenerated(uint64(l))
+	l = m.Image.Size()
+	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
 
@@ -481,10 +471,8 @@ func (m *BastionMachineImage) Size() (n int) {
 	_ = l
 	l = len(m.Name)
 	n += 1 + l + sovGenerated(uint64(l))
-	if m.Version != nil {
-		l = len(*m.Version)
-		n += 1 + l + sovGenerated(uint64(l))
-	}
+	l = len(m.Version)
+	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
 
@@ -598,8 +586,8 @@ func (this *BastionMachine) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&BastionMachine{`,
-		`Type:` + valueToStringGenerated(this.Type) + `,`,
-		`Image:` + strings.Replace(this.Image.String(), "BastionMachineImage", "BastionMachineImage", 1) + `,`,
+		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
+		`Image:` + strings.Replace(strings.Replace(this.Image.String(), "BastionMachineImage", "BastionMachineImage", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -610,7 +598,7 @@ func (this *BastionMachineImage) String() string {
 	}
 	s := strings.Join([]string{`&BastionMachineImage{`,
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
-		`Version:` + valueToStringGenerated(this.Version) + `,`,
+		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1070,8 +1058,7 @@ func (m *BastionMachine) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			s := string(dAtA[iNdEx:postIndex])
-			m.Type = &s
+			m.Type = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1101,9 +1088,6 @@ func (m *BastionMachine) Unmarshal(dAtA []byte) error {
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
-			}
-			if m.Image == nil {
-				m.Image = &BastionMachineImage{}
 			}
 			if err := m.Image.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1221,8 +1205,7 @@ func (m *BastionMachineImage) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			s := string(dAtA[iNdEx:postIndex])
-			m.Version = &s
+			m.Version = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

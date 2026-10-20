@@ -706,7 +706,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Type is the machine type of the bastion.</p>
 </td>
 </tr>
@@ -718,7 +717,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Image holds information about the machine image to use for the bastion.</p>
 </td>
 </tr>
@@ -768,7 +766,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Version is the version of the image.</p>
 </td>
 </tr>
