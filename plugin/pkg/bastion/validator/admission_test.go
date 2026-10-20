@@ -45,15 +45,14 @@ const (
 )
 
 var _ = Describe("Bastion", func() {
-	Describe("#Admit", func() {
+	Describe("#Validate", func() {
 		var (
 			bastion             *operations.Bastion
 			shoot               *gardencorev1beta1.Shoot
 			cloudProfile        *gardencorev1beta1.CloudProfile
 			coreClient          *corefake.Clientset
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
-			dummyOwnerRef       *metav1.OwnerReference
-			admissionHandler    *Bastion
+			admissionHandler    *BastionValidator
 		)
 
 		BeforeEach(func() {
@@ -107,17 +106,10 @@ var _ = Describe("Bastion", func() {
 				},
 			}
 
-			dummyOwnerRef = &metav1.OwnerReference{
-				APIVersion: "v1",
-				Kind:       "ConfigMap",
-				Name:       "dummy-object",
-			}
-
 			bastion = &operations.Bastion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            bastionName,
-					Namespace:       namespace,
-					OwnerReferences: []metav1.OwnerReference{*dummyOwnerRef},
+					Name:      bastionName,
+					Namespace: namespace,
 				},
 				Spec: operations.BastionSpec{
 					ShootRef: corev1.LocalObjectReference{
@@ -142,7 +134,7 @@ var _ = Describe("Bastion", func() {
 		It("should do nothing if the resource is not a Bastion", func() {
 			attrs := admission.NewAttributesRecord(nil, nil, operations.Kind(bastionName).WithVersion("version"), bastion.Namespace, bastion.Name, operations.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 			Expect(err).To(Succeed())
 		})
 
@@ -151,63 +143,14 @@ var _ = Describe("Bastion", func() {
 				return true, shoot, nil
 			})
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 			Expect(err).To(Succeed())
-		})
-
-		It("should mutate Bastion with Shoot information", func() {
-			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
-
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
-			Expect(err).To(Succeed())
-			Expect(bastion.Spec.SeedName).To(PointTo(Equal(seedName)))
-			Expect(bastion.Spec.ProviderType).To(PointTo(Equal(provider)))
-		})
-
-		It("should ensure an owner reference from the Bastion to the Shoot", func() {
-			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
-
-			shootOwnerRef := metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
-			Expect(err).To(Succeed())
-			Expect(bastion.Spec.SeedName).To(PointTo(Equal(seedName)))
-			Expect(bastion.Spec.ProviderType).To(PointTo(Equal(provider)))
-			Expect(bastion.OwnerReferences).To(ConsistOf(*dummyOwnerRef, *shootOwnerRef))
-		})
-
-		It("should mutate Bastion with creator information", func() {
-			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
-
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
-			Expect(err).To(Succeed())
-			Expect(bastion.Annotations[v1beta1constants.GardenCreatedBy]).To(Equal(userName))
-		})
-
-		It("should always keep the creator annotation", func() {
-			coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-				return true, shoot, nil
-			})
-
-			bastion.Annotations = map[string]string{
-				v1beta1constants.GardenCreatedBy: "not-" + userName,
-			}
-
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
-			Expect(err).To(Succeed())
-			Expect(bastion.Annotations[v1beta1constants.GardenCreatedBy]).To(Equal(userName))
 		})
 
 		It("should forbid the Bastion creation if a Shoot name is not specified", func() {
 			bastion.Spec.ShootRef.Name = ""
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -220,7 +163,7 @@ var _ = Describe("Bastion", func() {
 		It("should forbid the Bastion creation if the Shoot does not exist", func() {
 			bastion.Spec.ShootRef.Name = "does-not-exist"
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -237,7 +180,7 @@ var _ = Describe("Bastion", func() {
 				return true, shoot, nil
 			})
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -255,7 +198,7 @@ var _ = Describe("Bastion", func() {
 				return true, shoot, nil
 			})
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -274,7 +217,7 @@ var _ = Describe("Bastion", func() {
 				return true, shoot, nil
 			})
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 			Expect(err).To(BeInvalidError())
 			Expect(getErrorList(err)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -296,7 +239,7 @@ var _ = Describe("Bastion", func() {
 			oldBastion.Finalizers = []string{"foo"}
 			bastion.Finalizers = nil
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
 		})
 
@@ -315,7 +258,7 @@ var _ = Describe("Bastion", func() {
 			oldBastion.Finalizers = []string{"foo"}
 			bastion.Finalizers = nil
 
-			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
+			err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
 		})
 
@@ -332,7 +275,7 @@ var _ = Describe("Bastion", func() {
 					Image: operations.BastionMachineImage{Name: machineImage, Version: machineImageVersion},
 				}
 
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 				Expect(err).To(Succeed())
 			})
 
@@ -342,7 +285,7 @@ var _ = Describe("Bastion", func() {
 					Image: operations.BastionMachineImage{Name: machineImage, Version: machineImageVersion},
 				}
 
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 				Expect(err).To(BeInvalidError())
 				Expect(getErrorList(err)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -358,7 +301,7 @@ var _ = Describe("Bastion", func() {
 					Image: operations.BastionMachineImage{Name: "unknown-image", Version: machineImageVersion},
 				}
 
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 				Expect(err).To(BeInvalidError())
 				Expect(getErrorList(err)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -374,7 +317,7 @@ var _ = Describe("Bastion", func() {
 					Image: operations.BastionMachineImage{Name: machineImage, Version: "6.6.6"},
 				}
 
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
+				err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 				Expect(err).To(BeInvalidError())
 				Expect(getErrorList(err)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -396,7 +339,7 @@ var _ = Describe("Bastion", func() {
 				oldBastion.Finalizers = []string{"foo"}
 				bastion.Finalizers = nil
 
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
+				err := admissionHandler.Validate(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 				Expect(err).To(Succeed())
 			})
 		})
@@ -409,7 +352,7 @@ var _ = Describe("Bastion", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement("Bastion"))
+			Expect(registered).To(ContainElement("BastionValidator"))
 		})
 	})
 

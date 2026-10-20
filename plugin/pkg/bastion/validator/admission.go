@@ -21,26 +21,24 @@ import (
 	corevalidation "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(plugin.PluginNameBastion, func(_ io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameBastionValidator, func(_ io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }
 
-// Bastion contains listers and admission handler.
-type Bastion struct {
+// BastionValidator contains listers and admission handler.
+type BastionValidator struct {
 	*admission.Handler
 
 	coreClient                   gardencoreclientset.Interface
@@ -50,32 +48,32 @@ type Bastion struct {
 }
 
 var (
-	_ = admissioninitializer.WantsCoreClientSet(&Bastion{})
-	_ = admissioninitializer.WantsCoreInformerFactory(&Bastion{})
+	_ = admissioninitializer.WantsCoreClientSet(&BastionValidator{})
+	_ = admissioninitializer.WantsCoreInformerFactory(&BastionValidator{})
 
 	readyFuncs []admission.ReadyFunc
 )
 
-// New creates a new Bastion admission plugin.
-func New() (*Bastion, error) {
-	return &Bastion{
+// New creates a new BastionValidator admission plugin.
+func New() (*BastionValidator, error) {
+	return &BastionValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.
-func (v *Bastion) AssignReadyFunc(f admission.ReadyFunc) {
+func (v *BastionValidator) AssignReadyFunc(f admission.ReadyFunc) {
 	v.readyFunc = f
 	v.SetReadyFunc(f)
 }
 
 // SetCoreClientSet sets the garden core clientset.
-func (v *Bastion) SetCoreClientSet(c gardencoreclientset.Interface) {
+func (v *BastionValidator) SetCoreClientSet(c gardencoreclientset.Interface) {
 	v.coreClient = c
 }
 
 // SetCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *Bastion) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+func (v *BastionValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	v.cloudProfileLister = cloudProfileInformer.Lister()
 
@@ -90,7 +88,7 @@ func (v *Bastion) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFac
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
-func (v *Bastion) ValidateInitialization() error {
+func (v *BastionValidator) ValidateInitialization() error {
 	if v.coreClient == nil {
 		return errors.New("missing garden core client")
 	}
@@ -103,10 +101,10 @@ func (v *Bastion) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = (*Bastion)(nil)
+var _ admission.ValidationInterface = (*BastionValidator)(nil)
 
-// Admit validates and if appropriate mutates the given bastion against the shoot that it references.
-func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+// Validate validates the given bastion against the shoot that it references.
+func (v *BastionValidator) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
@@ -184,23 +182,11 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission
 		}
 	}
 
-	// update bastion
-	bastion.Spec.SeedName = shoot.Spec.SeedName
-	bastion.Spec.ProviderType = &shoot.Spec.Provider.Type
-
-	if userInfo := a.GetUserInfo(); a.GetOperation() == admission.Create && userInfo != nil {
-		metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenCreatedBy, userInfo.GetName())
-	}
-
-	// ensure bastions are cleaned up when shoots are deleted
-	ownerRef := *metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	bastion.OwnerReferences = kubernetes.MergeOwnerReferences(bastion.OwnerReferences, ownerRef)
-
 	return nil
 }
 
 // validateMachine validates the bastion's machine override against the CloudProfile referenced by the shoot.
-func (v *Bastion) validateMachine(bastion *operations.Bastion, shoot *gardencorev1beta1.Shoot) error {
+func (v *BastionValidator) validateMachine(bastion *operations.Bastion, shoot *gardencorev1beta1.Shoot) error {
 	gk := schema.GroupKind{Group: operations.GroupName, Kind: "Bastion"}
 
 	coreShoot := &core.Shoot{}
