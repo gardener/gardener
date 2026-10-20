@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -35,8 +36,10 @@ Like "gardenadm bootstrap", this command deploys the provider extensions and mac
 temporary bootstrap cluster. It restores the Infrastructure and Worker resources from the ShootState in the config
 directory and deletes them, which deletes all machines and the infrastructure in the cloud provider account.
 
-The config directory must contain the same manifests that were used for "gardenadm bootstrap" and the current
-ShootState of the self-hosted shoot cluster.
+The config directory must contain the same manifests that were used for "gardenadm bootstrap". The current ShootState
+of the self-hosted shoot cluster is either computed from the shoot cluster (--shoot-kubeconfig) or read from the config
+directory. The ShootState copied to the control plane machines by "gardenadm bootstrap" is outdated as soon as the
+shoot cluster has changed its machines (e.g., created the machines of other worker pools).
 
 Warning: the self-hosted shoot cluster must not be running anymore, or at least its machine-controller-manager must
 be stopped. Otherwise, it recreates the machines that are deleted by this command.
@@ -49,8 +52,11 @@ Limitations:
 - Re-running the command after machines or parts of the infrastructure have been deleted might create them again,
   because they are restored from the ShootState before they are deleted.`,
 
-		Example: `# Destroy the infrastructure
-gardenadm destroy --config-dir /path/to/manifests`,
+		Example: `# Destroy the infrastructure, with the ShootState in the config directory
+gardenadm destroy --config-dir /path/to/manifests
+
+# Destroy the infrastructure, computing the current ShootState from the self-hosted shoot cluster
+gardenadm destroy --config-dir /path/to/manifests --shoot-kubeconfig /path/to/shoot-kubeconfig`,
 
 		Args: cobra.NoArgs,
 
@@ -90,9 +96,26 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("shoot has unmanaged infrastructure, there is nothing to destroy: " +
 			"use `gardenadm reset` on the nodes instead")
 	}
+	if opts.ShootKubeconfig != "" {
+		if resources.ShootState != nil {
+			return fmt.Errorf("ShootState must not be contained in the config directory when --shoot-kubeconfig is set")
+		}
+
+		shootClientSet, err := NewClientSetFromFile(opts.ShootKubeconfig, kubernetes.SeedScheme)
+		if err != nil {
+			return fmt.Errorf("failed creating client for the shoot cluster: %w", err)
+		}
+
+		opts.Log.Info("Computing ShootState from the shoot cluster")
+		resources.ShootState, err = shootstate.Compute(ctx, shootClientSet.Client(), resources.Shoot, v1beta1helper.ControlPlaneNamespaceForShoot(resources.Shoot))
+		if err != nil {
+			return fmt.Errorf("failed computing ShootState from the shoot cluster: %w", err)
+		}
+	}
 	if resources.ShootState == nil {
 		return fmt.Errorf("ShootState is missing in the config directory: " +
-			"the state of the infrastructure and machines is required to destroy them")
+			"the state of the infrastructure and machines is required to destroy them, " +
+			"either put it into the config directory or set --shoot-kubeconfig")
 	}
 	if resources.ShootState.Name != resources.Shoot.Name || resources.ShootState.Namespace != resources.Shoot.Namespace {
 		return fmt.Errorf("ShootState %s does not belong to Shoot %s: their names and namespaces must match",

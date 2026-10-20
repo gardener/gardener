@@ -234,6 +234,13 @@ var _ = Describe("ShootState", func() {
 				}
 			})
 
+			It("should compute the ShootState", func() {
+				computed, err := Compute(ctx, fakeSeedClient, shoot, controlPlaneNamespace)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(client.ObjectKeyFromObject(computed)).To(Equal(client.ObjectKeyFromObject(shoot)))
+				Expect(computed.Spec).To(Equal(expectedSpec))
+			})
+
 			It("should compute the expected spec for both gardener and extensions data and overwrite the spec", func() {
 				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, controlPlaneNamespace, true)).To(Succeed())
 				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
