@@ -15,8 +15,10 @@ import (
 )
 
 const (
-	// PluginNameBastion is the name of the Bastion admission plugin.
-	PluginNameBastion = "Bastion"
+	// PluginNameBastionMutator is the name of the BastionMutator admission plugin.
+	PluginNameBastionMutator = "BastionMutator"
+	// PluginNameBastionValidator is the name of the BastionValidator admission plugin.
+	PluginNameBastionValidator = "BastionValidator"
 	// PluginNameControllerRegistrationResources is the name of the ControllerRegistrationResources admission plugin.
 	PluginNameControllerRegistrationResources = "ControllerRegistrationResources"
 	// PluginNameCustomVerbAuthorizer is the name of the CustomVerbAuthorizer admission plugin.
@@ -97,7 +99,8 @@ func AllOrderedPluginNames() []string {
 		PluginNameShootResourceReservation,          // ShootResourceReservation
 		PluginNameManagedSeed,                       // ManagedSeed
 		PluginNameManagedSeedShoot,                  // ManagedSeedShoot
-		PluginNameBastion,                           // Bastion
+		PluginNameBastionMutator,                    // BastionMutator
+		PluginNameBastionValidator,                  // BastionValidator
 		PluginNameBackupBucketValidator,             // BackupBucketValidator
 
 		// new admission plugins should generally be inserted above here
@@ -132,7 +135,8 @@ func GardenadmSkipPlugins() sets.Set[string] {
 		PluginNameCustomVerbAuthorizer,            // RBAC; not applicable offline
 		PluginNameManagedSeed,                     // not a Shoot plugin
 		PluginNameManagedSeedShoot,                // not a Shoot plugin
-		PluginNameBastion,                         // not a Shoot plugin
+		PluginNameBastionMutator,                  // not a Shoot plugin
+		PluginNameBastionValidator,                // not a Shoot plugin
 		PluginNameBackupBucketValidator,           // not a Shoot plugin
 		mutating.PluginName,                       // mutating admission policies; no policy infrastructure in gardenadm
 		mutatingwebhook.PluginName,                // no webhook server in gardenadm
@@ -168,7 +172,8 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameCustomVerbAuthorizer,            // CustomVerbAuthorizer
 		PluginNameManagedSeed,                     // ManagedSeed
 		PluginNameManagedSeedShoot,                // ManagedSeedShoot
-		PluginNameBastion,                         // Bastion
+		PluginNameBastionMutator,                  // BastionMutator
+		PluginNameBastionValidator,                // BastionValidator
 		PluginNameBackupBucketValidator,           // BackupBucketValidator
 		// TODO(vpnachev): Enable the MutatingAdmissionPolicy admission plugin by default
 		// once the minimum supported virtual-garden-kube-apiserver version is 1.36,
