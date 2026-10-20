@@ -66,19 +66,14 @@ func ValidateBastionSpec(spec *operations.BastionSpec, fldPath *field.Path) fiel
 	}
 
 	if spec.Machine != nil {
-		if spec.Machine.Type == nil && spec.Machine.Image == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("machine"), spec.Machine, "at least one of type or image must be specified"))
+		if len(spec.Machine.Type) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "type"), "machine type must be specified"))
 		}
-		if spec.Machine.Type != nil && len(*spec.Machine.Type) == 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("machine", "type"), *spec.Machine.Type, "machine type must not be empty"))
+		if len(spec.Machine.Image.Name) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "machine image name must be specified"))
 		}
-		if spec.Machine.Image != nil {
-			if len(spec.Machine.Image.Name) == 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("machine", "image", "name"), spec.Machine.Image.Name, "machine image name must not be empty"))
-			}
-			if spec.Machine.Image.Version != nil && len(*spec.Machine.Image.Version) == 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("machine", "image", "version"), *spec.Machine.Image.Version, "machine image version must not be empty"))
-			}
+		if len(spec.Machine.Image.Version) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "version"), "machine image version must be specified"))
 		}
 	}
 

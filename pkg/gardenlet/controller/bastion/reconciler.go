@@ -258,17 +258,13 @@ func machineForExtensionBastion(machine *operationsv1alpha1.BastionMachine) *ext
 		return nil
 	}
 
-	extensionMachine := &extensionsv1alpha1.BastionMachine{
+	return &extensionsv1alpha1.BastionMachine{
 		Type: machine.Type,
-	}
-	if machine.Image != nil {
-		extensionMachine.Image = &extensionsv1alpha1.BastionMachineImage{
+		Image: extensionsv1alpha1.BastionMachineImage{
 			Name:    machine.Image.Name,
 			Version: machine.Image.Version,
-		}
+		},
 	}
-
-	return extensionMachine
 }
 
 func setReadyCondition(clock clock.Clock, bastion *operationsv1alpha1.Bastion, status gardencorev1beta1.ConditionStatus, reason string, message string) {

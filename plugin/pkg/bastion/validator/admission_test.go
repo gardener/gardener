@@ -324,35 +324,10 @@ var _ = Describe("Bastion", func() {
 				})
 			})
 
-			It("should allow a known machine type", func() {
-				bastion.Spec.Machine = &operations.BastionMachine{Type: new(machineType)}
-
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
-				Expect(err).To(Succeed())
-			})
-
-			It("should allow a known machine image without a version", func() {
-				bastion.Spec.Machine = &operations.BastionMachine{
-					Image: &operations.BastionMachineImage{Name: machineImage},
-				}
-
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
-				Expect(err).To(Succeed())
-			})
-
-			It("should allow a known machine image with a known version", func() {
-				bastion.Spec.Machine = &operations.BastionMachine{
-					Image: &operations.BastionMachineImage{Name: machineImage, Version: new(machineImageVersion)},
-				}
-
-				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
-				Expect(err).To(Succeed())
-			})
-
 			It("should allow a known machine type and image together", func() {
 				bastion.Spec.Machine = &operations.BastionMachine{
-					Type:  new(machineType),
-					Image: &operations.BastionMachineImage{Name: machineImage, Version: new(machineImageVersion)},
+					Type:  machineType,
+					Image: operations.BastionMachineImage{Name: machineImage, Version: machineImageVersion},
 				}
 
 				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
@@ -360,7 +335,10 @@ var _ = Describe("Bastion", func() {
 			})
 
 			It("should forbid an unknown machine type", func() {
-				bastion.Spec.Machine = &operations.BastionMachine{Type: new("unknown-machine")}
+				bastion.Spec.Machine = &operations.BastionMachine{
+					Type:  "unknown-machine",
+					Image: operations.BastionMachineImage{Name: machineImage, Version: machineImageVersion},
+				}
 
 				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
 				Expect(err).To(BeInvalidError())
@@ -374,7 +352,8 @@ var _ = Describe("Bastion", func() {
 
 			It("should forbid an unknown machine image name", func() {
 				bastion.Spec.Machine = &operations.BastionMachine{
-					Image: &operations.BastionMachineImage{Name: "unknown-image"},
+					Type:  machineType,
+					Image: operations.BastionMachineImage{Name: "unknown-image", Version: machineImageVersion},
 				}
 
 				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
@@ -389,7 +368,8 @@ var _ = Describe("Bastion", func() {
 
 			It("should forbid an unknown machine image version", func() {
 				bastion.Spec.Machine = &operations.BastionMachine{
-					Image: &operations.BastionMachineImage{Name: machineImage, Version: new("6.6.6")},
+					Type:  machineType,
+					Image: operations.BastionMachineImage{Name: machineImage, Version: "6.6.6"},
 				}
 
 				err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, nil, admission.Create), nil)
@@ -405,7 +385,10 @@ var _ = Describe("Bastion", func() {
 			It("should not validate the machine against the CloudProfile when the Bastion is in deletion", func() {
 				now := metav1.Now()
 				bastion.DeletionTimestamp = &now
-				bastion.Spec.Machine = &operations.BastionMachine{Type: new("unknown-machine")}
+				bastion.Spec.Machine = &operations.BastionMachine{
+					Type:  "unknown-machine",
+					Image: operations.BastionMachineImage{Name: machineImage, Version: machineImageVersion},
+				}
 
 				oldBastion := bastion.DeepCopy()
 				oldBastion.Finalizers = []string{"foo"}

@@ -57,7 +57,7 @@ The `Validate` method returns a list of errors. If this list is non-empty, the g
 
 The machine type and machine image used for the bastion VM are determined from the following sources, in descending order of precedence (the machine type and the machine image are resolved independently):
 
-1. `Bastion` `.spec.machine`: An optional per-request override on the `Bastion` resource. It may pin the machine type (`.spec.machine.type`) and/or the machine image (`.spec.machine.image.name`, with an optional `.spec.machine.image.version`).
+1. `Bastion` `.spec.machine`: An optional per-request override on the `Bastion` resource. The field is optional, but when it is set, the machine type (`.spec.machine.type`) and the machine image (`.spec.machine.image.name` and `.spec.machine.image.version`) must all be specified. This fully pins both the machine type and the machine image, so no defaulting from the sources below takes place.
 1. `CloudProfile` `.spec.bastion`: An optional operator-provided default for the `CloudProfile`. It may define the machine type (`.spec.bastion.machineType.name`) and/or the machine image (`.spec.bastion.machineImage.name`, with an optional `.spec.bastion.machineImage.version`).
 1. Controller defaulting: Whatever is not pinned by either of the above is resolved automatically from the `CloudProfile`:
     - Machine type: the usable machine type with the fewest CPUs whose architecture is supported by the selected image.
