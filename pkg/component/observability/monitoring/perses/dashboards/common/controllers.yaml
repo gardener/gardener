@@ -126,9 +126,10 @@ spec:
             legend:
               mode: table
               position: right
-              size: small
+              values:
+                - relative
             radius: 50
-            showLabels: true
+            showLabels: false
         queries:
           - kind: TimeSeriesQuery
             spec:
