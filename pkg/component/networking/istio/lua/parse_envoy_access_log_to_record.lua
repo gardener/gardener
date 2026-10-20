@@ -1,3 +1,7 @@
+--[[
+SPDX-FileCopyrightText: Contributors to the Gardener project
+SPDX-License-Identifier: Apache-2.0
+--]]
 function parse_envoy_access_log_to_record(tag, timestamp, record)
     local line = record["log"]
     if line == nil or type(line) ~= "string" then
