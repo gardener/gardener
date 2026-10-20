@@ -3524,8 +3524,9 @@ kind: AuthorizationConfiguration
 					))
 				})
 
-				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
-					kapi.EnableStaticTokenKubeconfig()
+				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfig is set", func() {
+					contextName := "shoot--project--shoot"
+					kapi.EnableStaticTokenKubeconfig(contextName)
 
 					deployAndRead()
 
@@ -3539,7 +3540,7 @@ kind: AuthorizationConfiguration
 
 					kubeconfig := &clientcmdv1.Config{}
 					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
-					Expect(kubeconfig.CurrentContext).To(Equal(namespace))
+					Expect(kubeconfig.CurrentContext).To(Equal(contextName))
 					Expect(kubeconfig.Clusters).To(HaveLen(1))
 					Expect(kubeconfig.Clusters[0].Cluster.Server).To(Equal("https://" + externalHostname))
 					Expect(kubeconfig.AuthInfos).To(HaveLen(1))
