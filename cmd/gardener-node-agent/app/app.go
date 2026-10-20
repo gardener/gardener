@@ -233,7 +233,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		Manager:            mgr,
 		BootstrapRunnables: bootstrapRunnables,
 		ActualRunnables: []manager.Runnable{manager.RunnableFunc(func(ctx context.Context) error {
-			return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName, nodeName, cfgDir)
+			return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName, nodeName, cfgDir, runControlPlaneNodesEndpointsBootstrapper)
 		})},
 	}); err != nil {
 		return fmt.Errorf("failed adding runnables to manager: %w", err)

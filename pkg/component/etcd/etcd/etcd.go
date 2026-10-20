@@ -493,6 +493,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			if err := gardenerutils.NewShootAccessSecret(e.etcd.Name, e.namespace).Reconcile(ctx, e.client); err != nil {
 				return err
 			}
+
+			e.etcd.Spec.Labels = utils.MergeStringMaps(e.etcd.Spec.Labels, map[string]string{
+				v1beta1constants.LabelIsCriticalStaticPod: "true",
+			})
 		}
 
 		if existingEtcd == nil || existingEtcd.Spec.StorageCapacity == nil {

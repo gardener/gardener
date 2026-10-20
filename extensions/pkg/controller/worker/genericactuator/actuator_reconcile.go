@@ -27,6 +27,7 @@ import (
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -216,15 +217,19 @@ func deployMachineDeployments(
 		}
 	}
 
-	var taskFns = make([]flow.TaskFn, 0, len(wantedMachineDeployments))
+	var (
+		taskFns          = make([]flow.TaskFn, 0, len(wantedMachineDeployments))
+		controlPlanePool = v1beta1helper.ControlPlaneWorkerPoolForShoot(cluster.Shoot.Spec.Provider.Workers)
+	)
 	for _, deployment := range wantedMachineDeployments {
 		var (
-			existingMachineDeployment = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
-			shootIsAwake              = shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments)
+			existingMachineDeployment     = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
+			shootIsAwake                  = shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments)
+			deploymentForControlPlanePool = controlPlanePool != nil && controlPlanePool.Name == deployment.PoolName
 		)
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			return deployMachineDeployment(ctx, log, cl, worker, deployment, existingMachineDeployment, clusterAutoscalerUsed, isHibernated, shootIsAwake)
+			return deployMachineDeployment(ctx, log, cl, worker, deployment, existingMachineDeployment, clusterAutoscalerUsed, isHibernated, shootIsAwake, deploymentForControlPlanePool)
 		})
 	}
 
@@ -241,6 +246,7 @@ func deployMachineDeployment(
 	clusterAutoscalerUsed bool,
 	isHibernationEnabled bool,
 	shootIsAwake bool,
+	deploymentForControlPlanePool bool,
 ) error {
 	var labels = map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
 
@@ -329,6 +335,17 @@ func deployMachineDeployment(
 		if existingMachineDeployment != nil && existingMachineDeployment.Spec.Template.Annotations != nil {
 			for k, v := range existingMachineDeployment.Spec.Template.Annotations {
 				metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, k, v)
+			}
+		}
+
+		if deploymentForControlPlanePool {
+			if machineDeployment.Spec.Template.Spec.MachineConfiguration == nil {
+				machineDeployment.Spec.Template.Spec.MachineConfiguration = &machinev1alpha1.MachineConfiguration{}
+			}
+			if machineDeployment.Spec.Template.Spec.MachineConfiguration.NodeConditions == nil {
+				machineDeployment.Spec.Template.Spec.MachineConfiguration.NodeConditions = new(string(nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy))
+			} else {
+				machineDeployment.Spec.Template.Spec.MachineConfiguration.NodeConditions = new(strings.Join([]string{*machineDeployment.Spec.Template.Spec.MachineConfiguration.NodeConditions, string(nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy)}, ","))
 			}
 		}
 
