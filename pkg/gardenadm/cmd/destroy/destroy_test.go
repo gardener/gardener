@@ -50,7 +50,7 @@ var _ = Describe("Destroy", func() {
 		globalOpts.Log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(stdErr))
 		command = NewCommand(globalOpts)
 
-		fakeClient = fakeclient.NewClientBuilder().Build()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
 		fsys = fstest.MapFS{
@@ -103,6 +103,34 @@ spec:
 
 			It("should fail if the ShootState is missing", func() {
 				Expect(command.RunE(command, nil)).To(MatchError(ContainSubstring("ShootState is missing in the config directory")))
+			})
+
+			When("--shoot-kubeconfig is set", func() {
+				BeforeEach(func() {
+					Expect(command.Flags().Set("shoot-kubeconfig", "some-path-to-shoot-kubeconfig")).To(Succeed())
+				})
+
+				It("should fail if the config directory contains a ShootState", func() {
+					fsys["shootstate.yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: ShootState
+metadata:
+  name: root
+  namespace: garden
+`)}
+
+					Expect(command.RunE(command, nil)).To(MatchError(ContainSubstring("ShootState must not be contained in the config directory when --shoot-kubeconfig is set")))
+				})
+
+				It("should compute the ShootState from the shoot cluster", func() {
+					// The safety check runs after the ShootState has been computed and validated, so it is used to stop
+					// the command before it deploys anything.
+					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet"},
+					})).To(Succeed())
+
+					Expect(command.RunE(command, nil)).To(MatchError(ContainSubstring(`deployment "garden/gardenlet" exists on the targeted cluster`)))
+					Eventually(stdErr).Should(Say("Computing ShootState from the shoot cluster"))
+				})
 			})
 
 			It("should fail if the ShootState does not belong to the Shoot", func() {
