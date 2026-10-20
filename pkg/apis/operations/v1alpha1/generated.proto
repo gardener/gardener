@@ -54,11 +54,11 @@ message BastionList {
 // BastionMachine contains information about the machine type and image.
 message BastionMachine {
   // Type is the machine type of the bastion.
-  // +optional
+  // +required
   optional string type = 1;
 
   // Image holds information about the machine image to use for the bastion.
-  // +optional
+  // +required
   optional BastionMachineImage image = 2;
 }
 
@@ -66,10 +66,11 @@ message BastionMachine {
 // defined in the respective CloudProfile.
 message BastionMachineImage {
   // Name is the name of the image.
+  // +required
   optional string name = 1;
 
   // Version is the version of the image.
-  // +optional
+  // +required
   optional string version = 2;
 }
 
