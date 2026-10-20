@@ -23,4 +23,4 @@ spec:
       -ginkgo.skip="\[SERIAL\]"
       -ginkgo.timeout=2h
 
-  image: golang:1.26.9
+  image: golang:1.26.10
