@@ -23,6 +23,9 @@ const (
 var (
 	//go:embed lua/add_kubernetes_namespace_name_to_record.lua
 	add_kubernetes_namespace_name_to_record_lua string
+
+	//go:embed lua/parse_envoy_access_log_to_record.lua
+	parse_envoy_access_log_to_record_lua string
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the cluster-autoscaler logs.
@@ -52,6 +55,12 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 						Lua: &fluentbitv1alpha2filter.Lua{
 							Call: "add_kubernetes_namespace_name_to_record",
 							Code: add_kubernetes_namespace_name_to_record_lua,
+						},
+					},
+					{
+						Lua: &fluentbitv1alpha2filter.Lua{
+							Call: "parse_envoy_access_log_to_record",
+							Code: parse_envoy_access_log_to_record_lua,
 						},
 					},
 				},
