@@ -21,9 +21,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenadm/botanist"
+	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/nodeagent"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -98,6 +100,12 @@ func run(ctx context.Context, opts *Options) error {
 	}
 	nodeJoinedAlready := node != nil
 
+	machineIP, err := utils.MachineIP(b.HostName, b.Shoot.PreferIPv6())
+	if err != nil {
+		return fmt.Errorf("failed fetching machine IP: %w", err)
+	}
+	b.Logger.Info("Found machine IP", "machineIP", machineIP.String())
+
 	var (
 		g                       = flow.NewGraph("join")
 		reporter                = flow.NewCommandLineProgressReporter(opts.ErrOut)
@@ -139,10 +147,16 @@ func run(ctx context.Context, opts *Options) error {
 				return err
 			},
 		})
+		ensureMachineIPInETCDs = g.Add(flow.Task{
+			Name:         "Ensuring machine IP is added to ETCD resources",
+			Fn:           botanist.EnsureMachineIPInBothETCDs(b.Logger, b.ShootClientSet.Client(), b.Clock, b.Shoot.ControlPlaneNamespace, machineIP.String(), botanist.AddAddressToETCD),
+			SkipIf:       !opts.ControlPlane,
+			Dependencies: flow.NewTaskIDs(ensureNoActiveShootReconciliation),
+		})
 		syncPointReadyForGardenerNodeInit = flow.NewTaskIDs(
 			determineGardenerNodeAgentSecretName,
-			ensureNoActiveShootReconciliation,
 			determineZone,
+			ensureMachineIPInETCDs,
 		)
 
 		generateGardenerNodeInitConfig = g.Add(flow.Task{
@@ -217,7 +231,7 @@ Run 'kubectl get nodes' on the control-plane to see this node in the cluster.
 
 // GetGardenerNodeAgentSecret retrieves the Secret for gardener-node-agent which contains the operating system
 // configuration for this node.
-func GetGardenerNodeAgentSecret(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (*corev1.Secret, error) {
+func GetGardenerNodeAgentSecret(ctx context.Context, opts *Options, b *gardenadmbotanist.GardenadmBotanist) (*corev1.Secret, error) {
 	workerPoolName, err := getWorkerPoolName(ctx, opts, b)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine worker pool name in Shoot manifest: %w", err)
@@ -243,7 +257,7 @@ func GetGardenerNodeAgentSecret(ctx context.Context, opts *Options, b *botanist.
 	return &gardenerNodeAgentSecret, nil
 }
 
-func getWorkerPoolName(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (string, error) {
+func getWorkerPoolName(ctx context.Context, opts *Options, b *gardenadmbotanist.GardenadmBotanist) (string, error) {
 	if opts.WorkerPoolName != "" {
 		return opts.WorkerPoolName, nil
 	}
@@ -288,7 +302,7 @@ func getWorkerPool(opts *Options, workers []gardencorev1beta1.Worker) (gardencor
 }
 
 // DetermineZone determines the effective zone for the node based on the shoot specification.
-func DetermineZone(ctx context.Context, opts *Options, b *botanist.GardenadmBotanist) (effectiveZone string, err error) {
+func DetermineZone(ctx context.Context, opts *Options, b *gardenadmbotanist.GardenadmBotanist) (effectiveZone string, err error) {
 	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), metav1.NamespaceSystem)
 	if err != nil {
 		return "", fmt.Errorf("failed reading extensions.gardener.cloud/v1alpha1.Cluster object: %w", err)

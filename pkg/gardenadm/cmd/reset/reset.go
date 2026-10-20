@@ -25,9 +25,11 @@ import (
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenadm/botanist"
+	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/nodeagent"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
@@ -95,6 +97,12 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("cannot reset last control plane node as long as worker nodes still exist; remove the worker nodes first")
 	}
 
+	machineIP, err := utils.MachineIP(b.HostName, b.Shoot.PreferIPv6())
+	if err != nil {
+		return fmt.Errorf("failed fetching machine IP: %w", err)
+	}
+	b.Logger.Info("Found machine IP", "machineIP", machineIP.String())
+
 	var (
 		g = flow.NewGraph("reset")
 
@@ -104,10 +112,12 @@ func run(ctx context.Context, opts *Options) error {
 				return cordonAndDrainNode(ctx, b, node.Name, opts)
 			},
 		})
-
-		// TODO(scheererj): If node is a control plane node, remove its machine IP from the Etcd's
-		// .spec.externallyManagedMemberAddresses[], decrease .spec.replicas, and wait for reconciliation
-
+		ensureMachineIPInETCDs = g.Add(flow.Task{
+			Name:         "Ensure machine IP is removed from ETCD resources",
+			Fn:           botanist.EnsureMachineIPInBothETCDs(b.Logger, b.ShootClientSet.Client(), b.Clock, b.Shoot.ControlPlaneNamespace, machineIP.String(), botanist.RemoveAddressFromETCD),
+			SkipIf:       !isControlPlaneNode(node),
+			Dependencies: flow.NewTaskIDs(cordonAndDrainNodeComplete),
+		})
 		resetGardenerNodeAgent = g.Add(flow.Task{
 			Name: "Executing 'gardener-node-agent reset'",
 			Fn: func(ctx context.Context) error {
@@ -116,7 +126,7 @@ func run(ctx context.Context, opts *Options) error {
 				fmt.Fprintln(opts.ErrOut, string(out))
 				return err
 			},
-			Dependencies: flow.NewTaskIDs(cordonAndDrainNodeComplete),
+			Dependencies: flow.NewTaskIDs(ensureMachineIPInETCDs),
 		})
 		cleanupRemainingArtifacts = g.Add(flow.Task{
 			Name: "Cleaning up remaining artifacts on node",
@@ -157,8 +167,13 @@ command on any control plane node:
 	return nil
 }
 
-func isLastControlPlaneNodeWithWorkers(ctx context.Context, b *botanist.GardenadmBotanist, node *corev1.Node) (bool, error) {
-	if _, exists := node.Labels[v1beta1constants.LabelNodeRoleControlPlane]; !exists {
+func isControlPlaneNode(node *corev1.Node) bool {
+	_, exists := node.Labels[v1beta1constants.LabelNodeRoleControlPlane]
+	return exists
+}
+
+func isLastControlPlaneNodeWithWorkers(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, node *corev1.Node) (bool, error) {
+	if !isControlPlaneNode(node) {
 		return false, nil
 	}
 
@@ -178,7 +193,7 @@ func isLastControlPlaneNodeWithWorkers(ctx context.Context, b *botanist.Gardenad
 	return controlPlaneCount == 1 && len(nodeList.Items) > 1, nil
 }
 
-func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, nodeName string, opts *Options) error {
+func cordonAndDrainNode(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, nodeName string, opts *Options) error {
 	var (
 		informerFactory = kubeinformers.NewSharedInformerFactory(b.ShootClientSet.Kubernetes(), time.Minute)
 		pdbLister       = informerFactory.Policy().V1().PodDisruptionBudgets().Lister()
