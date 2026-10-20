@@ -62,27 +62,28 @@ var _ = Describe("MatchProject", func() {
 	})
 })
 
-var _ = Describe("Canonicalize", func() {
+var _ = Describe("reconcileOwnerRole", func() {
 	var (
 		owner = rbacv1.Subject{
-			APIGroup: "group",
-			Kind:     "kind",
-			Name:     "owner",
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "User",
+			Name:     "owner-1",
 		}
-		member1 = rbacv1.Subject{
-			APIGroup: "group",
-			Kind:     "kind",
-			Name:     "member1",
+		userMember = rbacv1.Subject{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "User",
+			Name:     "user-1",
 		}
-		member2 = rbacv1.Subject{
-			APIGroup: "group",
-			Kind:     "kind",
-			Name:     "member2",
+		serviceAccountMember = rbacv1.Subject{
+			APIGroup:  "",
+			Kind:      "ServiceAccount",
+			Name:      "robot",
+			Namespace: "namespace",
 		}
-		member3 = rbacv1.Subject{
-			APIGroup: "group",
-			Kind:     "kind",
-			Name:     "member3",
+		groupMember = rbacv1.Subject{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Group",
+			Name:     "group-1",
 		}
 		extensionRole = "extension:role"
 	)
@@ -91,15 +92,15 @@ var _ = Describe("Canonicalize", func() {
 		project := &core.Project{
 			Spec: core.ProjectSpec{
 				Members: []core.ProjectMember{
-					{Subject: member1, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: userMember, Roles: []string{core.ProjectMemberOwner}},
 				},
 			},
 		}
-		Strategy.Canonicalize(project)
+		ReconcileOwnerRole(project)
 		Expect(project).To(Equal(&core.Project{
 			Spec: core.ProjectSpec{
 				Members: []core.ProjectMember{
-					{Subject: member1, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: userMember, Roles: []string{core.ProjectMemberOwner}},
 				},
 			},
 		}))
@@ -111,7 +112,7 @@ var _ = Describe("Canonicalize", func() {
 				Owner: &owner,
 			},
 		}
-		Strategy.Canonicalize(project)
+		ReconcileOwnerRole(project)
 		Expect(project).To(Equal(&core.Project{
 			Spec: core.ProjectSpec{
 				Owner: &owner,
@@ -124,20 +125,20 @@ var _ = Describe("Canonicalize", func() {
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1},
+					{Subject: userMember},
 					{Subject: owner},
-					{Subject: member2},
+					{Subject: serviceAccountMember},
 				},
 			},
 		}
-		Strategy.Canonicalize(project)
+		ReconcileOwnerRole(project)
 		Expect(project).To(Equal(&core.Project{
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1},
+					{Subject: userMember},
 					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
-					{Subject: member2},
+					{Subject: serviceAccountMember},
 				},
 			},
 		}))
@@ -148,20 +149,20 @@ var _ = Describe("Canonicalize", func() {
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1},
+					{Subject: userMember},
 					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
-					{Subject: member2},
+					{Subject: serviceAccountMember},
 				},
 			},
 		}
-		Strategy.Canonicalize(project)
+		ReconcileOwnerRole(project)
 		Expect(project).To(Equal(&core.Project{
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1},
+					{Subject: userMember},
 					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
-					{Subject: member2},
+					{Subject: serviceAccountMember},
 				},
 			},
 		}))
@@ -172,22 +173,22 @@ var _ = Describe("Canonicalize", func() {
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: userMember, Roles: []string{core.ProjectMemberOwner}},
 					{Subject: owner},
-					{Subject: member2, Roles: []string{core.ProjectMemberOwner}},
-					{Subject: member3, Roles: []string{core.ProjectMemberOwner, extensionRole, core.ProjectMemberOwner}},
+					{Subject: serviceAccountMember, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: groupMember, Roles: []string{core.ProjectMemberOwner, extensionRole, core.ProjectMemberOwner}},
 				},
 			},
 		}
-		Strategy.Canonicalize(project)
+		ReconcileOwnerRole(project)
 		Expect(project).To(Equal(&core.Project{
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1, Roles: []string{}},
+					{Subject: userMember, Roles: []string{}},
 					{Subject: owner, Roles: []string{core.ProjectMemberOwner}},
-					{Subject: member2, Roles: []string{}},
-					{Subject: member3, Roles: []string{extensionRole}},
+					{Subject: serviceAccountMember, Roles: []string{}},
+					{Subject: groupMember, Roles: []string{extensionRole}},
 				},
 			},
 		}))
@@ -198,20 +199,46 @@ var _ = Describe("Canonicalize", func() {
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1, Roles: []string{core.ProjectMemberOwner, extensionRole}},
+					{Subject: userMember, Roles: []string{core.ProjectMemberOwner, extensionRole}},
 					{Subject: owner, Roles: []string{extensionRole}},
-					{Subject: member2},
+					{Subject: serviceAccountMember},
 				},
 			},
 		}
-		Strategy.Canonicalize(project)
+		ReconcileOwnerRole(project)
 		Expect(project).To(Equal(&core.Project{
 			Spec: core.ProjectSpec{
 				Owner: &owner,
 				Members: []core.ProjectMember{
-					{Subject: member1, Roles: []string{extensionRole}},
+					{Subject: userMember, Roles: []string{extensionRole}},
 					{Subject: owner, Roles: []string{extensionRole, core.ProjectMemberOwner}},
-					{Subject: member2},
+					{Subject: serviceAccountMember},
+				},
+			},
+		}))
+	})
+
+	It("should allow ServiceAccount to be owner", func() {
+		project := &core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &serviceAccountMember,
+				Members: []core.ProjectMember{
+					{Subject: userMember, Roles: []string{core.ProjectMemberOwner, extensionRole}},
+					{Subject: owner, Roles: []string{extensionRole, core.ProjectMemberOwner}},
+					{Subject: serviceAccountMember},
+					{Subject: rbacv1.Subject{Kind: "ServiceAccount", Name: "robot", Namespace: "default"}, Roles: []string{core.ProjectMemberOwner}},
+				},
+			},
+		}
+		ReconcileOwnerRole(project)
+		Expect(project).To(Equal(&core.Project{
+			Spec: core.ProjectSpec{
+				Owner: &serviceAccountMember,
+				Members: []core.ProjectMember{
+					{Subject: userMember, Roles: []string{extensionRole}},
+					{Subject: owner, Roles: []string{extensionRole}},
+					{Subject: serviceAccountMember, Roles: []string{core.ProjectMemberOwner}},
+					{Subject: rbacv1.Subject{Kind: "ServiceAccount", Name: "robot", Namespace: "default"}, Roles: []string{}},
 				},
 			},
 		}))
