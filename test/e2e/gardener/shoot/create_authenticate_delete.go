@@ -24,14 +24,19 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/utils/access"
@@ -213,6 +218,31 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(selfSubjectReview.Status.UserInfo.Groups).To(Equal([]string{"gardener.cloud:system:viewers", "system:authenticated"}))
 		})
 
+		It("should terminate requests and watches on persistent connections once the client certificate expires", func(ctx SpecContext) {
+			// The admin kubeconfig subresource enforces a 10 minute minimum validity, so sign a short-lived certificate
+			// ourselves. O=gardener.cloud:system:admins grants cluster-admin via the authenticating proxy.
+			certData, keyData, notAfter := signShortLivedShootAdminClientCertificate(ctx, shoot1.SeedClient, shoot1.Shoot.Status.TechnicalID, shortClientCertificateValidity)
+
+			restConfig := rest.CopyConfig(shoot1Client.RESTConfig())
+			restConfig.CertData = certData
+			restConfig.KeyData = keyData
+			restConfig.CertFile = ""
+			restConfig.KeyFile = ""
+			restConfig.BearerToken = ""
+			restConfig.BearerTokenFile = ""
+
+			directClient, err := kubernetesclientset.NewForConfig(rest.CopyConfig(restConfig))
+			Expect(err).NotTo(HaveOccurred())
+
+			proxyClient, err := getAPIServerProxyClientSet(restConfig, shoot1.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			verifyRequestsAndWatchesTerminateAfterCertificateExpiry(ctx, notAfter, map[string]kubernetesclientset.Interface{
+				"apiserver endpoint":       directClient,
+				"apiserver-proxy endpoint": proxyClient,
+			})
+		})
+
 		ItShouldDeleteShoot(shoot1)
 		ItShouldDeleteShoot(shoot2)
 
@@ -293,6 +323,18 @@ func getAPIServerProxyClient(restConfig *rest.Config, targetShoot *gardencorev1b
 	}
 
 	return c, nil
+}
+
+func getAPIServerProxyClientSet(restConfig *rest.Config, shoot *gardencorev1beta1.Shoot) (kubernetesclientset.Interface, error) {
+	transport, err := newHTTPConnectTransport(restConfig, apiserverexposure.GetAPIServerProxyTargetClusterName(shoot.Status.TechnicalID), vpnseedserver.HTTPProxyGatewayPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP connect transport: %w", err)
+	}
+
+	proxyConfig := rest.CopyConfig(restConfig)
+	proxyConfig.Host = "https://kubernetes.default.svc.cluster.local"
+
+	return kubernetesclientset.NewForConfigAndClient(proxyConfig, &http.Client{Transport: transport})
 }
 
 func httpClientForRESTConfig(restConfig *rest.Config) (string, *http.Client, error) {
@@ -459,4 +501,167 @@ func (i *injectHeaderTransport) RoundTrip(req *http.Request) (*http.Response, er
 		req.Header.Add(key, value)
 	}
 	return http.DefaultTransport.RoundTrip(req)
+}
+
+const shortClientCertificateValidity = 2 * time.Minute
+
+// signShortLivedShootAdminClientCertificate reads the shoot's client CA (ca-client) from its control plane namespace on
+// the seed and signs a short-lived client certificate with it. It returns the certificate and private key in PEM format
+// as well as the certificate's expiration time.
+func signShortLivedShootAdminClientCertificate(ctx context.Context, seedClient client.Client, controlPlaneNamespace string, validity time.Duration) ([]byte, []byte, time.Time) {
+	GinkgoHelper()
+
+	caClientSecrets := &corev1.SecretList{}
+	Expect(seedClient.List(ctx, caClientSecrets, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{
+		secretsmanager.LabelKeyName:            v1beta1constants.SecretNameCAClient,
+		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+		secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
+	})).To(Succeed())
+	Expect(caClientSecrets.Items).NotTo(BeEmpty(), "expected a ca-client secret in namespace %q", controlPlaneNamespace)
+
+	caClientSecret := caClientSecrets.Items[0]
+	for i := range caClientSecrets.Items {
+		if caClientSecrets.Items[i].CreationTimestamp.After(caClientSecret.CreationTimestamp.Time) {
+			caClientSecret = caClientSecrets.Items[i]
+		}
+	}
+
+	clientCA, err := secretsutils.LoadCertificate("", caClientSecret.Data[secretsutils.DataKeyPrivateKeyCA], caClientSecret.Data[secretsutils.DataKeyCertificateCA])
+	Expect(err).NotTo(HaveOccurred())
+
+	certificate, err := (&secretsutils.CertificateSecretConfig{
+		Name:         "e2e-client-cert-expiry",
+		CommonName:   "gardener.cloud:admin:e2e-client-cert-expiry",
+		Organization: []string{v1beta1constants.ShootSystemAdminsGroupName},
+		CertType:     secretsutils.ClientCert,
+		Validity:     &validity,
+		SigningCA:    clientCA,
+	}).GenerateCertificate()
+	Expect(err).NotTo(HaveOccurred())
+
+	return certificate.CertificatePEM, certificate.PrivateKeyPEM, certificate.Certificate.NotAfter
+}
+
+// verifyRequestsAndWatchesTerminateAfterCertificateExpiry asserts that, for every given persistent client, list requests
+// and a kept-open watch keep working until the client certificate expires (notAfter) and are then rejected with an
+// unauthorized error - only after expiry. List polling and watch maintenance run concurrently per client (within a
+// single validity window) so each client's success->rejection transition is observed independently.
+func verifyRequestsAndWatchesTerminateAfterCertificateExpiry(ctx context.Context, notAfter time.Time, clients map[string]kubernetesclientset.Interface) {
+	GinkgoHelper()
+
+	// Slack for the sub-second difference between the test's and Envoy's clocks and the route timeout timer precision.
+	const clockSlack = 2 * time.Second
+
+	probes := make(map[string]*connectionProbe, len(clients))
+	for name, shootClient := range clients {
+		By(fmt.Sprintf("opening a watch and establishing the persistent connection via the %s", name))
+
+		namespaceWatch, err := shootClient.CoreV1().Namespaces().Watch(ctx, metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		probe := &connectionProbe{
+			watch:    &watchMaintainer{done: make(chan struct{})},
+			listDone: make(chan struct{}),
+		}
+		probes[name] = probe
+		go probe.watch.run(ctx, shootClient, namespaceWatch)
+
+		Eventually(ctx, func(g Gomega) {
+			_, err := shootClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithTimeout(time.Minute).Should(Succeed())
+
+		go probe.pollListUntilRejected(ctx, shootClient)
+	}
+
+	for name, probe := range probes {
+		By(fmt.Sprintf("verifying that requests and watches are rejected with an unauthorized error only after the certificate expired via the %s", name))
+
+		Eventually(ctx, isClosed(probe.listDone)).WithTimeout(time.Until(notAfter) + time.Minute).WithPolling(time.Second).Should(BeTrue())
+		Expect(probe.listRejectedAt).To(BeTemporally(">=", notAfter.Add(-clockSlack)), "requests were rejected before the certificate expired")
+
+		Eventually(ctx, isClosed(probe.watch.done)).WithTimeout(time.Minute).WithPolling(time.Second).Should(BeTrue())
+		Expect(probe.watch.rejectedAt).To(BeTemporally(">=", notAfter.Add(-clockSlack)),
+			"the watch was rejected with an unauthorized error before the certificate expired (rejected at %v, certificate expired at %v)", probe.watch.rejectedAt, notAfter)
+	}
+}
+
+func isClosed(ch <-chan struct{}) func() bool {
+	return func() bool {
+		select {
+		case <-ch:
+			return true
+		default:
+			return false
+		}
+	}
+}
+
+// connectionProbe tracks, per persistent client, when list requests and the kept-open watch are first rejected with an
+// unauthorized error.
+type connectionProbe struct {
+	watch *watchMaintainer
+
+	listDone       chan struct{}
+	listRejectedAt time.Time
+}
+
+// pollListUntilRejected polls list requests until one is rejected with an unauthorized error, recording the time.
+func (p *connectionProbe) pollListUntilRejected(ctx context.Context, shootClient kubernetesclientset.Interface) {
+	defer close(p.listDone)
+
+	for ctx.Err() == nil {
+		if _, err := shootClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 1}); apierrors.IsUnauthorized(err) {
+			p.listRejectedAt = time.Now()
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
+// watchMaintainer keeps a watch alive, re-establishing it on transient errors, until it is rejected with an unauthorized error.
+type watchMaintainer struct {
+	done       chan struct{}
+	rejectedAt time.Time
+}
+
+// run drains the given watch and re-establishes it whenever it ends, retrying transient errors. It returns (closing
+// done) once re-establishing fails with an unauthorized error or the context is canceled.
+func (m *watchMaintainer) run(ctx context.Context, shootClient kubernetesclientset.Interface, namespaceWatch watch.Interface) {
+	defer close(m.done)
+
+	for {
+		for range namespaceWatch.ResultChan() {
+		}
+		namespaceWatch.Stop()
+
+		for {
+			if ctx.Err() != nil {
+				return
+			}
+
+			var err error
+			namespaceWatch, err = shootClient.CoreV1().Namespaces().Watch(ctx, metav1.ListOptions{})
+			if err == nil {
+				break
+			}
+			if apierrors.IsUnauthorized(err) {
+				m.rejectedAt = time.Now()
+				return
+			}
+
+			// Transient error (e.g. a freshly dialed connection failing its handshake); retry - the persistent
+			// connection yields the unauthorized error.
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+			}
+		}
+	}
 }
