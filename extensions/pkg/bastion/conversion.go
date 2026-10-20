@@ -17,18 +17,11 @@ func BastionMachineToCloudProfileBastion(machine *extensionsv1alpha1.BastionMach
 		return nil
 	}
 
-	bastion := &gardencorev1beta1.Bastion{}
-
-	if machine.Type != nil {
-		bastion.MachineType = &gardencorev1beta1.BastionMachineType{Name: *machine.Type}
-	}
-
-	if machine.Image != nil {
-		bastion.MachineImage = &gardencorev1beta1.BastionMachineImage{
+	return &gardencorev1beta1.Bastion{
+		MachineType: &gardencorev1beta1.BastionMachineType{Name: machine.Type},
+		MachineImage: &gardencorev1beta1.BastionMachineImage{
 			Name:    machine.Image.Name,
-			Version: machine.Image.Version,
-		}
+			Version: new(machine.Image.Version),
+		},
 	}
-
-	return bastion
 }

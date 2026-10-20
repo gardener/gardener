@@ -70,65 +70,52 @@ var _ = Describe("Bastion validation tests", func() {
 		})
 
 		Context("machine", func() {
-			It("should allow a machine with only a type", func() {
-				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{Type: new("large")}
-
-				Expect(ValidateBastion(bastion)).To(BeEmpty())
-			})
-
-			It("should allow a machine with only an image", func() {
+			It("should allow a fully specified machine", func() {
 				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
-					Image: &extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: new("1.2.3")},
+					Type:  "large",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
 				}
 
 				Expect(ValidateBastion(bastion)).To(BeEmpty())
 			})
 
-			It("should allow a machine with both type and image", func() {
-				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
-					Type:  new("large"),
-					Image: &extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux"},
-				}
+			It("should allow an absent machine", func() {
+				bastion.Spec.Machine = nil
 
 				Expect(ValidateBastion(bastion)).To(BeEmpty())
 			})
 
-			It("should forbid a machine that specifies neither type nor image", func() {
-				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{}
+			It("should forbid a machine with an empty type", func() {
+				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
+				}
 
 				Expect(ValidateBastion(bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.machine"),
-				}))))
-			})
-
-			It("should forbid an empty machine type", func() {
-				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{Type: new("")}
-
-				Expect(ValidateBastion(bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.machine.type"),
 				}))))
 			})
 
-			It("should forbid an empty machine image name", func() {
+			It("should forbid a machine with an empty image name", func() {
 				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
-					Image: &extensionsv1alpha1.BastionMachineImage{Name: ""},
+					Type:  "large",
+					Image: extensionsv1alpha1.BastionMachineImage{Version: "1.2.3"},
 				}
 
 				Expect(ValidateBastion(bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.machine.image.name"),
 				}))))
 			})
 
-			It("should forbid an empty machine image version", func() {
+			It("should forbid a machine with an empty image version", func() {
 				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
-					Image: &extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: new("")},
+					Type:  "large",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux"},
 				}
 
 				Expect(ValidateBastion(bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.machine.image.version"),
 				}))))
 			})
@@ -179,9 +166,15 @@ var _ = Describe("Bastion validation tests", func() {
 		})
 
 		It("should prevent updating the machine", func() {
-			bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{Type: new("large")}
+			bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+				Type:  "large",
+				Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
+			}
 			newBastion := prepareBastionForUpdate(bastion)
-			newBastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{Type: new("small")}
+			newBastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+				Type:  "small",
+				Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
+			}
 
 			errorList := ValidateBastionUpdate(newBastion, bastion)
 

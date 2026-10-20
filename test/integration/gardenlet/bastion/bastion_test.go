@@ -41,10 +41,10 @@ var _ = Describe("Bastion controller tests", func() {
 				g.Expect(extensionBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
 				g.Expect(extensionBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
 				g.Expect(extensionBastion.Spec.Machine).To(Equal(&extensionsv1alpha1.BastionMachine{
-					Type: new("large"),
-					Image: &extensionsv1alpha1.BastionMachineImage{
+					Type: "large",
+					Image: extensionsv1alpha1.BastionMachineImage{
 						Name:    "some-image",
-						Version: new("1.0.0"),
+						Version: "1.0.0",
 					},
 				}))
 				g.Expect(extensionBastion.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
@@ -169,10 +169,10 @@ var _ = Describe("Bastion controller tests", func() {
 					IPBlock: networkingv1.IPBlock{CIDR: "1.2.3.4/32"},
 				}},
 				Machine: &operationsv1alpha1.BastionMachine{
-					Type: new("large"),
-					Image: &operationsv1alpha1.BastionMachineImage{
+					Type: "large",
+					Image: operationsv1alpha1.BastionMachineImage{
 						Name:    "some-image",
-						Version: new("1.0.0"),
+						Version: "1.0.0",
 					},
 				},
 			},
@@ -306,10 +306,10 @@ var _ = Describe("Bastion controller tests", func() {
 				g.Expect(extensionBastion.Spec.Type).To(Equal(*operationsBastion.Spec.ProviderType))
 				g.Expect(extensionBastion.Spec.UserData).To(Equal(createUserData(operationsBastion)))
 				g.Expect(extensionBastion.Spec.Machine).To(Equal(&extensionsv1alpha1.BastionMachine{
-					Type: new("large"),
-					Image: &extensionsv1alpha1.BastionMachineImage{
+					Type: "large",
+					Image: extensionsv1alpha1.BastionMachineImage{
 						Name:    "some-image",
-						Version: new("1.0.0"),
+						Version: "1.0.0",
 					},
 				}))
 			}).Should(Succeed())

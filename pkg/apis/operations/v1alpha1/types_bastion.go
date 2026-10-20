@@ -76,11 +76,9 @@ type BastionIngressPolicy struct {
 // BastionMachine contains information about the machine type and image.
 type BastionMachine struct {
 	// Type is the machine type of the bastion.
-	// +optional
-	Type *string `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// Image holds information about the machine image to use for the bastion.
-	// +optional
-	Image *BastionMachineImage `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
+	Image BastionMachineImage `json:"image" protobuf:"bytes,2,opt,name=image"`
 }
 
 // BastionMachineImage defines the name and the version of the bastion's machine image in any environment. Has to be
@@ -89,8 +87,7 @@ type BastionMachineImage struct {
 	// Name is the name of the image.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Version is the version of the image.
-	// +optional
-	Version *string `json:"version,omitempty" protobuf:"bytes,2,opt,name=version"`
+	Version string `json:"version" protobuf:"bytes,2,opt,name=version"`
 }
 
 // BastionStatus holds the most recently observed status of the Bastion.

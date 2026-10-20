@@ -65,9 +65,9 @@ type BastionIngressPolicy struct {
 // BastionMachine contains information about the machine type and image.
 type BastionMachine struct {
 	// Type is the machine type of the bastion.
-	Type *string
+	Type string
 	// Image holds information about the machine image to use for the bastion.
-	Image *BastionMachineImage
+	Image BastionMachineImage
 }
 
 // BastionMachineImage defines the name and the version of the bastion's machine image in any environment. Has to be
@@ -76,7 +76,7 @@ type BastionMachineImage struct {
 	// Name is the name of the image.
 	Name string
 	// Version is the version of the image.
-	Version *string
+	Version string
 }
 
 // BastionStatus holds the most recently observed status of the Bastion.

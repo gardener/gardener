@@ -223,16 +223,8 @@ func (v *Bastion) validateMachine(bastion *operations.Bastion, shoot *gardencore
 
 	machinePath := field.NewPath("spec", "machine")
 
-	var (
-		machineType  *core.BastionMachineType
-		machineImage *core.BastionMachineImage
-	)
-	if bastion.Spec.Machine.Type != nil {
-		machineType = &core.BastionMachineType{Name: *bastion.Spec.Machine.Type}
-	}
-	if image := bastion.Spec.Machine.Image; image != nil {
-		machineImage = &core.BastionMachineImage{Name: image.Name, Version: image.Version}
-	}
+	machineType := &core.BastionMachineType{Name: bastion.Spec.Machine.Type}
+	machineImage := &core.BastionMachineImage{Name: bastion.Spec.Machine.Image.Name, Version: new(bastion.Spec.Machine.Image.Version)}
 
 	if errs := corevalidation.ValidateBastionMachine(machineType, machineImage, coreCloudProfileSpec, machinePath.Child("type"), machinePath.Child("image")); len(errs) > 0 {
 		return apierrors.NewInvalid(gk, bastion.Name, errs)
