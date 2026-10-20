@@ -18,7 +18,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/onsi/gomega/gexec"
@@ -36,9 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	apiserverapp "github.com/gardener/gardener/cmd/gardener-apiserver/app"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -387,27 +386,47 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 		return err
 	}
 
-	// ensure that we can really list objects in the Gardener API
-	// after https://github.com/kubernetes/kubernetes/pull/119824 (first available in v0.28.3), we have seen that GAPI
-	// sometimes fails to communicate with etcd even if we have passed all prior checks here, see
-	// https://github.com/gardener/gardener/pull/8666
-	// TODO: Revisit this once sigs.k8s.io/controller-runtime has upgraded their envtest version to v1.28.3+ (currently,
-	//  only v1.28.0 is used, hence the kube-apiserver does not yet suffer from the same issue).
+	// Ensure that every Gardener API GroupVersion is really served via the kube-apiserver and that we can list objects
+	// in it.
+	// An APIService being available does not mean that the kube-aggregator already proxies requests for it. It updates
+	// its proxy handler for the APIService asynchronously. Until then, requests for this GroupVersion fail with
+	// 503 ServiceUnavailable or 404 NotFound. Hence, we need to check every GroupVersion. Otherwise, tests might fail with
+	// "the server is currently unable to handle the request" when creating their first object.
+	// Listing objects also ensures that gardener-apiserver can communicate with etcd. After
+	// https://github.com/kubernetes/kubernetes/pull/119824, we have seen that it sometimes fails to do so even if we have
+	// passed all prior checks here. This check was added with the dependency update in
+	// https://github.com/gardener/gardener/pull/8666.
 	return retry.Until(ctx, waitPollInterval, func(ctx context.Context) (bool, error) {
-		for _, gvk := range []schema.GroupVersionKind{
-			gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"),
-			operationsv1alpha1.SchemeGroupVersion.WithKind("BastionList"),
-			seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeedList"),
-		} {
+		for _, gv := range apiserver.AllGardenerAPIGroupVersions {
+			resourceList, err := discoveryClient.ServerResourcesForGroupVersion(gv.String())
+			if err != nil {
+				return retry.MinorError(fmt.Errorf("failed discovering resources of %s: %w", gv, err))
+			}
+
+			kind := listableKind(resourceList)
+			if kind == "" {
+				return retry.SevereError(fmt.Errorf("no listable resource found in %s", gv))
+			}
+
 			objList := &metav1.PartialObjectMetadataList{}
-			objList.SetGroupVersionKind(gvk)
+			objList.SetGroupVersionKind(gv.WithKind(kind + "List"))
 			if err := c.List(ctx, objList, client.Limit(1)); err != nil {
 				return retry.MinorError(err)
 			}
-			log.V(1).Info("Listing resources is possible", "gvk", gvk)
+			log.V(1).Info("Listing resources is possible", "gvk", objList.GroupVersionKind())
 		}
 		return retry.Ok()
 	})
+}
+
+// listableKind returns the kind of the first top-level resource in the given list that supports the list verb.
+func listableKind(resourceList *metav1.APIResourceList) string {
+	for _, resource := range resourceList.APIResources {
+		if !strings.Contains(resource.Name, "/") && slices.Contains(resource.Verbs, "list") {
+			return resource.Kind
+		}
+	}
+	return ""
 }
 
 func (g *GardenerAPIServer) apiServiceForSchemeGroupVersion(svc *corev1.Service, gv schema.GroupVersion) *apiregistrationv1.APIService {
