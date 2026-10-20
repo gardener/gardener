@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -38,7 +39,15 @@ The config directory must contain the same manifests that were used for "gardena
 ShootState of the self-hosted shoot cluster.
 
 Warning: the self-hosted shoot cluster must not be running anymore, or at least its machine-controller-manager must
-be stopped. Otherwise, it recreates the machines that are deleted by this command.`,
+be stopped. Otherwise, it recreates the machines that are deleted by this command.
+
+Limitations:
+- Only the machines and the infrastructure are destroyed. Other resources are left behind, e.g., the DNS record of
+  the API server, the load balancer exposing the API server, and resources created by workloads in the cluster (load
+  balancers of Services, volumes of PersistentVolumeClaims, etc.).
+- Machines that are missing in the ShootState (e.g., because it is outdated) are not deleted.
+- Re-running the command after machines or parts of the infrastructure have been deleted might create them again,
+  because they are restored from the ShootState before they are deleted.`,
 
 		Example: `# Destroy the infrastructure
 gardenadm destroy --config-dir /path/to/manifests`,
@@ -84,6 +93,10 @@ func run(ctx context.Context, opts *Options) error {
 	if resources.ShootState == nil {
 		return fmt.Errorf("ShootState is missing in the config directory: " +
 			"the state of the infrastructure and machines is required to destroy them")
+	}
+	if resources.ShootState.Name != resources.Shoot.Name || resources.ShootState.Namespace != resources.Shoot.Namespace {
+		return fmt.Errorf("ShootState %s does not belong to Shoot %s: their names and namespaces must match",
+			client.ObjectKeyFromObject(resources.ShootState), client.ObjectKeyFromObject(resources.Shoot))
 	}
 
 	clientSet, err := NewClientSetFromFile(opts.Kubeconfig, kubernetes.SeedScheme)

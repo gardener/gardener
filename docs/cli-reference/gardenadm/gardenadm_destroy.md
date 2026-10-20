@@ -17,6 +17,14 @@ ShootState of the self-hosted shoot cluster.
 Warning: the self-hosted shoot cluster must not be running anymore, or at least its machine-controller-manager must
 be stopped. Otherwise, it recreates the machines that are deleted by this command.
 
+Limitations:
+- Only the machines and the infrastructure are destroyed. Other resources are left behind, e.g., the DNS record of
+  the API server, the load balancer exposing the API server, and resources created by workloads in the cluster (load
+  balancers of Services, volumes of PersistentVolumeClaims, etc.).
+- Machines that are missing in the ShootState (e.g., because it is outdated) are not deleted.
+- Re-running the command after machines or parts of the infrastructure have been deleted might create them again,
+  because they are restored from the ShootState before they are deleted.
+
 ```
 gardenadm destroy [flags]
 ```

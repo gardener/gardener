@@ -105,6 +105,17 @@ spec:
 				Expect(command.RunE(command, nil)).To(MatchError(ContainSubstring("ShootState is missing in the config directory")))
 			})
 
+			It("should fail if the ShootState does not belong to the Shoot", func() {
+				fsys["shootstate.yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: ShootState
+metadata:
+  name: other
+  namespace: garden
+`)}
+
+				Expect(command.RunE(command, nil)).To(MatchError(ContainSubstring("ShootState garden/other does not belong to Shoot garden/root")))
+			})
+
 			Describe("safety check", func() {
 				BeforeEach(func() {
 					fsys["shootstate.yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
