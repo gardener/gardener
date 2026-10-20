@@ -286,7 +286,7 @@ var _ = Describe("Etcd", func() {
 
 			switch class {
 			case ClassImportant:
-				if replicas == 1 {
+				if replicas == 1 && staticPodConfig == nil {
 					obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 				}
 				obj.Spec.Backup.Resources = &corev1.ResourceRequirements{
@@ -301,7 +301,7 @@ var _ = Describe("Etcd", func() {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "resources.druid.gardener.cloud/allow-unhealthy-pod-eviction", "")
 			}
 
-			if replicas == 3 {
+			if replicas == 3 && staticPodConfig == nil {
 				obj.Spec.Labels = utils.MergeStringMaps(obj.Spec.Labels, map[string]string{
 					"networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-2379": "allowed",
 					"networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-2380": "allowed",
@@ -1384,6 +1384,35 @@ var _ = Describe("Etcd", func() {
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-access-" + etcdName}, accessSecret)).To(Succeed())
 					Expect(accessSecret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", etcdName))
 					Expect(accessSecret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "kube-system"))
+				})
+
+				When("etcd is important", func() {
+					BeforeEach(func() {
+						class = ClassImportant
+					})
+
+					It("should not set the safe-to-evict annotation", func() {
+						Expect(etcd.Deploy(ctx)).To(Succeed())
+
+						etcdObj := &druidcorev1alpha1.Etcd{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+						Expect(etcdObj.Spec.Annotations).NotTo(HaveKey("cluster-autoscaler.kubernetes.io/safe-to-evict"))
+					})
+				})
+
+				When("HA setup is configured", func() {
+					BeforeEach(func() {
+						highAvailabilityEnabled = true
+						replicas = new(int32(3))
+					})
+
+					It("should not add the peer-to-peer network policy labels", func() {
+						Expect(etcd.Deploy(ctx)).To(Succeed())
+
+						etcdObj := &druidcorev1alpha1.Etcd{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+						Expect(etcdObj.Spec.Labels).NotTo(HaveKey("networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-2380"))
+					})
 				})
 
 				It("should set ExternallyManagedMemberAddresses and derive Replicas from controlPlaneNodeIP", func() {

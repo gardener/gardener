@@ -272,7 +272,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	)
 
 	if e.values.Class == ClassImportant {
-		if !e.values.HighAvailabilityEnabled {
+		if e.values.StaticPodConfig == nil && !e.values.HighAvailabilityEnabled {
 			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		}
 		metrics = druidcorev1alpha1.Extensive
@@ -406,7 +406,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
-		if e.values.HighAvailabilityEnabled {
+		if e.values.HighAvailabilityEnabled && e.values.StaticPodConfig == nil {
 			// Allow etcd p2p communication
 			e.etcd.Spec.Labels = utils.MergeStringMaps(e.etcd.Spec.Labels, map[string]string{
 				gardenerutils.NetworkPolicyLabel(e.values.NamePrefix+etcdconstants.ServiceName(e.values.Role), etcdconstants.PortEtcdClient):    v1beta1constants.LabelNetworkPolicyAllowed,
