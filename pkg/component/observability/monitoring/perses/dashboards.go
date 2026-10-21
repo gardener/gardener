@@ -13,6 +13,7 @@ import (
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,7 +44,7 @@ func init() {
 	// Fail fast at build/test time if any embedded dashboard cannot be decoded/validated, has no or an invalid resource
 	// name, or defines no panels.
 	for _, dashboardEmbed := range []embed.FS{gardenDashboards, seedDashboards, gardenAndSeedDashboards, gardenAndShootDashboards, commonDashboards} {
-		if err := fs.WalkDir(dashboardEmbed, "dashboards", func(path string, dirEntry fs.DirEntry, err error) error {
+		utilruntime.Must(fs.WalkDir(dashboardEmbed, "dashboards", func(path string, dirEntry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -56,18 +57,16 @@ func init() {
 			}
 			name, config, err := decodeDashboard(data)
 			if err != nil {
-				panic(fmt.Sprintf("embedded dashboard %s cannot be decoded: %v", path, err))
+				return fmt.Errorf("embedded dashboard %s cannot be decoded: %w", path, err)
 			}
 			if errs := utilvalidation.IsDNS1123Subdomain(name); len(errs) > 0 {
-				panic(fmt.Sprintf("embedded dashboard %s has invalid resource name %q: %v", path, name, errs))
+				return fmt.Errorf("embedded dashboard %s has invalid resource name %q: %v", path, name, errs)
 			}
 			if len(config.Panels) == 0 {
-				panic(fmt.Sprintf("embedded dashboard %s (%q) defines no panels", path, name))
+				return fmt.Errorf("embedded dashboard %s (%q) defines no panels", path, name)
 			}
 			return nil
-		}); err != nil {
-			panic(err)
-		}
+		}))
 	}
 }
 
