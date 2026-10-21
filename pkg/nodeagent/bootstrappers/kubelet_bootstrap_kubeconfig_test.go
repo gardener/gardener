@@ -85,7 +85,7 @@ var _ = Describe("KubeletBootstrapKubeconfig", func() {
 				test.AssertNoFileOnDisk(fakeFS, pathKubeletBootstrapKubeconfigFile)
 			})
 
-			It("should create the bootstrap kubeconfig file", func() {
+			It("should create the bootstrap kubeconfig file using the configured API server address", func() {
 				expectedBootstrapKubeconfig := `apiVersion: v1
 clusters:
 - cluster:
@@ -109,6 +109,43 @@ users:
 
 				test.AssertDirectoryOnDisk(fakeFS, pathKubeletDirectory)
 				test.AssertFileOnDisk(fakeFS, pathKubeletBootstrapKubeconfigFile, expectedBootstrapKubeconfig, 0600)
+			})
+
+			When("the node is a control plane node", func() {
+				BeforeEach(func() {
+					runnable = &KubeletBootstrapKubeconfig{
+						Log:                log,
+						FS:                 fakeFS,
+						APIServerConfig:    apiServerConfig,
+						IsControlPlaneNode: true,
+					}
+				})
+
+				It("should create the bootstrap kubeconfig file using localhost", func() {
+					expectedBootstrapKubeconfig := `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: ` + apiServerConfig.CAFile + `
+    server: https://localhost:443
+  name: kubelet-bootstrap
+contexts:
+- context:
+    cluster: kubelet-bootstrap
+    user: kubelet-bootstrap
+  name: kubelet-bootstrap
+current-context: kubelet-bootstrap
+kind: Config
+users:
+- name: kubelet-bootstrap
+  user:
+    token: ` + bootstrapToken + `
+`
+
+					Expect(runnable.Start(ctx)).To(Succeed())
+
+					test.AssertDirectoryOnDisk(fakeFS, pathKubeletDirectory)
+					test.AssertFileOnDisk(fakeFS, pathKubeletBootstrapKubeconfigFile, expectedBootstrapKubeconfig, 0600)
+				})
 			})
 		})
 	})

@@ -157,7 +157,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		return fmt.Errorf("failed fetching name of node: %w", err)
 	}
 
-	runControlPlaneNodesEndpointsBootstrapper := cfg.Bootstrap != nil && cfg.Bootstrap.ControlPlaneNodesEndpoints != nil && cfg.Bootstrap.ControlPlaneNodesEndpoints.Enabled
+	isControlPlaneNode := cfg.Bootstrap != nil && cfg.Bootstrap.ControlPlaneNodesEndpoints != nil && cfg.Bootstrap.ControlPlaneNodesEndpoints.Enabled
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -170,7 +170,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(int(cfg.Server.Metrics.Port))),
 			ExtraHandlers: extraHandlers,
 		},
-		Cache:          cache.Options{ByObject: getCache(log, hostName, nodeName, cfg.Controllers.OperatingSystemConfig.SecretName, runControlPlaneNodesEndpointsBootstrapper)},
+		Cache:          cache.Options{ByObject: getCache(log, hostName, nodeName, cfg.Controllers.OperatingSystemConfig.SecretName, isControlPlaneNode)},
 		LeaderElection: false,
 	})
 	if err != nil {
@@ -205,9 +205,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 
 	bootstrapRunnables := []manager.Runnable{
 		&bootstrappers.KubeletBootstrapKubeconfig{
-			Log:             log.WithName("kubelet-bootstrap-kubeconfig-creator"),
-			FS:              fs,
-			APIServerConfig: cfg.APIServer,
+			Log:                log.WithName("kubelet-bootstrap-kubeconfig-creator"),
+			FS:                 fs,
+			APIServerConfig:    cfg.APIServer,
+			IsControlPlaneNode: isControlPlaneNode,
 		},
 		&bootstrappers.OSCChecker{
 			Log:      log.WithName("osc-checker"),
@@ -219,7 +220,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		},
 	}
 
-	if runControlPlaneNodesEndpointsBootstrapper {
+	if isControlPlaneNode {
 		bootstrapRunnables = append(bootstrapRunnables, &bootstrappers.ControlPlaneNodesEndpoints{
 			Log:        log.WithName("controlplane-nodes-endpoints"),
 			FS:         fs,
@@ -243,7 +244,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 	return mgr.Start(ctx)
 }
 
-func getCache(log logr.Logger, hostName, nodeName, secretName string, runControlPlaneNodesEndpointsBootstrapper bool) map[client.Object]cache.ByObject {
+func getCache(log logr.Logger, hostName, nodeName, secretName string, isControlPlaneNode bool) map[client.Object]cache.ByObject {
 	var (
 		nodeCacheOptions  = cache.ByObject{Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})}
 		leaseCacheOptions = cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
@@ -254,7 +255,7 @@ func getCache(log logr.Logger, hostName, nodeName, secretName string, runControl
 		nodeCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName})
 		nodeCacheOptions.Label = nil
 		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenerutils.NodeAgentLeaseName(nodeName)})
-	} else if runControlPlaneNodesEndpointsBootstrapper {
+	} else if isControlPlaneNode {
 		// If the node name is not known yet, and we need to run the bootstrapper for populating the endpoints of other
 		// control plane nodes, we have to disable the label selector for the node cache so that we can actually
 		// discover them. This is only the case for control plane nodes in self-hosted shoots during their bootstrap
