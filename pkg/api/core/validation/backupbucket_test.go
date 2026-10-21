@@ -255,7 +255,7 @@ var _ = Describe("validation", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("spec.credentialsRef"),
-						"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1/WorkloadIdentity", "v1/Secret"`),
+						"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 					})),
 				))
 			})

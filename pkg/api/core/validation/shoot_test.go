@@ -1938,7 +1938,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":   Equal(field.ErrorTypeNotSupported),
 									"Field":  Equal("spec.provider.workers[0].controlPlane.backup.credentialsRef"),
-									"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1/WorkloadIdentity", "v1/Secret"`),
+									"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 								})),
 							))
 						})
@@ -2632,7 +2632,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeNotSupported),
 							"Field":  Equal("spec.dns.providers[0].credentialsRef"),
-							"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1/WorkloadIdentity", "v1/Secret"`),
+							"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 						}))),
 					),
 					Entry("InternalSecret",
@@ -2640,7 +2640,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeNotSupported),
 							"Field":  Equal("spec.dns.providers[0].credentialsRef"),
-							"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1/WorkloadIdentity", "v1/Secret"`),
+							"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 						}))),
 					),
 				)
