@@ -137,12 +137,19 @@ spec:
               format:
                 unit: percent
               label: '% of requests'
+            thresholds:
+              steps:
+                - color: '#fade2a'
+                  value: 1
+                - color: '#f2495c'
+                  value: 10
             legend:
               position: bottom
               mode: table
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -743,12 +750,17 @@ spec:
               format:
                 unit: percent
               label: '% of seat capacity'
+            thresholds:
+              steps:
+                - color: '#fade2a'
+                  value: 80
             legend:
               position: right
               mode: table
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -802,12 +814,17 @@ spec:
               format:
                 unit: seconds
               label: wait time (s)
+            thresholds:
+              steps:
+                - color: '#fade2a'
+                  value: 1
             legend:
               position: right
               mode: table
               values:
                 - max
                 - last
+              size: small
         queries:
           - kind: TimeSeriesQuery
             spec:
