@@ -38,6 +38,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
 		NewFunc:                   func() runtime.Object { return &core.SecretBinding{} },
 		NewListFunc:               func() runtime.Object { return &core.SecretBindingList{} },
+		PredicateFunc:             secretbinding.MatchSecretBinding,
 		DefaultQualifiedResource:  core.Resource("secretbindings"),
 		SingularQualifiedResource: core.Resource("secretbinding"),
 		EnableGarbageCollection:   true,
@@ -48,7 +49,11 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 
 		TableConvertor: newTableConvertor(),
 	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter}
+	options := &generic.StoreOptions{
+		RESTOptions: optsGetter,
+		AttrFunc:    secretbinding.GetAttrs,
+	}
+
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}
