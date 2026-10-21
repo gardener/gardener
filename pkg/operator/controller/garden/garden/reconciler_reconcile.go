@@ -426,10 +426,17 @@ func (r *Reconciler) reconcile(
 		renewVirtualClusterAccess = g.Add(flow.Task{
 			Name: "Renewing virtual garden access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				// TODO(timuthy): Drop renewing secrets with class `shoot` when the TokenRequestor controller is disabled in GRM, after release v1.156
+				// TODO(timuthy): Drop renewing secrets with class `shoot` when the TokenRequestor controller is disabled in GRM, after release v1.157
 				if err := tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
 					client.InNamespace(r.GardenNamespace),
 					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
+				); err != nil {
+					return err
+				}
+				// TODO(timuthy): Drop renewing secrets with class `garden-transitional` when gardener-operator managed access secrets are migrated to the `garden` class, after release v1.157
+				if err := tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(),
+					client.InNamespace(r.GardenNamespace),
+					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGardenTransitional},
 				); err != nil {
 					return err
 				}
@@ -1236,7 +1243,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 }
 
 func (r *Reconciler) deployGardenPrometheus(ctx context.Context, prometheus prometheus.Interface, virtualGardenClient client.Client, aggregatePrometheusHost string, dashboardDomain string, discoveryServerEnabled bool) error {
-	if err := gardenerutils.NewGardenAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
+	if err := gardenerutils.NewGardenTransitionalAccessSecret(gardenprometheus.AccessSecretName, r.GardenNamespace).Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for garden prometheus: %w", err)
 	}
 

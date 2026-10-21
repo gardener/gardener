@@ -84,7 +84,7 @@ func (g *gardener) Deploy(ctx context.Context) error {
 
 	accessSecretFn := gardenerutils.NewShootAccessSecret
 	if g.values.IsGardenCluster {
-		accessSecretFn = gardenerutils.NewGardenAccessSecret
+		accessSecretFn = gardenerutils.NewGardenTransitionalAccessSecret
 	}
 
 	for _, v := range accessNamesToServers {

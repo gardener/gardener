@@ -44,7 +44,7 @@ func runMigrations(ctx context.Context, c client.Client, log logr.Logger) manage
 }
 
 // DeleteStaleShootAccessSecrets deletes stale `shoot-access-*` secrets of class `shoot` in the garden namespace for
-// which a valid `garden-access-*` replacement secret (same ServiceAccount, class `garden`) exists.
+// which a valid `garden-access-*` replacement secret (same ServiceAccount, class `garden-transitional`) exists.
 func DeleteStaleShootAccessSecrets(ctx context.Context, c client.Client, log logr.Logger) error {
 	secretList := &corev1.SecretList{}
 	if err := c.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{
@@ -96,7 +96,7 @@ func deleteStaleShootAccessSecret(ctx context.Context, c client.Client, log logr
 
 func isValidGardenAccessReplacement(stale, replacement *corev1.Secret) bool {
 	return replacement.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest &&
-		replacement.Labels[resourcesv1alpha1.ResourceManagerClass] == resourcesv1alpha1.ResourceManagerClassGarden &&
+		replacement.Labels[resourcesv1alpha1.ResourceManagerClass] == resourcesv1alpha1.ResourceManagerClassGardenTransitional &&
 		replacement.Annotations[resourcesv1alpha1.ServiceAccountName] == stale.Annotations[resourcesv1alpha1.ServiceAccountName] &&
 		replacement.Annotations[resourcesv1alpha1.ServiceAccountNamespace] == stale.Annotations[resourcesv1alpha1.ServiceAccountNamespace] &&
 		metav1.HasAnnotation(replacement.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)

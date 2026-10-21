@@ -602,7 +602,7 @@ func (k *kubeControllerManager) emptyPodDisruptionBudget() *policyv1.PodDisrupti
 
 func (k *kubeControllerManager) newClusterAccessSecret() *gardenerutils.AccessSecret {
 	if k.values.IsGardenCluster {
-		return gardenerutils.NewGardenAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
+		return gardenerutils.NewGardenTransitionalAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
 	}
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
 }

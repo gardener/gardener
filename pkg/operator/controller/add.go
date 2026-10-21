@@ -165,7 +165,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 					return true, (&tokenrequestor.Reconciler{
 						ConcurrentSyncs:        ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
 						APIAudiences:           []string{v1beta1constants.GardenerAudience},
-						Classes:                []string{resourcesv1alpha1.ResourceManagerClassGarden},
+						Classes:                []string{resourcesv1alpha1.ResourceManagerClassGarden, resourcesv1alpha1.ResourceManagerClassGardenTransitional},
 						TargetDefaultNamespace: TargetNamespaceForTokenRequestorController(),
 					}).AddToManager(mgr, mgr, virtualCluster)
 				},
@@ -180,7 +180,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 
 // TargetNamespaceForTokenRequestorController returns a function that determines the target namespace for the TokenRequestor controller based on whether the cluster is a seed cluster or not.
 // If it is a seed cluster, it computes the garden namespace based on the seed name; otherwise, it returns the default garden namespace.
-// TODO(timuthy): Drop the default namespace handling after Gardener v1.156 has been released.
+// TODO(timuthy): Drop the default namespace handling after Gardener v1.162 has been released.
 func TargetNamespaceForTokenRequestorController() tokenrequestor.TargetDefaultNamespaceFn {
 	var (
 		mu       sync.Mutex

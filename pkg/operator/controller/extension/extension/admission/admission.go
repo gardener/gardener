@@ -286,7 +286,7 @@ func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context,
 }
 
 func (d *deployment) getClusterAccessSecret(name string) *gardenerutils.AccessSecret {
-	return gardenerutils.NewGardenAccessSecret(name, d.gardenNamespace)
+	return gardenerutils.NewGardenTransitionalAccessSecret(name, d.gardenNamespace)
 }
 
 func resourceName(extension *operatorv1alpha1.Extension) string {

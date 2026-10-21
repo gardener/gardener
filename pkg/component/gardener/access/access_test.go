@@ -342,12 +342,12 @@ users:
 				projectAdminClusterRoleBinding,
 			))
 
-			expectedGardenerSecret.Labels["resources.gardener.cloud/class"] = "garden"
+			expectedGardenerSecret.Labels["resources.gardener.cloud/class"] = "garden-transitional"
 			reconciledGardenerSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerSecretName, Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerSecret), reconciledGardenerSecret)).To(Succeed())
 			Expect(reconciledGardenerSecret).To(DeepEqual(expectedGardenerSecret))
 
-			expectedGardenerInternalSecret.Labels["resources.gardener.cloud/class"] = "garden"
+			expectedGardenerInternalSecret.Labels["resources.gardener.cloud/class"] = "garden-transitional"
 			reconciledGardenerInternalSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerInternalSecretName, Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerInternalSecret), reconciledGardenerInternalSecret)).To(Succeed())
 			Expect(reconciledGardenerInternalSecret).To(DeepEqual(expectedGardenerInternalSecret))

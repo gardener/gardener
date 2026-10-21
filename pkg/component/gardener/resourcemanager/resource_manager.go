@@ -1342,7 +1342,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context, config *reso
 // NewClusterAccessSecret returns a new AccessSecret for the cluster resource-manager is targeting.
 func (r *resourceManager) NewClusterAccessSecret() *gardenerutils.AccessSecret {
 	if r.values.IsGardenCluster {
-		return gardenerutils.NewGardenAccessSecret(v1beta1constants.DeploymentNameGardenerResourceManager, r.namespace)
+		return gardenerutils.NewGardenTransitionalAccessSecret(v1beta1constants.DeploymentNameGardenerResourceManager, r.namespace)
 	}
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameGardenerResourceManager, r.namespace)
 }

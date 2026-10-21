@@ -134,7 +134,7 @@ func (o *otelCollector) WithAuthenticationProxy(b bool) {
 
 func (o *otelCollector) newKubeRBACProxyClusterAccessSecret() *gardenerutils.AccessSecret {
 	if o.values.IsGardenCluster {
-		return gardenerutils.NewGardenAccessSecret(kubeRBACProxyName, o.namespace)
+		return gardenerutils.NewGardenTransitionalAccessSecret(kubeRBACProxyName, o.namespace)
 	}
 	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, o.namespace)
 }

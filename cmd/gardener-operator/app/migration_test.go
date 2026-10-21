@@ -54,7 +54,7 @@ var _ = Describe("Migration", func() {
 		}
 
 		replacementSecret := func(serviceAccount string) *corev1.Secret {
-			secret := accessSecret(gardenerutils.SecretNamePrefixGardenAccess+serviceAccount, serviceAccount, metav1.NamespaceSystem, resourcesv1alpha1.ResourceManagerClassGarden)
+			secret := accessSecret(gardenerutils.SecretNamePrefixGardenAccess+serviceAccount, serviceAccount, metav1.NamespaceSystem, resourcesv1alpha1.ResourceManagerClassGardenTransitional)
 			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, "2026-10-07T00:00:00Z")
 			return secret
 		}

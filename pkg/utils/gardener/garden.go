@@ -309,6 +309,16 @@ const (
 // with the given name and namespace. If not already done, the name will be prefixed with the
 // SecretNamePrefixGardenAccess. The ServiceAccountName field will be defaulted with the name.
 func NewGardenAccessSecret(name, namespace string) *AccessSecret {
+	return newGardenAccessSecret(name, namespace, resourcesv1alpha1.ResourceManagerClassGarden)
+}
+
+// NewGardenTransitionalAccessSecret is like NewGardenAccessSecret, but with class `garden-transitional`.
+// TODO(timuthy): Drop this function and switch usage to `NewGardenAccessSecret` after release v1.157
+func NewGardenTransitionalAccessSecret(name, namespace string) *AccessSecret {
+	return newGardenAccessSecret(name, namespace, resourcesv1alpha1.ResourceManagerClassGardenTransitional)
+}
+
+func newGardenAccessSecret(name, namespace, class string) *AccessSecret {
 	if !strings.HasPrefix(name, SecretNamePrefixGardenAccess) {
 		name = SecretNamePrefixGardenAccess + name
 	}
@@ -321,7 +331,7 @@ func NewGardenAccessSecret(name, namespace string) *AccessSecret {
 			},
 		},
 		ServiceAccountName: strings.TrimPrefix(name, SecretNamePrefixGardenAccess),
-		Class:              resourcesv1alpha1.ResourceManagerClassGarden,
+		Class:              class,
 	}
 }
 

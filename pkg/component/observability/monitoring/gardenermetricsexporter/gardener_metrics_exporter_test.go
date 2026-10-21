@@ -314,7 +314,7 @@ var _ = Describe("GardenerMetricsExporter", func() {
 						Namespace: namespace,
 						Labels: map[string]string{
 							"resources.gardener.cloud/purpose": "token-requestor",
-							"resources.gardener.cloud/class":   "garden",
+							"resources.gardener.cloud/class":   "garden-transitional",
 						},
 						Annotations: map[string]string{
 							"serviceaccount.resources.gardener.cloud/name":      "gardener-metrics-exporter",
