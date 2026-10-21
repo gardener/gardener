@@ -34,7 +34,7 @@ var _ = Describe("Options", func() {
 
 	Describe("#Validate", func() {
 		It("should succeed when proper values were provided", func() {
-			options.Token = "some-token"
+			options.BootstrapToken = "some-token"
 
 			Expect(options.Validate()).To(Succeed())
 		})
@@ -44,7 +44,7 @@ var _ = Describe("Options", func() {
 		})
 
 		It("should fail when a negative timeout is provided", func() {
-			options.Token = "some-token"
+			options.BootstrapToken = "some-token"
 			options.DrainTimeout = -1
 
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a drain timeout >= 0")))

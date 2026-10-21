@@ -138,7 +138,7 @@ func printConnectCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *c
 }
 
 func printResetCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {
-	return fmt.Sprintf(`gardenadm reset --token %s --ca-certificate "%s" %s
+	return fmt.Sprintf(`gardenadm reset --bootstrap-token %s --ca-certificate "%s" %s
 `,
 		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
 		utils.EncodeBase64(clientSet.RESTConfig().CAData),
@@ -152,7 +152,7 @@ func validateIsShootCluster(ctx context.Context, c client.Client) error {
 		if !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed checking whether cluster is a Shoot: %w", err)
 		}
-		return fmt.Errorf("`--print-join-command` can only be used when the kubeconfig points to a Shoot cluster (the %q ConfigMap was not found in the %q namespace)", v1beta1constants.ConfigMapNameShootInfo, metav1.NamespaceSystem)
+		return fmt.Errorf("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster (the %q ConfigMap was not found in the %q namespace)", v1beta1constants.ConfigMapNameShootInfo, metav1.NamespaceSystem)
 	}
 	return nil
 }

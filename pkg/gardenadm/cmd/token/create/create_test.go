@@ -102,7 +102,7 @@ var _ = Describe("Create", func() {
 			})
 
 			It("should return an error because the cluster is not a Shoot", func() {
-				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-join-command` can only be used when the kubeconfig points to a Shoot cluster")))
+				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster")))
 			})
 
 			It("should successfully print the join command", func() {
@@ -110,6 +110,24 @@ var _ = Describe("Create", func() {
 
 				Expect(command.RunE(command, []string{token})).To(Succeed())
 				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
+`))
+			})
+		})
+
+		When("the reset command should be printed", func() {
+			BeforeEach(func() {
+				Expect(command.Flags().Set("print-reset-command", "true")).To(Succeed())
+			})
+
+			It("should return an error because the cluster is not a Shoot", func() {
+				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster")))
+			})
+
+			It("should successfully print the reset command", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}})).To(Succeed())
+
+				Expect(command.RunE(command, []string{token})).To(Succeed())
+				Eventually(stdOut).Should(Say(`gardenadm reset --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
 `))
 			})
 		})
