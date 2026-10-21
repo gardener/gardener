@@ -6,9 +6,14 @@ package credentialsbinding
 
 import (
 	"context"
+	"fmt"
 
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
@@ -70,4 +75,35 @@ func (credentialsBindingStrategy) WarningsOnCreate(_ context.Context, _ runtime.
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (credentialsBindingStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
 	return nil
+}
+
+// ToSelectableFields returns a field set that represents the object.
+func ToSelectableFields(credentialsBinding *security.CredentialsBinding) fields.Set {
+	// The purpose of allocation with a given number of elements is to reduce
+	// amount of allocations needed to create the fields.Set. If you add any
+	// field here or the number of object-meta related fields changes, this should
+	// be adjusted.
+	credentialsBindingSpecificFieldsSet := make(fields.Set, 3)
+	credentialsBindingSpecificFieldsSet[security.CredentialsBindingCredentialsRefName] = credentialsBinding.CredentialsRef.Name
+	credentialsBindingSpecificFieldsSet[security.CredentialsBindingCredentialsRefNamespace] = credentialsBinding.CredentialsRef.Namespace
+	credentialsBindingSpecificFieldsSet[security.CredentialsBindingCredentialsRefKind] = credentialsBinding.CredentialsRef.Kind
+	return generic.AddObjectMetaFieldsSet(credentialsBindingSpecificFieldsSet, &credentialsBinding.ObjectMeta, true)
+}
+
+// GetAttrs returns labels and fields of a given object for filtering purposes.
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+	credentialsBinding, ok := obj.(*security.CredentialsBinding)
+	if !ok {
+		return nil, nil, fmt.Errorf("not a CredentialsBinding")
+	}
+	return credentialsBinding.Labels, ToSelectableFields(credentialsBinding), nil
+}
+
+// MatchCredentialsBinding returns a generic matcher for a given label and field selector.
+func MatchCredentialsBinding(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+	return storage.SelectionPredicate{
+		Label:    label,
+		Field:    field,
+		GetAttrs: GetAttrs,
+	}
 }

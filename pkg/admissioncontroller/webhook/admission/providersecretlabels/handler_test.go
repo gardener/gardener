@@ -65,8 +65,8 @@ var _ = Describe("handler", func() {
 
 		BeforeEach(func() {
 			handler = &SecretHandler{Handler: &Handler{
-				Logger: log,
-				Client: fakeClient,
+				Logger:    log,
+				APIReader: fakeClient,
 			}}
 
 			secret = &corev1.Secret{
@@ -154,6 +154,16 @@ var _ = Describe("handler", func() {
 			Expect(handler.Default(ctx, secret)).To(Succeed())
 			Expect(secret.Labels).To(BeEmpty())
 		})
+
+		It("should not add provider labels from bindings referencing a different secret", func() {
+			secretBinding.SecretRef.Name = "other-secret"
+			credentialsBinding.CredentialsRef.Name = "other-secret"
+			Expect(fakeClient.Create(ctx, secretBinding)).To(Succeed())
+			Expect(fakeClient.Create(ctx, credentialsBinding)).To(Succeed())
+
+			Expect(handler.Default(ctx, secret)).To(Succeed())
+			Expect(secret.Labels).To(BeEmpty())
+		})
 	})
 
 	Context("for InternalSecrets", func() {
@@ -167,8 +177,8 @@ var _ = Describe("handler", func() {
 
 		BeforeEach(func() {
 			handler = &InternalSecretHandler{Handler: &Handler{
-				Logger: log,
-				Client: fakeClient,
+				Logger:    log,
+				APIReader: fakeClient,
 			}}
 
 			internalSecret = &gardencorev1beta1.InternalSecret{

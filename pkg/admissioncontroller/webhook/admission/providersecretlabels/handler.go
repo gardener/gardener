@@ -29,8 +29,8 @@ import (
 // Handler syncs the provider labels on Secrets referenced in SecretBindings, or on Secrets and InternalSecrets
 // referenced in CredentialsBindings.
 type Handler struct {
-	Logger logr.Logger
-	Client client.Client
+	Logger    logr.Logger
+	APIReader client.Reader
 
 	secretHandler         admission.Handler
 	internalSecretHandler admission.Handler
@@ -104,7 +104,7 @@ func (h *InternalSecretHandler) Default(ctx context.Context, obj runtime.Object)
 
 func (h *Handler) fetchProviderTypesFromSecretBindings(ctx context.Context, name, namespace string) (sets.Set[string], error) {
 	secretBindingList := &gardencorev1beta1.SecretBindingList{}
-	if err := h.Client.List(ctx, secretBindingList, client.MatchingFields{
+	if err := h.APIReader.List(ctx, secretBindingList, client.MatchingFields{
 		gardencore.SecretBindingSecretRefName:      name,
 		gardencore.SecretBindingSecretRefNamespace: namespace,
 	}); err != nil {
@@ -120,7 +120,7 @@ func (h *Handler) fetchProviderTypesFromSecretBindings(ctx context.Context, name
 
 func (h *Handler) fetchProviderTypesFromCredentialsBindings(ctx context.Context, apiVersion, kind, name, namespace string) (sets.Set[string], error) {
 	credentialsBindingList := &securityv1alpha1.CredentialsBindingList{}
-	if err := h.Client.List(ctx, credentialsBindingList, client.MatchingFields{
+	if err := h.APIReader.List(ctx, credentialsBindingList, client.MatchingFields{
 		security.CredentialsBindingCredentialsRefName:      name,
 		security.CredentialsBindingCredentialsRefNamespace: namespace,
 		security.CredentialsBindingCredentialsRefKind:      kind,
@@ -130,7 +130,7 @@ func (h *Handler) fetchProviderTypesFromCredentialsBindings(ctx context.Context,
 
 	providerTypes := sets.New[string]()
 	for _, credentialsBinding := range credentialsBindingList.Items {
-		// The API version must be checked explicitly because it is not indexed.
+		// The API version is not available as a field selector and must therefore be checked explicitly.
 		// Indexing it is unnecessary, as the same API version is usually used for all kinds
 		// and would therefore provide no meaningful performance benefit.
 		if credentialsBinding.CredentialsRef.APIVersion == apiVersion {
