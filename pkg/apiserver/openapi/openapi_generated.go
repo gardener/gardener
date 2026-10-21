@@ -8972,6 +8972,26 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 							},
 						},
 					},
+					"internalDomains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InternalDomains configures DNS settings related to the internal domains of the seed. The first entry is the internal domain for new shoots, all other entries are former internal domains which may still be in use by shoots.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.SeedDNSProviderConfig{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+					"internalDomainEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InternalDomainEnabled indicates whether the shoots on this seed use an internal domain. Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

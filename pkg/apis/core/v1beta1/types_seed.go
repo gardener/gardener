@@ -181,6 +181,15 @@ type SeedDNS struct {
 	// When determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.
 	// +optional
 	Defaults []SeedDNSProviderConfig `json:"defaults,omitempty" protobuf:"bytes,4,rep,name=defaults"`
+	// InternalDomains configures DNS settings related to the internal domains of the seed.
+	// The first entry is the internal domain for new shoots, all other entries are former internal domains which may
+	// still be in use by shoots.
+	// +optional
+	InternalDomains []SeedDNSProviderConfig `json:"internalDomains,omitempty" protobuf:"bytes,5,rep,name=internalDomains"`
+	// InternalDomainEnabled indicates whether the shoots on this seed use an internal domain.
+	// Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.
+	// +optional
+	InternalDomainEnabled *bool `json:"internalDomainEnabled,omitempty" protobuf:"varint,6,opt,name=internalDomainEnabled"`
 }
 
 // SeedDNSProviderConfig configures a DNS provider.
