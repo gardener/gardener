@@ -155,9 +155,9 @@ spec:
                         kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{
                           namespace=~"$namespace",target_kind=~"$targetKind",target_name=~"$targetName",container=~"$container"
                         } * (1 - $deviationTolerance)
-                      )[${deviationDuration:text}:1m]
+                      )[${deviationDuration}m:1m]
                     ) >= bool $deviationDuration)
-                  seriesNameFormat: Sum of $targetName targets using less than VPA recommendation with a minimum duration of ${deviationDuration:text} and a tolerance of $deviationTolerance
+                  seriesNameFormat: Sum of $targetName targets using less than VPA recommendation with a minimum duration of ${deviationDuration}m and a tolerance of $deviationTolerance
     "1":
       kind: Panel
       spec:
@@ -194,9 +194,9 @@ spec:
                         kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{
                           namespace=~"$namespace",target_kind=~"$targetKind",target_name=~"$targetName",container=~"$container"
                         } * (1 + $deviationTolerance)
-                      )[${deviationDuration:text}:1m]
+                      )[${deviationDuration}m:1m]
                     ) >= bool $deviationDuration)
-                  seriesNameFormat: Sum of $targetName targets using more than VPA recommendation with a minimum duration of ${deviationDuration:text} and a tolerance of $deviationTolerance
+                  seriesNameFormat: Sum of $targetName targets using more than VPA recommendation with a minimum duration of ${deviationDuration}m and a tolerance of $deviationTolerance
   layouts:
     - kind: Grid
       spec:
