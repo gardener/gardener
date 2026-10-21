@@ -422,7 +422,32 @@ EOF
       done
     }
 
+    # Docker Desktop 4.89+ no longer installs its privileged helper (vmnetd) by default. Without it, binding bind9 and
+    # the load balancer containers to privileged ports on 172.18.255.* fails with "ports are not available".
+    # Install the helper if Docker Desktop is used on macOS and the helper socket is missing.
+    ensure_docker_desktop_vmnetd() {
+      if [[ "$OSTYPE" != "darwin"* ]]; then
+        return
+      fi
+      if [[ "$(docker info --format '{{.OperatingSystem}}' 2>/dev/null)" != "Docker Desktop" ]]; then
+        return
+      fi
+      if [[ -S /var/run/com.docker.vmnetd.sock ]]; then
+        return
+      fi
+
+      local installer="/Applications/Docker.app/Contents/MacOS/install"
+      if [[ ! -x "$installer" ]]; then
+        echo "Warning: Docker Desktop privileged helper (vmnetd) is missing and $installer was not found. Binding privileged ports may fail."
+        return
+      fi
+
+      echo "> Installing Docker Desktop privileged helper (vmnetd), this may prompt for your sudo password..."
+      ${SUDO}"$installer" vmnetd
+    }
+
     check_shell_dependencies
+    ensure_docker_desktop_vmnetd
 
     mkdir -m 0755 -p "$DIR_BACKUP_BUCKET" "$DIR_REGISTRY"
 
