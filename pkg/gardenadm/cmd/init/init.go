@@ -180,8 +180,11 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 		// resulting ingress from the status. For DNS-based exposure the SelfHostedShootExposure
 		// step is skipped and the DNSRecord step points directly at the control-plane node addresses.
 		deploySelfHostedShootExposure = g.Add(flow.Task{
-			Name:         "Deploying SelfHostedShootExposure",
-			Fn:           b.DeploySelfHostedShootExposure,
+			Name: "Deploying SelfHostedShootExposure",
+			// Retry because provisioning a load balancer can take several minutes. Meanwhile, the extension controller
+			// reports the pending provisioning as an error in the status, so a single Deploy+Wait hits the severe-error
+			// threshold long before the load balancer is ready.
+			Fn:           flow.TaskFn(b.DeploySelfHostedShootExposure).RetryUntilTimeout(5*time.Second, 15*time.Minute),
 			SkipIf:       !b.Shoot.HasExtensionExposure(),
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
