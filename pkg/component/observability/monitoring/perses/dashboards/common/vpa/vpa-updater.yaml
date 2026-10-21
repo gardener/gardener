@@ -44,13 +44,11 @@ spec:
         customAllValue: .+
         sort: alphabetical-asc
         plugin:
-          kind: StaticListVariable
+          kind: PrometheusLabelValuesVariable
           spec:
-            values:
-              - grafana
-              - migration
-              - not
-              - supported
+            labelName: vpa_namespace
+            matchers:
+              - vpa_updater_in_place_updated_pods_total{pod=~"$pod"}
         name: vpa_namespace
   panels:
     "0_0":
