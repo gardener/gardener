@@ -41,8 +41,8 @@ var (
 )
 
 func init() {
-	// Fail fast at build/test time if any embedded dashboard cannot be decoded/validated, has no or an invalid resource
-	// name, or defines no panels.
+	// Fail fast at startup if any embedded dashboard cannot be decoded/validated, has no or an invalid resource name,
+	// or defines no panels.
 	for _, dashboardEmbed := range []embed.FS{gardenDashboards, seedDashboards, gardenAndSeedDashboards, gardenAndShootDashboards, commonDashboards} {
 		utilruntime.Must(fs.WalkDir(dashboardEmbed, "dashboards", func(path string, dirEntry fs.DirEntry, err error) error {
 			if err != nil {
