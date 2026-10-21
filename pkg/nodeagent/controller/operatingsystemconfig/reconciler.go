@@ -47,6 +47,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -55,6 +56,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -621,6 +623,16 @@ func (r *Reconciler) applyChangedInlineFiles(ctx context.Context, log logr.Logge
 		}
 		if !ok {
 			continue
+		}
+
+		// POD_IP is not properly set in the static pod manifest of ETCDs (it points to `.status.podIP` but this does
+		// not work for static pods). To make it be able to start up with the right configuration, we have to set it to
+		// the machine's address.
+		if strings.HasPrefix(file.Path, filepath.Join(kubeletcomponent.FilePathKubernetesManifests, "etcd-")) {
+			data, err = r.mutateETCDStaticPodManifest(data)
+			if err != nil {
+				return fmt.Errorf("unable to mutate etcd static pod manifest %s: %w", file.Path, err)
+			}
 		}
 
 		if err := r.FS.MkdirAll(filepath.Dir(file.Path), defaultDirPermissions); err != nil {
@@ -1405,4 +1417,24 @@ func (r *Reconciler) getActualStaticPodHashes(ctx context.Context, log logr.Logg
 	}
 
 	return staticPodNameToHash, staticPodList, nil
+}
+
+func (r *Reconciler) mutateETCDStaticPodManifest(data []byte) ([]byte, error) {
+	machineIP, err := utils.MachineIP(r.HostName, ptr.Deref(r.Config.PreferIPv6, false))
+	if err != nil {
+		return nil, fmt.Errorf("failed determining the machine IP: %w", err)
+	}
+
+	pod := &corev1.Pod{}
+	if err := runtime.DecodeInto(nodeagent.Codec, data, pod); err != nil {
+		return nil, fmt.Errorf("failed decoding the data into a corev1.Pod object: %w", err)
+	}
+
+	utilruntime.Must(kubernetesutils.VisitPodSpec(pod, func(podSpec *corev1.PodSpec) {
+		kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+			kubernetesutils.AddEnvVar(container, corev1.EnvVar{Name: "POD_IP", Value: machineIP.String()}, true)
+		}, etcdconstants.ContainerNameBackupRestore)
+	}))
+
+	return runtime.Encode(nodeagent.Codec, pod)
 }
