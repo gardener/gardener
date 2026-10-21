@@ -636,7 +636,7 @@ func (m *watchMaintainer) run(ctx context.Context, shootClient kubernetesclients
 	defer close(m.done)
 
 	for {
-		for range namespaceWatch.ResultChan() {
+		for range namespaceWatch.ResultChan() { //nolint:revive // empty block intentionally drains the channel
 		}
 		namespaceWatch.Stop()
 
