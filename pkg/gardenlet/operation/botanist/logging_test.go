@@ -91,6 +91,12 @@ var _ = Describe("Logging", func() {
 				SecretsManager: fakeSecretManager,
 				SeedClientSet:  k8sSeedClient,
 				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+					SNI: &gardenletconfigv1alpha1.SNI{
+						Ingress: &gardenletconfigv1alpha1.SNIIngress{
+							Namespace: new("istio-ingress"),
+							Labels:    map[string]string{"istio": "ingressgateway"},
+						},
+					},
 					Logging: &gardenletconfigv1alpha1.Logging{
 						Enabled: new(true),
 						Vali: &gardenletconfigv1alpha1.Vali{
@@ -389,6 +395,11 @@ var _ = Describe("Logging", func() {
 		func(pvcAutoscalerEnabled bool, minimumVolumeSize *resource.Quantity, expectedStorage resource.Quantity) {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 			gardenletfeatures.RegisterFeatureGates()
+
+			Expect(fakeClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCACluster, Namespace: controlPlaneNamespace},
+				Data:       map[string][]byte{"bundle.crt": []byte("ca-bundle")},
+			})).To(Succeed())
 
 			var volume *gardencorev1beta1.SeedVolume
 			if minimumVolumeSize != nil {

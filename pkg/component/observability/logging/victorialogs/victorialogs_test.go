@@ -11,10 +11,15 @@ import (
 	victoriametricsv1 "github.com/VictoriaMetrics/operator/api/operator/v1"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
 	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -84,7 +89,7 @@ var _ = Describe("VictoriaLogs", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(c, namespace)
 		component = New(c, namespace, fakeSecretManager, values)
-		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c, componenttest.CmpOptsForIstio()...)
 	})
 
 	JustBeforeEach(func() {
@@ -501,6 +506,226 @@ var _ = Describe("VictoriaLogs", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(BeNotFoundError())
+		})
+	})
+
+	Context("with external exposure", func() {
+		const (
+			istioNamespace = "istio-ingress"
+			authSecret     = "monitoring-ingress-credentials-users"
+			host           = "vl-shoot.ingress.seed.example.com"
+		)
+
+		var (
+			tlsSecretInIstioNamespace *corev1.Secret
+			caBundleInIstioNamespace  *corev1.Secret
+			gateway                   *istionetworkingv1beta1.Gateway
+			virtualService            *istionetworkingv1beta1.VirtualService
+			destinationRule           *istionetworkingv1beta1.DestinationRule
+			exposedVlSingle           *victoriametricsv1.VLSingle
+		)
+
+		BeforeEach(func() {
+			// The CA secret must exist so secretsManager.Get("ca") succeeds in istioResources.
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+			// Wildcard cert: created with no data so the copied secret in istio namespace also has nil Data.
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "wildcard-tls", Namespace: namespace}})).To(Succeed())
+
+			values = Values{
+				ImageRepository:    imageRepository,
+				ImageTag:           imageTag,
+				SecretNameServerCA: "ca",
+				ExternalExposure: &ExposureValues{
+					AuthSecretName:               authSecret,
+					AuthSecretManaged:            true,
+					Host:                         host,
+					IstioIngressGatewayLabels:    map[string]string{"istio": "ingressgateway"},
+					IstioIngressGatewayNamespace: istioNamespace,
+					WildcardCertSecretName:       new("wildcard-tls"),
+				},
+			}
+			component = New(c, namespace, fakeSecretManager, values)
+
+			exposedVlSingle = vlSingle.DeepCopy()
+			exposedVlSingle.Spec.ServiceSpec.Annotations = map[string]string{
+				"networking.istio.io/exportTo": istioNamespace,
+			}
+
+			tlsSecretInIstioNamespace = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      namespace + "-victoria-logs-wildcard-tls",
+					Namespace: istioNamespace,
+					Labels:    getLabels(),
+				},
+			}
+
+			caBundleInIstioNamespace = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      namespace + "-victoria-logs-ca",
+					Namespace: istioNamespace,
+					Labels:    getLabels(),
+				},
+				Data: map[string][]byte{"cacert": nil},
+			}
+
+			gateway = &istionetworkingv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "victoria-logs",
+					Namespace: namespace,
+					Labels:    getLabels(),
+				},
+				Spec: istionetworkingv1alpha3.Gateway{
+					Selector: map[string]string{"istio": "ingressgateway"},
+					Servers: []*istionetworkingv1alpha3.Server{{
+						Port: &istionetworkingv1alpha3.Port{
+							Name: "tls", Number: 443, Protocol: "HTTPS",
+						},
+						Hosts: []string{host},
+						Tls: &istionetworkingv1alpha3.ServerTLSSettings{
+							CredentialName: namespace + "-victoria-logs-wildcard-tls",
+							Mode:           istionetworkingv1alpha3.ServerTLSSettings_SIMPLE,
+						},
+					}},
+				},
+			}
+
+			destinationFQDN := "logging-vl." + namespace + ".svc.cluster.local"
+			virtualService = &istionetworkingv1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "victoria-logs",
+					Namespace: namespace,
+					Labels: map[string]string{
+						v1beta1constants.LabelApp:                      "victoria-logs",
+						v1beta1constants.LabelRole:                     "observability",
+						v1beta1constants.GardenRole:                    "observability",
+						v1beta1constants.LabelObservabilityApplication: "victoria-logs",
+						v1beta1constants.LabelBasicAuthSecretName:      authSecret,
+						v1beta1constants.LabelBasicAuthServerName:      "istio-basic-auth-server",
+						v1beta1constants.LabelBasicAuthSecretManaged:   "true",
+					},
+				},
+				Spec: istionetworkingv1alpha3.VirtualService{
+					ExportTo: []string{istioNamespace},
+					Gateways: []string{"victoria-logs"},
+					Hosts:    []string{host},
+					Http: []*istionetworkingv1alpha3.HTTPRoute{
+						{
+							Name: "query",
+							Match: []*istionetworkingv1alpha3.HTTPMatchRequest{{
+								Uri: &istionetworkingv1alpha3.StringMatch{
+									MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/select/logsql/query"},
+								},
+							}},
+							Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
+								Destination: &istionetworkingv1alpha3.Destination{
+									Host: destinationFQDN,
+									Port: &istionetworkingv1alpha3.PortSelector{Number: 9429},
+								},
+							}},
+						},
+						{
+							DirectResponse: &istionetworkingv1alpha3.HTTPDirectResponse{Status: 403},
+						},
+						{
+							Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
+								Destination: &istionetworkingv1alpha3.Destination{
+									Host: destinationFQDN,
+									Port: &istionetworkingv1alpha3.PortSelector{Number: 9429},
+								},
+							}},
+						},
+					},
+				},
+			}
+
+			destinationRule = &istionetworkingv1beta1.DestinationRule{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "victoria-logs",
+					Namespace: namespace,
+					Labels:    getLabels(),
+				},
+				Spec: istionetworkingv1alpha3.DestinationRule{
+					Host: destinationFQDN,
+					TrafficPolicy: &istionetworkingv1alpha3.TrafficPolicy{
+						LoadBalancer: &istionetworkingv1alpha3.LoadBalancerSettings{
+							LocalityLbSetting: &istionetworkingv1alpha3.LocalityLoadBalancerSetting{
+								FailoverPriority: []string{"topology.kubernetes.io/zone"},
+								Enabled:          &wrapperspb.BoolValue{Value: true},
+							},
+						},
+						ConnectionPool: &istionetworkingv1alpha3.ConnectionPoolSettings{
+							Tcp: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings{
+								TcpKeepalive: &istionetworkingv1alpha3.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+									Time:     &durationpb.Duration{Seconds: 60},
+									Interval: &durationpb.Duration{Seconds: 30},
+									Probes:   5,
+								},
+								MaxConnectionDuration: &durationpb.Duration{Seconds: 86400},
+							},
+						},
+						OutlierDetection: &istionetworkingv1alpha3.OutlierDetection{},
+						Tls: &istionetworkingv1alpha3.ClientTLSSettings{
+							Mode:           istionetworkingv1alpha3.ClientTLSSettings_SIMPLE,
+							CredentialName: namespace + "-victoria-logs-ca",
+							Sni:            destinationFQDN,
+						},
+					},
+					ExportTo: []string{istioNamespace},
+				},
+			}
+		})
+
+		It("should deploy VLSingle with exportTo annotation and all istio resources", func() {
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+			Expect(customResourcesManagedResource).To(consistOf(
+				exposedVlSingle,
+				vpa,
+				serviceMonitor,
+				prometheusRule,
+				tlsSecretInIstioNamespace,
+				caBundleInIstioNamespace,
+				gateway,
+				virtualService,
+				destinationRule,
+			))
+		})
+
+		It("should generate a dedicated ingress TLS cert when no wildcard cert is provided", func() {
+			values.ExternalExposure.WildcardCertSecretName = nil
+			component = New(c, namespace, fakeSecretManager, values)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
+
+			generatedTLSSecretName := namespace + "-victoria-logs-victoria-logs-ingress-tls"
+			expectedGateway := gateway.DeepCopy()
+			expectedGateway.Spec.Servers[0].Tls.CredentialName = generatedTLSSecretName
+
+			consistOfIgnoringSecretData := NewManagedResourceConsistOfObjectsMatcher(c,
+				append(componenttest.CmpOptsForIstio(), cmpopts.IgnoreFields(corev1.Secret{}, "Data"))...,
+			)
+			Expect(customResourcesManagedResource).To(consistOfIgnoringSecretData(
+				exposedVlSingle,
+				vpa,
+				serviceMonitor,
+				prometheusRule,
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      generatedTLSSecretName,
+						Namespace: istioNamespace,
+						Labels:    getLabels(),
+					},
+				},
+				caBundleInIstioNamespace,
+				expectedGateway,
+				virtualService,
+				destinationRule,
+			))
 		})
 	})
 
