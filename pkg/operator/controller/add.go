@@ -163,7 +163,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 					}
 
 					return true, (&tokenrequestor.Reconciler{
-						ConcurrentSyncs:        ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+						ConcurrentSyncs:        int(ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0)),
 						APIAudiences:           []string{v1beta1constants.GardenerAudience},
 						Classes:                []string{resourcesv1alpha1.ResourceManagerClassGarden, resourcesv1alpha1.ResourceManagerClassGardenTransitional},
 						TargetDefaultNamespace: TargetNamespaceForTokenRequestorController(),
