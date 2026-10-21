@@ -39,6 +39,38 @@ var (
 	commonVpaDashboardsPath      = commonDashboardsPath + "/vpa"
 )
 
+func init() {
+	// Fail fast at build/test time if any embedded dashboard cannot be decoded/validated, has no or an invalid resource
+	// name, or defines no panels.
+	for _, dashboardEmbed := range []embed.FS{gardenDashboards, seedDashboards, gardenAndSeedDashboards, gardenAndShootDashboards, commonDashboards} {
+		if err := fs.WalkDir(dashboardEmbed, "dashboards", func(path string, dirEntry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if dirEntry.IsDir() {
+				return nil
+			}
+			data, err := dashboardEmbed.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			name, config, err := decodeDashboard(data)
+			if err != nil {
+				panic(fmt.Sprintf("embedded dashboard %s cannot be decoded: %v", path, err))
+			}
+			if errs := utilvalidation.IsDNS1123Subdomain(name); len(errs) > 0 {
+				panic(fmt.Sprintf("embedded dashboard %s has invalid resource name %q: %v", path, name, errs))
+			}
+			if len(config.Panels) == 0 {
+				panic(fmt.Sprintf("embedded dashboard %s (%q) defines no panels", path, name))
+			}
+			return nil
+		}); err != nil {
+			panic(err)
+		}
+	}
+}
+
 func (p *perses) dashboards() ([]client.Object, error) {
 	dashboards, err := p.loadDashboards()
 	if err != nil {
@@ -147,36 +179,4 @@ func (p *perses) selectDashboards() (map[string]embed.FS, sets.Set[string]) {
 		ignorePaths.Insert("vpa")
 	}
 	return requiredDashboards, ignorePaths
-}
-
-func init() {
-	// Fail fast at build/test time if any embedded dashboard cannot be decoded/validated, has no or an invalid resource
-	// name, or defines no panels.
-	for _, dashboardEmbed := range []embed.FS{gardenDashboards, seedDashboards, gardenAndSeedDashboards, gardenAndShootDashboards, commonDashboards} {
-		if err := fs.WalkDir(dashboardEmbed, "dashboards", func(path string, dirEntry fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if dirEntry.IsDir() {
-				return nil
-			}
-			data, err := dashboardEmbed.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			name, config, err := decodeDashboard(data)
-			if err != nil {
-				panic(fmt.Sprintf("embedded dashboard %s cannot be decoded: %v", path, err))
-			}
-			if errs := utilvalidation.IsDNS1123Subdomain(name); len(errs) > 0 {
-				panic(fmt.Sprintf("embedded dashboard %s has invalid resource name %q: %v", path, name, errs))
-			}
-			if len(config.Panels) == 0 {
-				panic(fmt.Sprintf("embedded dashboard %s (%q) defines no panels", path, name))
-			}
-			return nil
-		}); err != nil {
-			panic(err)
-		}
-	}
 }
