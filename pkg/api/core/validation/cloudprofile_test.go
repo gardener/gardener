@@ -831,6 +831,37 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						}))))
 					})
 
+					It("should forbid specifying lifecycle and expirationDate at the same time", func() {
+						deprecatedDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+						cloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        "3.4.6",
+											ExpirationDate: deprecatedDate,
+											Lifecycle: []core.LifecycleStage{
+												{Classification: deprecatedClassification, StartTime: deprecatedDate},
+											},
+										},
+										CRI:           []core.CRI{{Name: "containerd"}},
+										Architectures: []string{"amd64"},
+									},
+								},
+								UpdateStrategy: &updateStrategyMajor,
+							},
+						}
+
+						errorList := ValidateCloudProfile(cloudProfile)
+
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.machineImages[0].versions[0]"),
+							"Detail": Equal("cannot specify `classification` or `expirationDate` in combination with `lifecycle`"),
+						}))))
+					})
+
 					It("should forbid multiple lifecycle stages with same classification", func() {
 						supportedDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 

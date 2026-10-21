@@ -304,7 +304,6 @@ func ValidateMachineImageAdditionalConfig(machineVersion core.MachineImageVersio
 
 	allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 	allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
-	allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, versionsPath)...)
 
 	if len(capabilities) == 0 {
 		if len(machineVersion.Architectures) == 0 {

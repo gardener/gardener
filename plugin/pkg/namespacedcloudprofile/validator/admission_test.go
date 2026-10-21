@@ -189,14 +189,8 @@ var _ = Describe("Admission", func() {
 				}
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{image}
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", operation, nil, false, nil)
-				if fields == "both" {
-					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("spec.machineImages[0].versions[0]: Forbidden: cannot specify `classification` or `expirationDate` in combination with `lifecycle`")))
-				} else {
-					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
-				}
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			},
-				Entry("rejects both fields on create", admission.Create, "both"),
-				Entry("rejects both fields on update", admission.Update, "both"),
 				Entry("allows lifecycle alone", admission.Update, "lifecycle"),
 				Entry("allows expirationDate alone", admission.Update, "expirationDate"),
 			)

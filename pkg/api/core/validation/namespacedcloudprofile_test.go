@@ -17,6 +17,8 @@ import (
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
@@ -381,6 +383,74 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.machineImages[1].versions[0].version"),
 					}))))
+				})
+
+				Describe("using versionClassificationLifecycles", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+					})
+
+					It("should forbid specifying lifecycle and classification at the same time", func() {
+						deprecatedDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        "3.4.6",
+											Classification: &supportedClassification,
+											Lifecycle: []core.LifecycleStage{
+												{Classification: deprecatedClassification, StartTime: deprecatedDate},
+											},
+										},
+										CRI:           []core.CRI{{Name: "containerd"}},
+										Architectures: []string{"amd64"},
+									},
+								},
+								UpdateStrategy: &updateStrategyMajor,
+							},
+						}
+
+						errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
+
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.machineImages[0].versions[0]"),
+							"Detail": Equal("cannot specify `classification` or `expirationDate` in combination with `lifecycle`"),
+						}))))
+					})
+
+					It("should forbid specifying lifecycle and expirationDate at the same time", func() {
+						deprecatedDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: "ubuntu",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        "3.4.6",
+											ExpirationDate: deprecatedDate,
+											Lifecycle: []core.LifecycleStage{
+												{Classification: deprecatedClassification, StartTime: deprecatedDate},
+											},
+										},
+										CRI:           []core.CRI{{Name: "containerd"}},
+										Architectures: []string{"amd64"},
+									},
+								},
+								UpdateStrategy: &updateStrategyMajor,
+							},
+						}
+
+						errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
+
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.machineImages[0].versions[0]"),
+							"Detail": Equal("cannot specify `classification` or `expirationDate` in combination with `lifecycle`"),
+						}))))
+					})
 				})
 			})
 
