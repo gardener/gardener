@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/rand"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/rest"
@@ -110,9 +111,9 @@ type Interface interface {
 	SetReplicas(*int32)
 	// SetLiveMigration sets the LiveMigration field in the Values.
 	SetLiveMigration(*LiveMigrationValues)
-	// SetStaticPodControlPlaneNodesIPAddresses sets the IP addresses of all control plane nodes when etcd is run as
-	// static pod.
-	SetStaticPodControlPlaneNodesIPAddresses(...net.IP)
+	// SetStaticPodFirstControlPlaneMachineIP sets the IP address of the first control plane nodes created by
+	// `gardenadm init` when etcd is run as static pod.
+	SetStaticPodFirstControlPlaneMachineIP(net.IP)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -230,8 +231,10 @@ type AutoscalingConfig struct {
 
 // StaticPodConfig contains configuration when etcd runs as static pod.
 type StaticPodConfig struct {
-	// ControlPlaneNodesIPAddresses is the list of IP addresses for control plane nodes.
-	ControlPlaneNodesIPAddresses []net.IP
+	// FirstControlPlaneMachineIP is the IP address of the very first control plane machine created by `gardenadm init`.
+	// All other control plane node IP addresses are added/removed to/from the Etcd resource either via
+	// `gardenadm {join,reset}` or via gardenlet's `etcd-member` controller.
+	FirstControlPlaneMachineIP net.IP
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -479,20 +482,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		if e.values.StaticPodConfig != nil {
-			var replicas int32
 			if existingEtcd != nil {
 				e.etcd.Spec.ExternallyManagedMemberAddresses = slices.Clone(existingEtcd.Spec.ExternallyManagedMemberAddresses)
-				replicas = existingEtcd.Spec.Replicas
+				e.etcd.Spec.Replicas = existingEtcd.Spec.Replicas
+			}
+			if ip := e.values.StaticPodConfig.FirstControlPlaneMachineIP; ip != nil && !slices.Contains(e.etcd.Spec.ExternallyManagedMemberAddresses, ip.String()) {
+				e.etcd.Spec.ExternallyManagedMemberAddresses = append(e.etcd.Spec.ExternallyManagedMemberAddresses, ip.String())
+				e.etcd.Spec.Replicas++
 			}
 
-			for _, controlPlaneAddress := range e.values.StaticPodConfig.ControlPlaneNodesIPAddresses {
-				if ip := controlPlaneAddress.String(); !slices.Contains(e.etcd.Spec.ExternallyManagedMemberAddresses, ip) {
-					e.etcd.Spec.ExternallyManagedMemberAddresses = append(e.etcd.Spec.ExternallyManagedMemberAddresses, ip)
-					replicas++
-				}
-			}
-
-			e.etcd.Spec.Replicas = replicas
 			e.etcd.Spec.RunAsRoot = new(true)
 
 			if err := gardenerutils.NewShootAccessSecret(e.etcd.Name, e.namespace).Reconcile(ctx, e.client); err != nil {
@@ -943,10 +941,11 @@ func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 
 	address := fmt.Sprintf("%s%s.%s", e.values.NamePrefix, etcdconstants.ServiceName(e.values.Role), e.namespace)
 	if e.values.StaticPodConfig != nil {
-		if len(e.values.StaticPodConfig.ControlPlaneNodesIPAddresses) < 1 {
-			return fmt.Errorf("no static pod nodes IP addresses are configured for this etcd")
+		etcdObj, err := e.Get(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get etcd object %s: %w", client.ObjectKeyFromObject(e.etcd), err)
 		}
-		address = e.values.StaticPodConfig.ControlPlaneNodesIPAddresses[0].String()
+		address = etcdObj.Spec.ExternallyManagedMemberAddresses[rand.Intn(len(etcdObj.Spec.ExternallyManagedMemberAddresses))]
 	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://%s:%d/snapshot/full?final=true", address, etcdconstants.PortBackupRestore), nil)
@@ -1085,9 +1084,9 @@ func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
 func (e *etcd) SetLiveMigration(lm *LiveMigrationValues) { e.values.LiveMigration = lm }
 
-func (e *etcd) SetStaticPodControlPlaneNodesIPAddresses(ips ...net.IP) {
+func (e *etcd) SetStaticPodFirstControlPlaneMachineIP(ip net.IP) {
 	if e.values.StaticPodConfig != nil {
-		e.values.StaticPodConfig.ControlPlaneNodesIPAddresses = ips
+		e.values.StaticPodConfig.FirstControlPlaneMachineIP = ip
 	}
 }
 
@@ -1154,6 +1153,15 @@ func (e *etcd) computeCompactionJobContainerResources() *corev1.ResourceRequirem
 }
 
 func (e *etcd) computeReplicas(existingEtcd *druidcorev1alpha1.Etcd) int32 {
+	if e.values.StaticPodConfig != nil {
+		// In static pod mode, replicas should be derived from spec.externallyManagedMemberAddresses, not from
+		// values.Replicas.
+		if existingEtcd != nil {
+			return existingEtcd.Spec.Replicas
+		}
+		return 0
+	}
+
 	if e.values.Replicas != nil {
 		return *e.values.Replicas
 	}
