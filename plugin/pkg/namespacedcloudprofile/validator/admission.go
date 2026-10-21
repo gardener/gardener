@@ -424,7 +424,19 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						overrideStage := getExpiryStage(override.ExpirableVersion)
 						newStage := getExpiryStage(imageVersion.ExpirableVersion)
 						if !exists || overrideStage == nil || newStage == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
-							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q is in the past", imageVersion.Version)))
+							versionPath := imageVersionIndexPath.Child("expirationDate")
+							invalidValue := any(imageVersion.ExpirationDate)
+
+							if len(imageVersion.Lifecycle) > 0 {
+								versionPath = imageVersionIndexPath.Child("lifecycle")
+								invalidValue = imageVersion.Lifecycle
+							}
+
+							allErrs = append(allErrs, field.Invalid(
+								versionPath,
+								invalidValue,
+								fmt.Sprintf("expiration date for version %q is in the past", imageVersion.Version),
+							))
 						}
 					}
 				} else {

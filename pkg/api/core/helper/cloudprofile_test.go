@@ -606,7 +606,6 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
-			Expect(diff.RemovedVersionClassifications).To(BeEmpty())
 			Expect(diff.AddedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
 			Expect(diff.AddedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
@@ -642,7 +641,6 @@ var _ = Describe("CloudProfile Helper", func() {
 					"image-3": sets.New("version-1", "version-2"),
 				},
 			))
-			Expect(diff.RemovedVersionClassifications).To(BeEmpty())
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
 		})
@@ -686,9 +684,6 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
-			Expect(diff.RemovedVersionClassifications["image-1"]["version-1"].UnsortedList()).To(
-				ConsistOf(core.ClassificationSupported),
-			)
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
 		})
@@ -721,9 +716,6 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
-			Expect(diff.RemovedVersionClassifications["image-1"]["version-1"].UnsortedList()).To(
-				ConsistOf(core.ClassificationSupported),
-			)
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
 		})
@@ -733,7 +725,6 @@ var _ = Describe("CloudProfile Helper", func() {
 
 			Expect(diff.RemovedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.RemovedVersions).To(BeEmpty())
-			Expect(diff.RemovedVersionClassifications).To(BeEmpty())
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
 		})

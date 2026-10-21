@@ -208,20 +208,14 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 			}
 
 			if w.Machine.Image != nil {
-				for _, image := range newCloudProfileSpecCore.MachineImages {
-					if image.Name != w.Machine.Image.Name {
-						continue
-					}
-					for _, version := range image.Versions {
-						if version.Version == w.Machine.Image.Version && gardencorehelper.VersionIsUnavailable(version.ExpirableVersion) {
-							return fmt.Errorf(
-								"newly referenced cloud profile marks the machine image version %q currently in use by worker %q as unavailable",
-								fmt.Sprintf("%s@%s", image.Name, version.Version),
-								w.Name,
-							)
-						}
-					}
-					break
+				imageVersion, exists := gardencorehelper.FindMachineImageVersion(newCloudProfileSpecCore.MachineImages, w.Machine.Image.Name, w.Machine.Image.Version)
+
+				if exists && gardencorehelper.VersionIsUnavailable(imageVersion.ExpirableVersion) {
+					return fmt.Errorf(
+						"newly referenced cloud profile marks the machine image version %q currently in use by worker %q as unavailable",
+						fmt.Sprintf("%s@%s", w.Machine.Image.Name, imageVersion.Version),
+						w.Name,
+					)
 				}
 			}
 
