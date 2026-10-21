@@ -1774,6 +1774,42 @@ var _ = Describe("Validation Tests", func() {
 						})
 					})
 
+					Context("AuditWebhook", func() {
+						BeforeEach(func() {
+							garden.Spec.VirtualCluster.Gardener.APIServer.AuditWebhook = &operatorv1alpha1.AuditWebhook{
+								KubeconfigSecretName: "audit-webhook-kubeconfig",
+							}
+						})
+
+						DescribeTable("truncation size validation",
+							func(truncateEnabled *bool, truncateMaxBatchSize, truncateMaxEventSize *int64, expectedErrorField string) {
+								garden.Spec.VirtualCluster.Gardener.APIServer.AuditWebhook.TruncateEnabled = truncateEnabled
+								garden.Spec.VirtualCluster.Gardener.APIServer.AuditWebhook.TruncateMaxBatchSize = truncateMaxBatchSize
+								garden.Spec.VirtualCluster.Gardener.APIServer.AuditWebhook.TruncateMaxEventSize = truncateMaxEventSize
+
+								if expectedErrorField == "" {
+									Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+									return
+								}
+
+								Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+									PointTo(MatchFields(IgnoreExtras, Fields{
+										"Type":  Equal(field.ErrorTypeInvalid),
+										"Field": Equal(expectedErrorField),
+									})),
+								))
+							},
+
+							Entry("should not complain if no truncation sizes are configured", nil, nil, nil, ""),
+							Entry("should not complain if both truncation sizes are configured and valid", new(true), new(int64(10485760)), new(int64(102400)), ""),
+							Entry("should complain if both truncation sizes are configured and the max batch size is smaller than the max event size", new(true), new(int64(102400)), new(int64(10485760)), "spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.truncateMaxBatchSize"),
+							Entry("should complain if only the max batch size is configured and it is smaller than the default max event size", new(true), new(int64(1024)), nil, "spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.truncateMaxBatchSize"),
+							Entry("should complain if only the max event size is configured and it is larger than the default max batch size", new(true), nil, new(int64(10485761)), "spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.truncateMaxEventSize"),
+							Entry("should not complain if only the max event size is configured and it is smaller than the default max batch size", new(true), nil, new(int64(102400)), ""),
+							Entry("should complain about invalid sizes even if truncation is disabled", new(false), new(int64(102400)), new(int64(10485760)), "spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.truncateMaxBatchSize"),
+						)
+					})
+
 					Context("EncryptionConfig", func() {
 						It("should deny specifying duplicate resources", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
@@ -2735,6 +2771,42 @@ var _ = Describe("Validation Tests", func() {
 
 						Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 					})
+				})
+
+				Context("audit webhook", func() {
+					BeforeEach(func() {
+						garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditWebhook = &operatorv1alpha1.AuditWebhook{
+							KubeconfigSecretName: "audit-webhook-kubeconfig",
+						}
+					})
+
+					DescribeTable("truncation size validation",
+						func(truncateEnabled *bool, truncateMaxBatchSize, truncateMaxEventSize *int64, expectedErrorField string) {
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditWebhook.TruncateEnabled = truncateEnabled
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditWebhook.TruncateMaxBatchSize = truncateMaxBatchSize
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AuditWebhook.TruncateMaxEventSize = truncateMaxEventSize
+
+							if expectedErrorField == "" {
+								Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
+								return
+							}
+
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal(expectedErrorField),
+								})),
+							))
+						},
+
+						Entry("should not complain if no truncation sizes are configured", nil, nil, nil, ""),
+						Entry("should not complain if both truncation sizes are configured and valid", new(true), new(int64(10485760)), new(int64(102400)), ""),
+						Entry("should complain if both truncation sizes are configured and the max batch size is smaller than the max event size", new(true), new(int64(102400)), new(int64(10485760)), "spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.truncateMaxBatchSize"),
+						Entry("should complain if only the max batch size is configured and it is smaller than the default max event size", new(true), new(int64(1024)), nil, "spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.truncateMaxBatchSize"),
+						Entry("should complain if only the max event size is configured and it is larger than the default max batch size", new(true), nil, new(int64(10485761)), "spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.truncateMaxEventSize"),
+						Entry("should not complain if only the max event size is configured and it is smaller than the default max batch size", new(true), nil, new(int64(102400)), ""),
+						Entry("should complain about invalid sizes even if truncation is disabled", new(false), new(int64(102400)), new(int64(10485760)), "spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.truncateMaxBatchSize"),
+					)
 				})
 			})
 		})

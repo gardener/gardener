@@ -401,12 +401,27 @@ type KubeAPIServerConfig struct {
 }
 
 // AuditWebhook contains settings related to an audit webhook configuration.
+// +kubebuilder:validation:XValidation:rule="!has(self.truncateMaxBatchSize) || !has(self.truncateMaxEventSize) || self.truncateMaxBatchSize >= self.truncateMaxEventSize",message="truncateMaxBatchSize must be greater than or equal to truncateMaxEventSize when both are configured"
 type AuditWebhook struct {
 	// BatchMaxSize is the maximum size of a batch.
 	// +kubebuilder:default=30
 	// +kubebuilder:validation:Minimum=1
 	// +optional
 	BatchMaxSize *int32 `json:"batchMaxSize,omitempty"`
+	// TruncateEnabled specifies whether audit event and batch truncation is enabled.
+	// Note that truncation is only performed if this field is set to `true`, since the kube-apiserver defaults the corresponding `--audit-webhook-truncate-enabled` flag to `false`.
+	// +optional
+	TruncateEnabled *bool `json:"truncateEnabled,omitempty"`
+	// TruncateMaxBatchSize is the maximum size in bytes of a batch sent to the webhook.
+	// Defaulted to 10485760 (10MB) by the kubernetes apiserver (https://github.com/kubernetes/kubernetes/blob/6c4be7ebaa505f58463f1829272445845567b501/staging/src/k8s.io/apiserver/pkg/server/options/audit.go#L176)
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	TruncateMaxBatchSize *int64 `json:"truncateMaxBatchSize,omitempty"`
+	// TruncateMaxEventSize is the maximum size in bytes of an audit event sent to the webhook.
+	// Defaulted to 102400 (100KB) by the kubernetes apiserver (https://github.com/kubernetes/kubernetes/blob/6c4be7ebaa505f58463f1829272445845567b501/staging/src/k8s.io/apiserver/pkg/server/options/audit.go#L177)
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	TruncateMaxEventSize *int64 `json:"truncateMaxEventSize,omitempty"`
 	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
 	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
