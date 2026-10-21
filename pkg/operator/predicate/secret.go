@@ -32,7 +32,7 @@ func GardenWildcardCertificateChanged() predicate.Predicate {
 
 			if secretIsGardenWildcardCertificate(oldSecret) || secretIsGardenWildcardCertificate(secret) {
 				return !apiequality.Semantic.DeepEqual(secret.Data, oldSecret.Data) ||
-					secretGardenRole(oldSecret) != secretGardenRole(secret)
+					oldSecret.Labels[v1beta1constants.GardenRole] != secret.Labels[v1beta1constants.GardenRole]
 			}
 			return false
 		},
@@ -44,13 +44,5 @@ func GardenWildcardCertificateChanged() predicate.Predicate {
 }
 
 func secretIsGardenWildcardCertificate(secret *corev1.Secret) bool {
-	return secretGardenRole(secret) == v1beta1constants.GardenRoleGardenWildcardCert
-}
-
-func secretGardenRole(secret *corev1.Secret) string {
-	var role string
-	if secret != nil {
-		role = secret.Labels[v1beta1constants.GardenRole]
-	}
-	return role
+	return secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleGardenWildcardCert
 }
