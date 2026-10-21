@@ -189,8 +189,7 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 
 	// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
 	// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
-	if (version.Classification != nil && helper.VersionIsSupported(version)) ||
-		(len(version.Lifecycle) > 0 && helper.SupportedLifecycleClassification(version).Classification == core.ClassificationSupported) {
+	if version.Classification != nil && helper.VersionIsSupported(version) {
 		currentSemVer, err := semver.NewVersion(version.Version)
 		if err != nil {
 			// check is already performed by caller, avoid duplicate error

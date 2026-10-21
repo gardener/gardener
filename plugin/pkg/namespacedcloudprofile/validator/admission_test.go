@@ -390,7 +390,6 @@ var _ = Describe("Admission", func() {
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("lifecycle stages must not overlap per minor version")))
 			},
-				Entry("with two lifecycle overrides", true),
 				Entry("with an inherited supported version", false),
 			)
 

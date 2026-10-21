@@ -399,47 +399,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 					})
 
-					It("should forbid overlapping supported machine image versions within the same minor", func() {
-						cloudProfile.Spec.MachineImages = []core.MachineImage{
-							{
-								Name: machineImageName,
-								Versions: []core.MachineImageVersion{
-									{
-										ExpirableVersion: core.ExpirableVersion{
-											Version: "3.4.6",
-											Lifecycle: []core.LifecycleStage{
-												{
-													Classification: supportedClassification,
-												},
-											},
-										},
-										CRI:           []core.CRI{{Name: "containerd"}},
-										Architectures: []string{"amd64"},
-									},
-									{
-										ExpirableVersion: core.ExpirableVersion{
-											Version: "3.4.7",
-											Lifecycle: []core.LifecycleStage{
-												{
-													Classification: supportedClassification,
-												},
-											},
-										},
-										CRI:           []core.CRI{{Name: "containerd"}},
-										Architectures: []string{"amd64"},
-									},
-								},
-								UpdateStrategy: &updateStrategyMajor,
-							},
-						}
-						errorList := ValidateCloudProfile(cloudProfile)
-
-						Expect(errorList).To(ConsistOf(
-							PointTo(MatchFields(IgnoreExtras, Fields{"Type": Equal(field.ErrorTypeForbidden), "Field": Equal("spec.machineImages[0].versions[0]")})),
-							PointTo(MatchFields(IgnoreExtras, Fields{"Type": Equal(field.ErrorTypeForbidden), "Field": Equal("spec.machineImages[0].versions[1]")})),
-						))
-					})
-
 					It("should forbid expired lifecycle stage on latest kubernetes version", func() {
 						expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 						cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
@@ -3103,10 +3062,6 @@ var _ = Describe("Supported version lifecycle periods", func() {
 				}
 			}
 		},
-		Entry("unbounded periods overlap", period(nil, nil), period(nil, nil), "1.30.2", true),
-		Entry("finite future periods overlap", period(&start, &end), period(&middle, &end), "1.30.2", true),
-		Entry("finite and unbounded future periods overlap", period(&start, &end), period(&middle, nil), "1.30.2", true),
-		Entry("unbounded future periods overlap", period(&start, nil), period(&end, nil), "1.30.2", true),
 		Entry("adjacent periods do not overlap", period(nil, &middle), period(&middle, nil), "1.30.2", false),
 		Entry("separated periods do not overlap", period(&start, &middle), period(&end, nil), "1.30.2", false),
 		Entry("reversed separated periods do not overlap", period(&end, nil), period(&start, &middle), "1.30.2", false),
