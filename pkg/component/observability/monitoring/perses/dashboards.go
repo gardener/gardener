@@ -159,6 +159,9 @@ func (p *perses) selectDashboards() (map[string]embed.FS, sets.Set[string]) {
 		if p.values.VPAEnabled {
 			requiredDashboards[commonVpaDashboardsPath] = commonDashboards
 		}
+		if !p.values.IncludeIstioDashboards {
+			ignorePaths.Insert("istio")
+		}
 		return requiredDashboards, ignorePaths
 	}
 

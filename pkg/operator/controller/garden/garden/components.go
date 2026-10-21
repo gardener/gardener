@@ -1745,8 +1745,8 @@ func (r *Reconciler) newPerses(garden *operatorv1alpha1.Garden, secretsManager s
 			IsGardenCluster:     true,
 			VPAEnabled:          vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 			VictoriaLogsEnabled: features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
-			// The garden runtime cluster has no istio dashboards (parity with Plutono).
-			IncludeIstioDashboards: false,
+			// The garden runtime cluster runs istio, so include its dashboards.
+			IncludeIstioDashboards: true,
 			ExternalExposure: &perses.ExposureValues{
 				AuthSecretName:               v1beta1constants.SecretNameObservabilityIngress,
 				AuthSecretManaged:            true,

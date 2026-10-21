@@ -651,6 +651,7 @@ var _ = Describe("Perses", func() {
 				Context("garden cluster", func() {
 					BeforeEach(func() {
 						values.IsGardenCluster = true
+						values.IncludeIstioDashboards = true
 					})
 
 					It("should deploy the garden + garden-shoot dashboards including istio", func() {
