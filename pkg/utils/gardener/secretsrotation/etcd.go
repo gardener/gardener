@@ -155,7 +155,7 @@ func CreateStorageVersionMigrationResourcesAndWaitForCompletion(
 		})
 	}
 
-	if err := flow.Parallel(fns...)(ctx); err != nil {
+	if err := flow.ParallelN(100, fns...)(ctx); err != nil {
 		return fmt.Errorf("error while processing StorageVersionMigration objects: %w", err)
 	}
 

@@ -72,8 +72,8 @@ func AddToManager(
 	}
 
 	if err := (&providersecretlabels.Handler{
-		Logger: mgr.GetLogger().WithName("webhook").WithName(providersecretlabels.HandlerName),
-		Client: mgr.GetClient(),
+		Logger:    mgr.GetLogger().WithName("webhook").WithName(providersecretlabels.HandlerName),
+		APIReader: mgr.GetAPIReader(),
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", providersecretlabels.HandlerName, err)
 	}

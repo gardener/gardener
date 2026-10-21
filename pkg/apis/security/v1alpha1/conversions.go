@@ -5,11 +5,27 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/gardener/gardener/pkg/apis/security"
 )
+
+func addConversionFuncs(scheme *runtime.Scheme) error {
+	return scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("CredentialsBinding"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", security.CredentialsBindingCredentialsRefName, security.CredentialsBindingCredentialsRefNamespace, security.CredentialsBindingCredentialsRefKind:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
+}
 
 // Convert_security_TargetSystem_To_v1alpha1_TargetSystem is a manual conversion function.
 func Convert_security_TargetSystem_To_v1alpha1_TargetSystem(in *security.TargetSystem, out *TargetSystem, s conversion.Scope) error {

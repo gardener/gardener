@@ -144,12 +144,6 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		indexer.AddShootAuthorizationConfigMapName,
 		indexer.AddShootAdmissionPluginKubeconfigSecretName,
 		indexer.AddShootStructuredAuthorizationKubeconfigSecretName,
-		indexer.AddSecretBindingSecretRefName,
-		indexer.AddSecretBindingSecretRefNamespace,
-		// security API group
-		indexer.AddCredentialsBindingCredentialsRefName,
-		indexer.AddCredentialsBindingCredentialsRefNamespace,
-		indexer.AddCredentialsBindingCredentialsRefKind,
 	} {
 		if err := fn(ctx, i); err != nil {
 			return err
