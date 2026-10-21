@@ -314,7 +314,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(seed, secretsManager)
+	c.victoriaLogs, err = r.newVictoriaLogs(seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, c.istioDefaultLabels, c.istioDefaultNamespace)
 	if err != nil {
 		return
 	}
@@ -643,7 +643,14 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 	return deployer, err
 }
 
-func (r *Reconciler) newVictoriaLogs(seed *seedpkg.Seed, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(
+	seed *seedpkg.Seed,
+	secretsManager secretsmanager.Interface,
+	globalMonitoringSecretSeed *corev1.Secret,
+	wildCardCertSecret *corev1.Secret,
+	istioIngressGatewayLabels map[string]string,
+	istioIngressGatewayNamespace string,
+) (component.DeployWaiter, error) {
 	var storage *resource.Quantity
 	if r.Config.Logging != nil && r.Config.Logging.VictoriaLogs != nil && r.Config.Logging.VictoriaLogs.Garden != nil {
 		storage = r.Config.Logging.VictoriaLogs.Garden.Storage
@@ -652,6 +659,20 @@ func (r *Reconciler) newVictoriaLogs(seed *seedpkg.Seed, secretsManager secretsm
 	pvcAutoscalerEnabled := v1beta1helper.SeedSettingPersistentVolumeClaimAutoscalerEnabled(seed.GetInfo().Spec.Settings)
 	if pvcAutoscalerEnabled {
 		storage = new(resource.MustParse(seed.GetValidVolumeSize("5Gi")))
+	}
+
+	externalExposure := &victorialogs.ExposureValues{
+		Host:                         seed.GetIngressFQDN("vl-seed"),
+		IstioIngressGatewayLabels:    istioIngressGatewayLabels,
+		IstioIngressGatewayNamespace: istioIngressGatewayNamespace,
+	}
+	if globalMonitoringSecretSeed != nil {
+		externalExposure.AuthSecretName = globalMonitoringSecretSeed.Name
+		// The seed's global monitoring secret is referenced verbatim, not managed by the secrets manager.
+		externalExposure.AuthSecretManaged = false
+	}
+	if wildCardCertSecret != nil {
+		externalExposure.WildcardCertSecretName = new(wildCardCertSecret.GetName())
 	}
 
 	deployer, err := sharedcomponent.NewVictoriaLogs(
@@ -668,6 +689,7 @@ func (r *Reconciler) newVictoriaLogs(seed *seedpkg.Seed, secretsManager secretsm
 		},
 		secretsManager,
 		v1beta1constants.SecretNameCASeed,
+		externalExposure,
 	)
 	if err != nil {
 		return nil, err
