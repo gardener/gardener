@@ -25,15 +25,14 @@ spec:
           - $__all
         allowAllValue: true
         allowMultiple: true
+        customAllValue: .*
         sort: none
         plugin:
-          kind: StaticListVariable
+          kind: PrometheusLabelValuesVariable
           spec:
-            values:
-              - grafana
-              - migration
-              - not
-              - supported
+            labelName: pod
+            matchers:
+              - container_cpu_usage_seconds_total{container="istio-proxy"}
         name: istio_proxy_pod
     - kind: ListVariable
       spec:
@@ -43,15 +42,14 @@ spec:
           - $__all
         allowAllValue: true
         allowMultiple: true
+        customAllValue: .*
         sort: none
         plugin:
-          kind: StaticListVariable
+          kind: PrometheusLabelValuesVariable
           spec:
-            values:
-              - grafana
-              - migration
-              - not
-              - supported
+            labelName: namespace
+            matchers:
+              - istio_tcp_received_bytes_total
         name: istio_proxy_namespace
   panels:
     "0":
