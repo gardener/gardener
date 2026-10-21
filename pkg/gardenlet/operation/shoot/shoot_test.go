@@ -787,6 +787,164 @@ var _ = Describe("shoot", func() {
 			})
 		})
 
+		Describe("#InternalClusterDomain and #PriorInternalClusterDomain", func() {
+			var (
+				ctx           context.Context
+				c             client.Client
+				seedClientSet kubernetes.Interface
+				shootObject   *gardencorev1beta1.Shoot
+			)
+
+			buildShoot := func() *Shoot {
+				GinkgoHelper()
+
+				s, err := NewBuilder().
+					WithShootObject(shootObject).
+					WithCloudProfileObject(nil).
+					WithoutShootCredentials().
+					WithProjectName("bar").
+					WithInternalDomain(&gardener.Domain{Domain: "internal.new.example.com"}).
+					WithDefaultDomains([]*gardener.Domain{{Domain: "example.com"}}).
+					Build(ctx, seedClientSet, c)
+				Expect(err).NotTo(HaveOccurred())
+
+				return s
+			}
+
+			advertisedAddress := func(name, domain string) gardencorev1beta1.ShootAdvertisedAddress {
+				return gardencorev1beta1.ShootAdvertisedAddress{Name: name, URL: "https://api." + domain}
+			}
+
+			withCARotationPhase := func(phase gardencorev1beta1.CredentialsRotationPhase) {
+				shootObject.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+						CertificateAuthorities: &gardencorev1beta1.CARotation{Phase: phase},
+					},
+				}
+			}
+
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+				ctx = context.Background()
+				c = fake.NewFakeClient()
+				seedClientSet = fakekubernetes.NewClientSetBuilder().WithVersion("1.35.0").Build()
+
+				uid := "057cf3ec-1b86-40b3-abc2-47ac71abbe85"
+				shootObject = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden-bar", UID: types.UID(uid)},
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS:        &gardencorev1beta1.DNS{Domain: new("foo.example.com")},
+						Kubernetes: gardencorev1beta1.Kubernetes{Version: "v1.35.0"},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: "shoot--bar--foo-" + uid,
+						AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+							advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "foo.example.com"),
+							advertisedAddress(v1beta1constants.AdvertisedAddressInternal, "foo.bar.internal.old.example.com"),
+						},
+					},
+				}
+			})
+
+			Describe("#InternalClusterDomain", func() {
+				It("should keep the applied domain although the domain of the seed changed", func() {
+					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.old.example.com")))
+				})
+
+				It("should take the domain of the seed if the shoot has no advertised addresses", func() {
+					shootObject.Status.AdvertisedAddresses = nil
+
+					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+				})
+
+				It("should be nil if the shoot has advertised addresses but no internal address", func() {
+					shootObject.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "foo.example.com"),
+					}
+
+					Expect(buildShoot().InternalClusterDomain).To(BeNil())
+				})
+
+				It("should not depend on the shoot DNS of the builder", func() {
+					s, err := NewBuilder().
+						WithShootObject(shootObject).
+						WithCloudProfileObject(nil).
+						WithoutShootCredentials().
+						WithoutShootDNS().
+						WithProjectName("bar").
+						WithInternalDomain(&gardener.Domain{Domain: "internal.new.example.com"}).
+						Build(ctx, seedClientSet, c)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(s.InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.old.example.com")))
+				})
+
+				It("should take the domain of the seed if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+				})
+			})
+
+			Describe("#PriorInternalClusterDomain", func() {
+				BeforeEach(func() {
+					shootObject.Status.AdvertisedAddresses = append(shootObject.Status.AdvertisedAddresses,
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorInternal, "foo.bar.internal.older.example.com"),
+					)
+					withCARotationPhase(gardencorev1beta1.RotationPrepared)
+				})
+
+				DescribeTable("should take the domain from the prior internal address in each migration phase",
+					func(phase gardencorev1beta1.CredentialsRotationPhase) {
+						withCARotationPhase(phase)
+
+						Expect(buildShoot().PriorInternalClusterDomain).To(PointTo(Equal("foo.bar.internal.older.example.com")))
+					},
+
+					Entry("Preparing", gardencorev1beta1.RotationPreparing),
+					Entry("PreparingWithoutWorkersRollout", gardencorev1beta1.RotationPreparingWithoutWorkersRollout),
+					Entry("WaitingForWorkersRollout", gardencorev1beta1.RotationWaitingForWorkersRollout),
+					Entry("Prepared", gardencorev1beta1.RotationPrepared),
+				)
+
+				It("should keep the prior domain if the internal domain is disabled", func() {
+					shootObject.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "foo.example.com"),
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorInternal, "foo.bar.internal.older.example.com"),
+					}
+
+					s := buildShoot()
+					Expect(s.InternalClusterDomain).To(BeNil())
+					Expect(s.PriorInternalClusterDomain).To(PointTo(Equal("foo.bar.internal.older.example.com")))
+				})
+
+				It("should be nil without a prior internal address", func() {
+					shootObject.Status.AdvertisedAddresses = shootObject.Status.AdvertisedAddresses[:2]
+
+					Expect(buildShoot().PriorInternalClusterDomain).To(BeNil())
+				})
+
+				DescribeTable("should be nil outside of the migration phases",
+					func(phase gardencorev1beta1.CredentialsRotationPhase) {
+						withCARotationPhase(phase)
+
+						Expect(buildShoot().PriorInternalClusterDomain).To(BeNil())
+					},
+
+					Entry("Completing", gardencorev1beta1.RotationCompleting),
+					Entry("Completed", gardencorev1beta1.RotationCompleted),
+					Entry("no phase", gardencorev1beta1.CredentialsRotationPhase("")),
+				)
+
+				It("should be nil if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+					Expect(buildShoot().PriorInternalClusterDomain).To(BeNil())
+				})
+			})
+		})
+
 		Describe("#UpdateInfo", func() {
 			It("should apply the mutation, carry .resourceVersion and .status from server, but not other server-side fields", func() {
 				shootObj := &gardencorev1beta1.Shoot{

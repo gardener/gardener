@@ -1044,6 +1044,9 @@ const (
 	AdvertisedAddressPriorExternal = "prior-external"
 	// AdvertisedAddressInternal is a constant that represents the name of the internal kube-apiserver address.
 	AdvertisedAddressInternal = "internal"
+	// AdvertisedAddressPriorInternal is a constant that represents the name of the internal kube-apiserver address
+	// which is replaced by a domain migration and stays valid until the migration is completed.
+	AdvertisedAddressPriorInternal = "prior-internal"
 	// AdvertisedAddressUnmanaged is a constant that represents the name of the unmanaged kube-apiserver address.
 	AdvertisedAddressUnmanaged = "unmanaged"
 	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address that is used as a

@@ -96,6 +96,9 @@ type Shoot struct {
 	// service account issuer, the `gardener` kubeconfig, and the advertised addresses. In contrast, the internal domain
 	// of self-hosted shoots points to the internal IPs of the control plane nodes and is only reachable from the nodes.
 	InternalClusterDomain *string
+	// PriorInternalClusterDomain is the internal domain which is replaced during a running domain migration.
+	// It is nil if no domain migration is running.
+	PriorInternalClusterDomain *string
 	// ExternalClusterDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalClusterDomain *string
 	// PriorExternalClusterDomain is the external domain which is replaced during a running domain migration.

@@ -218,13 +218,13 @@ var domainMigrationPhases = sets.New(
 	gardencorev1beta1.RotationPrepared,
 )
 
-func priorClusterDomain(shoot *gardencorev1beta1.Shoot, priorAddressName, currentAddressName string, currentDomain *string) *string {
+func priorExternalClusterDomain(shoot *gardencorev1beta1.Shoot, currentDomain *string) *string {
 	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || currentDomain == nil ||
 		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
 		return nil
 	}
 
-	if priorDomain := domainFromAdvertisedAddress(shoot, priorAddressName); priorDomain != nil {
+	if priorDomain := domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressPriorExternal); priorDomain != nil {
 		return priorDomain
 	}
 
@@ -232,12 +232,29 @@ func priorClusterDomain(shoot *gardencorev1beta1.Shoot, priorAddressName, curren
 	// differs from the spec in the first reconciliation of a migration, which is the single chance to capture the old
 	// domain. Afterwards the prior address above takes over. The comparison also separates a plain CA rotation, where
 	// both domains are equal, from a CA rotation which migrates the domain.
-	appliedDomain := domainFromAdvertisedAddress(shoot, currentAddressName)
+	appliedDomain := domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressExternal)
 	if appliedDomain == nil || *appliedDomain == *currentDomain {
 		return nil
 	}
 
 	return appliedDomain
+}
+
+func internalClusterDomain(shoot *gardencorev1beta1.Shoot, seedDomain *string) *string {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || len(shoot.Status.AdvertisedAddresses) == 0 {
+		return seedDomain
+	}
+
+	return domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressInternal)
+}
+
+func priorInternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) ||
+		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
+		return nil
+	}
+
+	return domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressPriorInternal)
 }
 
 func domainFromAdvertisedAddress(shoot *gardencorev1beta1.Shoot, name string) *string {
@@ -280,9 +297,10 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
-	shoot.InternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
+	shoot.InternalClusterDomain = internalClusterDomain(shootObject, gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain))
+	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
-	shoot.PriorExternalClusterDomain = priorClusterDomain(shootObject, v1beta1constants.AdvertisedAddressPriorExternal, v1beta1constants.AdvertisedAddressExternal, shoot.ExternalClusterDomain)
+	shoot.PriorExternalClusterDomain = priorExternalClusterDomain(shootObject, shoot.ExternalClusterDomain)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
 	shoot.WantsAlertmanager = v1beta1helper.ShootWantsAlertManager(shootObject)
 	shoot.WantsVerticalPodAutoscaler = v1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
