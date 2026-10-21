@@ -127,7 +127,7 @@ func AddToManager(
 		// (c) the gardenlet is responsible for a self-hosted shoot
 		if err := (&tokenrequestor.Reconciler{
 			ConcurrentSyncs:        int(ptr.Deref(cfg.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs, 0)),
-			Class:                  new(resourcesv1alpha1.ResourceManagerClassGarden),
+			Classes:                []string{resourcesv1alpha1.ResourceManagerClassGarden},
 			TargetDefaultNamespace: targetNamespaceForTokenRequestorController(cfg),
 		}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 			return fmt.Errorf("failed adding TokenRequestorServiceAccount controller: %w", err)

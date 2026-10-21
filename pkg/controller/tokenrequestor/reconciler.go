@@ -44,7 +44,7 @@ type Reconciler struct {
 	ConcurrentSyncs int
 	Clock           clock.Clock
 	JitterFunc      func(time.Duration, float64) time.Duration
-	Class           *string
+	Classes         []string
 	APIAudiences    []string
 	CAData          []byte
 	// TargetDefaultNamespace is the namespace that requested ServiceAccounts should be created in
