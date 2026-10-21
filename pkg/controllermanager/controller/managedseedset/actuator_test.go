@@ -66,7 +66,7 @@ var _ = Describe("Actuator", func() {
 		r0 = mockmanagedseedset.NewMockReplica(ctrl)
 		recorder = mockevents.NewMockEventRecorder(ctrl)
 
-		v := int(maxShootRetries)
+		v := maxShootRetries
 		cfg = &controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration{
 			MaxShootRetries: &v,
 		}

@@ -159,7 +159,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 	Context("ShootStateControllerConfiguration", func() {
 		Context("ConcurrentSyncs", func() {
 			var (
-				concurrentSyncs = 0
+				concurrentSyncs = int32(0)
 			)
 
 			BeforeEach(func() {
@@ -178,7 +178,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 			})
 
 			It("should allow 0 as a value", func() {
-				concurrentSyncs = 0
+				concurrentSyncs = int32(0)
 				conf.Controllers.ShootState.ConcurrentSyncs = &concurrentSyncs
 				errorList := ValidateControllerManagerConfiguration(conf)
 				Expect(errorList).To(BeEmpty())

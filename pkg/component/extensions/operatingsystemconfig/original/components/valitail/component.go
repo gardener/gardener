@@ -54,7 +54,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		units = append(units, getValitailUnit())
 		files = append(files, valitailConfigFile, getValitailCAFile(ctx), extensionsv1alpha1.File{
 			Path:        valitailBinaryPath,
-			Permissions: new(uint32(0755)),
+			Permissions: new(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
 					Image:           ctx.Images[imagevector.ContainerImageNameValitail].String(),

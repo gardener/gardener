@@ -32,7 +32,7 @@ import (
 // to further objects in order to protect them from deletions as long as they are still referenced.
 type Reconciler struct {
 	Client                             client.Client
-	ConcurrentSyncs                    *int
+	ConcurrentSyncs                    *int32
 	NewObjectFunc                      func() client.Object
 	NewObjectListFunc                  func() client.ObjectList
 	GetNamespace                       func(client.Object) string

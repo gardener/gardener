@@ -19,7 +19,7 @@ var _ = Describe("Init", func() {
 	Describe("#GardenadmConfig", func() {
 		downloadScriptMatcher := extensionsv1alpha1.File{
 			Path:        "/var/lib/gardenadm/download.sh",
-			Permissions: new(uint32(0755)),
+			Permissions: new(int32(0755)),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",

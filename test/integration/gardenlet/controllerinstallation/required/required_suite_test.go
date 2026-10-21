@@ -156,7 +156,7 @@ var _ = BeforeSuite(func() {
 	seedName = testRunID
 	Expect((&required.Reconciler{
 		Config: gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		SeedName: seedName,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
@@ -199,7 +199,7 @@ var _ = BeforeSuite(func() {
 	By("Register self-hosted controller")
 	Expect((&required.Reconciler{
 		Config: gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 		SelfHostedShootMeta: &types.NamespacedName{Name: selfHostedShootName, Namespace: selfHostedShootNamespace},
 	}).AddToManager(selfHostedMgr, selfHostedMgr, selfHostedMgr)).To(Succeed())

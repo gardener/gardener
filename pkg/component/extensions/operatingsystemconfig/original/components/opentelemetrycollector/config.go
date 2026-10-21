@@ -65,7 +65,7 @@ func getOpentelemetryCollectorConfigurationFile(ctx components.Context) (extensi
 
 	return extensionsv1alpha1.File{
 		Path:        PathConfig,
-		Permissions: new(uint32(0400)),
+		Permissions: new(int32(0400)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -83,7 +83,7 @@ func getOpenTelemetryCollectorCAFile(ctx components.Context) extensionsv1alpha1.
 
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
-		Permissions: new(uint32(0400)),
+		Permissions: new(int32(0400)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

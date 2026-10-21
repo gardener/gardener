@@ -165,9 +165,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		Scheme:                  kubernetes.SeedScheme,
 		GracefulShutdownTimeout: new(5 * time.Second),
 
-		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(int(cfg.Server.HealthProbes.Port))),
 		Metrics: metricsserver.Options{
-			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
+			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(int(cfg.Server.Metrics.Port))),
 			ExtraHandlers: extraHandlers,
 		},
 		Cache:          cache.Options{ByObject: getCache(log, hostName, nodeName, cfg.Controllers.OperatingSystemConfig.SecretName, runControlPlaneNodesEndpointsBootstrapper)},

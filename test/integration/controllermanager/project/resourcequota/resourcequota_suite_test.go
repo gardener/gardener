@@ -98,7 +98,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&resourcequota.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(ctx, mgr)).To(Succeed())
 

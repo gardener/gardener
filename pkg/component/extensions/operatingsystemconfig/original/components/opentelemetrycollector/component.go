@@ -90,7 +90,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	)
 	files = append(files, collectorConfigFile, getOpenTelemetryCollectorCAFile(ctx), extensionsv1alpha1.File{
 		Path:        openTelemetryCollectorBinaryPath,
-		Permissions: new(uint32(0700)),
+		Permissions: new(int32(0700)),
 		Content: extensionsv1alpha1.FileContent{
 			ImageRef: &extensionsv1alpha1.FileContentImageRef{
 				Image:           ctx.Images[imagevector.ContainerImageNameOpentelemetryCollector].String(),
@@ -99,7 +99,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 	}, extensionsv1alpha1.File{
 		Path:        openTelemetryCollectorKubeconfigPath,
-		Permissions: new(uint32(0600)),
+		Permissions: new(int32(0600)),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				// Plain text

@@ -133,7 +133,7 @@ type BastionControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// MaxLifetime is the maximum time a Bastion resource can exist before it is
 	// forcefully deleted (defaults to '24h').
 	// +optional
@@ -146,7 +146,7 @@ type CertificateSigningRequestControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -155,7 +155,7 @@ type CloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // NamespacedCloudProfileControllerConfiguration defines the configuration of the NamespacedCloudProfile
@@ -164,7 +164,7 @@ type NamespacedCloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ControllerDeploymentControllerConfiguration defines the configuration of the
@@ -173,7 +173,7 @@ type ControllerDeploymentControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ControllerDeploymentReferenceControllerConfiguration defines the configuration of the
@@ -181,7 +181,7 @@ type ControllerDeploymentControllerConfiguration struct {
 type ControllerDeploymentReferenceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on controller deployments.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ControllerRegistrationControllerConfiguration defines the configuration of the
@@ -190,7 +190,7 @@ type ControllerRegistrationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // EventControllerConfiguration defines the configuration of the Event controller.
@@ -198,7 +198,7 @@ type EventControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// TTLNonShootEvents is the time-to-live for all non-shoot related events (defaults to `1h`).
 	// +optional
 	TTLNonShootEvents *metav1.Duration `json:"ttlNonShootEvents,omitempty"`
@@ -210,7 +210,7 @@ type ExposureClassControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ProjectControllerConfiguration defines the configuration of the
@@ -219,22 +219,22 @@ type ProjectControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// MinimumLifetimeDays is the number of days a `Project` may exist before it is being
 	// checked whether it is actively used or got stale.
 	// +optional
-	MinimumLifetimeDays *int `json:"minimumLifetimeDays,omitempty"`
+	MinimumLifetimeDays *int32 `json:"minimumLifetimeDays,omitempty"`
 	// Quotas is the default configuration matching projects are set up with if a quota is not already specified.
 	// +optional
 	Quotas []QuotaConfiguration `json:"quotas,omitempty"`
 	// StaleGracePeriodDays is the number of days a `Project` may be unused before it will
 	// be considered for checks whether it is actively used or got stale.
 	// +optional
-	StaleGracePeriodDays *int `json:"staleGracePeriodDays,omitempty"`
+	StaleGracePeriodDays *int32 `json:"staleGracePeriodDays,omitempty"`
 	// StaleExpirationTimeDays is the number of days after a `Project` that has been marked as
 	// 'stale'/'unused' and passed the 'stale grace period' will be considered for auto deletion.
 	// +optional
-	StaleExpirationTimeDays *int `json:"staleExpirationTimeDays,omitempty"`
+	StaleExpirationTimeDays *int32 `json:"staleExpirationTimeDays,omitempty"`
 	// StaleSyncPeriod is the duration how often the reconciliation loop for stale Projects is executed.
 	// +optional
 	StaleSyncPeriod *metav1.Duration `json:"staleSyncPeriod,omitempty"`
@@ -255,7 +255,7 @@ type QuotaControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // SecretBindingControllerConfiguration defines the configuration of the
@@ -264,7 +264,7 @@ type SecretBindingControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // CredentialsBindingControllerConfiguration defines the configuration of the
@@ -273,7 +273,7 @@ type CredentialsBindingControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // SeedControllerConfiguration defines the configuration of the
@@ -282,7 +282,7 @@ type SeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// MonitorPeriod is the duration after the seed controller will mark the `GardenletReady`
 	// condition in `Seed` resources as `Unknown` in case the gardenlet did not send heartbeats.
 	// +optional
@@ -303,7 +303,7 @@ type SeedExtensionsCheckControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of Seed Extensions is performed).
 	// +optional
@@ -319,7 +319,7 @@ type SeedBackupBucketsCheckControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of BackupBuckets is performed).
 	// +optional
@@ -335,7 +335,7 @@ type SeedReferenceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// seeds.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootMaintenanceControllerConfiguration defines the configuration of the
@@ -344,7 +344,7 @@ type ShootMaintenanceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// EnableShootControlPlaneRestarter configures whether adequate pods of the shoot control plane are restarted during maintenance.
 	// +optional
 	EnableShootControlPlaneRestarter *bool `json:"enableShootControlPlaneRestarter,omitempty"`
@@ -359,7 +359,7 @@ type ShootQuotaControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled
 	// (how often Shoots referenced Quota is checked).
 	// +optional
@@ -372,7 +372,7 @@ type ShootHibernationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// TriggerDeadlineDuration is an optional deadline for triggering hibernation if scheduled
 	// time is missed for any reason (defaults to '2h').
 	// +optional
@@ -385,7 +385,7 @@ type ShootReferenceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// shoots.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootRetryControllerConfiguration defines the configuration of the
@@ -394,7 +394,7 @@ type ShootRetryControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// RetryPeriod is the retry period for retrying failed Shoots that match certain criterion.
 	// Defaults to 10m.
 	// +optional
@@ -412,7 +412,7 @@ type ShootConditionsControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootStatusLabelControllerConfiguration defines the configuration of the
@@ -421,7 +421,7 @@ type ShootStatusLabelControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootMigrationControllerConfiguration defines the configuration of the
@@ -430,7 +430,7 @@ type ShootMigrationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ManagedSeedSetControllerConfiguration defines the configuration of the
@@ -439,10 +439,10 @@ type ManagedSeedSetControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// MaxShootRetries is the maximum number of times to retry failed shoots before giving up. Defaults to 3.
 	// +optional
-	MaxShootRetries *int `json:"maxShootRetries,omitempty"`
+	MaxShootRetries *int32 `json:"maxShootRetries,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
@@ -453,7 +453,7 @@ type ShootStateControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
@@ -479,7 +479,7 @@ type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
-	Port int `json:"port"`
+	Port int32 `json:"port"`
 }
 
 const (
@@ -490,5 +490,5 @@ const (
 	ControllerManagerDefaultLockObjectName = "gardener-controller-manager-leader-election"
 
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
-	DefaultControllerConcurrentSyncs = 5
+	DefaultControllerConcurrentSyncs int32 = 5
 )

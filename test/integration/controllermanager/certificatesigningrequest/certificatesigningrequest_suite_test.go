@@ -181,7 +181,7 @@ var _ = BeforeSuite(func() {
 	Expect((&certificatesigningrequestcontroller.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
 		Config: controllermanagerconfigv1alpha1.CertificateSigningRequestControllerConfiguration{
-			ConcurrentSyncs: new(5),
+			ConcurrentSyncs: new(int32(5)),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 

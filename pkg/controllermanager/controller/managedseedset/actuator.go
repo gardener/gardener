@@ -198,7 +198,7 @@ func (a *actuator) reconcileReplica(
 	case replicaStatus == StatusShootReconcileFailed && !scalingIn:
 		// This replica's shoot reconciliation has failed, retry it if max retries is not yet reached
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason)
-		if int(retries) < *a.cfg.MaxShootRetries {
+		if retries < *a.cfg.MaxShootRetries {
 			log.Info("Retrying Shoot reconciliation")
 			a.infoEventf(managedSeedSet, EventRetryingShootReconciliation, gardencorev1beta1.EventActionReconcile, "Retrying Shoot %s reconciliation", r.GetFullName())
 			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {
@@ -215,7 +215,7 @@ func (a *actuator) reconcileReplica(
 	case replicaStatus == StatusShootDeleteFailed:
 		// This replica's shoot deletion has failed, retry it if max retries is not yet reached
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason)
-		if int(retries) < *a.cfg.MaxShootRetries {
+		if retries < *a.cfg.MaxShootRetries {
 			log.Info("Retrying Shoot deletion")
 			a.infoEventf(managedSeedSet, EventRetryingShootDeletion, gardencorev1beta1.EventActionDelete, "Retrying Shoot %s deletion", r.GetFullName())
 			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {

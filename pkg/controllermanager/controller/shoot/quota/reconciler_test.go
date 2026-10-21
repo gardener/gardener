@@ -48,7 +48,7 @@ var _ = Describe("Reconciler", func() {
 			Client: fakeClient,
 			Clock:  clock.RealClock{},
 			Config: controllermanagerconfigv1alpha1.ShootQuotaControllerConfiguration{
-				ConcurrentSyncs: new(1),
+				ConcurrentSyncs: new(int32(1)),
 				SyncPeriod:      &metav1.Duration{},
 			},
 		}
