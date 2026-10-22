@@ -133,6 +133,9 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 			itShouldJoinNode()
 
 			itShouldSeeJoinedNodeAndCheckHealth(func() kubernetes.Interface { return shootClientSet })
+
+			// Without managed infrastructure, there is no internal domain, so worker nodes use the external domain.
+			gardenadm.ItShouldUseExpectedAPIServerAddressOnNodes(&shootClientSet, RunInNode, "api.root.garden.external.local.gardener.cloud")
 		})
 
 		Context("gardenadm reset + join", Ordered, Label("resetjoin"), func() {
