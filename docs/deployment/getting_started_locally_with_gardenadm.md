@@ -212,6 +212,7 @@ The whole process usually takes a couple of minutes, but eventually you should s
 ### Connecting to the Self-Hosted Shoot Cluster
 
 `gardenadm init` provisions a LoadBalancer for the shoot's API server via the `SelfHostedShootExposure` extension, so the cluster is directly reachable from your host machine.
+The worker nodes don't use the LoadBalancer but talk to the control plane via the internal domain `api.internal.root.garden.external.local.gardener.cloud`, which points to the control plane machine directly.
 Generate a kubeconfig and write it to the default location:
 
 ```shell

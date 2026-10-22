@@ -45,3 +45,17 @@ We distinguish between two different scenarios for bootstrapping self-hosted sho
 - Managed Infrastructure, meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
 
 The general procedure of bootstrapping a self-hosted shoot cluster is similar in both scenarios.
+
+## Control Plane Exposure and DNS
+
+The API server of a self-hosted shoot cluster is accessible via the external domain `api.<spec.dns.domain>`.
+How the external domain is managed depends on the `spec.provider.workers[].controlPlane.exposure` configuration of the control plane worker pool (see [GEP-0036](https://github.com/gardener/enhancements/tree/main/geps/0036-self-hosted-shoot-exposure)):
+
+- If the control plane is exposed (via `exposure.extension` or `exposure.dns`), Gardener manages the DNS records of the cluster.
+  For shoots with managed infrastructure, Gardener additionally manages an internal `DNSRecord` for the domain `api.internal.<spec.dns.domain>` pointing to the internal IPs of the healthy control plane nodes.
+  Components on the nodes (e.g., `gardener-node-agent`, `kubelet`, and `kube-proxy`) talk to the control plane via the internal domain instead of the external domain.
+  On the control plane nodes, `kubelet` and `kube-proxy` talk to the local API server via `localhost` instead.
+  This prevents a split-brain scenario if the exposure (e.g., a load balancer) breaks: the worker nodes could no longer talk to the control plane while the control plane components still can, which might lead to the termination of the worker nodes.
+  Accordingly, `gardenadm token create --print-join-command` prints the internal domain for joining nodes.
+- If the control plane is not exposed, the external domain is managed outside of Gardener, i.e., the operator is responsible for setting up the DNS record `api.<spec.dns.domain>` pointing to the control plane nodes or an external load balancer.
+  In this case, there is no internal domain and the components on the nodes talk to the control plane via the external domain.
