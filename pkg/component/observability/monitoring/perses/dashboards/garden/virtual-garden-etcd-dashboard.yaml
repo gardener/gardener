@@ -269,7 +269,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                   minStep: ""
-                  query: sum(rate(container_fs_reads_bytes_total{namespace="kube-system", pod=~"etcd-(${cluster}).*"}[1m])) by(pod, container)
+                  query: sum(rate(container_fs_reads_bytes_total{namespace="garden", pod=~"${cluster}.*"}[1m])) by(pod, container)
                   seriesNameFormat: '{{pod}} / {{container}}'
     "1_1":
       kind: Panel
@@ -295,7 +295,7 @@ spec:
                   datasource:
                     kind: PrometheusDatasource
                   minStep: ""
-                  query: sum(rate(container_fs_writes_bytes_total{namespace="kube-system", pod=~"etcd-(${cluster}).*"}[1m])) by(pod, container)
+                  query: sum(rate(container_fs_writes_bytes_total{namespace="garden", pod=~"${cluster}.*"}[1m])) by(pod, container)
                   seriesNameFormat: '{{pod}} / {{container}}'
     "2_0":
       kind: Panel
