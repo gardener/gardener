@@ -133,6 +133,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configVerbosity                       int32 = 4
 		configMaxScaleDownParallelism               = new(int32(20))
 		configMaxDrainParallelism                   = new(int32(2))
+		configMaxTotalUnreadyPercentage             = new(float64(60))
+		configOkTotalUnreadyCount                   = new(int32(5))
 		configNewPodScaleUpDelay                    = &metav1.Duration{Duration: time.Second}
 		configTaints                                = []string{"taint-1", "taint-2"}
 		configFull                                  = &gardencorev1beta1.ClusterAutoscaler{
@@ -158,6 +160,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			MaxDrainParallelism:             configMaxDrainParallelism,
 			NewPodScaleUpDelay:              configNewPodScaleUpDelay,
 			MaxBinpackingTime:               configMaxBinpackingTime,
+			MaxTotalUnreadyPercentage:       configMaxTotalUnreadyPercentage,
+			OkTotalUnreadyCount:             configOkTotalUnreadyCount,
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -325,6 +329,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--max-nodes-total=0",
 					"--emit-per-nodegroup-metrics=false",
 					"--max-binpacking-time=5m0s",
+					"--ok-total-unready-count=3",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
@@ -348,6 +353,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--max-nodes-total=0",
 					fmt.Sprintf("--emit-per-nodegroup-metrics=%t", configEmitPerNodeGroupMetrics),
 					fmt.Sprintf("--max-binpacking-time=%s", configMaxBinpackingTime.Duration),
+					fmt.Sprintf("--ok-total-unready-count=%d", *configOkTotalUnreadyCount),
 					fmt.Sprintf("--startup-taint=%s", configTaints[0]),
 					fmt.Sprintf("--startup-taint=%s", configTaints[1]),
 					fmt.Sprintf("--status-taint=%s", configTaints[0]),
@@ -376,9 +382,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment4Min, machineDeployment4Max, namespace, machineDeployment4Name),
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment5Min, machineDeployment5Max, namespace, machineDeployment5Name),
 			)
+			maxTotalUnreadyPercentage := float64(45) // default
 			if withAutoPreservation {
-				command = append(command, "--max-total-unready-percentage=100")
+				maxTotalUnreadyPercentage = 100
+			} else if withConfig {
+				maxTotalUnreadyPercentage = *configMaxTotalUnreadyPercentage
 			}
+			command = append(command, fmt.Sprintf("--max-total-unready-percentage=%f", maxTotalUnreadyPercentage))
 
 			deploy := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{

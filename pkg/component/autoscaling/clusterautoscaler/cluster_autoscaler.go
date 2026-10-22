@@ -529,6 +529,7 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 		fmt.Sprintf("--max-nodes-total=%d", c.maxNodesTotal),
 		fmt.Sprintf("--emit-per-nodegroup-metrics=%t", *c.config.EmitPerNodeGroupMetrics),
 		fmt.Sprintf("--max-binpacking-time=%s", c.config.MaxBinpackingTime.Duration),
+		fmt.Sprintf("--ok-total-unready-count=%d", *c.config.OkTotalUnreadyCount),
 	)
 
 	for _, taint := range c.config.StartupTaints {
@@ -551,10 +552,12 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 	// Disabling this check allows unscheduled workload from these failed preserved nodes to trigger scale up.
 	for _, workerConfig := range c.workerConfig {
 		if workerConfig.MachineControllerManagerSettings != nil && ptr.Deref(workerConfig.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0) > 0 {
-			command = append(command, "--max-total-unready-percentage=100")
+			*c.config.MaxTotalUnreadyPercentage = 100
 			break
 		}
 	}
+
+	command = append(command, fmt.Sprintf("--max-total-unready-percentage=%f", *c.config.MaxTotalUnreadyPercentage))
 
 	return command
 }
