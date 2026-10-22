@@ -1258,6 +1258,287 @@ func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 	return g
 }
 
+// TaskGroupMigrateExtensionResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateExtensionResources flow.TaskID = "TaskGroupMigrateExtensionResources"
+
+// MigrateExtensionResourcesTaskGroup stops the machine-controller-manager and then migrates all extension resources
+// so the destination seed can restore them.
+func (b *Botanist) MigrateExtensionResourcesTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateExtensionResources)
+
+		deleteMachineControllerManager = g.Add(flow.Task{
+			Name: "Deleting machine-controller-manager",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.MachineControllerManager.Destroy(ctx)
+			}),
+			SkipIf: b.Shoot.IsWorkerless,
+		})
+		waitUntilMachineControllerManagerDeleted = g.Add(flow.Task{
+			Name: "Waiting until machine-controller-manager has been deleted",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.MachineControllerManager.WaitCleanup(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
+		})
+		migrateExtensionResources = g.Add(flow.Task{
+			Name:         "Migrating extension resources",
+			Fn:           b.MigrateExtensionResourcesInParallel,
+			Dependencies: flow.NewTaskIDs(waitUntilMachineControllerManagerDeleted),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been migrated",
+			Fn:           b.WaitUntilExtensionResourcesMigrated,
+			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupMigrateExtensionsBeforeKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateExtensionsBeforeKubeAPIServer flow.TaskID = "TaskGroupMigrateExtensionsBeforeKubeAPIServer"
+
+// MigrateExtensionsBeforeKubeAPIServerTaskGroup migrates the source extensions needed before the kube-apiserver and
+// persists the resulting shoot state so the destination can restore them.
+func (b *Botanist) MigrateExtensionsBeforeKubeAPIServerTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateExtensionsBeforeKubeAPIServer)
+
+		migrateExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
+			Name: "Migrating extensions before kube-apiserver",
+			Fn:   b.Shoot.Components.Extensions.Extension.MigrateBeforeKubeAPIServer,
+		})
+		waitUntilExtensionsBeforeKubeAPIServerMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extensions before kube-apiserver have been migrated",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Persisting shoot state",
+			Fn:           b.PersistShootState,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsBeforeKubeAPIServerMigrated),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupMigrateAndDeleteManagedResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateAndDeleteManagedResources flow.TaskID = "TaskGroupMigrateAndDeleteManagedResources"
+
+// MigrateAndDeleteManagedResourcesTaskGroup handles the migration and deletion of managed resources.
+func (b *Botanist) MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResources bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteManagedResources)
+
+		// Deploy gardener-resource-manager to re-run the bootstrap logic if needed (e.g. when the token is expired because of hibernation).
+		// This fixes https://github.com/gardener/gardener/issues/7606
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:   "Deploying gardener-resource-manager",
+			Fn:     b.DeployGardenerResourceManager,
+			SkipIf: !cleanupShootResources,
+		})
+		ensureResourceManagerScaledUp = g.Add(flow.Task{
+			Name:         "Ensuring that the gardener-resource-manager is scaled to 1",
+			Fn:           b.ScaleGardenerResourceManagerToOne,
+			SkipIf:       !cleanupShootResources,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
+			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
+			Fn:           b.KeepObjectsForManagedResources,
+			SkipIf:       !cleanupShootResources,
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
+		})
+		deleteManagedResources = g.Add(flow.Task{
+			Name:         "Deleting all Managed Resources from the Shoot's namespace",
+			Fn:           b.DeleteManagedResources,
+			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until ManagedResources are deleted",
+			Fn:           flow.TaskFn(b.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
+			Dependencies: flow.NewTaskIDs(deleteManagedResources),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupMigrateAndDeleteInfrastructure is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateAndDeleteInfrastructure flow.TaskID = "TaskGroupMigrateAndDeleteInfrastructure"
+
+// MigrateAndDeleteInfrastructureTaskGroup handles the migration and deletion of the shoot infrastructure.
+func (b *Botanist) MigrateAndDeleteInfrastructureTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteInfrastructure)
+
+		migrateInfrastructure = g.Add(flow.Task{
+			Name: "Migrating shoot infrastructure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.Migrate(ctx)
+			}),
+			SkipIf: b.Shoot.IsWorkerless,
+		})
+		waitUntilInfrastructureMigrated = g.Add(flow.Task{
+			Name: "Waiting until shoot infrastructure has been migrated",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.WaitMigrate(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(migrateInfrastructure),
+		})
+		deleteInfrastructure = g.Add(flow.Task{
+			Name: "Deleting shoot infrastructure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.Destroy(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureMigrated),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until shoot infrastructure has been deleted",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deleteInfrastructure),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupMigrateAndDeleteControlPlane is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateAndDeleteControlPlane flow.TaskID = "TaskGroupMigrateAndDeleteControlPlane"
+
+// MigrateAndDeleteControlPlaneTaskGroup handles the migration and deletion of the shoot control plane.
+func (b *Botanist) MigrateAndDeleteControlPlaneTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteControlPlane)
+
+		migrateControlPlane = g.Add(flow.Task{
+			Name: "Migrating shoot control plane",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ControlPlane.Migrate(ctx)
+			}),
+			SkipIf: b.Shoot.IsWorkerless,
+		})
+		deleteControlPlane = g.Add(flow.Task{
+			Name: "Deleting shoot control plane",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ControlPlane.Destroy(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(migrateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until shoot control plane has been deleted",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ControlPlane.WaitCleanup(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deleteControlPlane),
+		})
+	)
+
+	return g
+}
+
+// TaskMigrateAndDeleteExtensionsAfterKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
+const TaskMigrateAndDeleteExtensionsAfterKubeAPIServer flow.TaskID = "TaskMigrateAndDeleteExtensionsAfterKubeAPIServer"
+
+// MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup handles the migration and deletion of extensions that should be applied after the kube-apiserver.
+func (b *Botanist) MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskMigrateAndDeleteExtensionsAfterKubeAPIServer)
+
+		migrateExtensionsAfterKubeAPIServer = g.Add(flow.Task{
+			Name: "Migrating extensions after kube-apiserver",
+			Fn:   b.Shoot.Components.Extensions.Extension.MigrateAfterKubeAPIServer,
+		})
+		waitUntilExtensionsAfterKubeAPIServerMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled after kube-apiserver have been migrated",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitMigrateAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(migrateExtensionsAfterKubeAPIServer),
+		})
+		deleteExtensionsAfterKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extensions after kube-apiserver",
+			Fn:           b.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled after kube-apiserver have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionsAfterKubeAPIServer),
+		})
+		// Add this step in interest of completeness. All extension deletions should have already been triggered by previous steps.
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until all extensions have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
+		})
+	)
+
+	return g
+}
+
+// TaskGroupDestroyExtensionAndMachineResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupDestroyExtensionAndMachineResources flow.TaskID = "TaskGroupDestroyExtensionAndMachineResources"
+
+// DestroyExtensionAndMachineResourcesTaskGroup deletes extension resources, machine resources, extensions before
+// kube-apiserver, and stale extensions in parallel. This group follows the migration of extensions before
+// kube-apiserver and prepares for the deletion of the control plane.
+func (b *Botanist) DestroyExtensionAndMachineResourcesTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupDestroyExtensionAndMachineResources)
+
+		deleteExtensionResources = g.Add(flow.Task{
+			Name: "Deleting extension resources from the Shoot namespace",
+			Fn:   b.DestroyExtensionResourcesInParallel,
+		})
+		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been deleted",
+			Fn:           b.WaitUntilExtensionResourcesDeleted,
+			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
+		})
+		deleteMachineResources = g.Add(flow.Task{
+			Name: "Shallow-deleting machine resources from the Shoot namespace",
+			Fn:   b.ShallowDeleteMachineResources,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until machine resources have been deleted",
+			Fn: func(ctx context.Context) error {
+				return gardenerutils.WaitUntilMachineResourcesDeleted(ctx, b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+			},
+			Dependencies: flow.NewTaskIDs(deleteMachineResources),
+		})
+		deleteExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extensions before kube-apiserver",
+			Fn:           b.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled before kube-apiserver have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionsBeforeKubeAPIServer),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name: "Deleting stale extensions",
+			Fn:   b.Shoot.Components.Extensions.Extension.DeleteStaleResources,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until all stale extensions have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
+		})
+	)
+
+	return g
+}
+
 func (b *Botanist) isGardenadmBootstrap() bool {
 	return b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
 }
