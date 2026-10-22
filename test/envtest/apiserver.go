@@ -405,7 +405,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 
 			kind := listableKind(resourceList)
 			if kind == "" {
-				return retry.SevereError(fmt.Errorf("no listable resource found in %s", gv))
+				return retry.MinorError(fmt.Errorf("no listable resource found in %s", gv))
 			}
 
 			objList := &metav1.PartialObjectMetadataList{}
