@@ -150,6 +150,9 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should deploy the DNSRecord", func(ctx SpecContext) {
 			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-external", Namespace: technicalID}}
 			Eventually(ctx, Object(dnsRecord)).Should(BeHealthy(health.CheckExtensionObject))
+
+			// The internal DNSRecord is only deployed by `gardenadm init` in the self-hosted shoot.
+			Expect(Get(&extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-internal", Namespace: technicalID}})()).To(BeNotFoundError())
 		}, SpecTimeout(time.Minute))
 
 		It("should prepare extension resources for migration", func(ctx SpecContext) {
@@ -282,10 +285,30 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, shootKomega.Object(exposure)).Should(BeHealthy(health.CheckExtensionObject))
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy/restore the DNSRecord in the shoot", func(ctx SpecContext) {
+		It("should deploy/restore the external DNSRecord in the shoot", func(ctx SpecContext) {
 			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-external", Namespace: "kube-system"}}
 			Eventually(ctx, shootKomega.Object(dnsRecord)).Should(BeHealthy(health.CheckExtensionObject))
 		}, SpecTimeout(time.Minute))
+
+		It("should deploy the internal DNSRecord pointing to the control plane machine in the shoot", func(ctx SpecContext) {
+			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-internal", Namespace: "kube-system"}}
+			Eventually(ctx, shootKomega.Object(dnsRecord)).Should(And(
+				BeHealthy(health.CheckExtensionObject),
+				HaveField("Spec.Name", "api.internal.root.garden.external.local.gardener.cloud"),
+			))
+
+			nodeList := &corev1.NodeList{}
+			Expect(shootClientSet.Client().List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelNodeRoleControlPlane: ""})).To(Succeed())
+			var internalIPs []string
+			for _, node := range nodeList.Items {
+				for _, address := range node.Status.Addresses {
+					if address.Type == corev1.NodeInternalIP {
+						internalIPs = append(internalIPs, address.Address)
+					}
+				}
+			}
+			Expect(dnsRecord.Spec.Values).To(ConsistOf(BeElementOf(internalIPs)))
+		}, SpecTimeout(2*time.Minute))
 
 		It("should deploy/restore the Worker in the shoot", func(ctx SpecContext) {
 			worker := &extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: "kube-system"}}
@@ -371,6 +394,9 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		It("should destroy the bastion in the second run", func(ctx SpecContext) {
 			Eventually(ctx, ObjectList(&extensionsv1alpha1.BastionList{}, client.InNamespace(technicalID))).Should(HaveField("Items", BeEmpty()))
 		}, SpecTimeout(time.Minute))
+
+		// Worker nodes use the internal domain pointing to the internal IPs of the control plane nodes.
+		gardenadm.ItShouldUseExpectedAPIServerAddressOnNodes(&shootClientSet, runInNode, "api.internal.root.garden.external.local.gardener.cloud")
 	})
 
 	Context("gardenadm connect", Ordered, Label("connect"), func() {
