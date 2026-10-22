@@ -127,10 +127,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(destinationEtcdJoined),
 		})
 
-		_ = g.Add(flow.Task{
+		destinationKubeAPIServerReady = g.Add(flow.Task{
 			Name:         "Deploying destination control plane and temporary VPN",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationKubeAPIServerReady, destinationKubeAPIServerReadyTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Migrating DNS records to the destination seed",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrateDNSRecords, migrateDNSRecordsTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(destinationKubeAPIServerReady),
 		})
 	)
 
@@ -418,6 +424,28 @@ func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 	})
 
 	// TODO(GEP-39): Wait until the temporary VPN tunnel connection to the destination is established.
+
+	return g
+}
+
+// taskGroupMigrateDNSRecords is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupMigrateDNSRecords flow.TaskID = "TaskGroupMigrateDNSRecords"
+
+// migrateDNSRecordsTaskGroup releases the source internal and external DNSRecords so the destination can take them over.
+func migrateDNSRecordsTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(taskGroupMigrateDNSRecords).
+			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup) != nil)
+
+		_ = g.Add(flow.Task{
+			Name: "Migrating internal DNS record",
+			Fn:   b.MigrateInternalDNSRecord,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Migrating external DNS record",
+			Fn:   b.MigrateExternalDNSRecord,
+		})
+	)
 
 	return g
 }
