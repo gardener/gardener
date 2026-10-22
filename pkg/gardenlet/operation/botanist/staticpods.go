@@ -188,7 +188,7 @@ func (b *Botanist) DeployStaticControlPlaneDeployments(ctx context.Context, useB
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd, useShootAccessTokens, ""); err != nil {
+	if _, _, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, useBootstrapEtcd, useShootAccessTokens, "", b.Shoot.ComputeAPIServerAddressForNodes()); err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 
@@ -268,8 +268,9 @@ func (b *Botanist) populateStaticAdminTokenToAccessTokenSecret(ctx context.Conte
 }
 
 // DeployOperatingSystemConfigWithStaticPods deploys and waits for the OperatingSystemConfig containing the files for the control
-// plane components running as static pods.
-func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath string) (*operatingsystemconfig.Data, string, error) {
+// plane components running as static pods. apiServerAddress is the address of the API server that is used by the
+// components on the nodes.
+func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context, useBootstrapEtcd, useShootAccessTokens bool, bootstrapEtcdBackupPath, apiServerAddress string) (*operatingsystemconfig.Data, string, error) {
 	pods, err := b.staticControlPlanePods(ctx, useBootstrapEtcd, useShootAccessTokens, bootstrapEtcdBackupPath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
@@ -286,7 +287,7 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 	}
 	files = b.appendEtcdCAsToFiles(files)
 
-	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
+	if err := b.deployOperatingSystemConfig(ctx, apiServerAddress); err != nil {
 		return nil, "", fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
 	}
 

@@ -19,9 +19,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
@@ -104,13 +106,21 @@ func run(ctx context.Context, opts *Options) error {
 
 	switch {
 	case opts.PrintJoinCommand:
-		fmt.Fprint(opts.Out, printJoinCommand(clientSet, secret))
+		controlPlaneAddress, err := controlPlaneAddressForNodes(ctx, clientSet)
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(opts.Out, printJoinCommand(clientSet, secret, controlPlaneAddress))
 
 	case opts.PrintConnectCommand:
 		fmt.Fprint(opts.Out, printConnectCommand(clientSet, secret))
 
 	case opts.PrintResetCommand:
-		fmt.Fprint(opts.Out, printResetCommand(clientSet, secret))
+		controlPlaneAddress, err := controlPlaneAddressForNodes(ctx, clientSet)
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(opts.Out, printResetCommand(clientSet, secret, controlPlaneAddress))
 
 	default:
 		fmt.Fprintln(opts.Out, bootstraptoken.FromSecretData(secret.Data))
@@ -119,12 +129,31 @@ func run(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func printJoinCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {
+// controlPlaneAddressForNodes returns the address that nodes should use for talking to the control plane. If Gardener
+// manages the internal domain of the self-hosted shoot, this is the internal domain pointing to the internal IPs of the
+// control plane nodes. Otherwise, it is the address of the API server in the used kubeconfig.
+func controlPlaneAddressForNodes(ctx context.Context, clientSet kubernetes.Interface) (string, error) {
+	shoot, err := gardenerextensions.GetShoot(ctx, clientSet.Client(), metav1.NamespaceSystem)
+	if err != nil {
+		return "", fmt.Errorf("failed reading Shoot from Cluster resource: %w", err)
+	}
+	if shoot == nil {
+		return "", fmt.Errorf("no Shoot found in Cluster resource %q", metav1.NamespaceSystem)
+	}
+
+	if gardenerutils.SelfHostedShootHasInternalAPIServerDomain(shoot) {
+		return "https://" + gardenerutils.GetSelfHostedShootInternalAPIServerDomain(*shoot.Spec.DNS.Domain), nil
+	}
+
+	return clientSet.RESTConfig().Host, nil
+}
+
+func printJoinCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret, controlPlaneAddress string) string {
 	return fmt.Sprintf(`gardenadm join --bootstrap-token %s --ca-certificate "%s" %s
 `,
 		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
 		utils.EncodeBase64(clientSet.RESTConfig().CAData),
-		clientSet.RESTConfig().Host,
+		controlPlaneAddress,
 	)
 }
 
@@ -137,12 +166,12 @@ func printConnectCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *c
 	)
 }
 
-func printResetCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret) string {
+func printResetCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret, controlPlaneAddress string) string {
 	return fmt.Sprintf(`gardenadm reset --bootstrap-token %s --ca-certificate "%s" %s
 `,
 		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
 		utils.EncodeBase64(clientSet.RESTConfig().CAData),
-		clientSet.RESTConfig().Host,
+		controlPlaneAddress,
 	)
 }
 
