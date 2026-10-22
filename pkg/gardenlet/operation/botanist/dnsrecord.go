@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+	"time"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -161,6 +162,22 @@ func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord compo
 		return dnsRecord.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return dnsRecord.Deploy(ctx)
+}
+
+// liveMigrationDNSCacheSyncWait is how long to wait after re-pointing the shoot's DNS records to give
+// upstream DNS caches time to pick up the new targets before components that resolve those names are started.
+const liveMigrationDNSCacheSyncWait = 2 * time.Minute
+
+// WaitForLiveMigrationDNSCacheSync blocks for liveMigrationDNSCacheSyncWait (or until ctx is cancelled) so DNS caches
+// can sync to the destination targets after the internal and external DNS records have been re-pointed.
+func (b *Botanist) WaitForLiveMigrationDNSCacheSync(ctx context.Context) error {
+	b.Logger.Info("Waiting for DNS caches to sync to the destination", "duration", liveMigrationDNSCacheSyncWait)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-b.Clock.After(liveMigrationDNSCacheSyncWait):
+		return nil
+	}
 }
 
 func (b *Botanist) dnsRecordTTLSeconds() *int64 {
