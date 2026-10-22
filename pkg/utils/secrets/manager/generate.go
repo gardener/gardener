@@ -429,7 +429,7 @@ type SignedByCAOptions struct {
 	// the old CA by default, however one might want to use the current CA instead. Similarly, client certificates are
 	// signed with the current CA by default, however one might want to use the old CA instead.
 	CAClass *secretClass
-	// LoadMissingCAFromClusterCtx enables loading a missing signing CA from the cluster or from raw data when it is not
+	// LoadMissingCA enables loading a missing signing CA from the cluster or from raw data when it is not
 	// found in the internal store. This is useful when generating certificates signed by CAs that were not created by
 	// this secrets manager instance.
 	LoadMissingCA *loadMissingCAOptions
@@ -521,7 +521,7 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 
 			if signedByCAOptions.LoadMissingCA.fromCluster != nil {
 				mgr.logger.Info("Signing CA secret not found in internal store, trying to load it from cluster", "signingCASecretName", name)
-				if err := loadCASecretsFromClusterIntoStore(signedByCAOptions.LoadMissingCA.fromCluster.ctx, mgr, name); err != nil {
+				if err := loadSecretsFromClusterIntoStore(signedByCAOptions.LoadMissingCA.fromCluster.ctx, mgr, name); err != nil {
 					return fmt.Errorf("failed to load missing CA secret from cluster: %w", err)
 				}
 			}
@@ -563,7 +563,7 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 	}
 }
 
-func loadCASecretsFromClusterIntoStore(ctx context.Context, mgr *manager, name string) error {
+func loadSecretsFromClusterIntoStore(ctx context.Context, mgr *manager, name string) error {
 	secretList, err := mgr.listSecrets(ctx, client.MatchingLabels{LabelKeyName: name})
 	if err != nil {
 		return fmt.Errorf("failed to list secrets for name %q: %w", name, err)

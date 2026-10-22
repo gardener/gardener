@@ -5,10 +5,18 @@
 package manager
 
 import (
+	"context"
+	"time"
+
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	testclock "k8s.io/utils/clock/testing"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Get", func() {
@@ -107,6 +115,77 @@ var _ = Describe("Get", func() {
 				result, found := m.Get(name, Old)
 				Expect(found).To(BeTrue())
 				Expect(result).To(Equal(oldSecret))
+			})
+		})
+
+		When("the secret must be loaded from the cluster", func() {
+			var (
+				ctx        = context.Background()
+				namespace  = "shoot--foo--bar"
+				identity   = "test"
+				fakeClient client.Client
+			)
+
+			secretInCluster := func(suffix string) *corev1.Secret {
+				return &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name + "-" + suffix,
+						Namespace: namespace,
+						Labels: map[string]string{
+							"managed-by":       "secrets-manager",
+							"manager-identity": identity,
+							"name":             name,
+						},
+					},
+				}
+			}
+
+			BeforeEach(func() {
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+
+				mgr, err := New(ctx, logr.Discard(), testclock.NewFakeClock(time.Time{}), fakeClient, identity, WithNamespaces(namespace))
+				Expect(err).NotTo(HaveOccurred())
+				m = mgr.(*manager)
+			})
+
+			It("should not load from the cluster when the option is not set", func() {
+				Expect(fakeClient.Create(ctx, secretInCluster("current"))).To(Succeed())
+
+				result, found := m.Get(name)
+				Expect(found).To(BeFalse())
+				Expect(result).To(BeNil())
+			})
+
+			It("should load the secret from the cluster into the internal store", func() {
+				secret := secretInCluster("current")
+				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+				result, found := m.Get(name, LoadMissingSecretFromCluster(ctx))
+				Expect(found).To(BeTrue())
+				Expect(result.Name).To(Equal(name + "-current"))
+
+				By("Verify the secret was added to the internal store")
+				_, found = m.getFromStore(name)
+				Expect(found).To(BeTrue())
+			})
+
+			It("should return the old secret when both current and old exist in the cluster", func() {
+				oldSecret := secretInCluster("old")
+				oldSecret.CreationTimestamp = metav1.NewTime(time.Unix(1, 0))
+				currentSecret := secretInCluster("current")
+				currentSecret.CreationTimestamp = metav1.NewTime(time.Unix(2, 0))
+				Expect(fakeClient.Create(ctx, oldSecret)).To(Succeed())
+				Expect(fakeClient.Create(ctx, currentSecret)).To(Succeed())
+
+				result, found := m.Get(name, Old, LoadMissingSecretFromCluster(ctx))
+				Expect(found).To(BeTrue())
+				Expect(result.Name).To(Equal(name + "-old"))
+			})
+
+			It("should return that no secret was found when it does not exist in the cluster", func() {
+				result, found := m.Get(name, LoadMissingSecretFromCluster(ctx))
+				Expect(found).To(BeFalse())
+				Expect(result).To(BeNil())
 			})
 		})
 	})

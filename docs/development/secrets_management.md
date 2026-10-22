@@ -30,11 +30,12 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
 
   This method retrieves the current secret for the given name.
   In case the secret in question is a certificate authority secret then it retrieves the bundle secret by default.
-  It is important that this method only knows about secrets for which there were prior `Generate` calls.
+  It is important that this method only knows about secrets for which there were prior `Generate` calls, unless the `LoadMissingSecretFromCluster` option is used (see below).
   Available `GetOption`s:
   - `Bundle` (default): This retrieves the bundle secret.
   - `Current`: This retrieves the current secret.
   - `Old`: This retrieves the old secret.
+  - `LoadMissingSecretFromCluster(context.Context)`: This option allows to load a secret directly from the cluster when it is missing in the internal store because it was not generated upfront (i.e., there was no prior `Generate` call). This is helpful when the secrets manager instance reading a secret is not the same one managing its lifecycle.
 
 - `Cleanup(context.Context) error`
 
