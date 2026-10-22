@@ -818,6 +818,19 @@ func (r *resourceManager) emptyService() *corev1.Service {
 func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev1.ConfigMap) error {
 	deployment := r.emptyDeployment()
 
+	// By default, we sign the server certificate with the current CA so that it is already in use before the old CA is
+	// dropped from the bundle during a CA rotation. This is correct whenever the client's CA bundle is updated together
+	// with or before `gardener-resource-manager`, i.e., in the runtime and virtual garden cases as well as for hosted
+	// shoots (where `kube-apiserver` is redeployed before this component).
+	// For self-hosted shoots, however, the `kube-apiserver` static pod receives the CA bundle via a lagging
+	// `OperatingSystemConfig` rollout that only completes after this component has been redeployed. Signing with the
+	// current CA would break the `kube-apiserver`'s connection to the `node-agent-authorizer` webhook until the new CA
+	// bundle has been rolled out. Hence, we fall back to the default (old CA) to bridge this gap.
+	signedByCAOptions := []secretsmanager.SignedByCAOption{secretsmanager.UseCurrentCA}
+	if r.values.ResponsibilityMode == ForShootOrVirtualGarden && r.values.IsSelfHostedShoot {
+		signedByCAOptions = nil
+	}
+
 	secretServer, err := r.secretsManager.Generate(ctx,
 		&secrets.CertificateSecretConfig{
 			Name:                        r.values.NamePrefix + secretNameServer,
@@ -826,7 +839,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 			CertType:                    secrets.ServerCert,
 			SkipPublishingCACertificate: true,
 		},
-		secretsmanager.SignedByCA(r.values.SecretNameServerCA, secretsmanager.UseCurrentCA),
+		secretsmanager.SignedByCA(r.values.SecretNameServerCA, signedByCAOptions...),
 		secretsmanager.Rotate(secretsmanager.InPlace),
 		secretsmanager.Namespace(r.namespace),
 	)
