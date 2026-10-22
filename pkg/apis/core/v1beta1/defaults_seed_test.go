@@ -160,4 +160,81 @@ var _ = Describe("Seed defaulting", func() {
 			Expect(obj.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(Equal(dwdProberEnabled))
 		})
 	})
+
+	Describe("SeedDNS defaulting", func() {
+		var (
+			domainA SeedDNSProviderConfig
+			domainB SeedDNSProviderConfig
+		)
+
+		BeforeEach(func() {
+			domainA = SeedDNSProviderConfig{
+				Type:           "provider-a",
+				Domain:         "internal.a.example.com",
+				Zone:           new("zone-a"),
+				CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "secret-a"},
+			}
+			domainB = SeedDNSProviderConfig{
+				Type:           "provider-b",
+				Domain:         "internal.b.example.com",
+				CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "secret-b"},
+			}
+		})
+
+		It("should enable the internal domain if the flag is not set", func() {
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.DNS.InternalDomainEnabled).To(PointTo(BeTrue()))
+		})
+
+		It("should not overwrite a disabled internal domain", func() {
+			obj.Spec.DNS.InternalDomainEnabled = new(false)
+
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.DNS.InternalDomainEnabled).To(PointTo(BeFalse()))
+		})
+
+		It("should leave both internal domain fields empty if none is set", func() {
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.DNS.Internal).To(BeNil())
+			Expect(obj.Spec.DNS.InternalDomains).To(BeEmpty())
+		})
+
+		It("should use the internal domain as the only entry of the internal domains", func() {
+			obj.Spec.DNS.Internal = &domainA
+
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.DNS.InternalDomains).To(ConsistOf(domainA))
+		})
+
+		It("should use the first entry of the internal domains as the internal domain", func() {
+			obj.Spec.DNS.InternalDomains = []SeedDNSProviderConfig{domainA, domainB}
+
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.DNS.Internal).To(PointTo(Equal(domainA)))
+		})
+
+		It("should not share data between the internal domain and the internal domains", func() {
+			obj.Spec.DNS.Internal = &domainA
+
+			SetObjectDefaults_Seed(obj)
+			obj.Spec.DNS.InternalDomains[0].Zone = new("other-zone")
+
+			Expect(obj.Spec.DNS.Internal.Zone).To(PointTo(Equal("zone-a")))
+		})
+
+		It("should not change the internal domain fields if both are set", func() {
+			obj.Spec.DNS.Internal = &domainA
+			obj.Spec.DNS.InternalDomains = []SeedDNSProviderConfig{domainB}
+
+			SetObjectDefaults_Seed(obj)
+
+			Expect(obj.Spec.DNS.Internal).To(PointTo(Equal(domainA)))
+			Expect(obj.Spec.DNS.InternalDomains).To(ConsistOf(domainB))
+		})
+	})
 })

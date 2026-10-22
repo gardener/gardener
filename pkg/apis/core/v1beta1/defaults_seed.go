@@ -22,6 +22,7 @@ func SetDefaults_SeedSpec(obj *SeedSpec) {
 	}
 	setDefaults_SeedNetworks(&obj.Networks)
 	setDefaults_SeedSettings(obj.Settings)
+	setDefaults_SeedDNS(&obj.DNS)
 }
 
 func setDefaults_SeedSettings(obj *SeedSettings) {
@@ -64,6 +65,18 @@ func setDefaults_SeedSettings(obj *SeedSettings) {
 func setDefaults_SeedNetworks(obj *SeedNetworks) {
 	if len(obj.IPFamilies) == 0 {
 		obj.IPFamilies = []IPFamily{IPFamilyIPv4}
+	}
+}
+
+func setDefaults_SeedDNS(obj *SeedDNS) {
+	if obj.Internal != nil && len(obj.InternalDomains) == 0 {
+		obj.InternalDomains = []SeedDNSProviderConfig{*obj.Internal.DeepCopy()}
+	}
+	if obj.Internal == nil && len(obj.InternalDomains) > 0 {
+		obj.Internal = obj.InternalDomains[0].DeepCopy()
+	}
+	if obj.InternalDomainEnabled == nil {
+		obj.InternalDomainEnabled = new(true)
 	}
 }
 
