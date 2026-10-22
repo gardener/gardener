@@ -250,7 +250,7 @@ spec:
                 spec:
                   datasource:
                     kind: PrometheusDatasource
-                  query: garden_shoot_info{iaas=~"${iaas:pipe}",seed=~"${seed:pipe}",region=~"${region:pipe}"} + on(name, project) garden_shoot_condition{condition="APIServerAvailable", purpose=~"${purpose:pipe}"}
+                  query: garden_shoot_info{iaas=~"$iaas",seed=~"$seed",region=~"$region"} + on(name, project) garden_shoot_condition{condition="APIServerAvailable", purpose=~"$purpose"}
                   seriesNameFormat: '{{project}}/{{name}}'
   layouts:
     - kind: Grid
