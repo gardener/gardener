@@ -139,10 +139,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(destinationKubeAPIServerReady),
 		})
 
-		_ = g.Add(flow.Task{
+		etcdMigrationComplete = g.Add(flow.Task{
 			Name:         "Migrating etcd cluster to destination seed",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(dnsRecordsMigrated),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up the source seed",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup, sourceSeedCleanupTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(etcdMigrationComplete),
 		})
 	)
 
@@ -516,6 +522,53 @@ func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Fn:           b.SnapshotEtcd,
 		SkipIf:       v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), b.GetSeed()) == nil,
 		Dependencies: flow.NewTaskIDs(waitUntilEtcdReadyAfterCleanup),
+	})
+
+	return g
+}
+
+// taskGroupSourceSeedCleanup is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupSourceSeedCleanup flow.TaskID = "TaskGroupSourceSeedCleanup"
+
+// sourceSeedCleanupTaskGroup migrates and tears down the source-side shoot resources (extensions, infrastructure,
+// control plane, managed resources, machines) and persists the migrated state for the destination to restore.
+func sourceSeedCleanupTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(taskGroupSourceSeedCleanup)
+	)
+
+	persistShootState := g.Add(flow.Task{
+		Name: "Persisting shoot state",
+		Fn:   b.PersistShootState,
+	})
+
+	migrateManagedResources := b.MigrateAndDeleteManagedResourcesTaskGroup(true)
+	g = g.AddAll(migrateManagedResources.WithTaskDependencies(persistShootState)...)
+
+	migrateExtensions := b.MigrateExtensionResourcesTaskGroup()
+	g = g.AddAll(migrateExtensions.WithTaskDependencies(migrateManagedResources)...)
+
+	destroyExtensionsAndMachineResources := b.DestroyExtensionAndMachineResourcesTaskGroup()
+	g = g.AddAll(destroyExtensionsAndMachineResources.WithTaskDependencies(migrateExtensions)...)
+
+	migrateControlPlane := b.MigrateAndDeleteControlPlaneTaskGroup()
+	g = g.AddAll(migrateControlPlane.WithTaskDependencies(destroyExtensionsAndMachineResources)...)
+
+	migrateExtensionsAfterKubeAPIServerGroup := b.MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup()
+	g = g.AddAll(migrateExtensionsAfterKubeAPIServerGroup.WithTaskDependencies(migrateControlPlane)...)
+
+	migrateInfrastructureGroup := b.MigrateAndDeleteInfrastructureTaskGroup()
+	g = g.AddAll(migrateInfrastructureGroup.WithTaskDependencies(migrateExtensionsAfterKubeAPIServerGroup)...)
+
+	_ = g.Add(flow.Task{
+		Name:         "Deleting DNSRecords from the source namespace",
+		Fn:           b.DestroyDNSRecords,
+		Dependencies: flow.NewTaskIDs(migrateInfrastructureGroup),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Deleting source backup entry from the source namespace",
+		Fn:           b.DestroySourceBackupEntry,
+		Dependencies: flow.NewTaskIDs(migrateInfrastructureGroup),
 	})
 
 	return g
