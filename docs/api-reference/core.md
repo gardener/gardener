@@ -8998,7 +8998,7 @@ boolean
 </td>
 <td>
 <em>(Optional)</em>
-<p>ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.<br />Default, if unspecified, is to enforce TCP.</p>
+<p>ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.<br />Default, if unspecified, is to prefer UDP and fall back to TCP (prefer_udp). Many infrastructure DNS resolvers rate-limit or struggle<br />with a large number of TCP connections, which can cause connection timeouts. Set to true only if your upstream DNS resolver is known<br />to drop or truncate UDP responses.</p>
 </td>
 </tr>
 <tr>
