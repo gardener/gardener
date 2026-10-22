@@ -85,6 +85,7 @@ func (g *gardenerMetricsCollector) Deploy(ctx context.Context) error {
 		g.openTelemetryCollector(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name),
 		g.serviceMonitor(),
 		g.internalMetricsServiceMonitor(),
+		g.verticalPodAutoscaler(),
 	)
 	if err != nil {
 		return err
