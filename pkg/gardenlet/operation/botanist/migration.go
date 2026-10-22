@@ -14,11 +14,31 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
+
+// PersistShootState writes all secrets from the seed namespace into the garden-cluster ShootState so that
+// a destination gardenlet can restore them during live migration.
+func (b *Botanist) PersistShootState(ctx context.Context) error {
+	return shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(),
+		b.Shoot.GetInfo(), b.Shoot.ControlPlaneNamespace, false)
+}
+
+// RefreshShootStateForLiveMigration fetches the current ShootState from the garden cluster and stores it on the
+// in-memory Shoot.
+func (b *Botanist) RefreshShootStateForLiveMigration(ctx context.Context) error {
+	shootState := &gardencorev1beta1.ShootState{}
+	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
+		return fmt.Errorf("failed to fetch ShootState for live migration: %w", err)
+	}
+	b.Shoot.SetShootState(shootState)
+	return nil
+}
 
 // MigrateExtensionResourcesInParallel migrates extension CRs.
 // CRs with kind "Extension" are handled separately and are not migrated by this function.
