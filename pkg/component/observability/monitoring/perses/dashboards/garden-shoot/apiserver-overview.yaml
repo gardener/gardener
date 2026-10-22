@@ -510,6 +510,10 @@ spec:
               format:
                 unit: seconds
               label: latency (s)
+            thresholds:
+              steps:
+                - color: '#fade2a'
+                  value: 1
             legend:
               position: right
               mode: table
@@ -540,6 +544,10 @@ spec:
               format:
                 unit: seconds
               label: latency (s)
+            thresholds:
+              steps:
+                - color: '#fade2a'
+                  value: 1
             legend:
               position: right
               mode: table
@@ -930,6 +938,10 @@ spec:
               format:
                 unit: seconds
               label: latency (s)
+            thresholds:
+              steps:
+                - color: '#fade2a'
+                  value: 0.5
             legend:
               position: right
               mode: table
