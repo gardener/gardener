@@ -145,10 +145,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(dnsRecordsMigrated),
 		})
 
-		_ = g.Add(flow.Task{
+		sourceSeedCleanup = g.Add(flow.Task{
 			Name:         "Cleaning up the source seed",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup, sourceSeedCleanupTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(etcdMigrationComplete),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Completing live migration",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrationCompleted, destinationCompletionTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(sourceSeedCleanup),
 		})
 	)
 
@@ -569,6 +575,175 @@ func sourceSeedCleanupTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Name:         "Deleting source backup entry from the source namespace",
 		Fn:           b.DestroySourceBackupEntry,
 		Dependencies: flow.NewTaskIDs(migrateInfrastructureGroup),
+	})
+
+	return g
+}
+
+// taskGroupDestinationCompletionTaskGroup is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupDestinationCompletionTaskGroup flow.TaskID = "TaskGroupDestinationCompletionTaskGroup"
+
+// destinationCompletionTaskGroup returns the group run by the MigrationCompleted step: the restore chain followed by
+// the destination shoot-system layer (system components, resources, addons, observability), run sequentially.
+func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	var (
+		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
+		nginxDisabled    = b.Shoot.IsWorkerless || !v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
+		g                = flow.NewTaskGroup(taskGroupDestinationCompletionTaskGroup)
+	)
+
+	refreshShootState := g.Add(flow.Task{
+		Name: "Refreshing shoot state",
+		Fn:   b.RefreshShootStateForLiveMigration,
+	})
+
+	deployReferencedResources := b.ReconcileReferencedResourcesTaskGroup()
+	g = g.AddAll(deployReferencedResources.WithTaskDependencies(refreshShootState)...)
+	// Deploy the DNSRecords first so api.<domain> resolves to the destination before the long tail of restores (and
+	// before the permanent vpn-shoot, whose endpoint is api.<internalDomain>, is brought up).
+	deployDNS := b.ReconcileDNSRecordsTaskGroup()
+	g = g.AddAll(deployDNS.WithTaskDependencies(refreshShootState)...)
+
+	// Give upstream DNS caches time to pick up the destination targets before bringing up the permanent vpn-shoot
+	// (whose endpoint resolves via api.<internalDomain>) and the other components that resolve these names.
+	waitDNSCacheSync := g.Add(flow.Task{
+		Name:         "Waiting for DNS caches to sync to the destination",
+		Fn:           b.WaitForLiveMigrationDNSCacheSync,
+		Dependencies: flow.NewTaskIDs(deployDNS),
+	})
+
+	deployCloudProviderSecret := b.DeployCloudProviderSecretTaskGroup()
+	g = g.AddAll(deployCloudProviderSecret.WithTaskDependencies(waitDNSCacheSync)...)
+
+	reconcileInfrastructure := b.ReconcileInfrastructureTaskGroup(false)
+	g = g.AddAll(reconcileInfrastructure.WithTaskDependencies(deployCloudProviderSecret)...)
+
+	reconcileControlPlane := b.ReconcileControlPlaneTaskGroup(false)
+	g = g.AddAll(reconcileControlPlane.WithTaskDependencies(reconcileInfrastructure)...)
+
+	restoreNetwork := g.Add(flow.Task{
+		Name:         "Restoring network",
+		Fn:           b.DeployNetwork,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(reconcileControlPlane),
+	})
+	waitNetwork := g.Add(flow.Task{
+		Name:         "Waiting until network is restored",
+		Fn:           b.Shoot.Components.Extensions.Network.Wait,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(restoreNetwork),
+	})
+
+	reconcileOperatingSystemConfig := b.ReconcileOperatingSystemConfigTaskGroup(false)
+	g = g.AddAll(reconcileOperatingSystemConfig.WithTaskDependencies(waitNetwork)...)
+
+	// machine-controller-manager must run before the worker is restored so it adopts the migrated MachineDeployments.
+	mcm := b.ReconcileMachineControllerManagerTaskGroup()
+	g = g.AddAll(mcm.WithTaskDependencies(reconcileOperatingSystemConfig)...)
+	worker := b.ReconcileWorkerTaskGroup(false)
+	g = g.AddAll(worker.WithTaskDependencies(mcm)...)
+
+	reconcileContainerRuntime := b.ReconcileContainerRuntimeTaskGroup(false)
+	g = g.AddAll(reconcileContainerRuntime.WithTaskDependencies(worker)...)
+
+	reconcileExtensionsAfterKubeAPIServer := b.ReconcileExtensionsAfterKubeAPIServerTaskGroup(false)
+	g = g.AddAll(reconcileExtensionsAfterKubeAPIServer.WithTaskDependencies(reconcileContainerRuntime)...)
+
+	// Deploy the permanent vpn-shoot and wait until it is healthy before tearing down the temporary VPN, so the
+	// permanent tunnel to the destination is established first and connectivity is uninterrupted.
+	deployVPNShoot := g.Add(flow.Task{
+		Name:         "Deploying VPN shoot client to destination",
+		Fn:           b.DeployVPNShoot,
+		Dependencies: flow.NewTaskIDs(reconcileExtensionsAfterKubeAPIServer),
+	})
+	waitVPNShoot := g.Add(flow.Task{
+		Name:         "Waiting until VPN shoot client to destination is healthy",
+		Fn:           b.Shoot.Components.SystemComponents.VPNShoot.Wait,
+		Dependencies: flow.NewTaskIDs(deployVPNShoot),
+	})
+	deployGardenerAccess := g.Add(flow.Task{
+		Name:         "Deploying Gardener access resources",
+		Fn:           b.Shoot.Components.GardenerAccess.Deploy,
+		Dependencies: flow.NewTaskIDs(waitVPNShoot),
+	})
+	initializeShootClients := g.Add(flow.Task{
+		Name:         "Initializing connection to shoot",
+		Fn:           b.InitializeDesiredShootClients,
+		Dependencies: flow.NewTaskIDs(deployGardenerAccess),
+	})
+	// Confirm the permanent tunnel actually carries traffic to the shoot BEFORE tearing down the
+	// temporary VPN. Otherwise the temp path is removed while the permanent one may not yet be
+	// established end-to-end (VPNShoot.Wait only checks pod/ManagedResource health, not tunnel
+	// reachability), briefly black-holing apiserver->shoot traffic - webhooks, logs, exec.
+	waitTunnelConnection := g.Add(flow.Task{
+		Name:         "Waiting until the permanent VPN tunnel connection to the destination is established",
+		Fn:           b.WaitUntilTunnelConnectionExists,
+		Dependencies: flow.NewTaskIDs(initializeShootClients),
+	})
+
+	// TODO(GEP-39): Destroy the temporary VPN shoot client and live migration VPN DNS record after the permanent tunnel is established.
+
+	// EnsureShootClusterIdentity populates status.ClusterIdentity, read by the system-components group, so it runs first.
+	deployAPIServerProxy := g.Add(flow.Task{
+		Name:         "Deploying apiserver-proxy",
+		Fn:           b.DeployAPIServerProxy,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(waitTunnelConnection),
+	})
+	ensureShootClusterIdentity := g.Add(flow.Task{
+		Name:         "Ensuring shoot cluster identity",
+		Fn:           b.EnsureShootClusterIdentity,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(deployAPIServerProxy),
+	})
+
+	shootNamespaces := b.ReconcileShootNamespacesTaskGroup(false)
+	g = g.AddAll(shootNamespaces.WithTaskDependencies(ensureShootClusterIdentity)...)
+
+	systemComponents := b.ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, false)
+	g = g.AddAll(systemComponents.WithTaskDependencies(shootNamespaces)...)
+
+	systemResources := b.ReconcileSystemResourcesTaskGroup()
+	g = g.AddAll(systemResources.WithTaskDependencies(systemComponents)...)
+
+	deployNodeAgent := g.Add(flow.Task{
+		Name: "Deploying gardener-node-agent's OperatingSystemConfig secrets and RBAC resources",
+		Fn: func(ctx context.Context) error {
+			return b.DeployManagedResourceForGardenerNodeAgent(ctx, false)
+		},
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(systemResources),
+	})
+	populateStaticManifests := g.Add(flow.Task{
+		Name:         "Populating static manifests from seed to shoot",
+		Fn:           b.PopulateStaticManifestsFromSeedToShoot,
+		Dependencies: flow.NewTaskIDs(deployNodeAgent),
+	})
+	updateAdvertisedAddresses := g.Add(flow.Task{
+		Name:         "Ensuring advertised addresses for the shoot",
+		Fn:           b.UpdateAdvertisedAddresses,
+		Dependencies: flow.NewTaskIDs(populateStaticManifests),
+	})
+
+	deployLogging := g.Add(flow.Task{
+		Name:         "Deploying shoot logging stack in seed",
+		Fn:           b.DeployLogging,
+		Dependencies: flow.NewTaskIDs(updateAdvertisedAddresses),
+	})
+	observabilityGroup := b.ReconcileObservabilityTaskGroup()
+	g = g.AddAll(observabilityGroup.WithTaskDependencies(deployLogging)...)
+
+	waitNginx := g.Add(flow.Task{
+		Name:         "Waiting until nginx ingress LoadBalancer is ready",
+		Fn:           b.WaitUntilNginxIngressServiceIsReady,
+		SkipIf:       nginxDisabled,
+		Dependencies: flow.NewTaskIDs(observabilityGroup),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Deploying nginx ingress DNS record",
+		Fn:           b.DeployOrDestroyIngressDNSRecord,
+		SkipIf:       nginxDisabled,
+		Dependencies: flow.NewTaskIDs(waitNginx),
 	})
 
 	return g
