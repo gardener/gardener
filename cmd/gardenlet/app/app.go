@@ -809,7 +809,10 @@ func addAllFieldIndexesToGardenClient(ctx context.Context, i client.FieldIndexer
 func addAllFieldIndexesToSeedClient(ctx context.Context, i client.FieldIndexer) error {
 	var fns []func(context.Context, client.FieldIndexer) error
 	if gardenlet.IsResponsibleForSelfHostedShoot() {
-		fns = append(fns, indexer.AddPodNodeName)
+		fns = append(fns,
+			indexer.AddPodNodeName,
+			indexer.AddConfigMapName,
+		)
 	}
 
 	for _, fn := range fns {

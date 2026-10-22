@@ -56,3 +56,23 @@ func AddServiceNamespaceSelectors(ctx context.Context, indexer client.FieldIndex
 	}
 	return nil
 }
+
+// ConfigMapName is a constant for the metadata.name field selector in ConfigMaps.
+const ConfigMapName = "metadata.name"
+
+// ConfigMapNameIndexerFunc extracts the .metadata.name field of a ConfigMap.
+var ConfigMapNameIndexerFunc = func(obj client.Object) []string {
+	configMap, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		return []string{""}
+	}
+	return []string{configMap.Name}
+}
+
+// AddConfigMapName adds an index for ConfigMapName to the given indexer.
+func AddConfigMapName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &corev1.ConfigMap{}, ConfigMapName, ConfigMapNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to ConfigMap Informer: %w", ConfigMapName, err)
+	}
+	return nil
+}

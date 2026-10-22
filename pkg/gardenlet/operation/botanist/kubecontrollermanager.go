@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/shared"
@@ -99,7 +100,7 @@ func (b *Botanist) WaitUntilKubeRootCAConfigMapsUpdated(ctx context.Context) err
 
 	configMapList := &corev1.ConfigMapList{}
 	if err := b.ShootClientSet.Client().List(ctx, configMapList,
-		client.MatchingFields{"metadata.name": "kube-root-ca.crt"},
+		client.MatchingFields{indexer.ConfigMapName: "kube-root-ca.crt"},
 		client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(secretsrotation.LabelKeyCABundleName, selection.NotEquals, caBundleSecret.Name))},
 	); err != nil {
 		return fmt.Errorf("failed listing kube-root-ca.crt ConfigMaps with outdated CA bundle: %w", err)
