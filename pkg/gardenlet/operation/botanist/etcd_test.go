@@ -515,6 +515,15 @@ var _ = Describe("Etcd", func() {
 
 					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 				})
+
+				It("should never take the snapshot-restore path for a live-migration destination", func() {
+					botanist.Shoot.LiveMigrationRole = v1beta1helper.LiveMigrationRoleDestination
+
+					etcdMain.EXPECT().Deploy(ctx)
+					etcdEvents.EXPECT().Deploy(ctx)
+
+					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+				})
 			})
 		})
 
