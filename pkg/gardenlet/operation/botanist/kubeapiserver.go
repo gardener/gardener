@@ -132,6 +132,13 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 
 	if b.Shoot.ExternalClusterDomain != nil {
 		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
+
+		// Self-hosted shoots use an internal domain for traffic from the nodes to the control plane if the control plane
+		// is exposed. Add it independent of the exposure configuration so that enabling the exposure doesn't require
+		// re-issuing the server certificate before the nodes can switch to the internal domain.
+		if b.Shoot.IsSelfHosted() {
+			dnsNames = append(dnsNames, gardenerutils.GetSelfHostedShootInternalAPIServerDomain(*b.Shoot.ExternalClusterDomain))
+		}
 	}
 
 	return kubeapiserver.ServerCertificateConfig{
