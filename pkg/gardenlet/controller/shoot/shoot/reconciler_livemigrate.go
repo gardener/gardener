@@ -121,10 +121,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(sourceEtcdReadyForPeerJoin),
 		})
 
-		_ = g.Add(flow.Task{
+		migrateExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
 			Name:         "Migrating source extensions needed before kube-apiserver",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer, botanist.MigrateExtensionsBeforeKubeAPIServerTaskGroup()),
 			Dependencies: flow.NewTaskIDs(destinationEtcdJoined),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Deploying destination control plane and temporary VPN",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationKubeAPIServerReady, destinationKubeAPIServerReadyTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
 		})
 	)
 
@@ -345,6 +351,73 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
 	)
+
+	return g
+}
+
+// taskGroupDestinationKubeAPIServerReady is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupDestinationKubeAPIServerReady flow.TaskID = "TaskGroupDestinationKubeAPIServerReady"
+
+// destinationKubeAPIServerReadyTaskGroup brings up the destination control plane and the temporary VPN.
+func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	g := flow.NewTaskGroup(taskGroupDestinationKubeAPIServerReady)
+
+	refreshShootState := g.Add(flow.Task{
+		Name: "Refreshing shoot state",
+		Fn:   b.RefreshShootStateForLiveMigration,
+	})
+	deployVPNServer := g.Add(flow.Task{
+		Name:         "Deploying destination VPN server",
+		Fn:           b.DeployVPNServer,
+		Dependencies: flow.NewTaskIDs(refreshShootState),
+	})
+	// The istio ConfigMap gates the pod-kube-apiserver-load-balancing webhook; without it control plane pods resolve
+	// api.<internalDomain> to the source apiserver and fail authentication (401).
+	reconcileIstioConfigMap := g.Add(flow.Task{
+		Name:         "Reconciling istio internal load balancing configmap",
+		Fn:           b.ReconcileIstioInternalLoadBalancingConfigMap,
+		Dependencies: flow.NewTaskIDs(refreshShootState),
+	})
+
+	reconcileExtensions := b.ReconcileExtensionsBeforeKubeAPIServerTaskGroup(false)
+	g = g.AddAll(reconcileExtensions.WithTaskDependencies(reconcileIstioConfigMap)...)
+
+	deployService := g.Add(flow.Task{
+		Name:         "Deploying kube-apiserver service",
+		Fn:           b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy,
+		Dependencies: flow.NewTaskIDs(reconcileExtensions),
+	})
+	waitService := g.Add(flow.Task{
+		Name:         "Waiting until kube-apiserver service is ready",
+		Fn:           b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait,
+		Dependencies: flow.NewTaskIDs(deployService),
+	})
+
+	reconcileKubeAPIServer := b.ReconcileKubeAPIServerTaskGroup(false, 30*time.Second)
+	g = g.AddAll(reconcileKubeAPIServer.WithTaskDependencies(waitService, deployVPNServer)...)
+
+	reconcileGardenerResourceManager := b.ReconcileGardenerResourceManagerTaskGroup(true, false)
+	g = g.AddAll(reconcileGardenerResourceManager.WithTaskDependencies(reconcileKubeAPIServer)...)
+
+	reconcileControlPlaneComponents := b.ReconcileControlPlaneComponentsTaskGroup(false)
+	g = g.AddAll(reconcileControlPlaneComponents.WithTaskDependencies(reconcileGardenerResourceManager)...)
+
+	// TODO(GEP-39): Deploy temporary VPN shoot client and live migration VPN DNS record as part of the live migration process.
+
+	deployGardenerAccess := g.Add(flow.Task{
+		Name:         "Deploying Gardener shoot access resources",
+		Fn:           flow.TaskFn(b.Shoot.Components.GardenerAccess.Deploy).RetryUntilTimeout(5*time.Second, 30*time.Second),
+		Dependencies: flow.NewTaskIDs(reconcileGardenerResourceManager),
+	})
+	// WaitUntilTemporaryTunnelConnectionExists lists pods through b.ShootClientSet, which is nil until the shoot client
+	// is initialized against the freshly deployed destination kube-apiserver.
+	_ = g.Add(flow.Task{
+		Name:         "Initializing connection to shoot",
+		Fn:           flow.TaskFn(b.InitializeDesiredShootClients).RetryUntilTimeout(5*time.Second, 2*time.Minute),
+		Dependencies: flow.NewTaskIDs(deployGardenerAccess),
+	})
+
+	// TODO(GEP-39): Wait until the temporary VPN tunnel connection to the destination is established.
 
 	return g
 }
