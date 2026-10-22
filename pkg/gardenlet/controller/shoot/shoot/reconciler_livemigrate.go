@@ -133,10 +133,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
 		})
 
-		_ = g.Add(flow.Task{
+		dnsRecordsMigrated = g.Add(flow.Task{
 			Name:         "Migrating DNS records to the destination seed",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrateDNSRecords, migrateDNSRecordsTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(destinationKubeAPIServerReady),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Removing source etcd members from the joined cluster",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup()),
+			Dependencies: flow.NewTaskIDs(dnsRecordsMigrated),
 		})
 	)
 
@@ -448,4 +454,13 @@ func migrateDNSRecordsTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	)
 
 	return g
+}
+
+// taskGroupEtcdMigrationComplete is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupEtcdMigrationComplete flow.TaskID = "TaskGroupEtcdMigrationComplete"
+
+// etcdMigrationCompleteTaskGroup removes the source cluster's etcd members from the joined cluster, scaling etcd-main
+// back to its final member count, and waits until the destination etcd is ready again.
+func etcdMigrationCompleteTaskGroup() flow.TaskGroup {
+	return flow.NewTaskGroup(taskGroupEtcdMigrationComplete)
 }
