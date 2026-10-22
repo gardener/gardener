@@ -198,8 +198,9 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped, deploySelfHostedShootExposure),
 		})
-		// Components on the worker nodes talk to the control plane via the internal DNSRecord (control plane nodes use
-		// localhost), so it must exist before deploying the Worker.
+		// Components on the nodes (e.g., gardener-node-agent) talk to the control plane via the internal DNSRecord, so it
+		// must exist before rolling out the OperatingSystemConfig with the internal domain (static control plane pods) and
+		// before deploying the Worker.
 		deployInternalDNSRecord = g.Add(flow.Task{
 			Name: "Deploying internal DNSRecord",
 			// Retry to tolerate the warmup window of the in-cluster extension controllers that were just redeployed
@@ -226,7 +227,10 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 				WithDependencies(syncPointBootstrapped, reconcileBackupEntry).
 				SkipIf(opts.UseBootstrapEtcd),
 		)
-		reconcileStaticControlPlanePods = g.AddGroup(b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd))
+		reconcileStaticControlPlanePods = g.AddGroup(
+			b.ReconcileStaticControlPlanePodsTaskGroup(opts.UseBootstrapEtcd).
+				WithDependencies(deployInternalDNSRecord),
+		)
 
 		_ = g.Add(flow.Task{
 			Name:         "Finalizing ETCD bootstrap transition (cleanup bootstrap ETCD left-overs)",

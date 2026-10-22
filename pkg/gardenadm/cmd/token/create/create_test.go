@@ -6,6 +6,7 @@ package create_test
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -15,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -53,7 +56,7 @@ var _ = Describe("Create", func() {
 		globalOpts.IOStreams, _, stdOut, _ = clitest.NewTestIOStreams()
 		command = NewCommand(globalOpts)
 
-		fakeClient = fakeclient.NewClientBuilder().Build()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithRESTConfig(restConfig).Build()
 
 		DeferCleanup(test.WithVar(&tokenutils.CreateClientSet, func(context.Context, logr.Logger) (kubernetes.Interface, error) { return clientSet, nil }))
@@ -96,39 +99,96 @@ var _ = Describe("Create", func() {
 			Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("already exists")))
 		})
 
-		When("the join command should be printed", func() {
+		Context("join and reset command", func() {
+			var shoot *gardencorev1beta1.Shoot
+
 			BeforeEach(func() {
-				Expect(command.Flags().Set("print-join-command", "true")).To(Succeed())
+				shoot = &gardencorev1beta1.Shoot{
+					TypeMeta: metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"},
+					Spec: gardencorev1beta1.ShootSpec{
+						CredentialsBindingName: new("credentials"),
+						DNS:                    &gardencorev1beta1.DNS{Domain: new("root.example.com")},
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{
+								Name:         "control-plane",
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							}},
+						},
+					},
+				}
 			})
 
-			It("should return an error because the cluster is not a Shoot", func() {
-				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster")))
-			})
+			createShootInfoAndCluster := func() {
+				GinkgoHelper()
 
-			It("should successfully print the join command", func() {
 				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}})).To(Succeed())
 
-				Expect(command.RunE(command, []string{token})).To(Succeed())
-				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
+				shootRaw, err := json.Marshal(shoot)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeClient.Create(ctx, &extensionsv1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem},
+					Spec:       extensionsv1alpha1.ClusterSpec{Shoot: runtime.RawExtension{Raw: shootRaw}},
+				})).To(Succeed())
+			}
+
+			When("the join command should be printed", func() {
+				BeforeEach(func() {
+					Expect(command.Flags().Set("print-join-command", "true")).To(Succeed())
+				})
+
+				It("should return an error because the cluster is not a Shoot", func() {
+					Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster")))
+				})
+
+				It("should return an error because the Cluster resource does not exist", func() {
+					Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}})).To(Succeed())
+
+					Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("failed reading Shoot from Cluster resource")))
+				})
+
+				It("should successfully print the join command", func() {
+					createShootInfoAndCluster()
+
+					Expect(command.RunE(command, []string{token})).To(Succeed())
+					Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
 `))
-			})
-		})
+				})
 
-		When("the reset command should be printed", func() {
-			BeforeEach(func() {
-				Expect(command.Flags().Set("print-reset-command", "true")).To(Succeed())
-			})
+				It("should print the join command with the internal domain if the control plane is exposed", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane.Exposure = &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}}
+					createShootInfoAndCluster()
 
-			It("should return an error because the cluster is not a Shoot", func() {
-				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster")))
-			})
-
-			It("should successfully print the reset command", func() {
-				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ConfigMapNameShootInfo, Namespace: metav1.NamespaceSystem}})).To(Succeed())
-
-				Expect(command.RunE(command, []string{token})).To(Succeed())
-				Eventually(stdOut).Should(Say(`gardenadm reset --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
+					Expect(command.RunE(command, []string{token})).To(Succeed())
+					Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" https://api.internal.root.example.com
 `))
+				})
+			})
+
+			When("the reset command should be printed", func() {
+				BeforeEach(func() {
+					Expect(command.Flags().Set("print-reset-command", "true")).To(Succeed())
+				})
+
+				It("should return an error because the cluster is not a Shoot", func() {
+					Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster")))
+				})
+
+				It("should successfully print the reset command", func() {
+					createShootInfoAndCluster()
+
+					Expect(command.RunE(command, []string{token})).To(Succeed())
+					Eventually(stdOut).Should(Say(`gardenadm reset --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
+`))
+				})
+
+				It("should print the reset command with the internal domain if the control plane is exposed", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane.Exposure = &gardencorev1beta1.Exposure{Extension: &gardencorev1beta1.ExtensionExposure{}}
+					createShootInfoAndCluster()
+
+					Expect(command.RunE(command, []string{token})).To(Succeed())
+					Eventually(stdOut).Should(Say(`gardenadm reset --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" https://api.internal.root.example.com
+`))
+				})
 			})
 		})
 
