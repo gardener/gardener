@@ -43,7 +43,7 @@ func (g *gardenerMetricsCollector) openTelemetryCollector(genericTokenKubeconfig
 			},
 			OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 				Image:             g.values.Image,
-				Replicas:          new(int32(1)),
+				Replicas:          new(int32(2)),
 				PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
 				ServiceAccount:    openTelemetryCollectorName,
 				Resources: corev1.ResourceRequirements{
