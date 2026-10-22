@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -237,7 +236,7 @@ func sourceEtcdPreparedForPeerJoinTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 		persistShootState = g.Add(flow.Task{
 			Name: "Persisting shoot state",
 			Fn: func(ctx context.Context) error {
-				return shootstate.Deploy(ctx, b.Clock, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.GetInfo(), b.Shoot.ControlPlaneNamespace, false)
+				return b.PersistShootState(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(deployEtcdPeerExposure),
 		})
@@ -256,14 +255,21 @@ func sourceEtcdPreparedForPeerJoinTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 			Fn:           b.WaitUntilEtcdsReady,
 			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
+
+		// The destination restores the backup entry in DestinationEtcdPeersJoinedTaskGroup. Skip
+		// re-migrating once destination has already started consuming the result.
+		skipIfDestJoined = v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined) != nil
+
 		migrateBackupEntry = g.Add(flow.Task{
 			Name:         "Migrating backup entry",
 			Fn:           b.Shoot.Components.BackupEntry.Migrate,
+			SkipIf:       skipIfDestJoined,
 			Dependencies: flow.NewTaskIDs(waitEtcdsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until backup entry has been migrated",
 			Fn:           b.Shoot.Components.BackupEntry.WaitMigrate,
+			SkipIf:       skipIfDestJoined,
 			Dependencies: flow.NewTaskIDs(migrateBackupEntry),
 		})
 	)
@@ -279,6 +285,11 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 	var (
 		g = flow.NewTaskGroup(taskGroupDestinationEtcdPeersJoined)
 
+		// Fetch the ShootState written by the source so InitializeSecretsManagement can restore from it.
+		refreshShootState = g.Add(flow.Task{
+			Name: "Refreshing shoot state",
+			Fn:   b.RefreshShootStateForLiveMigration,
+		})
 		deployControlPlaneNamespace = g.Add(flow.Task{
 			Name: "Deploying control plane namespace",
 			Fn:   b.DeployControlPlaneNamespace,
@@ -291,7 +302,7 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 		initSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing secrets management",
 			Fn:           b.InitializeSecretsManagement,
-			Dependencies: flow.NewTaskIDs(deployEtcdPeerExposure),
+			Dependencies: flow.NewTaskIDs(refreshShootState, deployEtcdPeerExposure),
 		})
 		// The source backup entry is deployed to ensure that the data in the source seed's backup bucket
 		// is properly cleaned up at a later stage of the flow.
