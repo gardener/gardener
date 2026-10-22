@@ -38,6 +38,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
+	operatorgarden "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
@@ -187,6 +188,13 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
 		fldBackup := fldPath.Child("etcd", "main", "backup")
 		if newVirtualCluster.ETCD.Main.Backup != nil {
+			// etcd-druid expects the backup bucket prefix to be immutable. We enforce immutability for the prefix, even if the confirmation.gardener.cloud/change-backup confirmation is set.
+			_, oldPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(oldGarden)
+			_, newPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(newGarden)
+			if oldPrefix != newPrefix {
+				allErrs = append(allErrs, field.Forbidden(fldBackup.Child("bucketName"), "changing the prefix of the backup bucket is not allowed"))
+			}
+
 			if gardenerutils.CheckIfBackupChangeIsConfirmed(newGarden.Annotations) {
 				bucketNameChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName)
 				providerChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.Provider, newVirtualCluster.ETCD.Main.Backup.Provider)
