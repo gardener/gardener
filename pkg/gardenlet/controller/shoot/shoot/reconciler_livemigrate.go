@@ -121,10 +121,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(sourceEtcdReadyForPeerJoin),
 		})
 
+		migrateExtensionsNeededBeforeKubeAPIServer = g.Add(flow.Task{
+			Name:         "Migrating source extensions needed before kube-apiserver",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer, botanist.MigrateExtensionsBeforeKubeAPIServerTaskGroup()),
+			Dependencies: flow.NewTaskIDs(destinationEtcdPeersJoined),
+		})
+
 		_ = g.Add(flow.Task{
 			Name:         "Migrating etcd cluster to destination seed",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup(botanist)),
-			Dependencies: flow.NewTaskIDs(destinationEtcdPeersJoined),
+			Dependencies: flow.NewTaskIDs(migrateExtensionsNeededBeforeKubeAPIServer),
 		})
 	)
 
