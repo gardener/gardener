@@ -382,6 +382,8 @@ spec:
           kind: Table
           spec:
             columnSettings:
+              - hide: true
+                name: timestamp
               - name: shoot_uid
                 width: 292
               - name: namespace
@@ -517,6 +519,8 @@ spec:
           kind: Table
           spec:
             columnSettings:
+              - hide: true
+                name: timestamp
               - name: shoot_uid
                 width: 292
               - name: namespace
