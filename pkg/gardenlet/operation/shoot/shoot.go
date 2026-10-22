@@ -548,6 +548,28 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(preferInternalClusterDomain 
 	return v1beta1helper.GetAPIServerDomain(*s.ExternalClusterDomain)
 }
 
+// SelfHostedShootInternalAPIServerDomain returns the internal domain of the self-hosted shoot's API server
+// (`api.internal.<spec.dns.domain>`) if Gardener manages a DNSRecord for this domain pointing to the internal IPs of the
+// control plane nodes (see gardenerutils.SelfHostedShootHasInternalAPIServerDomain). Otherwise, it returns nil.
+func (s *Shoot) SelfHostedShootInternalAPIServerDomain() *string {
+	shoot := s.GetInfo()
+	if !gardenerutils.SelfHostedShootHasInternalAPIServerDomain(shoot) {
+		return nil
+	}
+	return new(gardenerutils.GetSelfHostedShootInternalAPIServerDomain(*shoot.Spec.DNS.Domain))
+}
+
+// ComputeAPIServerAddressForNodes returns the address of the shoot API server that should be used by components running
+// on the shoot's worker nodes (e.g., kubelet, kube-proxy). For self-hosted shoots with an exposed control plane, this is
+// the internal domain pointing to the internal IPs of the control plane nodes, so that the nodes don't depend on the
+// control plane exposure (e.g., a load balancer) for talking to the API server.
+func (s *Shoot) ComputeAPIServerAddressForNodes() string {
+	if domain := s.SelfHostedShootInternalAPIServerDomain(); domain != nil {
+		return *domain
+	}
+	return s.ComputeOutOfClusterAPIServerAddress(true)
+}
+
 // ProxyMode returns the kube-proxy mode config for the shoot.
 func (s *Shoot) ProxyMode() gardencorev1beta1.ProxyMode {
 	shoot := s.GetInfo()

@@ -79,6 +79,16 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		}
 		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Garden.InternalDomain.Credentials, b.Shoot.GetInfo())
 		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain)
+	} else if internalDomain := b.Shoot.SelfHostedShootInternalAPIServerDomain(); internalDomain != nil && b.NeedsExternalDNS() {
+		// Self-hosted shoots don't have an internal domain configured by the operator. Instead, the internal DNSRecord
+		// is a sibling of the external DNSRecord (using the same provider and credentials), which points to the internal
+		// IPs of the control plane nodes instead of the control plane exposure.
+		values.Type = b.Shoot.ExternalDomain.Provider
+		if b.Shoot.ExternalDomain.Zone != "" {
+			values.Zone = &b.Shoot.ExternalDomain.Zone
+		}
+		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.ExternalDomain.Credentials, b.Shoot.GetInfo())
+		values.DNSName = *internalDomain
 	}
 
 	return extensionsdnsrecord.New(
