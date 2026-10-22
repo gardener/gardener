@@ -12,6 +12,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -68,7 +69,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 
 		serviceAccount                *corev1.ServiceAccount
 		openTelemetryCollector        *otelv1beta1.OpenTelemetryCollector
-		serviceMonitor                *monitoringv1.ServiceMonitor
+		scrapeConfig                  *monitoringv1alpha1.ScrapeConfig
 		internalMetricsServiceMonitor *monitoringv1.ServiceMonitor
 		vpa                           *vpaautoscalingv1.VerticalPodAutoscaler
 
@@ -149,7 +150,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 				},
 				OpenTelemetryCommonFields: otelv1beta1.OpenTelemetryCommonFields{
 					Image:             image,
-					Replicas:          new(int32(1)),
+					Replicas:          new(int32(2)),
 					PriorityClassName: "gardener-garden-system-100",
 					ServiceAccount:    "gardener-metrics",
 					Resources: corev1.ResourceRequirements{
@@ -248,26 +249,34 @@ var _ = Describe("GardenerMetricsCollector", func() {
 			},
 		}
 
-		serviceMonitor = &monitoringv1.ServiceMonitor{
+		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "garden-gardener-metrics",
 				Namespace: namespace,
 				Labels:    map[string]string{"prometheus": "garden"},
 			},
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-					"app": "gardener",
-					"operator.opentelemetry.io/collector-service-type": "base",
-					"role": "gardener-metrics",
+			Spec: monitoringv1alpha1.ScrapeConfigSpec{
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       monitoringv1alpha1.KubernetesRoleService,
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 				}},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port: "metrics",
-					RelabelConfigs: []monitoringv1.RelabelConfig{{
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{
+							"__meta_kubernetes_service_label_app",
+							"__meta_kubernetes_service_label_role",
+							"__meta_kubernetes_service_label_operator_opentelemetry_io_collector_service_type",
+							"__meta_kubernetes_service_port_name",
+						},
+						Regex:  "gardener;gardener-metrics;base;metrics",
+						Action: "keep",
+					},
+					{
 						Action:      "replace",
 						Replacement: new("gardener-metrics"),
 						TargetLabel: "job",
-					}},
-				}},
+					},
+				},
 			},
 		}
 
@@ -287,7 +296,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 					Port: "monitoring",
 					RelabelConfigs: []monitoringv1.RelabelConfig{{
 						Action:      "replace",
-						Replacement: new("gardener-metrics"),
+						Replacement: new("gardener-metrics-monitoring"),
 						TargetLabel: "job",
 					}},
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
@@ -462,7 +471,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 				Expect(managedResourceRuntime).To(consistOf(
 					serviceAccount,
 					openTelemetryCollector,
-					serviceMonitor,
+					scrapeConfig,
 					internalMetricsServiceMonitor,
 					vpa,
 				))
