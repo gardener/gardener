@@ -5,16 +5,20 @@
 package shoot
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
@@ -37,6 +41,22 @@ var liveMigrationStepOwners = map[gardencorev1beta1.ConditionType]v1beta1helper.
 	gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete:                      v1beta1helper.LiveMigrationRoleDestination,
 	gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup:                          v1beta1helper.LiveMigrationRoleSource,
 	gardencorev1beta1.ShootLiveMigrationMigrationCompleted:                         v1beta1helper.LiveMigrationRoleDestination,
+	gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown:                    v1beta1helper.LiveMigrationRoleSource,
+}
+
+// liveMigrationConditionOrder is the canonical ordering of live migration conditions, matching the flow step sequence.
+// Conditions are sorted by this order when written to status so they always appear in flow order regardless of which
+// gardenlet set them first.
+var liveMigrationConditionOrder = []gardencorev1beta1.ConditionType{
+	gardencorev1beta1.ShootLiveMigrationSourceEtcdPreparedForPeerJoin,
+	gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined,
+	gardencorev1beta1.ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer,
+	gardencorev1beta1.ShootLiveMigrationDestinationKubeAPIServerReady,
+	gardencorev1beta1.ShootLiveMigrationMigrateDNSRecords,
+	gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete,
+	gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup,
+	gardencorev1beta1.ShootLiveMigrationMigrationCompleted,
+	gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown,
 }
 
 func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.Operation, role v1beta1helper.LiveMigrationRole) *v1beta1helper.WrappedLastErrors {
@@ -73,6 +93,21 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
+	// Set before the graph runs so IsRestorePhase() is consistent across every task.
+	o.Shoot.LiveMigrationRole = role
+
+	// The live migration flow deploys the shoot control plane on the destination seed without running the
+	// infrastructure reconciliation that normally populates o.Shoot.Networks (see WaitForInfrastructure). Compute
+	// the networks here from the shoot's spec and status so control plane components (e.g. kube-apiserver, VPN) can
+	// read the CIDRs. This mirrors the regular reconcile and migrate flows.
+	if o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil {
+		networks, err := shoot.ToNetworks(o.Shoot.GetInfo(), o.Shoot.IsWorkerless)
+		if err != nil {
+			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
+		o.Shoot.Networks = networks
+	}
+
 	var (
 		g = flow.NewGraph("Shoot control plane live migration")
 
@@ -86,8 +121,6 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined, destinationEtcdPeersJoinedTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(sourceEtcdReadyForPeerJoin),
 		})
-
-		// TODO(GEP-39): Future PRs will add other steps as the topic progresses.
 	)
 
 	f := g.Compile()
@@ -158,13 +191,33 @@ func (r *Reconciler) setLiveMigrationStepConditionError(ctx context.Context, sho
 	return r.patchLiveMigrationConditions(ctx, shoot, condition)
 }
 
+// finalizeLiveMigration switches the shoot's status.seedName to the destination seed and clears the live-migration
+// state and intent annotation, returning the shoot to normal reconciliation on the destination seed.
+func (r *Reconciler) finalizeLiveMigration(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	patch := client.MergeFrom(shoot.DeepCopy())
+	delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+	if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+		return fmt.Errorf("failed to remove live migration annotation: %w", err)
+	}
+
+	statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
+	shoot.Status.SeedName = shoot.Spec.SeedName
+	shoot.Status.LiveMigration = nil
+	shoot.Status.MigrationStartTime = nil
+	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
+}
+
 func (r *Reconciler) patchLiveMigrationConditions(ctx context.Context, shoot *gardencorev1beta1.Shoot, conditions ...gardencorev1beta1.Condition) error {
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
 
 	if shoot.Status.LiveMigration == nil {
 		shoot.Status.LiveMigration = &gardencorev1beta1.LiveMigration{}
 	}
-	shoot.Status.LiveMigration.Conditions = v1beta1helper.MergeConditions(shoot.Status.LiveMigration.Conditions, conditions...)
+	merged := v1beta1helper.MergeConditions(shoot.Status.LiveMigration.Conditions, conditions...)
+	slices.SortStableFunc(merged, func(a, b gardencorev1beta1.Condition) int {
+		return cmp.Compare(slices.Index(liveMigrationConditionOrder, a.Type), slices.Index(liveMigrationConditionOrder, b.Type))
+	})
+	shoot.Status.LiveMigration.Conditions = merged
 
 	return r.GardenClient.Status().Patch(ctx, shoot, patch)
 }
