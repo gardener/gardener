@@ -1003,7 +1003,11 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
-	if !e.values.HighAvailabilityEnabled {
+	// Non-HA hosted shoots don't have a peer CA, so there is nothing to do for them (self-hosted shoots always have a
+	// peer CA, even when non-HA).
+	// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable
+	//  PeerUrlTLS even for clusters that are currently not configured with HA, see also L354.
+	if !e.values.HighAvailabilityEnabled && e.values.StaticPodConfig == nil {
 		return nil
 	}
 
