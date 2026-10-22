@@ -1663,7 +1663,7 @@ type NodeLocalDNS struct {
 	// Default, if unspecified, is to enforce TCP.
 	ForceTCPToClusterDNS *bool
 	// ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.
-	// Default, if unspecified, is to enforce TCP.
+	// Default, if unspecified, is to prefer UDP.
 	ForceTCPToUpstreamDNS *bool
 	// DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
 	// Default, if unspecified, is to forward requests for external domains to upstream DNS

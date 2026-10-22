@@ -9048,7 +9048,7 @@ boolean
 </td>
 <td>
 <em>(Optional)</em>
-<p>ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.<br />Default, if unspecified, is to enforce TCP.</p>
+<p>ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.<br />Default, if unspecified, is to prefer UDP.</p>
 </td>
 </tr>
 <tr>

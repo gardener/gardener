@@ -7352,7 +7352,7 @@ func schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref common.ReferenceCallback) com
 					},
 					"forceTCPToUpstreamDNS": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not. Default, if unspecified, is to enforce TCP.",
+							Description: "ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not. Default, if unspecified, is to prefer UDP.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
