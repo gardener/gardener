@@ -58,6 +58,12 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 			return b.DeleteStaleEtcdMemberLeases(ctx, (*clientSet).Client())
 		},
 	})
+	_ = g.Add(flow.Task{
+		Name: "Scaling down gardenlet to prevent interference with restore",
+		Fn: func(ctx context.Context) error {
+			return b.ScaleDownGardenlet(ctx, (*clientSet).Client())
+		},
+	})
 
 	return g
 }

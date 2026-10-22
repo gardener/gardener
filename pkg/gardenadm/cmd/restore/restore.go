@@ -84,15 +84,25 @@ func run(ctx context.Context, opts *Options) error {
 
 	// The ETCD snapshot restored during `gardenadm restore` brings stale resources back to life which must be cleaned
 	// up before the init flow re-reconciles the control plane. BootstrapControlPlane runs these cleanups (deleting the
-	// prior control plane Node and its Pods, and the stale gardener-node-agent OperatingSystemConfig Secret) after the
-	// connection to the control plane is established and before the bootstrap secrets are imported.
+	// prior control plane Node and its Pods, the stale gardener-node-agent OperatingSystemConfig Secret, and scaling the
+	// gardenlet Deployment to zero) after the connection to the control plane is established and before the bootstrap
+	// secrets are imported.
 	b, err := initcmd.BootstrapControlPlane(ctx, initOpts, opts.BackupDataPath, opts.PriorNodeName, true)
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap control plane: %w", err)
 	}
 
 	if err := initcmd.RunInitFlow(ctx, b, initOpts); err != nil {
+		// Best-effort: restore gardenlet replicas even when the init flow fails so the cluster is not left with
+		// gardenlet permanently scaled to zero.
+		if scaleErr := b.ScaleUpGardenlet(ctx, b.SeedClientSet.Client()); scaleErr != nil {
+			opts.Log.Error(scaleErr, "Failed to scale gardenlet back up after init flow failure")
+		}
 		return err
+	}
+
+	if err := b.ScaleUpGardenlet(ctx, b.SeedClientSet.Client()); err != nil {
+		return fmt.Errorf("failed scaling gardenlet back up after restore: %w", err)
 	}
 
 	removeRestoreInProgressMarker(opts.Log, fs)
