@@ -306,22 +306,39 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyMainETCDBackupBucket = g.Add(flow.Task{
-			Name: "Destroying main ETCD backup bucket",
+			Name: "Destroying main ETCD backup buckets",
 			Fn: func(ctx context.Context) error {
-				backupBucket := etcdMainBackupBucket(garden)
-				if err := extensions.DeleteExtensionObject(ctx, r.RuntimeClientSet.Client(), backupBucket); err != nil {
-					return err
+				backupBuckets := &extensionsv1alpha1.BackupBucketList{}
+				if err := r.RuntimeClientSet.Client().List(ctx, backupBuckets); err != nil {
+					return fmt.Errorf("failed to determine backup buckets associated to this garden: %w", err)
 				}
 
-				return extensions.WaitUntilExtensionObjectDeleted(
-					ctx,
-					r.RuntimeClientSet.Client(),
-					log,
-					backupBucket,
-					extensionsv1alpha1.BackupBucketResource,
-					2*time.Second,
-					time.Minute,
-				)
+				var waitFns []flow.TaskFn
+				for i := range backupBuckets.Items {
+					backupBucket := &backupBuckets.Items[i]
+					if backupBucket.Spec.Class == nil || *backupBucket.Spec.Class != extensionsv1alpha1.ExtensionClassGarden ||
+						backupBucket.Spec.SecretRef.Namespace != r.GardenNamespace {
+						continue
+					}
+
+					if err := extensions.DeleteExtensionObject(ctx, r.RuntimeClientSet.Client(), backupBucket); err != nil {
+						return fmt.Errorf("failed deleting backup bucket %s: %w", client.ObjectKeyFromObject(backupBucket), err)
+					}
+
+					waitFns = append(waitFns, func(ctx context.Context) error {
+						return extensions.WaitUntilExtensionObjectDeleted(
+							ctx,
+							r.RuntimeClientSet.Client(),
+							log,
+							backupBucket,
+							extensionsv1alpha1.BackupBucketResource,
+							2*time.Second,
+							time.Minute,
+						)
+					})
+				}
+
+				return flow.Parallel(waitFns...)(ctx)
 			},
 			SkipIf:       helper.GetETCDMainBackup(garden) == nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed, destroyMainETCDBackupEntry),
