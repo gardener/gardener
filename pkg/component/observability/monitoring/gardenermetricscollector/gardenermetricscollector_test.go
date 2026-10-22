@@ -12,11 +12,13 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -68,6 +70,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 		openTelemetryCollector        *otelv1beta1.OpenTelemetryCollector
 		serviceMonitor                *monitoringv1.ServiceMonitor
 		internalMetricsServiceMonitor *monitoringv1.ServiceMonitor
+		vpa                           *vpaautoscalingv1.VerticalPodAutoscaler
 
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
@@ -315,6 +318,39 @@ var _ = Describe("GardenerMetricsCollector", func() {
 			},
 		}
 
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-metrics",
+				Namespace: namespace,
+				Labels:    labels,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "opentelemetry.io/v1beta1",
+					Kind:       "OpenTelemetryCollector",
+					Name:       "gardener-metrics",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: "otc-container",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("64Mi"),
+							},
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						},
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
+						},
+					},
+				},
+			},
+		}
+
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "gardener.cloud:gardener-metrics",
@@ -428,6 +464,7 @@ var _ = Describe("GardenerMetricsCollector", func() {
 					openTelemetryCollector,
 					serviceMonitor,
 					internalMetricsServiceMonitor,
+					vpa,
 				))
 
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
