@@ -56,4 +56,19 @@ var _ = Describe("Kubernetes", func() {
 			ConsistOf("true"),
 		),
 	)
+
+	DescribeTable("#AddConfigMapName",
+		func(obj client.Object, matcher gomegatypes.GomegaMatcher) {
+			Expect(AddConfigMapName(context.TODO(), indexer)).To(Succeed())
+
+			Expect(indexer.obj).To(Equal(&corev1.ConfigMap{}))
+			Expect(indexer.field).To(Equal("metadata.name"))
+			Expect(indexer.extractValue).NotTo(BeNil())
+			Expect(indexer.extractValue(obj)).To(matcher)
+		},
+
+		Entry("no ConfigMap", &corev1.Secret{}, ConsistOf("")),
+		Entry("ConfigMap w/o name", &corev1.ConfigMap{}, ConsistOf("")),
+		Entry("ConfigMap w/ name", &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "configmap-foo"}}, ConsistOf("configmap-foo")),
+	)
 })
