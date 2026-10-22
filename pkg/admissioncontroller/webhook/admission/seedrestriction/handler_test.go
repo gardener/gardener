@@ -477,8 +477,21 @@ var _ = Describe("handler", func() {
 				})
 
 				Context("when operation is delete", func() {
+					encodeDeleteBucket := func(seedNameInBackupBucket *string) {
+						GinkgoHelper()
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
+							ObjectMeta: metav1.ObjectMeta{Name: request.Name},
+							Spec: gardencorev1beta1.BackupBucketSpec{
+								SeedName: seedNameInBackupBucket,
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject.Raw = objData
+					}
+
 					BeforeEach(func() {
 						request.Operation = admissionv1.Delete
+						encodeDeleteBucket(&seedName)
 					})
 
 					It("should return an error because reading the Seed failed", func() {
@@ -493,37 +506,56 @@ var _ = Describe("handler", func() {
 						}))
 					})
 
-					It("should forbid the request because the seed UID and the bucket name does not match", func() {
-						seed := &gardencorev1beta1.Seed{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: seedName,
-							},
-						}
-						Expect(fakeClient.Create(ctx, seed)).To(Succeed())
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusForbidden),
-									Message: "cannot delete unrelated BackupBucket",
+					DescribeTable("should forbid deleting a bucket not associated with the seed",
+						func(seedNameInBackupBucket *string) {
+							seed := &gardencorev1beta1.Seed{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: seedName,
+									UID:  "seed-uid",
 								},
-							},
-						}))
-					})
+							}
+							Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+							encodeDeleteBucket(seedNameInBackupBucket)
 
-					It("should allow the request because the seed UID and the bucket name does match", func() {
-						seed := &gardencorev1beta1.Seed{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: seedName,
-							},
-						}
-						Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: "cannot delete unrelated BackupBucket",
+									},
+								},
+							}))
+						},
 
-						request.Name = string(seed.UID)
+						Entry("seed name is nil", nil),
+						Entry("seed name is different", new("other-seed")),
+						Entry("seed name is the Seed UID instead of its name", new("seed-uid")),
+					)
 
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
+					DescribeTable("should allow deleting a bucket associated with the seed regardless of its name",
+						func(bucketName string) {
+							seed := &gardencorev1beta1.Seed{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: seedName,
+									UID:  "seed-uid",
+								},
+								Spec: gardencorev1beta1.SeedSpec{
+									Backup: &gardencorev1beta1.Backup{BucketName: new("current-bucket")},
+								},
+							}
+							Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+
+							request.Name = bucketName
+							encodeDeleteBucket(&seedName)
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						},
+
+						Entry("UID-based name", "seed-uid"),
+						Entry("current custom name", "current-bucket"),
+						Entry("historical custom name", "old-bucket"),
+					)
 				})
 
 				When("operation is UPDATE", func() {
