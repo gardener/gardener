@@ -6,8 +6,10 @@ package gardenermetricscollector
 
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
@@ -18,29 +20,36 @@ const (
 	openTelemetryCollectorMonitoringServiceType = "monitoring"
 )
 
-func (g *gardenerMetricsCollector) serviceMonitor() *monitoringv1.ServiceMonitor {
-	selectorLabels := GetLabels()
-	selectorLabels[openTelemetryCollectorServiceTypeLabel] = openTelemetryCollectorBaseServiceType
+func (g *gardenerMetricsCollector) scrapeConfig() *monitoringv1alpha1.ScrapeConfig {
+	serviceTypeLabelMeta := "__meta_kubernetes_service_label_operator_opentelemetry_io_collector_service_type"
 
-	return &monitoringv1.ServiceMonitor{
+	return &monitoringv1alpha1.ScrapeConfig{
 		ObjectMeta: monitoringutils.ConfigObjectMeta(openTelemetryCollectorName, g.namespace, garden.Label),
-		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector: metav1.LabelSelector{MatchLabels: selectorLabels},
-			Endpoints: []monitoringv1.Endpoint{{
-				Port: metricsPortName,
-				RelabelConfigs: []monitoringv1.RelabelConfig{
-					// The OpenTelemetry Operator creates the Service after the collector resource. Without explicitly
-					// overriding the job label, prometheus-operator would choose the service name as the job.
-					{
-						Action:      "replace",
-						Replacement: new(openTelemetryCollectorName),
-						TargetLabel: "job",
-					},
-				},
-				// TODO: The metrics exposed by the Gardener metrics receiver differ slightly from those of the
-				// gardener-metrics-exporter. For now, keep all scraped metrics without filtering. Once the metric set
-				// has stabilized, add a StandardMetricRelabelConfig allowlist here.
+		Spec: monitoringv1alpha1.ScrapeConfigSpec{
+			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+				Role:       monitoringv1alpha1.KubernetesRoleService,
+				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{g.namespace}},
 			}},
+			RelabelConfigs: []monitoringv1.RelabelConfig{
+				{
+					SourceLabels: []monitoringv1.LabelName{
+						"__meta_kubernetes_service_label_" + v1beta1constants.LabelApp,
+						"__meta_kubernetes_service_label_" + v1beta1constants.LabelRole,
+						monitoringv1.LabelName(serviceTypeLabelMeta),
+						"__meta_kubernetes_service_port_name",
+					},
+					Regex:  v1beta1constants.LabelGardener + ";" + roleName + ";" + openTelemetryCollectorBaseServiceType + ";" + metricsPortName,
+					Action: "keep",
+				},
+				{
+					Action:      "replace",
+					Replacement: new(openTelemetryCollectorName),
+					TargetLabel: "job",
+				},
+			},
+			// TODO: The metrics exposed by the Gardener metrics receiver differ slightly from those of the
+			// gardener-metrics-exporter. For now, keep all scraped metrics without filtering. Once the metric set
+			// has stabilized, add a StandardMetricRelabelConfig allowlist here.
 		},
 	}
 }
@@ -84,7 +93,7 @@ func (g *gardenerMetricsCollector) internalMetricsServiceMonitor() *monitoringv1
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: new(openTelemetryCollectorName),
+						Replacement: new(openTelemetryCollectorName + "-monitoring"),
 						TargetLabel: "job",
 					},
 				},
