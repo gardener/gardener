@@ -151,10 +151,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(etcdMigrationComplete),
 		})
 
-		_ = g.Add(flow.Task{
+		migrationCompleted = g.Add(flow.Task{
 			Name:         "Completing live migration",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrationCompleted, destinationCompletionTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(sourceSeedCleanup),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up the source VPN server and namespace",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown, sourceSeedFinalTeardownTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(migrationCompleted),
 		})
 	)
 
@@ -746,5 +752,31 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Dependencies: flow.NewTaskIDs(waitNginx),
 	})
 
+	return g
+}
+
+// taskGroupSourceSeedFinalTeardown is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupSourceSeedFinalTeardown flow.TaskID = "TaskGroupSourceSeedFinalTeardown"
+
+// sourceSeedFinalTeardownTaskGroup deletes the vpn-seed-server and the shoot namespace from the source seed.
+// It runs after MigrationCompleted so the permanent vpn-shoot is already connected to the destination and
+// vpn-shoot-tmp has already been destroyed. At that point the source vpn-seed-server has no active clients:
+// tearing it down causes no reconnect loop and no shared kernel routing-table disruption.
+func sourceSeedFinalTeardownTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	g := flow.NewTaskGroup(taskGroupSourceSeedFinalTeardown)
+	destroyVPNServer := g.Add(flow.Task{
+		Name: "Deleting vpn-seed-server from the source namespace",
+		Fn:   b.DestroyVPNServer,
+	})
+	deleteNamespace := g.Add(flow.Task{
+		Name:         "Deleting shoot namespace in Seed",
+		Fn:           flow.TaskFn(b.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		Dependencies: flow.NewTaskIDs(destroyVPNServer),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Waiting until shoot namespace in Seed has been deleted",
+		Fn:           b.WaitUntilSeedNamespaceDeleted,
+		Dependencies: flow.NewTaskIDs(deleteNamespace),
+	})
 	return g
 }
