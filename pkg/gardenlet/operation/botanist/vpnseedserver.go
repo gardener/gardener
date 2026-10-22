@@ -70,3 +70,11 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)
 }
+
+// DestroyVPNServer deletes the vpn-seed-server.
+func (b *Botanist) DestroyVPNServer(ctx context.Context) error {
+	if b.Shoot.Components.ControlPlane.VPNSeedServer == nil {
+		return nil
+	}
+	return b.Shoot.Components.ControlPlane.VPNSeedServer.Destroy(ctx)
+}
