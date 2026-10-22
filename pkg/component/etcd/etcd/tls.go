@@ -44,7 +44,7 @@ func GenerateServerCertificate(
 }
 
 // GenerateClientCertificate generates the client certificate for the etcd cluster.
-func GenerateClientCertificate(ctx context.Context, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
+func GenerateClientCertificate(ctx context.Context, secretsManager secretsmanager.Interface, signedByCAOptions ...secretsmanager.SignedByCAOption) (*corev1.Secret, error) {
 	return secretsManager.Generate(ctx,
 		&secretsutils.CertificateSecretConfig{
 			Name:                        SecretNameClient,
@@ -52,7 +52,7 @@ func GenerateClientCertificate(ctx context.Context, secretsManager secretsmanage
 			CertType:                    secretsutils.ClientCert,
 			SkipPublishingCACertificate: true,
 		},
-		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD),
+		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD, signedByCAOptions...),
 		secretsmanager.Rotate(secretsmanager.InPlace),
 	)
 }

@@ -287,7 +287,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
 	}
 
-	clientSecret, err := GenerateClientCertificate(ctx, e.secretsManager)
+	var clientCertSignedByCAOptions []secretsmanager.SignedByCAOption
+	if e.values.StaticPodConfig != nil {
+		// For self-hosted shoots, sign the client certificate with the old CA. Otherwise, etcd-druid already starts
+		// talking to etcd with the new client cert while the etcd pod on the control plane nodes did not yet receive
+		// the new CA bundle, hence rejects it. This would result in a never finishing Etcd reconciliation.
+		clientCertSignedByCAOptions = append(clientCertSignedByCAOptions, secretsmanager.UseOldCA)
+	}
+
+	clientSecret, err := GenerateClientCertificate(ctx, e.secretsManager, clientCertSignedByCAOptions...)
 	if err != nil {
 		return fmt.Errorf("failed to generate client certificate: %w", err)
 	}
