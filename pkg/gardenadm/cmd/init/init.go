@@ -198,6 +198,16 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped, deploySelfHostedShootExposure),
 		})
+		// Components on the worker nodes talk to the control plane via the internal DNSRecord (control plane nodes use
+		// localhost), so it must exist before deploying the Worker.
+		deployInternalDNSRecord = g.Add(flow.Task{
+			Name: "Deploying internal DNSRecord",
+			// Retry to tolerate the warmup window of the in-cluster extension controllers that were just redeployed
+			// into the pod network (see above).
+			Fn:           flow.TaskFn(b.DeployInternalDNSRecord).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+			SkipIf:       b.Shoot.SelfHostedShootInternalAPIServerDomain() == nil,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
 		reconcileBackupBucket = g.Add(flow.Task{
 			Name:         "Deploying BackupBucket for ETCD data",
 			Fn:           b.ReconcileBackupBucket,
@@ -255,7 +265,7 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 		)
 		reconcileWorker = g.AddGroup(
 			b.ReconcileWorkerTaskGroup(false).
-				WithDependencies(syncPointBootstrapped),
+				WithDependencies(syncPointBootstrapped, deployInternalDNSRecord),
 		)
 
 		// We need to deploy the worker before activating the node-agent-authorizer. Without the machine objects,
