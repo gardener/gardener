@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/testing"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -50,12 +51,14 @@ var _ = Describe("migration", func() {
 		network               *mocknetwork.MockInterface
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
 		worker                *mockworker.MockInterface
+		shoot                 *gardencorev1beta1.Shoot
 
 		botanist *Botanist
 
 		ctx                     = context.TODO()
 		fakeErr                 = errors.New("fake")
 		fakeClient              client.Client
+		gardenFakeClient        client.Client
 		fakeKubernetesInterface kubernetes.Interface
 	)
 
@@ -378,6 +381,59 @@ var _ = Describe("migration", func() {
 			Expect(cloudProviderSecret.DeletionTimestamp).To(BeNil())
 			Expect(cloudProviderSecret.Finalizers).To(ConsistOf("do-not-remove-me"))
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(unrelatedSecret), unrelatedSecret)).To(Succeed())
+		})
+	})
+
+	Describe("#PersistShootState", func() {
+		BeforeEach(func() {
+			gardenFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			seedFakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden-bar"},
+			}
+
+			botanist.Clock = clock.RealClock{}
+			botanist.GardenClient = gardenFakeClient
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedFakeClient).Build()
+			botanist.Shoot.SetInfo(shoot)
+			botanist.Shoot.ControlPlaneNamespace = "shoot--bar--foo"
+		})
+
+		It("should create a ShootState in the garden cluster", func() {
+			Expect(botanist.PersistShootState(ctx)).To(Succeed())
+			Expect(gardenFakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.ShootState{})).To(Succeed())
+		})
+	})
+
+	Describe("#RefreshShootStateForLiveMigration", func() {
+		BeforeEach(func() {
+			gardenFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden-bar"},
+			}
+
+			botanist.GardenClient = gardenFakeClient
+			botanist.Shoot.SetInfo(shoot)
+		})
+
+		It("should store the fetched ShootState on the in-memory Shoot", func() {
+			Expect(gardenFakeClient.Create(ctx, &gardencorev1beta1.ShootState{
+				ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace},
+			})).To(Succeed())
+
+			Expect(botanist.RefreshShootStateForLiveMigration(ctx)).To(Succeed())
+
+			stored := botanist.Shoot.GetShootState()
+			Expect(stored).NotTo(BeNil())
+			Expect(client.ObjectKeyFromObject(stored)).To(Equal(client.ObjectKeyFromObject(shoot)))
+		})
+
+		It("should return an error when the ShootState cannot be fetched", func() {
+			Expect(botanist.RefreshShootStateForLiveMigration(ctx)).To(
+				MatchError(ContainSubstring("failed to fetch ShootState")),
+			)
 		})
 	})
 })
