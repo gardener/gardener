@@ -19,7 +19,7 @@ func ValidateCredentialsBinding(binding *security.CredentialsBinding) field.Erro
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, gardencorevalidation.ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, gardencorevalidation.ValidateCredentialsRef(binding.CredentialsRef, field.NewPath("credentialsRef"))...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateCredentialsRef(binding.CredentialsRef, gardencorevalidation.SecretInternalSecretWorkloadIdentityGVKs, field.NewPath("credentialsRef"))...)
 	allErrs = append(allErrs, ValidateCredentialsBindingProvider(binding.Provider, field.NewPath("provider"))...)
 	for i, quota := range binding.Quotas {
 		allErrs = append(allErrs, gardencorevalidation.ValidateObjectReferenceNameAndNamespace(quota, field.NewPath("quotas").Index(i), false)...)

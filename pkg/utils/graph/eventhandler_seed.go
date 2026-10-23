@@ -116,7 +116,9 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 			credentialsRef.Kind == "Secret" {
 			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
-		g.addEdge(vertex, seedVertex)
+		if vertex != nil {
+			g.addEdge(vertex, seedVertex)
+		}
 	}
 
 	if seed.Spec.DNS.Provider != nil {
@@ -133,7 +135,9 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 			credentialsRef.Kind == "Secret" {
 			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
-		g.addEdge(vertex, seedVertex)
+		if vertex != nil {
+			g.addEdge(vertex, seedVertex)
+		}
 	}
 
 	if seed.Spec.DNS.Internal != nil {
@@ -150,7 +154,9 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 			credentialsRef.Kind == "Secret" {
 			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
-		g.addEdge(vertex, seedVertex)
+		if vertex != nil {
+			g.addEdge(vertex, seedVertex)
+		}
 	}
 
 	for _, defaultDNS := range seed.Spec.DNS.Defaults {
@@ -167,7 +173,9 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 			credentialsRef.Kind == "Secret" {
 			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 		}
-		g.addEdge(vertex, seedVertex)
+		if vertex != nil {
+			g.addEdge(vertex, seedVertex)
+		}
 	}
 
 	addSeedResources(seed.Spec, g, seedVertex)

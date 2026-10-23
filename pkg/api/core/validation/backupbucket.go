@@ -75,7 +75,7 @@ func validateCredentials(spec *core.BackupBucketSpec, fldPath *field.Path) field
 	if spec.CredentialsRef == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef"), "must be set and refer a Secret or WorkloadIdentity"))
 	} else {
-		allErrs = append(allErrs, ValidateCredentialsRef(*spec.CredentialsRef, fldPath.Child("credentialsRef"))...)
+		allErrs = append(allErrs, ValidateCredentialsRef(*spec.CredentialsRef, SecretWorkloadIdentityGVKs, fldPath.Child("credentialsRef"))...)
 	}
 
 	return allErrs

@@ -391,7 +391,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("spec.dns.internal.credentialsRef"),
-						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
+						"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 					})),
 				))
 			})
@@ -483,7 +483,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("spec.dns.defaults[0].credentialsRef"),
-						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
+						"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 					})),
 				))
 			})
@@ -632,7 +632,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{ // not supported credentialsRef
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("spec.dns.defaults[1].credentialsRef"),
-						"Detail": ContainSubstring("supported values: \"/v1, Kind=Secret\""),
+						"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 					})),
 				))
 			})
@@ -700,7 +700,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("spec.backup.credentialsRef"),
-						"Detail": Equal(`supported values: "/v1, Kind=Secret", "core.gardener.cloud/v1beta1, Kind=InternalSecret", "security.gardener.cloud/v1alpha1, Kind=WorkloadIdentity"`),
+						"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 					})),
 				))
 			})
