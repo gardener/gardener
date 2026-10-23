@@ -83,6 +83,7 @@ func (b *Botanist) ToAdvertisedAddresses(ctx context.Context) ([]gardencorev1bet
 	}
 
 	if b.Shoot.InternalClusterDomain != nil ||
+		(b.hasDisabledInternalDomain() && b.Shoot.ExternalClusterDomain != nil) ||
 		hasCustomIssuer(b.Shoot.GetInfo()) ||
 		v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo()) {
 		externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)

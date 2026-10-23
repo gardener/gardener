@@ -21,11 +21,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("AdvertisedAddresses", func() {
@@ -125,6 +127,25 @@ var _ = Describe("AdvertisedAddresses", func() {
 				{
 					Name: "service-account-issuer",
 					URL:  "https://api.baz.foo",
+				},
+			}))
+		})
+
+		It("returns the service-account-issuer address of the external domain if the shoot has no internal domain", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "external",
+					URL:  "https://api.foo.bar",
+				},
+				{
+					Name: "service-account-issuer",
+					URL:  "https://api.foo.bar",
 				},
 			}))
 		})

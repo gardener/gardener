@@ -16,16 +16,20 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("KubeAPIServerExposure", func() {
@@ -114,6 +118,39 @@ var _ = Describe("KubeAPIServerExposure", func() {
 		})
 	})
 
+	Describe("#ReconcileIstioInternalLoadBalancingConfigMap", func() {
+		var configMap *corev1.ConfigMap
+
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
+			configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: botanist.Shoot.ControlPlaneNamespace, Name: resourcemanagerconfigv1alpha1.IstioInternalLoadBalancingConfigMapName}}
+		})
+
+		It("should use the internal domain", func() {
+			botanist.Shoot.InternalClusterDomain = new("internal.foo.bar")
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+
+			Expect(botanist.ReconcileIstioInternalLoadBalancingConfigMap(context.TODO())).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+			Expect(configMap.Data).To(HaveKeyWithValue(resourcemanagerconfigv1alpha1.HostsConfigMapKey, "api.internal.foo.bar"))
+		})
+
+		It("should use the external domain if the shoot has no internal domain", func() {
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+
+			Expect(botanist.ReconcileIstioInternalLoadBalancingConfigMap(context.TODO())).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+			Expect(configMap.Data).To(HaveKeyWithValue(resourcemanagerconfigv1alpha1.HostsConfigMapKey, "api.external.foo.bar"))
+		})
+
+		It("should delete the config map if the shoot has no domain", func() {
+			Expect(botanist.SeedClientSet.Client().Create(context.TODO(), configMap)).To(Succeed())
+
+			Expect(botanist.ReconcileIstioInternalLoadBalancingConfigMap(context.TODO())).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
+		})
+	})
+
 	Describe("#setAPIServerServiceClusterIPs", func() {
 		BeforeEach(func() {
 			botanist.Shoot.InternalClusterDomain = new("internal.foo.bar")
@@ -172,6 +209,19 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKey{Namespace: botanist.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, gateway)).To(Succeed())
 			Expect(gateway.Spec.Servers).NotTo(BeEmpty())
 			Expect(gateway.Spec.Servers[0].Hosts).To(ConsistOf("api.internal.foo.bar", "api.external.foo.bar", "api.prior.foo.bar"))
+		})
+
+		It("should only route the external domain if the shoot has no internal domain", func() {
+			botanist.Shoot.InternalClusterDomain = nil
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+
+			Expect(botanist.DefaultKubeAPIServerService().Deploy(context.TODO())).To(Succeed())
+			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(context.TODO())).To(Succeed())
+
+			gateway := &istionetworkingv1beta1.Gateway{}
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKey{Namespace: botanist.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, gateway)).To(Succeed())
+			Expect(gateway.Spec.Servers).NotTo(BeEmpty())
+			Expect(gateway.Spec.Servers[0].Hosts).To(ConsistOf("api.external.foo.bar"))
 		})
 
 		It("should not panic when ExternalClusterDomain is not nil", func() {

@@ -26,11 +26,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("dns", func() {
@@ -169,6 +171,27 @@ var _ = Describe("dns", func() {
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 
 			Expect(b.ShootUsesDNS()).To(BeTrue())
+		})
+	})
+
+	Context("ShootUsesDNS without internal domain", func() {
+		BeforeEach(func() {
+			b.Shoot.InternalClusterDomain = nil
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: new("foo")}
+			b.Shoot.ExternalClusterDomain = new("baz")
+			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
+		})
+
+		It("returns true if the seed disables the internal domain", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+			Expect(b.ShootUsesDNS()).To(BeTrue())
+		})
+
+		It("returns false if the feature gate is disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+			Expect(b.ShootUsesDNS()).To(BeFalse())
 		})
 	})
 

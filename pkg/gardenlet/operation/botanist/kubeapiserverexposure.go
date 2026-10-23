@@ -89,7 +89,14 @@ func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register
 
 // ShootUsesDNS returns true if the shoot uses internal and external DNS.
 func (b *Botanist) ShootUsesDNS() bool {
-	return b.NeedsInternalDNS() && b.NeedsExternalDNS()
+	// A shoot whose seed disables the internal domain only uses its external domain.
+	return (b.NeedsInternalDNS() || b.hasDisabledInternalDomain()) && b.NeedsExternalDNS()
+}
+
+func (b *Botanist) hasDisabledInternalDomain() bool {
+	return features.DefaultFeatureGate.Enabled(features.MutableShootDomains) &&
+		b.Shoot.InternalClusterDomain == nil &&
+		!b.Shoot.IsSelfHosted()
 }
 
 // ShootUsesIstioTLSTermination returns true if the shoot uses Istio TLS termination aka L7 load-balancing.
@@ -194,9 +201,6 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 			}
 
 			values := &kubeapiserverexposure.SNIValues{
-				Hosts: []string{
-					v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain),
-				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
 					APIServerClusterIP: b.APIServerClusterIP,
 				},
@@ -207,6 +211,10 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				IstioTLSTermination:   b.ShootUsesIstioTLSTermination(),
 				WildcardConfiguration: wildcardConfiguration,
 				TLSMinVersion:         b.shootKubeAPIServerTLSMinVersion(),
+			}
+
+			if b.Shoot.InternalClusterDomain != nil {
+				values.Hosts = append(values.Hosts, v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain))
 			}
 
 			if b.Shoot.ExternalClusterDomain != nil {
@@ -240,14 +248,17 @@ func mapToReservedKubeApiServerRange(ip net.IP) string {
 
 // ReconcileIstioInternalLoadBalancingConfigMap reconciles the configmap for istio internal load balancing.
 func (b *Botanist) ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Context) error {
+	var hosts []string
+	if b.Shoot.InternalClusterDomain != nil || b.Shoot.ExternalClusterDomain != nil {
+		hosts = append(hosts, b.Shoot.ComputeOutOfClusterAPIServerAddress(true))
+	}
+
 	return kubeapiserverexposure.ReconcileIstioInternalLoadBalancingConfigMap(
 		ctx,
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.IstioNamespace(),
-		[]string{
-			v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain),
-		},
-		b.ShootUsesIstioTLSTermination(),
+		hosts,
+		b.ShootUsesIstioTLSTermination() && len(hosts) > 0,
 	)
 }
