@@ -46,6 +46,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 
 			if !v1beta1helper.SeedBackupCredentialsRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
 				!v1beta1helper.DNSProviderCredentialsRefEqual(oldSeed.Spec.DNS.Internal, newSeed.Spec.DNS.Internal) ||
+				!v1beta1helper.DNSProvidersCredentialsRefEqual(oldSeed.Spec.DNS.InternalDomains, newSeed.Spec.DNS.InternalDomains) ||
 				!v1beta1helper.DNSProvidersCredentialsRefEqual(oldSeed.Spec.DNS.Defaults, newSeed.Spec.DNS.Defaults) ||
 				!v1beta1helper.ResourceReferencesEqual(oldSeed.Spec.Resources, newSeed.Spec.Resources) ||
 				!seedDNSProviderCredentialsRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
@@ -157,6 +158,23 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 		if vertex != nil {
 			g.addEdge(vertex, seedVertex)
 		}
+	}
+
+	for _, internalDNS := range seed.Spec.DNS.InternalDomains {
+		var (
+			credentialsRef = internalDNS.CredentialsRef
+			name           = credentialsRef.Name
+			namespace      = credentialsRef.Namespace
+			vertex         *Vertex
+		)
+		if credentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else if credentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsRef.Kind == "Secret" {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
+		}
+		g.addEdge(vertex, seedVertex)
 	}
 
 	for _, defaultDNS := range seed.Spec.DNS.Defaults {

@@ -440,6 +440,29 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		})
 	})
 
+	It("should add an edge for the credentials of each internal domain of a seed", func() {
+		formerInternalDNSCredentialsRef := corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "former-internal"}
+
+		By("Add")
+		seed1.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{
+			{CredentialsRef: seed1InternalDNSSecretCredentialsRef},
+			{CredentialsRef: seed1InternalDNSWorkloadIdentityCredentialsRef},
+			{CredentialsRef: formerInternalDNSCredentialsRef},
+		}
+		fakeInformerSeed.Add(seed1)
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSSecretCredentialsRef.Namespace, seed1InternalDNSSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, seed1InternalDNSWorkloadIdentityCredentialsRef.Namespace, seed1InternalDNSWorkloadIdentityCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, formerInternalDNSCredentialsRef.Namespace, formerInternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+
+		By("Update (remove an internal domain)")
+		seed1Copy := seed1.DeepCopy()
+		seed1.Spec.DNS.InternalDomains = seed1.Spec.DNS.InternalDomains[:2]
+		fakeInformerSeed.Update(seed1Copy, seed1)
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSSecretCredentialsRef.Namespace, seed1InternalDNSSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, seed1InternalDNSWorkloadIdentityCredentialsRef.Namespace, seed1InternalDNSWorkloadIdentityCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, formerInternalDNSCredentialsRef.Namespace, formerInternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+	})
+
 	It("should behave as expected for gardencorev1beta1.Seed", func() {
 		By("Add")
 		fakeInformerSeed.Add(seed1)
