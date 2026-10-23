@@ -199,39 +199,86 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 	if err != nil {
 		return err
 	}
-	if err := validationContext.validateMergeResultForReferencingShoots(mergedStatus); err != nil {
+
+	var oldEffectiveMergedStatus *gardencorev1beta1.NamespacedCloudProfileStatus
+	if a.GetOperation() == admission.Update {
+		oldProfile := &gardencorev1beta1.NamespacedCloudProfile{}
+		if err := gardencoreapi.Scheme.Convert(oldNamespacedCloudProfile, oldProfile, nil); err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		namespacedcloudprofile.MergeCloudProfiles(oldProfile, parentCloudProfile.DeepCopy())
+		oldEffectiveMergedStatus = &oldProfile.Status
+	}
+
+	if err := validationContext.validateMergeResultForReferencingShoots(mergedStatus, oldEffectiveMergedStatus); err != nil {
 		return admission.NewForbidden(a, err)
 	}
 
 	return nil
 }
 
-func (c *validationContext) validateMergeResultForReferencingShoots(mergedStatus *gardencorev1beta1.NamespacedCloudProfileStatus) error {
-	unavailableKubernetesVersions := sets.New[string]()
-	unavailableMachineImageVersions := sets.New[string]()
+func collectNewUnavailableExpirableVersions(newVersions, oldVersions []gardencorev1beta1.ExpirableVersion) sets.Set[string] {
+	result := sets.New[string]()
 
-	machineImageIdentifier := func(name, version string) string {
-		return fmt.Sprintf("%s@%s", name, version)
+	oldVersionsMap := map[string]gardencorev1beta1.ExpirableVersion{}
+	for _, version := range oldVersions {
+		oldVersionsMap[version.Version] = version
 	}
 
-	for _, version := range mergedStatus.CloudProfileSpec.Kubernetes.Versions {
-		if v1beta1helper.VersionIsUnavailable(version) {
-			unavailableKubernetesVersions.Insert(version.Version)
+	for _, newVersion := range newVersions {
+		oldVersion, ok := oldVersionsMap[newVersion.Version]
+		if !ok {
+			continue
+		}
+
+		if !v1beta1helper.VersionIsUnavailable(oldVersion) &&
+			v1beta1helper.VersionIsUnavailable(newVersion) {
+			result.Insert(newVersion.Version)
 		}
 	}
 
-	for _, image := range mergedStatus.CloudProfileSpec.MachineImages {
-		for _, version := range image.Versions {
-			if !v1beta1helper.VersionIsUnavailable(version.ExpirableVersion) {
+	return result
+}
+
+func (c *validationContext) validateMergeResultForReferencingShoots(newProfile, oldProfile *gardencorev1beta1.NamespacedCloudProfileStatus) error {
+	newlyUnavailableKubernetesVersions := sets.New[string]()
+	newlyUnavailableMachineImageVersions := sets.New[string]()
+	if oldProfile == nil {
+		for _, version := range newProfile.CloudProfileSpec.Kubernetes.Versions {
+			if v1beta1helper.VersionIsUnavailable(version) {
+				newlyUnavailableKubernetesVersions.Insert(version.Version)
+			}
+		}
+		for _, image := range newProfile.CloudProfileSpec.MachineImages {
+			for _, version := range image.Versions {
+				if v1beta1helper.VersionIsUnavailable(version.ExpirableVersion) {
+					newlyUnavailableMachineImageVersions.Insert(fmt.Sprintf("%s@%s", image.Name, version.Version))
+				}
+			}
+		}
+	} else {
+		newlyUnavailableKubernetesVersions = collectNewUnavailableExpirableVersions(
+			newProfile.CloudProfileSpec.Kubernetes.Versions,
+			oldProfile.CloudProfileSpec.Kubernetes.Versions,
+		)
+		oldImages := gardenerutils.NewV1beta1ImagesContext(oldProfile.CloudProfileSpec.MachineImages)
+		for _, newImage := range newProfile.CloudProfileSpec.MachineImages {
+			oldImage, exists := oldImages.GetImage(newImage.Name)
+			if !exists {
 				continue
 			}
-
-			unavailableMachineImageVersions.Insert(machineImageIdentifier(image.Name, version.Version))
+			for version := range collectNewUnavailableExpirableVersions(
+				v1beta1helper.ToExpirableVersions(newImage.Versions),
+				v1beta1helper.ToExpirableVersions(oldImage.Versions),
+			) {
+				newlyUnavailableMachineImageVersions.Insert(fmt.Sprintf("%s@%s", newImage.Name, version))
+			}
 		}
 	}
 
 	for _, shoot := range c.referencedShoots {
-		if unavailableKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
+		if newlyUnavailableKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
 			return fmt.Errorf(
 				"kubernetes version %q currently used by shoot %q would become unavailable",
 				shoot.Spec.Kubernetes.Version,
@@ -243,7 +290,7 @@ func (c *validationContext) validateMergeResultForReferencingShoots(mergedStatus
 			kubernetes := worker.Kubernetes
 			if kubernetes != nil &&
 				kubernetes.Version != nil &&
-				unavailableKubernetesVersions.Has(*kubernetes.Version) {
+				newlyUnavailableKubernetesVersions.Has(*kubernetes.Version) {
 				return fmt.Errorf(
 					"kubernetes version %q currently used by worker-pool %q of shoot %q would become unavailable",
 					*kubernetes.Version,
@@ -257,8 +304,8 @@ func (c *validationContext) validateMergeResultForReferencingShoots(mergedStatus
 				continue
 			}
 
-			imageIdentifier := machineImageIdentifier(image.Name, *image.Version)
-			if unavailableMachineImageVersions.Has(imageIdentifier) {
+			imageIdentifier := fmt.Sprintf("%s@%s", image.Name, *image.Version)
+			if newlyUnavailableMachineImageVersions.Has(imageIdentifier) {
 				return fmt.Errorf(
 					"machine image %q currently used by worker-pool %q of shoot %q would become unavailable",
 					imageIdentifier,

@@ -201,16 +201,6 @@ var (
 	volumeTypeKeyFunc          = func(t gardencorev1beta1.VolumeType) string { return t.Name }
 )
 
-// getExpirationStage return a pointer to the expired stage of an ExpirableVersion or nil if not found.
-func getExpirationStage(v *gardencorev1beta1.ExpirableVersion) *gardencorev1beta1.LifecycleStage {
-	for i := range v.Lifecycle {
-		if v.Lifecycle[i].Classification == gardencorev1beta1.ClassificationExpired {
-			return &v.Lifecycle[i]
-		}
-	}
-	return nil
-}
-
 // ApplyExpirableVersionOverrides applies a NamespacedCloudProfile override to a CloudProfile ExpirableVersion.
 // The behavior depends on whether the base and override use the legacy- or lifecycle classification:
 //   - legacy / legacy: preserve existing behavior and only add or replace the expiration date.

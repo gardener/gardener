@@ -373,7 +373,7 @@ var _ = Describe("Admission", func() {
 		})
 
 		Describe("Kubernetes versions", func() {
-			DescribeTable("only allow one supported version per minor version", func(overrideBoth bool) {
+			It("rejects a supported override alongside an inherited supported version in the same minor version", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 				parentCloudProfile.Spec.Kubernetes.Versions = append(parentCloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{
 					Version: "1.31.1", Classification: new(gardencorev1beta1.ClassificationPreview),
@@ -382,16 +382,9 @@ var _ = Describe("Admission", func() {
 				namespacedCloudProfile.Spec.Kubernetes = &gardencore.KubernetesSettings{Versions: []gardencore.ExpirableVersion{
 					{Version: "1.31.1", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}}},
 				}}
-				if overrideBoth {
-					namespacedCloudProfile.Spec.Kubernetes.Versions = append(namespacedCloudProfile.Spec.Kubernetes.Versions, gardencore.ExpirableVersion{
-						Version: "1.31.0", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}},
-					})
-				}
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("lifecycle stages must not overlap per minor version")))
-			},
-				Entry("with an inherited supported version", false),
-			)
+			})
 
 			It("should not allow creating a (Namespaced)CloudProfile if the resulting Kubernetes versions are empty", func() {
 				parentCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{}
@@ -671,6 +664,54 @@ var _ = Describe("Admission", func() {
 						},
 					},
 				}
+			})
+
+			for _, target := range []string{"control-plane Kubernetes", "worker Kubernetes", "worker machine image"} {
+				It("allows an unrelated update when a referenced "+target+" version is already unavailable", func() {
+					unavailable := []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported, StartTime: validExpirationDate}}
+					if target == "worker machine image" {
+						parentCloudProfile.Spec.MachineImages[0].Versions[0].Lifecycle = unavailable
+						shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+							Name: "tomato",
+							Machine: gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{
+								Name: "test-image", Version: new("1.0.0"),
+							}},
+						}}
+						namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = []gardencore.MachineImage{{
+							Name: "test-image", Versions: []gardencore.MachineImageVersion{{
+								ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}}},
+							}},
+						}}
+					} else {
+						parentCloudProfile.Spec.Kubernetes.Versions[1].Classification = nil
+						parentCloudProfile.Spec.Kubernetes.Versions[1].Lifecycle = unavailable
+						namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions = []gardencore.ExpirableVersion{{
+							Version: "1.31.0", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}},
+						}}
+						if target == "worker Kubernetes" {
+							shoot.Spec.Kubernetes.Version = "1.30.0"
+							shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+								Name: "tomato", Kubernetes: &gardencorev1beta1.WorkerKubernetes{Version: new("1.31.0")},
+							}}
+						}
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+					updated := namespacedCloudProfile.DeepCopy()
+					updated.Labels = map[string]string{"test": "updated"}
+					attrs := admission.NewAttributesRecord(updated, namespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), updated.Namespace, updated.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+			}
+
+			It("rejects creating a profile when a Shoot references an unavailable Kubernetes version", func() {
+				parentCloudProfile.Spec.Kubernetes.Versions[1].Classification = nil
+				parentCloudProfile.Spec.Kubernetes.Versions[1].Lifecycle = []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported, StartTime: validExpirationDate}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring(`kubernetes version "1.31.0" currently used by shoot "bed" would become unavailable`)))
 			})
 
 			Context("when Kubernetes version is in use", func() {
