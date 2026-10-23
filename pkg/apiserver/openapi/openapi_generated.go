@@ -9634,6 +9634,13 @@ func schema_pkg_apis_core_v1beta1_SeedVolume(ref common.ReferenceCallback) commo
 							},
 						},
 					},
+					"etcdStorageClassName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCDStorageClassName defines the name of the StorageClass used by etcd (if provided) for persistent volumes in the seed. If unset, the provider extension's default applies.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

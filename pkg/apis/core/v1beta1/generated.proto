@@ -3353,6 +3353,11 @@ message SeedVolume {
   // +patchStrategy=merge
   // +optional
   repeated SeedVolumeProvider providers = 2;
+
+  // ETCDStorageClassName defines the name of the StorageClass used by etcd (if provided) for
+  // persistent volumes in the seed. If unset, the provider extension's default applies.
+  // +optional
+  optional string etcdStorageClassName = 3;
 }
 
 // SeedVolumeProvider is a storage class provisioner type.
