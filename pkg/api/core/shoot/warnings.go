@@ -76,12 +76,15 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"), ignoreWarningsForDNSIndexes)...)
 	}
 
-	for _, worker := range shoot.Spec.Provider.Workers {
+	for i, worker := range shoot.Spec.Provider.Workers {
 		if worker.MachineControllerManagerSettings != nil {
 			if autoPreserveFailedMachineMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0); autoPreserveFailedMachineMax > 0 {
 				numZones := len(sets.New(worker.Zones...))
 				if int(autoPreserveFailedMachineMax) < numZones {
-					warnings = append(warnings, fmt.Sprintf("in worker %q, machineControllerManagerSettings.autoPreserveFailedMachineMax is set to a value less than the number of zones. This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.", worker.Name))
+					fldPath := field.NewPath("spec", "provider", "workers").Index(i).Child("machineControllerManagerSettings", "autoPreserveFailedMachineMax")
+					warnings = append(warnings,
+						fmt.Sprintf("you are setting the %s field to a value less than the number of zones. This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.",
+							fldPath.String()))
 				}
 			}
 		}
