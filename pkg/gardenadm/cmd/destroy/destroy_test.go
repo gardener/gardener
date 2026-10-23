@@ -5,7 +5,6 @@
 package destroy_test
 
 import (
-	"context"
 	"io/fs"
 	"testing/fstest"
 
@@ -32,8 +31,6 @@ import (
 
 var _ = Describe("Destroy", func() {
 	var (
-		ctx = context.Background()
-
 		globalOpts *cmd.Options
 		stdErr     *Buffer
 		command    *cobra.Command
@@ -121,7 +118,7 @@ metadata:
 					Expect(command.RunE(command, nil)).To(MatchError(ContainSubstring("ShootState must not be contained in the config directory when --shoot-kubeconfig is set")))
 				})
 
-				It("should compute the ShootState from the shoot cluster", func() {
+				It("should compute the ShootState from the shoot cluster", func(ctx SpecContext) {
 					// The safety check runs after the ShootState has been computed and validated, so it is used to stop
 					// the command before it deploys anything.
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
@@ -154,14 +151,14 @@ metadata:
 `)}
 				})
 
-				It("should abort the execution if gardener-operator is deployed on the targeted cluster", func() {
+				It("should abort the execution if gardener-operator is deployed on the targeted cluster", func(ctx SpecContext) {
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardener-operator"},
 					})).To(Succeed())
 					Expect(command.RunE(command, nil)).To(MatchError(ContainSubstring("`gardenadm destroy` does not support targeting a cluster")))
 				})
 
-				It("should abort the execution if gardenlet is deployed on the targeted cluster", func() {
+				It("should abort the execution if gardenlet is deployed on the targeted cluster", func(ctx SpecContext) {
 					Expect(fakeClient.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet"},
 					})).To(Succeed())

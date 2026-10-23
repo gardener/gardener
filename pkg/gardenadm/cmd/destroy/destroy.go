@@ -14,6 +14,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	gardenadmbotanist "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -150,32 +151,7 @@ func run(ctx context.Context, opts *Options) error {
 		g        = flow.NewGraph("destroy")
 		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
-		deployNamespaces            = g.AddGroup(b.DeployNamespacesTaskGroup())
-		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
-		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
-		_                           = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
-		initializeSecretsManagement = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
-		deployPriorityClassCritical = g.Add(flow.Task{
-			Name:         "Deploying PriorityClass for gardener-resource-manager",
-			Fn:           b.DeployPriorityClassCritical,
-			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
-		})
-		_ = g.AddGroup(
-			b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, false, false).
-				WithDependencies(deployPriorityClassCritical),
-		)
-		_ = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
-				WithDependencies(deployPriorityClassCritical),
-		)
-		_                             = g.AddGroup(b.ReconcileReferencedResourcesTaskGroup())
-		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
-		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(true))
-		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
-		syncPointBootstrapped         = flow.NewTaskIDs(
-			reconcileNetworkPolicies,
-			reconcileExtensionControllers,
-		)
+		syncPointBootstrapped = b.AddBootstrapClusterTasks(g)
 
 		restoreInfrastructure = g.AddGroup(
 			b.ReconcileInfrastructureTaskGroup(false).
@@ -197,30 +173,18 @@ func run(ctx context.Context, opts *Options) error {
 		// machine-controller-manager runs without a target cluster in the bootstrap cluster (see
 		// `gardenadm bootstrap`), so the machines are deleted without draining the nodes.
 		destroyWorker = g.Add(flow.Task{
-			Name: "Destroying shoot workers",
-			Fn: func(ctx context.Context) error {
-				if err := b.Shoot.Components.Extensions.Worker.Destroy(ctx); err != nil {
-					return err
-				}
-				return b.Shoot.Components.Extensions.Worker.WaitCleanup(ctx)
-			},
+			Name:         "Destroying shoot workers",
+			Fn:           component.OpDestroyAndWait(b.Shoot.Components.Extensions.Worker).Destroy,
 			Dependencies: flow.NewTaskIDs(restoreWorker),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deleting machine-controller-manager",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.ControlPlane.MachineControllerManager.Destroy(ctx)
-			},
+			Name:         "Deleting machine-controller-manager",
+			Fn:           component.OpDestroyAndWait(b.Shoot.Components.ControlPlane.MachineControllerManager).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyWorker),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Destroying shoot infrastructure",
-			Fn: func(ctx context.Context) error {
-				if err := b.Shoot.Components.Extensions.Infrastructure.Destroy(ctx); err != nil {
-					return err
-				}
-				return b.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)
-			},
+			Name:         "Destroying shoot infrastructure",
+			Fn:           component.OpDestroyAndWait(b.Shoot.Components.Extensions.Infrastructure).Destroy,
 			Dependencies: flow.NewTaskIDs(restoreInfrastructure, destroyWorker),
 		})
 	)
