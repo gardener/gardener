@@ -2860,6 +2860,28 @@ spec:
                 description: ImagePullPolicy indicates the pull policy to be used
                   for retrieving the container image.
                 type: string
+              imagePullSecrets:
+                description: ImagePullSecrets is a list of references to secrets in
+                  the same namespace to use for pulling the images of the generated
+                  pods.
+                items:
+                  description: |-
+                    LocalObjectReference contains enough information to let you locate the
+                    referenced object inside the same namespace.
+                  properties:
+                    name:
+                      default: ""
+                      description: |-
+                        Name of the referent.
+                        This field is effectively required, but due to backwards compatibility is
+                        allowed to be empty. Instances of this type with an empty value here are
+                        almost certainly wrong.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
+                x-kubernetes-list-type: atomic
               initContainers:
                 description: |-
                   InitContainers allows injecting initContainers to the generated pod definition.
@@ -6194,6 +6216,12 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              revisionHistoryLimit:
+                default: 10
+                description: RevisionHistoryLimit is The number of old replicasets
+                  to retain to allow rollback.
+                format: int32
+                type: integer
               scrapeConfigs:
                 description: |-
                   ScrapeConfigs define static Prometheus scrape configurations for the target allocator.
