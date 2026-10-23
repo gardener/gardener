@@ -13,10 +13,12 @@ import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
@@ -248,11 +250,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		}
 	}
 
-	if internalDNS := seedSpec.DNS.Internal; internalDNS == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("dns", "internal"), "internal DNS configuration is required"))
-	} else {
-		allErrs = append(allErrs, validateSeedDNSProviderConfig(*internalDNS, fldPath.Child("dns", "internal"))...)
-	}
+	allErrs = append(allErrs, validateSeedInternalDomains(seedSpec.DNS, fldPath.Child("dns"))...)
 
 	defaultDomains := sets.New[string]()
 	for i, defaultDNS := range seedSpec.DNS.Defaults {
@@ -480,6 +478,38 @@ func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *fie
 }
 
 // validateSeedDNSProviderConfig validates a SeedDNSProviderConfig.
+func validateSeedInternalDomains(dns core.SeedDNS, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if dns.Internal == nil && len(dns.InternalDomains) == 0 {
+		if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || ptr.Deref(dns.InternalDomainEnabled, true) {
+			allErrs = append(allErrs, field.Required(fldPath.Child("internal"), "internal DNS configuration is required"))
+		}
+		return allErrs
+	}
+
+	if dns.Internal != nil {
+		allErrs = append(allErrs, validateSeedDNSProviderConfig(*dns.Internal, fldPath.Child("internal"))...)
+	}
+
+	domains := sets.New[string]()
+	for i, internalDNS := range dns.InternalDomains {
+		idxPath := fldPath.Child("internalDomains").Index(i)
+		allErrs = append(allErrs, validateSeedDNSProviderConfig(internalDNS, idxPath)...)
+
+		if domains.Has(internalDNS.Domain) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("domain"), internalDNS.Domain))
+		}
+		domains.Insert(internalDNS.Domain)
+	}
+
+	if dns.Internal != nil && len(dns.InternalDomains) > 0 && !apiequality.Semantic.DeepEqual(*dns.Internal, dns.InternalDomains[0]) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("internal"), *dns.Internal, "must be equal to the first entry of internalDomains"))
+	}
+
+	return allErrs
+}
+
 func validateSeedDNSProviderConfig(dnsConfig core.SeedDNSProviderConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

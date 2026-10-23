@@ -15,10 +15,12 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -86,8 +88,13 @@ func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedN
 	return nil
 }
 
-// ValidateInternalDomainChangeForSeed returns an error when the internal domain is changed for a seed that is still in use by shoots.
+// ValidateInternalDomainChangeForSeed returns an error when an internal domain is changed or removed for a seed that is
+// still in use by shoots.
 func ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
+	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return validateInternalDomainsRemovalFromSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+	}
+
 	if oldSeedSpec.DNS.Internal != nil && newSeedSpec.DNS.Internal != nil &&
 		oldSeedSpec.DNS.Internal.Domain != newSeedSpec.DNS.Internal.Domain {
 		shoots, err := shootLister.List(labels.Everything())
@@ -101,6 +108,81 @@ func ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec
 	}
 
 	return nil
+}
+
+func validateInternalDomainsRemovalFromSeed(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
+	removedDomains := RemovedInternalDomains(oldSeedSpec, newSeedSpec)
+	if removedDomains.Len() == 0 {
+		return nil
+	}
+
+	seedShoots, err := GetFilteredShootList(shootLister, func(shoot *gardencorev1beta1.Shoot) bool { return isSeedUsedByShoot(seedName, shoot) })
+	if err != nil {
+		return err
+	}
+
+	usedRemovedDomains := sets.New[string]()
+	for _, shoot := range seedShoots {
+		usedRemovedDomains.Insert(internalDomainsUsedByShoot(shoot, removedDomains)...)
+	}
+
+	if usedRemovedDomains.Len() > 0 {
+		return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove internal domains %v from %s %q as they are still being used by shoots", sets.List(usedRemovedDomains), kind, seedName))
+	}
+
+	// A gardenlet with an outdated seed can still assign the first internal domain to a shoot, which the shoot lister
+	// does not show yet. Thus, the first internal domain must be replaced and removed in two separate updates.
+	if firstDomain := firstInternalDomain(oldSeedSpec); len(seedShoots) > 0 && removedDomains.Has(firstDomain) {
+		return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove the first internal domain %q from %s %q in the same update that replaces it while shoots are scheduled onto it, make another internal domain the first one before", firstDomain, kind, seedName))
+	}
+
+	return nil
+}
+
+// RemovedInternalDomains returns the internal domains of the old seed spec which the new seed spec does not contain.
+func RemovedInternalDomains(oldSeedSpec, newSeedSpec *core.SeedSpec) sets.Set[string] {
+	return internalDomainsOfSeed(oldSeedSpec).Difference(internalDomainsOfSeed(newSeedSpec))
+}
+
+func internalDomainsOfSeed(seedSpec *core.SeedSpec) sets.Set[string] {
+	// The spec of a ManagedSeed is not defaulted, thus it may contain only one of the fields.
+	domains := sets.New[string]()
+	if seedSpec.DNS.Internal != nil {
+		domains.Insert(seedSpec.DNS.Internal.Domain)
+	}
+	for _, internalDomain := range seedSpec.DNS.InternalDomains {
+		domains.Insert(internalDomain.Domain)
+	}
+	return domains
+}
+
+func firstInternalDomain(seedSpec *core.SeedSpec) string {
+	if len(seedSpec.DNS.InternalDomains) > 0 {
+		return seedSpec.DNS.InternalDomains[0].Domain
+	}
+	if seedSpec.DNS.Internal != nil {
+		return seedSpec.DNS.Internal.Domain
+	}
+	return ""
+}
+
+func internalDomainsUsedByShoot(shoot *gardencorev1beta1.Shoot, seedDomains sets.Set[string]) []string {
+	var usedDomains []string
+	for _, address := range shoot.Status.AdvertisedAddresses {
+		if address.Name != v1beta1constants.AdvertisedAddressInternal && address.Name != v1beta1constants.AdvertisedAddressPriorInternal {
+			continue
+		}
+
+		// suffix match, refuses too much if one seed domain is a subdomain of another one. Compare with
+		// ConstructInternalClusterDomain if this matters.
+		clusterDomain := v1beta1helper.GetDomainFromAPIServerURL(address.URL)
+		for seedDomain := range seedDomains {
+			if strings.HasSuffix(clusterDomain, "."+seedDomain) {
+				usedDomains = append(usedDomains, seedDomain)
+			}
+		}
+	}
+	return usedDomains
 }
 
 // ValidateDefaultDomainsChangeForSeed returns an error when default domains that are being used by a shoot scheduled on the seed are removed,

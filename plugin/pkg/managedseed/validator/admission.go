@@ -39,6 +39,7 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
@@ -610,11 +611,12 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 
 func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
 	var (
-		allErrs                 = field.ErrorList{}
-		seedConfigSpecBasePath  = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
-		zonesFieldPath          = seedConfigSpecBasePath.Child("provider", "zones")
-		internalDomainFieldPath = seedConfigSpecBasePath.Child("dns", "internal", "domain")
-		defaultDomainsFieldPath = seedConfigSpecBasePath.Child("dns", "defaults")
+		allErrs                  = field.ErrorList{}
+		seedConfigSpecBasePath   = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
+		zonesFieldPath           = seedConfigSpecBasePath.Child("provider", "zones")
+		internalDomainFieldPath  = seedConfigSpecBasePath.Child("dns", "internal", "domain")
+		internalDomainsFieldPath = seedConfigSpecBasePath.Child("dns", "internalDomains")
+		defaultDomainsFieldPath  = seedConfigSpecBasePath.Child("dns", "defaults")
 	)
 
 	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
@@ -633,7 +635,11 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 	}
 
 	if err := admissionutils.ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
-		allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
+		if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+			allErrs = append(allErrs, field.Forbidden(internalDomainsFieldPath, err.Error()))
+		} else {
+			allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
+		}
 	}
 
 	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, v.secretLister, "ManagedSeed"); err != nil {

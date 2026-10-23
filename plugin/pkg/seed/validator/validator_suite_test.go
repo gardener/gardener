@@ -14,6 +14,7 @@ import (
 )
 
 func TestValidator(t *testing.T) {
+	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	features.RegisterFeatureGates()
 	RunSpecs(t, "AdmissionPlugin Seed Validator Suite")

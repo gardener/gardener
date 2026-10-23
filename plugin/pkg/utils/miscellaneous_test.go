@@ -18,6 +18,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -237,6 +239,113 @@ var _ = Describe("Miscellaneous", func() {
 			shoot.Status.SeedName = &otherSeed
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 			Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		Context("with the MutableShootDomains feature gate", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+				oldSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "foo.internal"}, {Domain: "former.internal"}}
+				newSeedSpec = oldSeedSpec.DeepCopy()
+				shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+					{Name: v1beta1constants.AdvertisedAddressExternal, URL: "https://api.shoot.project.example.com"},
+					{Name: v1beta1constants.AdvertisedAddressInternal, URL: "https://api.shoot.project.internal.foo.internal"},
+				}
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+			})
+
+			It("should accept a new internal domain while the former one is kept", func() {
+				newSeedSpec.DNS.Internal.Domain = "bar.internal"
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.internal"}, {Domain: "foo.internal"}, {Domain: "former.internal"}}
+
+				Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			})
+
+			It("should accept the removal of an internal domain that no shoot uses", func() {
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "foo.internal"}}
+
+				Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			})
+
+			It("should refuse the removal of an internal domain that a shoot uses", func() {
+				newSeedSpec.DNS.Internal.Domain = "bar.internal"
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.internal"}, {Domain: "former.internal"}}
+
+				err := ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+				Expect(err).To(MatchError(ContainSubstring("cannot remove internal domains [foo.internal]")))
+			})
+
+			It("should refuse the removal of an internal domain that a shoot uses as prior internal domain", func() {
+				shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+					{Name: v1beta1constants.AdvertisedAddressInternal, URL: "https://api.shoot.project.internal.foo.internal"},
+					{Name: v1beta1constants.AdvertisedAddressPriorInternal, URL: "https://api.shoot.project.internal.former.internal"},
+				}
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shoot)).To(Succeed())
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "foo.internal"}}
+
+				err := ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+				Expect(err).To(MatchError(ContainSubstring("cannot remove internal domains [former.internal]")))
+			})
+
+			It("should refuse the removal of all internal domains if a shoot uses one of them", func() {
+				newSeedSpec.DNS.Internal = nil
+				newSeedSpec.DNS.InternalDomains = nil
+
+				err := ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+				Expect(err).To(MatchError(ContainSubstring("cannot remove internal domains [foo.internal]")))
+			})
+
+			It("should consider the internal domain if the internal domains are not set", func() {
+				oldSeedSpec.DNS.InternalDomains = nil
+				newSeedSpec.DNS.Internal.Domain = "bar.internal"
+				newSeedSpec.DNS.InternalDomains = nil
+
+				err := ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+				Expect(err).To(MatchError(ContainSubstring("cannot remove internal domains [foo.internal]")))
+			})
+
+			It("should ignore the external address of a shoot", func() {
+				shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+					{Name: v1beta1constants.AdvertisedAddressExternal, URL: "https://api.shoot.project.former.internal"},
+				}
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shoot)).To(Succeed())
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "foo.internal"}}
+
+				Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			})
+
+			It("should refuse to replace and remove the first internal domain in one update while shoots are on the seed", func() {
+				shoot.Status.AdvertisedAddresses = nil
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shoot)).To(Succeed())
+				newSeedSpec.DNS.Internal.Domain = "former.internal"
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "former.internal"}}
+
+				err := ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+				Expect(err).To(MatchError(ContainSubstring(`cannot remove the first internal domain "foo.internal"`)))
+			})
+
+			It("should accept the removal of a former first internal domain that no shoot uses", func() {
+				oldSeedSpec.DNS.Internal.Domain = "former.internal"
+				oldSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "former.internal"}, {Domain: "foo.internal"}}
+				shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+					{Name: v1beta1constants.AdvertisedAddressInternal, URL: "https://api.shoot.project.internal.former.internal"},
+				}
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shoot)).To(Succeed())
+				newSeedSpec.DNS.Internal.Domain = "former.internal"
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "former.internal"}}
+
+				Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			})
+
+			It("should accept the removal of an internal domain that only shoots of other seeds use", func() {
+				shoot.Spec.SeedName = new("other-seed")
+				shoot.Status.SeedName = new("other-seed")
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shoot)).To(Succeed())
+				newSeedSpec.DNS.Internal.Domain = "former.internal"
+				newSeedSpec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "former.internal"}}
+
+				Expect(ValidateInternalDomainChangeForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+			})
 		})
 	})
 

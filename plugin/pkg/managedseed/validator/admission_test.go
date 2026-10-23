@@ -24,6 +24,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -31,6 +32,8 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
 )
@@ -1110,6 +1113,42 @@ var _ = Describe("ManagedSeed", func() {
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.internal.domain"),
 							"Detail": ContainSubstring("internal domain must not be changed while shoots are still scheduled onto seed"),
+						})),
+					))
+				})
+
+				It("should forbid the removal of an internal domain that a shoot uses if the MutableShootDomains feature gate is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					oldGardenletConfig.SeedConfig.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+						Domain: "old.internal",
+					}
+
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.DNS.Internal = &gardencorev1beta1.SeedDNSProviderConfig{
+						Domain: "new.internal",
+					}
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name},
+						Status: gardencorev1beta1.ShootStatus{AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+							{Name: v1beta1constants.AdvertisedAddressInternal, URL: "https://api.shoot.project.internal.old.internal"},
+						}},
+					}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.internalDomains"),
+							"Detail": ContainSubstring("cannot remove internal domains [old.internal]"),
 						})),
 					))
 				})

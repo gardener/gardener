@@ -9,6 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -109,6 +111,75 @@ var _ = Describe("Strategy", func() {
 				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
 
 				Expect(newSeed.Generation).To(Equal(oldSeed.Generation))
+			})
+		})
+
+		Context("internal domains", func() {
+			var domainA, domainB, domainC core.SeedDNSProviderConfig
+
+			BeforeEach(func() {
+				domainA = core.SeedDNSProviderConfig{Type: "provider-a", Domain: "internal.a.example.com", CredentialsRef: corev1.ObjectReference{Name: "secret-a"}}
+				domainB = core.SeedDNSProviderConfig{Type: "provider-b", Domain: "internal.b.example.com", CredentialsRef: corev1.ObjectReference{Name: "secret-b"}}
+				domainC = core.SeedDNSProviderConfig{Type: "provider-c", Domain: "internal.c.example.com", CredentialsRef: corev1.ObjectReference{Name: "secret-c"}}
+
+				oldSeed.Spec.DNS = core.SeedDNS{Internal: &domainA, InternalDomains: []core.SeedDNSProviderConfig{domainA, domainB}}
+				newSeed.Spec.DNS = *oldSeed.Spec.DNS.DeepCopy()
+			})
+
+			It("should replace the first entry of the internal domains if only the internal domain changed", func() {
+				newSeed.Spec.DNS.Internal = domainC.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.DNS.Internal).To(PointTo(Equal(domainC)))
+				Expect(newSeed.Spec.DNS.InternalDomains).To(Equal([]core.SeedDNSProviderConfig{domainC, domainB}))
+			})
+
+			It("should set the internal domain to the first entry of the internal domains if only the internal domains changed", func() {
+				newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{domainC, domainA, domainB}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.DNS.Internal).To(PointTo(Equal(domainC)))
+				Expect(newSeed.Spec.DNS.InternalDomains).To(Equal([]core.SeedDNSProviderConfig{domainC, domainA, domainB}))
+			})
+
+			It("should keep both fields if both changed to different values", func() {
+				newSeed.Spec.DNS.Internal = domainC.DeepCopy()
+				newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{domainB, domainA}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.DNS.Internal).To(PointTo(Equal(domainC)))
+				Expect(newSeed.Spec.DNS.InternalDomains).To(Equal([]core.SeedDNSProviderConfig{domainB, domainA}))
+			})
+
+			It("should keep both fields if both changed to the same value", func() {
+				newSeed.Spec.DNS.Internal = domainC.DeepCopy()
+				newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{domainC, domainA}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.DNS.Internal).To(PointTo(Equal(domainC)))
+				Expect(newSeed.Spec.DNS.InternalDomains).To(Equal([]core.SeedDNSProviderConfig{domainC, domainA}))
+			})
+
+			It("should keep both fields if the stored fields already differ", func() {
+				oldSeed.Spec.DNS.Internal = domainC.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.DNS.Internal).To(PointTo(Equal(domainA)))
+				Expect(newSeed.Spec.DNS.InternalDomains).To(Equal([]core.SeedDNSProviderConfig{domainA, domainB}))
+			})
+
+			It("should not share data between the internal domain and the internal domains", func() {
+				newSeed.Spec.DNS.Internal = domainC.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				newSeed.Spec.DNS.InternalDomains[0].Domain = "other.example.com"
+
+				Expect(newSeed.Spec.DNS.Internal.Domain).To(Equal("internal.c.example.com"))
 			})
 		})
 	})
