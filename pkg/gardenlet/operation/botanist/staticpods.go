@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
@@ -288,7 +289,10 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
-	files = b.appendEtcdCAsToFiles(files)
+	files, err = b.appendEtcdCAsToFiles(ctx, files)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed appending ETCD CAs to list of files: %w", err)
+	}
 
 	if err := b.deployOperatingSystemConfig(ctx, apiServerAddress); err != nil {
 		return nil, nil, fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
@@ -389,7 +393,7 @@ func (b *Botanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File,
 	}), nil
 }
 
-func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []extensionsv1alpha1.File {
+func (b *Botanist) appendEtcdCAsToFiles(ctx context.Context, files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
 	filesForCA := func(data map[string][]byte, path string) []extensionsv1alpha1.File {
 		return []extensionsv1alpha1.File{
 			{
@@ -405,22 +409,65 @@ func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []exten
 		}
 	}
 
-	for _, ca := range []struct {
-		name     string
-		basePath string
-	}{
-		{name: v1beta1constants.SecretNameCAETCD, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCD},
-		{name: v1beta1constants.SecretNameCAETCDPeer, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer},
-	} {
-		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
-			files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
+	if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCD, secretsmanager.Current); found {
+		files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCD, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
+	}
+	if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCD, secretsmanager.Old); found {
+		files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCD, v1beta1constants.OperatingSystemConfigFolderOld))...)
+	}
+
+	if maskOldPeerCAAsCurrent, err := b.mustMaskOldPeerCAAsCurrent(ctx); err != nil {
+		return nil, fmt.Errorf("failed checking whether old ETCD peer CA must be marked as 'current': %w", err)
+	} else if !maskOldPeerCAAsCurrent {
+		if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Current); found {
+			files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
 		}
-		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
-			files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderOld))...)
+		if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Old); found {
+			files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer, v1beta1constants.OperatingSystemConfigFolderOld))...)
+		}
+	} else {
+		var data map[string][]byte
+		if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Old); found {
+			data = secret.Data
+		} else if secret, found = b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Current); found {
+			data = secret.Data
+		}
+		files = append(files, filesForCA(data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
+	}
+
+	return files, nil
+}
+
+func (b *Botanist) mustMaskOldPeerCAAsCurrent(ctx context.Context) (bool, error) {
+	// During the Preparing phase of certificate authority rotation, we are rolling out ETCD twice: First, to only
+	// populate the new peer CA (so that all peers know and trust it). Second, to regenerate new peer certificates
+	// (now that all peers know the new CA, we can issue new peer certificates for the members).
+	// gardener-node-agent always uses the current peer CA for signing the peer certificates. If we already
+	// populated the new peer CA in the first rollout, it would already issue these new certificates before all
+	// members know and trust the new peer CA – the peer certificate regeneration should only happen in the second
+	// rollout.
+	// Hence, `maskOldPeerCAAsCurrent` is true in the first rollout only. If so, we put the old peer CA into the
+	// /var/lib/etcd/ca-peer/current folder such that GNA keeps using it for the peer certificates, and only in the
+	// second rollout `maskOldPeerCAAsCurrent` gets false such that GNA uses the new CA and regenerates them.
+	if !sets.New(
+		gardencorev1beta1.RotationPreparing,
+		gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+	).Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials)) {
+		return false, nil
+	}
+
+	for name, component := range map[string]etcd.Interface{
+		"etcd-main":   b.Shoot.Components.ControlPlane.EtcdMain,
+		"etcd-events": b.Shoot.Components.ControlPlane.EtcdEvents,
+	} {
+		if peerCARolloutCompleted, err := component.IsPeerCARolledOut(ctx); err != nil {
+			return false, fmt.Errorf("failed to check if peer CA rollout is completed for %s: %w", name, err)
+		} else if !peerCARolloutCompleted {
+			return true, nil
 		}
 	}
 
-	return files
+	return false, nil
 }
 
 type staticPod struct {
