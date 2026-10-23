@@ -312,7 +312,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 				Labels: utils.MergeStringMaps(getLabels("critical"), map[string]string{"service": "discovery-service"}),
 				Annotations: map[string]string{
 					"summary": "Discovery Server is Down in landscape {{$externalLabels.landscape}}",
-					"description": "The http health probe to the Gardener Discovery Server failed for at least 5 " +
+					"description": "The HTTP probe to the Gardener Discovery Server failed for at least 5 " +
 						"minutes (instance is {{$labels.instance}}). " +
 						"(Status code is " +
 						"{{printf `probe_http_status_code{job      = \"blackbox-discovery-server\" " +

@@ -1682,10 +1682,11 @@ func (r *Reconciler) newPrometheusLongTerm(
 
 func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (component.DeployWaiter, error) {
 	var (
-		primaryVirtualDNSDomain = garden.Spec.VirtualCluster.DNS.Domains[0].Name
-		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + primaryVirtualDNSDomain + "/healthz")}
-		gardenerDashboardTarget = monitoringv1alpha1.Target("https://" + helper.PrimaryDashboardDomain(garden) + "/healthz")
-		discoveryServerEnabled  = garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil
+		primaryVirtualDNSDomain     = garden.Spec.VirtualCluster.DNS.Domains[0].Name
+		kubeAPIServerTargets        = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + primaryVirtualDNSDomain + "/healthz")}
+		gardenerDashboardTarget     = monitoringv1alpha1.Target("https://" + helper.PrimaryDashboardDomain(garden) + "/healthz")
+		discoveryServerEnabled      = garden.Spec.VirtualCluster.Gardener.DiscoveryServer != nil
+		discoveryServerPublicTarget = monitoringv1alpha1.Target(workloadIdentityTokenIssuerURL(garden) + "/.well-known/openid-configuration")
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
@@ -1696,8 +1697,12 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 		}
 	}
 
-	// See function 'gardenerDashboard.ingress(ctx)' in pkg/component/gardener/dashboard/ingress.go
-	isDashboardCertificateIssuedByGardener := wildcardCertSecretName == nil
+	var (
+		// See function 'gardenerDashboard.ingress(ctx)' in pkg/component/gardener/dashboard/ingress.go
+		isDashboardCertificateIssuedByGardener = wildcardCertSecretName == nil
+		// If externally configured or wildcard certificate is used, the CA bundle might be missing.
+		isDiscoveryServerCertificateIssuedByGardener = ptr.Deref(discoveryServerTLSSecretName(garden, wildcardCertSecretName), "") == ""
+	)
 
 	return sharedcomponent.NewBlackboxExporter(
 		r.RuntimeClientSet.Client(),
@@ -1716,8 +1721,8 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 				gardenerutils.NetworkPolicyLabel(gardenerdiscoveryserver.ServiceName, 8081):                                                                             v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 			PriorityClassName: v1beta1constants.PriorityClassNameGardenSystem100,
-			Config:            gardenblackboxexporter.Config(isDashboardCertificateIssuedByGardener, discoveryServerEnabled),
-			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget, discoveryServerEnabled),
+			Config:            gardenblackboxexporter.Config(isDashboardCertificateIssuedByGardener, discoveryServerEnabled, isDiscoveryServerCertificateIssuedByGardener),
+			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget, discoveryServerEnabled, discoveryServerPublicTarget),
 			Replicas:          1,
 		},
 	)

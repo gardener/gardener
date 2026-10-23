@@ -94,6 +94,9 @@ func testGardenerDiscoverServerAlert(config []*monitoringv1.PrometheusRule, isGa
 
 	if isGardenerDiscoveryServerEnabled {
 		Expect(discoveryServerAlert).ToNot(BeNil())
+		Expect(discoveryServerAlert.Expr.StrVal).To(Equal(
+			`probe_success{job = "blackbox-discovery-server", purpose = "availability"} == 0`,
+		))
 	} else {
 		Expect(discoveryServerAlert).To(BeNil())
 	}

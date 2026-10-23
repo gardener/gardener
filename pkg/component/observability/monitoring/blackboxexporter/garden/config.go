@@ -23,7 +23,7 @@ const (
 )
 
 // Config returns the blackbox-exporter config for the garden use-case.
-func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEnabled bool) blackboxexporterconfig.Config {
+func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEnabled, isDiscoveryServerCertificateIssuedByGardener bool) blackboxexporterconfig.Config {
 	var (
 		defaultModuleConfig = func() blackboxexporterconfig.Module {
 			return blackboxexporterconfig.Module{
@@ -57,6 +57,10 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 
 	if isDashboardCertificateIssuedByGardener {
 		httpGardenerDashboardModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
+	}
+
+	if isDiscoveryServerCertificateIssuedByGardener {
+		httpGardenerDiscoveryServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
 	}
 
 	config := blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
