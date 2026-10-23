@@ -793,19 +793,26 @@ var _ = Describe("shoot", func() {
 				c             client.Client
 				seedClientSet kubernetes.Interface
 				shootObject   *gardencorev1beta1.Shoot
+
+				newDomain, oldDomain, olderDomain *gardener.Domain
+				internalDomains                   []*gardener.Domain
 			)
 
-			buildShoot := func() *Shoot {
-				GinkgoHelper()
-
-				s, err := NewBuilder().
+			build := func() (*Shoot, error) {
+				return NewBuilder().
 					WithShootObject(shootObject).
 					WithCloudProfileObject(nil).
 					WithoutShootCredentials().
 					WithProjectName("bar").
-					WithInternalDomains([]*gardener.Domain{{Domain: "internal.new.example.com"}}).
+					WithInternalDomains(internalDomains).
 					WithDefaultDomains([]*gardener.Domain{{Domain: "example.com"}}).
 					Build(ctx, seedClientSet, c)
+			}
+
+			buildShoot := func() *Shoot {
+				GinkgoHelper()
+
+				s, err := build()
 				Expect(err).NotTo(HaveOccurred())
 
 				return s
@@ -829,6 +836,11 @@ var _ = Describe("shoot", func() {
 				ctx = context.Background()
 				c = fake.NewFakeClient()
 				seedClientSet = fakekubernetes.NewClientSetBuilder().WithVersion("1.35.0").Build()
+
+				newDomain = &gardener.Domain{Domain: "internal.new.example.com", Provider: "new-provider"}
+				oldDomain = &gardener.Domain{Domain: "internal.old.example.com", Provider: "old-provider"}
+				olderDomain = &gardener.Domain{Domain: "internal.older.example.com", Provider: "older-provider"}
+				internalDomains = []*gardener.Domain{newDomain, oldDomain, olderDomain}
 
 				uid := "057cf3ec-1b86-40b3-abc2-47ac71abbe85"
 				shootObject = &gardencorev1beta1.Shoot{
@@ -873,7 +885,7 @@ var _ = Describe("shoot", func() {
 						WithoutShootCredentials().
 						WithoutShootDNS().
 						WithProjectName("bar").
-						WithInternalDomains([]*gardener.Domain{{Domain: "internal.new.example.com"}}).
+						WithInternalDomains(internalDomains).
 						Build(ctx, seedClientSet, c)
 
 					Expect(err).NotTo(HaveOccurred())
@@ -884,6 +896,31 @@ var _ = Describe("shoot", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
 
 					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+				})
+			})
+
+			Describe("#InternalDomain", func() {
+				It("should take the internal domain of the seed which belongs to the applied domain", func() {
+					Expect(buildShoot().InternalDomain).To(BeIdenticalTo(oldDomain))
+				})
+
+				It("should take the first internal domain of the seed for a new shoot", func() {
+					shootObject.Status.AdvertisedAddresses = nil
+
+					Expect(buildShoot().InternalDomain).To(BeIdenticalTo(newDomain))
+				})
+
+				It("should be nil if the shoot has no internal domain", func() {
+					shootObject.Status.AdvertisedAddresses = shootObject.Status.AdvertisedAddresses[:1]
+
+					Expect(buildShoot().InternalDomain).To(BeNil())
+				})
+
+				It("should fail if the applied domain is not an internal domain of the seed", func() {
+					internalDomains = []*gardener.Domain{newDomain}
+
+					_, err := build()
+					Expect(err).To(MatchError(ContainSubstring(`the internal cluster domain "foo.bar.internal.old.example.com" does not belong to an internal domain of the seed`)))
 				})
 			})
 
@@ -944,17 +981,29 @@ var _ = Describe("shoot", func() {
 				})
 			})
 
-			Describe("#InternalDomain", func() {
-				It("should take the internal domain of the seed", func() {
-					Expect(buildShoot().InternalDomain).To(Equal(&gardener.Domain{Domain: "internal.new.example.com"}))
+			Describe("#PriorInternalDomain", func() {
+				BeforeEach(func() {
+					shootObject.Status.AdvertisedAddresses = append(shootObject.Status.AdvertisedAddresses,
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorInternal, "foo.bar.internal.older.example.com"),
+					)
+					withCARotationPhase(gardencorev1beta1.RotationPrepared)
 				})
 
-				It("should be nil if the shoot has no internal cluster domain", func() {
-					shootObject.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
-						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "foo.example.com"),
-					}
+				It("should take the internal domain of the seed which belongs to the prior domain", func() {
+					Expect(buildShoot().PriorInternalDomain).To(BeIdenticalTo(olderDomain))
+				})
 
-					Expect(buildShoot().InternalDomain).To(BeNil())
+				It("should be nil outside of the migration phases", func() {
+					withCARotationPhase(gardencorev1beta1.RotationCompleting)
+
+					Expect(buildShoot().PriorInternalDomain).To(BeNil())
+				})
+
+				It("should fail if the prior domain is not an internal domain of the seed", func() {
+					internalDomains = []*gardener.Domain{newDomain, oldDomain}
+
+					_, err := build()
+					Expect(err).To(MatchError(ContainSubstring(`the internal cluster domain "foo.bar.internal.older.example.com" does not belong to an internal domain of the seed`)))
 				})
 			})
 		})

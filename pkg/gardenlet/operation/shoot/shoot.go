@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenlethelper "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
@@ -265,6 +266,22 @@ func (b *Builder) internalDomainForNewShoots() *gardenerutils.Domain {
 	return b.internalDomains[0]
 }
 
+func (b *Builder) findInternalDomain(shootName string, clusterDomain *string) (*gardenerutils.Domain, error) {
+	if clusterDomain == nil {
+		return nil, nil
+	}
+
+	for _, internalDomain := range b.internalDomains {
+		if ptr.Equal(gardenerutils.ConstructInternalClusterDomain(shootName, b.projectName, internalDomain), clusterDomain) {
+			return internalDomain, nil
+		}
+	}
+
+	// A gardenlet with an outdated seed can assign an internal domain which is removed from the seed at the same time.
+	// The operator must add the internal domain to the seed again.
+	return nil, fmt.Errorf("the internal cluster domain %q does not belong to an internal domain of the seed", *clusterDomain)
+}
+
 func domainFromAdvertisedAddress(shoot *gardencorev1beta1.Shoot, name string) *string {
 	for _, address := range shoot.Status.AdvertisedAddresses {
 		if address.Name == name {
@@ -307,8 +324,11 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
 	shoot.InternalClusterDomain = internalClusterDomain(shootObject, gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots()))
 	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
-	if shoot.InternalClusterDomain != nil {
-		shoot.InternalDomain = b.internalDomainForNewShoots()
+	if shoot.InternalDomain, err = b.findInternalDomain(shootObject.Name, shoot.InternalClusterDomain); err != nil {
+		return nil, err
+	}
+	if shoot.PriorInternalDomain, err = b.findInternalDomain(shootObject.Name, shoot.PriorInternalClusterDomain); err != nil {
+		return nil, err
 	}
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
 	shoot.PriorExternalClusterDomain = priorExternalClusterDomain(shootObject, shoot.ExternalClusterDomain)
