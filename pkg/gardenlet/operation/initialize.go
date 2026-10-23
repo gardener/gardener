@@ -46,10 +46,10 @@ func Initialize(
 	error,
 ) {
 	var (
-		gardenSecrets  map[string]*corev1.Secret
-		internalDomain *gardenerutils.Domain
-		defaultDomains []*gardenerutils.Domain
-		err            error
+		gardenSecrets   map[string]*corev1.Secret
+		internalDomains []*gardenerutils.Domain
+		defaultDomains  []*gardenerutils.Domain
+		err             error
 	)
 
 	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
@@ -63,10 +63,10 @@ func Initialize(
 			return nil, err
 		}
 
-		internalDomain, err = gardenerutils.ReadGardenInternalDomain(
+		internalDomains, err = gardenerutils.ReadGardenInternalDomains(
 			ctx,
 			gardenClient,
-			seed.Spec.DNS.Internal,
+			garden.SeedInternalDomains(seed),
 		)
 		if err != nil {
 			return nil, err
@@ -108,7 +108,7 @@ func Initialize(
 	gardenObj, err := garden.
 		NewBuilder().
 		WithProject(project).
-		WithInternalDomain(internalDomain).
+		WithInternalDomains(internalDomains).
 		WithDefaultDomains(defaultDomains).
 		Build(ctx)
 	if err != nil {
@@ -122,7 +122,7 @@ func Initialize(
 		WithShootObject(shoot).
 		WithShootCredentialsFrom(gardenClient).
 		WithExposureClassObject(exposureClass).
-		WithInternalDomain(gardenObj.InternalDomain).
+		WithInternalDomains(gardenObj.InternalDomains).
 		WithDefaultDomains(gardenObj.DefaultDomains).
 		WithServiceAccountIssuerHostname(gardenSecrets[v1beta1constants.GardenRoleShootServiceAccountIssuer])
 
@@ -132,7 +132,7 @@ func Initialize(
 		WithGardenerInfo(gardenerInfo).
 		WithGardenClusterIdentity(gardenClusterIdentity).
 		WithSecrets(gardenSecrets).
-		WithInternalDomain(gardenObj.InternalDomain).
+		WithInternalDomains(gardenObj.InternalDomains).
 		WithDefaultDomains(gardenObj.DefaultDomains).
 		WithGarden(gardenObj)
 

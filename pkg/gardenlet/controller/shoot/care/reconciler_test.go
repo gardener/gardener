@@ -608,7 +608,7 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ *gardencorev1beta1.Gardener,
 		_ string,
 		_ map[string]*corev1.Secret,
-		_ *gardenerutils.Domain,
+		_ []*gardenerutils.Domain,
 		_ []*gardenerutils.Domain,
 		_ *gardencorev1beta1.Shoot,
 	) (*operation.Operation, error) {

@@ -179,9 +179,10 @@ func (b *Builder) WithProjectName(projectName string) *Builder {
 	return b
 }
 
-// WithInternalDomain sets the internalDomain attribute at the Builder.
-func (b *Builder) WithInternalDomain(internalDomain *gardenerutils.Domain) *Builder {
-	b.internalDomain = internalDomain
+// WithInternalDomains sets the internalDomains attribute at the Builder. The first internal domain is the one for new
+// shoots.
+func (b *Builder) WithInternalDomains(internalDomains []*gardenerutils.Domain) *Builder {
+	b.internalDomains = internalDomains
 	return b
 }
 
@@ -257,6 +258,13 @@ func priorInternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
 	return domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressPriorInternal)
 }
 
+func (b *Builder) internalDomainForNewShoots() *gardenerutils.Domain {
+	if len(b.internalDomains) == 0 {
+		return nil
+	}
+	return b.internalDomains[0]
+}
+
 func domainFromAdvertisedAddress(shoot *gardencorev1beta1.Shoot, name string) *string {
 	for _, address := range shoot.Status.AdvertisedAddresses {
 		if address.Name == name {
@@ -297,10 +305,10 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
-	shoot.InternalClusterDomain = internalClusterDomain(shootObject, gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain))
+	shoot.InternalClusterDomain = internalClusterDomain(shootObject, gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots()))
 	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
 	if shoot.InternalClusterDomain != nil {
-		shoot.InternalDomain = b.internalDomain
+		shoot.InternalDomain = b.internalDomainForNewShoots()
 	}
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
 	shoot.PriorExternalClusterDomain = priorExternalClusterDomain(shootObject, shoot.ExternalClusterDomain)

@@ -65,7 +65,7 @@ type Builder struct {
 	seed                         *gardencorev1beta1.Seed
 	exposureClass                *gardencorev1beta1.ExposureClass
 	projectName                  string
-	internalDomain               *gardenerutils.Domain
+	internalDomains              []*gardenerutils.Domain
 	defaultDomains               []*gardenerutils.Domain
 }
 

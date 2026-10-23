@@ -11,21 +11,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Builder is an object that builds Garden objects.
 type Builder struct {
-	projectFunc        func(context.Context) (*gardencorev1beta1.Project, error)
-	internalDomainFunc func() (*gardenerutils.Domain, error)
-	defaultDomainsFunc func() ([]*gardenerutils.Domain, error)
+	projectFunc         func(context.Context) (*gardencorev1beta1.Project, error)
+	internalDomainsFunc func() ([]*gardenerutils.Domain, error)
+	defaultDomainsFunc  func() ([]*gardenerutils.Domain, error)
 }
 
 // Garden is an object containing Garden cluster specific data.
 type Garden struct {
-	Project        *gardencorev1beta1.Project
-	DefaultDomains []*gardenerutils.Domain
-	InternalDomain *gardenerutils.Domain
+	Project         *gardencorev1beta1.Project
+	DefaultDomains  []*gardenerutils.Domain
+	InternalDomains []*gardenerutils.Domain
 }
 
 // NewBuilder returns a new Builder.
@@ -59,9 +60,9 @@ func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Build
 	return b
 }
 
-// WithInternalDomain sets the internalDomainFunc attribute at the Builder.
-func (b *Builder) WithInternalDomain(internalDomain *gardenerutils.Domain) *Builder {
-	b.internalDomainFunc = func() (*gardenerutils.Domain, error) { return internalDomain, nil }
+// WithInternalDomains sets the internalDomainsFunc attribute at the Builder.
+func (b *Builder) WithInternalDomains(internalDomains []*gardenerutils.Domain) *Builder {
+	b.internalDomainsFunc = func() ([]*gardenerutils.Domain, error) { return internalDomains, nil }
 	return b
 }
 
@@ -81,12 +82,12 @@ func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 	}
 	garden.Project = project
 
-	if b.internalDomainFunc != nil {
-		internalDomain, err := b.internalDomainFunc()
+	if b.internalDomainsFunc != nil {
+		internalDomains, err := b.internalDomainsFunc()
 		if err != nil {
 			return nil, err
 		}
-		garden.InternalDomain = internalDomain
+		garden.InternalDomains = internalDomains
 	}
 
 	if b.defaultDomainsFunc != nil {
@@ -98,4 +99,16 @@ func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 	}
 
 	return garden, nil
+}
+
+// SeedInternalDomains returns the internal domains of the given seed. Without the MutableShootDomains feature gate, it
+// only returns spec.dns.internal.
+func SeedInternalDomains(seed *gardencorev1beta1.Seed) []gardencorev1beta1.SeedDNSProviderConfig {
+	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return seed.Spec.DNS.InternalDomains
+	}
+	if seed.Spec.DNS.Internal == nil {
+		return nil
+	}
+	return []gardencorev1beta1.SeedDNSProviderConfig{*seed.Spec.DNS.Internal}
 }

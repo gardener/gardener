@@ -803,7 +803,7 @@ var _ = Describe("shoot", func() {
 					WithCloudProfileObject(nil).
 					WithoutShootCredentials().
 					WithProjectName("bar").
-					WithInternalDomain(&gardener.Domain{Domain: "internal.new.example.com"}).
+					WithInternalDomains([]*gardener.Domain{{Domain: "internal.new.example.com"}}).
 					WithDefaultDomains([]*gardener.Domain{{Domain: "example.com"}}).
 					Build(ctx, seedClientSet, c)
 				Expect(err).NotTo(HaveOccurred())
@@ -873,7 +873,7 @@ var _ = Describe("shoot", func() {
 						WithoutShootCredentials().
 						WithoutShootDNS().
 						WithProjectName("bar").
-						WithInternalDomain(&gardener.Domain{Domain: "internal.new.example.com"}).
+						WithInternalDomains([]*gardener.Domain{{Domain: "internal.new.example.com"}}).
 						Build(ctx, seedClientSet, c)
 
 					Expect(err).NotTo(HaveOccurred())

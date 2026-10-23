@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -422,6 +423,51 @@ var _ = Describe("Garden", func() {
 				Zone:        zone,
 				Credentials: workloadIdentity,
 			}))
+		})
+	})
+
+	Describe("#ReadGardenInternalDomains", func() {
+		var secret *corev1.Secret
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "internal-domain", Namespace: "garden"}}
+		})
+
+		seedDNSProvider := func(domain, secretName string) gardencorev1beta1.SeedDNSProviderConfig {
+			return gardencorev1beta1.SeedDNSProviderConfig{
+				Type:           "route-53",
+				Domain:         domain,
+				CredentialsRef: corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: secretName, Namespace: "garden"},
+			}
+		}
+
+		It("should return the domain information of each internal domain in the given order", func() {
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ReadGardenInternalDomains(ctx, fakeClient, []gardencorev1beta1.SeedDNSProviderConfig{
+				seedDNSProvider("internal.new.example.com", "internal-domain"),
+				seedDNSProvider("internal.old.example.com", "internal-domain"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveExactElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{"Domain": Equal("internal.new.example.com")})),
+				PointTo(MatchFields(IgnoreExtras, Fields{"Domain": Equal("internal.old.example.com")})),
+			))
+		})
+
+		It("should return an empty list if there are no internal domains", func() {
+			Expect(ReadGardenInternalDomains(ctx, fakeClient, nil)).To(BeEmpty())
+		})
+
+		It("should fail if the credentials of an internal domain do not exist", func() {
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			_, err := ReadGardenInternalDomains(ctx, fakeClient, []gardencorev1beta1.SeedDNSProviderConfig{
+				seedDNSProvider("internal.new.example.com", "internal-domain"),
+				seedDNSProvider("internal.old.example.com", "missing"),
+			})
+			Expect(err).To(MatchError(ContainSubstring("cannot fetch internal domain credentials from reference")))
 		})
 	})
 

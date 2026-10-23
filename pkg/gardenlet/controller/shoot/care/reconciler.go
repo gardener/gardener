@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -57,9 +58,9 @@ type Reconciler struct {
 	GardenClusterIdentity string
 	SeedName              string
 
-	gardenSecrets        map[string]*corev1.Secret
-	gardenInternalDomain *gardenerutils.Domain
-	gardenDefaultDomains []*gardenerutils.Domain
+	gardenSecrets         map[string]*corev1.Secret
+	gardenInternalDomains []*gardenerutils.Domain
+	gardenDefaultDomains  []*gardenerutils.Domain
 }
 
 // Reconcile executes care operations, e.g. health checks or garbage collection.
@@ -118,13 +119,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			return reconcile.Result{}, fmt.Errorf("error reading Garden secrets: %w", err)
 		}
 
-		internalDomain, err := gardenerutils.ReadGardenInternalDomain(
+		internalDomains, err := gardenerutils.ReadGardenInternalDomains(
 			careCtx,
 			r.GardenClient,
-			seed.Spec.DNS.Internal,
+			garden.SeedInternalDomains(seed),
 		)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domain: %w", err)
+			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domains: %w", err)
 		}
 
 		defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
@@ -138,7 +139,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 
 		r.gardenSecrets = secrets
-		r.gardenInternalDomain = internalDomain
+		r.gardenInternalDomains = internalDomains
 		r.gardenDefaultDomains = defaultDomains
 	}
 
@@ -153,7 +154,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.Identity,
 		r.GardenClusterIdentity,
 		r.gardenSecrets,
-		r.gardenInternalDomain,
+		r.gardenInternalDomains,
 		r.gardenDefaultDomains,
 		shoot,
 	)
