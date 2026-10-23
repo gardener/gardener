@@ -50,5 +50,5 @@ func (o *Options) Complete() error {
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	o.ManifestOptions.AddFlags(fs)
 	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the bootstrap cluster")
-	fs.StringVar(&o.ShootKubeconfig, "shoot-kubeconfig", "", "Path to the kubeconfig file pointing to the self-hosted shoot cluster. If set, the current ShootState is computed from the shoot cluster instead of being read from the config directory")
+	fs.StringVar(&o.ShootKubeconfig, "shoot-kubeconfig", "", "Path to the kubeconfig file pointing to the self-hosted shoot cluster (recommended). If set, cluster-autoscaler and machine-controller-manager are stopped in the shoot cluster, and the current ShootState is computed from the shoot cluster instead of being read from the config directory")
 }

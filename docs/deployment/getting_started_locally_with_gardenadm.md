@@ -222,6 +222,24 @@ NAME                                                    STATUS   ROLES    AGE   
 machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s   v1.35.0
 ```
 
+### Destroying the Self-Hosted Shoot Cluster
+
+`gardenadm destroy` deletes the machines and the infrastructure of the self-hosted shoot cluster.
+Like `gardenadm bootstrap`, it uses the kind cluster as bootstrap cluster.
+With `--shoot-kubeconfig`, it stops `cluster-autoscaler` and `machine-controller-manager` in the self-hosted shoot and computes the current `ShootState` from it:
+
+```shell
+KUBECONFIG=./dev-setup/kubeconfigs/runtime/kubeconfig \
+IMAGEVECTOR_OVERWRITE=./dev-setup/gardenadm/resources/generated/.imagevector-overwrite.yaml \
+IMAGEVECTOR_OVERWRITE_COMPONENTS=./dev-setup/gardenadm/resources/imagevector-overwrite-components.yaml \
+IMAGEVECTOR_OVERWRITE_CHARTS=./dev-setup/gardenadm/resources/generated/.imagevector-overwrite-charts.yaml \
+  ./bin/gardenadm destroy \
+    -d ./dev-setup/gardenadm/resources/generated/managed-infra \
+    --shoot-kubeconfig ./dev-setup/kubeconfigs/self-hosted-shoot/kubeconfig
+```
+
+Afterwards, no machine pods are left in the `infra-shoot--garden--root` namespace of the kind cluster.
+
 ### Tearing Down
 
 When you are done, you can delete the setup by running

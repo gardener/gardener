@@ -37,13 +37,19 @@ Like "gardenadm bootstrap", this command deploys the provider extensions and mac
 temporary bootstrap cluster. It restores the Infrastructure and Worker resources from the ShootState in the config
 directory and deletes them, which deletes all machines and the infrastructure in the cloud provider account.
 
-The config directory must contain the same manifests that were used for "gardenadm bootstrap". The current ShootState
-of the self-hosted shoot cluster is either computed from the shoot cluster (--shoot-kubeconfig) or read from the config
-directory. The ShootState copied to the control plane machines by "gardenadm bootstrap" is outdated as soon as the
-shoot cluster has changed its machines (e.g., created the machines of other worker pools).
+The config directory must contain the same manifests that were used for "gardenadm bootstrap".
 
-Warning: the self-hosted shoot cluster must not be running anymore, or at least its machine-controller-manager must
-be stopped. Otherwise, it recreates the machines that are deleted by this command.
+The current ShootState of the self-hosted shoot cluster is required to restore the machines and the infrastructure.
+The recommended way is to pass the kubeconfig of the running self-hosted shoot cluster (--shoot-kubeconfig): the
+command then stops cluster-autoscaler and machine-controller-manager in the shoot cluster, so that they don't recreate
+the machines, and computes the ShootState from the shoot cluster. A ShootState in the config directory is ignored in
+this case.
+
+Without --shoot-kubeconfig, the ShootState is read from the config directory. Note that the ShootState copied to the
+control plane machines by "gardenadm bootstrap" is outdated as soon as the shoot cluster has changed its machines
+(e.g., created the machines of other worker pools). Also, the self-hosted shoot cluster must not be running anymore,
+or at least its cluster-autoscaler and machine-controller-manager must be stopped. Otherwise, they recreate the
+machines that are deleted by this command.
 
 Limitations:
 - Only the machines and the infrastructure are destroyed. Other resources are left behind, e.g., the DNS record of
@@ -53,11 +59,11 @@ Limitations:
 - Re-running the command after machines or parts of the infrastructure have been deleted might create them again,
   because they are restored from the ShootState before they are deleted.`,
 
-		Example: `# Destroy the infrastructure, with the ShootState in the config directory
-gardenadm destroy --config-dir /path/to/manifests
+		Example: `# Destroy the infrastructure, computing the current ShootState from the self-hosted shoot cluster (recommended)
+gardenadm destroy --config-dir /path/to/manifests --shoot-kubeconfig /path/to/shoot-kubeconfig
 
-# Destroy the infrastructure, computing the current ShootState from the self-hosted shoot cluster
-gardenadm destroy --config-dir /path/to/manifests --shoot-kubeconfig /path/to/shoot-kubeconfig`,
+# Destroy the infrastructure, with the ShootState in the config directory
+gardenadm destroy --config-dir /path/to/manifests`,
 
 		Args: cobra.NoArgs,
 
@@ -97,14 +103,30 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("shoot has unmanaged infrastructure, there is nothing to destroy: " +
 			"use `gardenadm reset` on the nodes instead")
 	}
+	clientSet, err := NewClientSetFromFile(opts.Kubeconfig, kubernetes.SeedScheme)
+	if err != nil {
+		return fmt.Errorf("failed creating client: %w", err)
+	}
+
+	if err := cmd.EnsureNoGardenletOrOperator(ctx, clientSet.Client(), "destroy"); err != nil {
+		return err
+	}
+	if err := ensureNotSelfHostedShoot(ctx, clientSet.Client()); err != nil {
+		return err
+	}
+
 	if opts.ShootKubeconfig != "" {
 		if resources.ShootState != nil {
-			return fmt.Errorf("ShootState must not be contained in the config directory when --shoot-kubeconfig is set")
+			opts.Log.Info("Ignoring the ShootState in the config directory because --shoot-kubeconfig is set")
 		}
 
 		shootClientSet, err := NewClientSetFromFile(opts.ShootKubeconfig, kubernetes.SeedScheme)
 		if err != nil {
 			return fmt.Errorf("failed creating client for the shoot cluster: %w", err)
+		}
+
+		if err := stopMachineControllers(ctx, opts.Log, shootClientSet.Client()); err != nil {
+			return err
 		}
 
 		opts.Log.Info("Computing ShootState from the shoot cluster")
@@ -121,15 +143,6 @@ func run(ctx context.Context, opts *Options) error {
 	if resources.ShootState.Name != resources.Shoot.Name || resources.ShootState.Namespace != resources.Shoot.Namespace {
 		return fmt.Errorf("ShootState %s does not belong to Shoot %s: their names and namespaces must match",
 			client.ObjectKeyFromObject(resources.ShootState), client.ObjectKeyFromObject(resources.Shoot))
-	}
-
-	clientSet, err := NewClientSetFromFile(opts.Kubeconfig, kubernetes.SeedScheme)
-	if err != nil {
-		return fmt.Errorf("failed creating client: %w", err)
-	}
-
-	if err := cmd.EnsureNoGardenletOrOperator(ctx, clientSet.Client(), "destroy"); err != nil {
-		return err
 	}
 
 	// Instruct the botanist to restore the extension resources from the ShootState, like after a control plane
