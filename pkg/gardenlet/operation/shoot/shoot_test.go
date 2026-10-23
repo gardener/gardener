@@ -943,6 +943,20 @@ var _ = Describe("shoot", func() {
 					Expect(buildShoot().PriorInternalClusterDomain).To(BeNil())
 				})
 			})
+
+			Describe("#InternalDomain", func() {
+				It("should take the internal domain of the seed", func() {
+					Expect(buildShoot().InternalDomain).To(Equal(&gardener.Domain{Domain: "internal.new.example.com"}))
+				})
+
+				It("should be nil if the shoot has no internal cluster domain", func() {
+					shootObject.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, "foo.example.com"),
+					}
+
+					Expect(buildShoot().InternalDomain).To(BeNil())
+				})
+			})
 		})
 
 		Describe("#UpdateInfo", func() {

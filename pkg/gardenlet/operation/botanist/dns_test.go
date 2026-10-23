@@ -132,18 +132,27 @@ var _ = Describe("dns", func() {
 
 	Context("NeedsInternalDNS", func() {
 		It("should be false when the internal domain is nil", func() {
-			b.Garden.InternalDomain = nil
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = nil
 			Expect(b.NeedsInternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when the internal domain provider is unmanaged", func() {
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "unmanaged"}
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "unmanaged"}
 			Expect(b.NeedsInternalDNS()).To(BeFalse())
 		})
 
 		It("should be true when the internal domain provider is not unmanaged", func() {
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 			Expect(b.NeedsInternalDNS()).To(BeTrue())
+		})
+
+		It("should be false when the shoot has no internal cluster domain", func() {
+			b.Shoot.InternalClusterDomain = nil
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			Expect(b.NeedsInternalDNS()).To(BeFalse())
 		})
 	})
 
@@ -153,7 +162,8 @@ var _ = Describe("dns", func() {
 		})
 
 		It("returns true when DNS is used", func() {
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: new("foo")}
 			b.Shoot.ExternalClusterDomain = new("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
@@ -189,7 +199,7 @@ var _ = Describe("dns", func() {
 			b.Shoot.InternalClusterDomain = new("bar")
 			b.Shoot.ExternalClusterDomain = new("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 
 			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			externalDNSRecord.EXPECT().SetValues([]string{"1.2.3.4"})

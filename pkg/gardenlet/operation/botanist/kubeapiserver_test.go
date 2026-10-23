@@ -392,7 +392,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: new("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
-						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
+						botanist.Shoot.InternalDomain = &gardenerutils.Domain{}
 					},
 					kubeapiserver.SNIConfig{
 						Enabled: false,
@@ -400,7 +400,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("both DNS needed",
 					func() {
-						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
+						botanist.Shoot.InternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalClusterDomain = new("some-domain")
 						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{

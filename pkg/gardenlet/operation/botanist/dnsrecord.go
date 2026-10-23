@@ -46,7 +46,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		return b.newDNSRecord(values, true, b.Shoot.ExternalDomain, *internalDomain)
 	}
 
-	return b.newDNSRecord(values, b.NeedsInternalDNS(), b.Garden.InternalDomain, apiServerDomain(b.Shoot.InternalClusterDomain))
+	return b.newDNSRecord(values, b.NeedsInternalDNS(), b.Shoot.InternalDomain, apiServerDomain(b.Shoot.InternalClusterDomain))
 }
 
 func (b *Botanist) annotateExternalDNSRecordOperation() bool {

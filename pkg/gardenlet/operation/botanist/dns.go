@@ -32,9 +32,9 @@ func (b *Botanist) NeedsPriorExternalDNS() bool {
 
 // NeedsInternalDNS returns true if the Shoot cluster needs internal DNS.
 func (b *Botanist) NeedsInternalDNS() bool {
-	return b.Garden != nil &&
-		b.Garden.InternalDomain != nil &&
-		b.Garden.InternalDomain.Provider != "unmanaged"
+	return b.Shoot.InternalClusterDomain != nil &&
+		b.Shoot.InternalDomain != nil &&
+		b.Shoot.InternalDomain.Provider != "unmanaged"
 }
 
 func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {

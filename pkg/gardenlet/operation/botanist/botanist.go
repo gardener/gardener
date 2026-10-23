@@ -96,10 +96,13 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 }
 
 func (b *Botanist) internalDNSProviderTypes() []string {
-	if b.Garden.InternalDomain == nil {
-		return nil
+	var providerTypes []string
+	for _, domain := range []*gardenerutils.Domain{b.Shoot.InternalDomain, b.Shoot.PriorInternalDomain} {
+		if domain != nil {
+			providerTypes = append(providerTypes, domain.Provider)
+		}
 	}
-	return []string{b.Garden.InternalDomain.Provider}
+	return providerTypes
 }
 
 // outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver

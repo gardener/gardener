@@ -299,6 +299,9 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
 	shoot.InternalClusterDomain = internalClusterDomain(shootObject, gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain))
 	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
+	if shoot.InternalClusterDomain != nil {
+		shoot.InternalDomain = b.internalDomain
+	}
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
 	shoot.PriorExternalClusterDomain = priorExternalClusterDomain(shootObject, shoot.ExternalClusterDomain)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)

@@ -127,15 +127,6 @@ var _ = Describe("dnsrecord", func() {
 						},
 					},
 					InternalClusterDomain: new(internalDomain),
-					Components: &shoot.Components{
-						Extensions: &shoot.Extensions{
-							ExternalDNSRecord:      externalDNSRecord,
-							PriorExternalDNSRecord: priorExternalDNSRecord,
-							InternalDNSRecord:      internalDNSRecord,
-						},
-					},
-				},
-				Garden: &garden.Garden{
 					InternalDomain: &gardenerutils.Domain{
 						Domain:   internalDomain,
 						Provider: internalProvider,
@@ -146,7 +137,15 @@ var _ = Describe("dnsrecord", func() {
 							},
 						},
 					},
+					Components: &shoot.Components{
+						Extensions: &shoot.Extensions{
+							ExternalDNSRecord:      externalDNSRecord,
+							PriorExternalDNSRecord: priorExternalDNSRecord,
+							InternalDNSRecord:      internalDNSRecord,
+						},
+					},
 				},
+				Garden: &garden.Garden{},
 				Seed:   &seed.Seed{},
 				Logger: logr.Discard(),
 			},
@@ -768,9 +767,9 @@ var _ = Describe("dnsrecord", func() {
 			})
 		})
 
-		Context("destroy (Garden InternalDomain is set to nil)", func() {
+		Context("destroy (Shoot InternalDomain is set to nil)", func() {
 			JustBeforeEach(func() {
-				b.Garden.InternalDomain = nil
+				b.Shoot.InternalDomain = nil
 			})
 
 			It("should call Destroy and WaitCleanup and succeed if they succeeded", func() {
