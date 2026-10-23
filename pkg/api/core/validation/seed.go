@@ -259,6 +259,11 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain))
 		}
 		defaultDomains.Insert(defaultDNS.Domain)
+
+		// External DNS names point at the internal domain, so the two identities must stay distinct.
+		if internalDNS := seedSpec.DNS.Internal; internalDNS != nil && len(internalDNS.Domain) > 0 && len(defaultDNS.Domain) > 0 && defaultDNS.Domain == internalDNS.Domain {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain, "must differ from the internal domain"))
+		}
 	}
 
 	allErrs = append(allErrs, validateExtensions(seedSpec.Extensions, fldPath.Child("extensions"))...)

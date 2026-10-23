@@ -546,6 +546,19 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
+			It("should reject a default domain equal to the internal domain", func() {
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{
+					Type:   "foo",
+					Domain: seed.Spec.DNS.Internal.Domain,
+				}}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.defaults[0].domain"),
+					"Detail": Equal("must differ from the internal domain"),
+				}))))
+			})
+
 			It("should return error for duplicate domains in defaults DNS configurations", func() {
 				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
 					{
