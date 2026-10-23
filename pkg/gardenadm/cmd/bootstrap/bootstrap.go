@@ -98,32 +98,8 @@ func run(ctx context.Context, opts *Options) error {
 		g        = flow.NewGraph("bootstrap")
 		reporter = flow.NewCommandLineProgressReporter(opts.ErrOut)
 
-		deployNamespaces            = g.AddGroup(b.DeployNamespacesTaskGroup())
-		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
-		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
-		_                           = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
-		initializeSecretsManagement = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
-		deployPriorityClassCritical = g.Add(flow.Task{
-			Name:         "Deploying PriorityClass for gardener-resource-manager",
-			Fn:           b.DeployPriorityClassCritical,
-			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
-		})
-		_ = g.AddGroup(
-			b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, false, false).
-				WithDependencies(deployPriorityClassCritical),
-		)
-		_ = g.AddGroup(
-			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
-				WithDependencies(deployPriorityClassCritical),
-		)
-		_                             = g.AddGroup(b.ReconcileReferencedResourcesTaskGroup())
-		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
-		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(true))
-		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
-		syncPointBootstrapped         = flow.NewTaskIDs(
-			reconcileNetworkPolicies,
-			reconcileExtensionControllers,
-		)
+		syncPointBootstrapped = b.AddBootstrapClusterTasks(g)
+
 		reconcileInfrastructure = g.AddGroup(
 			b.ReconcileInfrastructureTaskGroup(false).
 				WithDependencies(syncPointBootstrapped).

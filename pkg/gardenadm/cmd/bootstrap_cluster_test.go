@@ -5,8 +5,6 @@
 package cmd_test
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -20,7 +18,6 @@ import (
 var _ = Describe("BootstrapCluster", func() {
 	Describe("#EnsureNoGardenletOrOperator", func() {
 		var (
-			ctx        = context.Background()
 			fakeClient client.Client
 		)
 
@@ -28,11 +25,11 @@ var _ = Describe("BootstrapCluster", func() {
 			fakeClient = fakeclient.NewClientBuilder().Build()
 		})
 
-		It("should succeed if neither gardener-operator nor gardenlet is deployed", func() {
+		It("should succeed if neither gardener-operator nor gardenlet is deployed", func(ctx SpecContext) {
 			Expect(EnsureNoGardenletOrOperator(ctx, fakeClient, "foo")).To(Succeed())
 		})
 
-		It("should fail if gardener-operator is deployed", func() {
+		It("should fail if gardener-operator is deployed", func(ctx SpecContext) {
 			Expect(fakeClient.Create(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardener-operator"}})).To(Succeed())
 
 			Expect(EnsureNoGardenletOrOperator(ctx, fakeClient, "foo")).To(MatchError(And(
@@ -41,7 +38,7 @@ var _ = Describe("BootstrapCluster", func() {
 			)))
 		})
 
-		It("should fail if gardenlet is deployed", func() {
+		It("should fail if gardenlet is deployed", func(ctx SpecContext) {
 			Expect(fakeClient.Create(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet"}})).To(Succeed())
 
 			Expect(EnsureNoGardenletOrOperator(ctx, fakeClient, "foo")).To(MatchError(ContainSubstring(`deployment "garden/gardenlet" exists on the targeted cluster`)))
