@@ -7,7 +7,6 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -17,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
@@ -27,11 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
-
-// annotationKeyPreRestoreReplicas is the annotation key used to persist the gardenlet Deployment's original replica
-// count before scaling it to zero during restore. A retried restore skips the cleanup task group
-// (kubeconfigFileExists=true), so ScaleUpGardenlet reads this annotation to recover the value.
-const annotationKeyPreRestoreReplicas = "gardenadm.gardener.cloud/pre-restore-replicas"
 
 // DeletePriorNode deletes the Node object of the prior control plane Node that was lost during the disaster.
 func (b *GardenadmBotanist) DeletePriorNode(ctx context.Context, realClient client.Client, priorNodeName string) error {
@@ -178,11 +173,9 @@ func (b *GardenadmBotanist) DeleteStaleEtcdMemberLeases(ctx context.Context, rea
 	return nil
 }
 
-// ScaleDownGardenlet scales the gardenlet Deployment restored from the ETCD snapshot to zero replicas and deletes its
-// running pods so that gardenlet cannot interfere with the restore flow. The previous replica count is persisted as an
-// annotation on the Deployment so that ScaleUpGardenlet can recover it even on a retried restore (where the cleanup
-// task group is skipped). If the gardenlet Deployment does not exist (e.g. the snapshot predates `gardenadm connect`),
-// the function is a no-op.
+// ScaleDownGardenlet scales the gardenlet Deployment restored from the ETCD snapshot to zero replicas and force-deletes
+// its Pods so that gardenlet cannot interfere with the restore flow. If the gardenlet Deployment does not exist (e.g.
+// the snapshot predates `gardenadm connect`), the function is a no-op.
 func (b *GardenadmBotanist) ScaleDownGardenlet(ctx context.Context, realClient client.Client) error {
 	gardenletKey := client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenlet}
 
@@ -194,85 +187,49 @@ func (b *GardenadmBotanist) ScaleDownGardenlet(ctx context.Context, realClient c
 		return fmt.Errorf("failed getting gardenlet Deployment: %w", err)
 	}
 
-	var replicas int32 = 1
-	if deployment.Spec.Replicas != nil {
-		replicas = *deployment.Spec.Replicas
-	}
-
-	patch := client.MergeFrom(deployment.DeepCopy())
-	metav1.SetMetaDataAnnotation(&deployment.ObjectMeta, annotationKeyPreRestoreReplicas, strconv.FormatInt(int64(replicas), 10))
-	if err := realClient.Patch(ctx, deployment, patch); err != nil {
-		return fmt.Errorf("failed annotating gardenlet Deployment with pre-restore replicas: %w", err)
-	}
-
-	b.Logger.Info("Scaling down gardenlet Deployment to prevent interference with restore", "deployment", gardenletKey, "previousReplicas", replicas)
+	b.Logger.Info("Scaling down gardenlet Deployment to prevent interference with restore", "deployment", gardenletKey, "previousReplicas", ptr.Deref(deployment.Spec.Replicas, 1))
 	if err := kubernetesutils.ScaleDeployment(ctx, realClient, gardenletKey, 0); err != nil {
 		return fmt.Errorf("failed scaling down gardenlet Deployment: %w", err)
 	}
 
-	podList := &corev1.PodList{}
-	if err := realClient.List(ctx, podList,
+	b.Logger.Info("Force deleting gardenlet Pods", "deployment", gardenletKey)
+	if err := realClient.DeleteAllOf(ctx, &corev1.Pod{},
 		client.InNamespace(b.Shoot.ControlPlaneNamespace),
-		client.MatchingLabels{"app": "gardener", "role": "gardenlet"},
+		client.MatchingLabels(deployment.Spec.Selector.MatchLabels),
+		&client.DeleteAllOfOptions{DeleteOptions: client.DeleteOptions{
+			GracePeriodSeconds: new(int64(0)),
+			PropagationPolicy:  new(metav1.DeletePropagationBackground),
+		}},
 	); err != nil {
-		return fmt.Errorf("failed listing gardenlet Pods: %w", err)
-	}
-
-	forceDeleteOptions := &client.DeleteOptions{
-		GracePeriodSeconds: new(int64(0)),
-		PropagationPolicy:  new(metav1.DeletePropagationBackground),
-	}
-	for _, pod := range podList.Items {
-		b.Logger.Info("Force deleting gardenlet Pod", "pod", client.ObjectKeyFromObject(&pod))
-		if err := realClient.Delete(ctx, &pod, forceDeleteOptions); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed force deleting gardenlet Pod %s: %w", client.ObjectKeyFromObject(&pod), err)
-		}
+		return fmt.Errorf("failed force deleting gardenlet Pods: %w", err)
 	}
 
 	return nil
 }
 
-// ScaleUpGardenlet scales the gardenlet Deployment back to its pre-restore replica count after the restore completes.
-// It reads the replica count from the annotation written by ScaleDownGardenlet. It is a no-op when the Deployment does
-// not exist or the annotation is absent (gardenlet was never scaled down).
+// ScaleUpGardenlet scales the gardenlet Deployment back to 2 replicas after the restore completes and waits until the
+// Deployment is available. It is a no-op when the Deployment does not exist (e.g. the snapshot predates `gardenadm
+// connect`).
 func (b *GardenadmBotanist) ScaleUpGardenlet(ctx context.Context, realClient client.Client) error {
 	gardenletKey := client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenlet}
 
-	deployment := &appsv1.Deployment{}
-	if err := realClient.Get(ctx, gardenletKey, deployment); err != nil {
+	if err := realClient.Get(ctx, gardenletKey, &appsv1.Deployment{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed getting gardenlet Deployment: %w", err)
 	}
 
-	var savedReplicas int32
-	if v, ok := deployment.Annotations[annotationKeyPreRestoreReplicas]; ok {
-		parsed, err := strconv.ParseInt(v, 10, 32)
-		if err != nil {
-			return fmt.Errorf("failed parsing %s annotation value %q: %w", annotationKeyPreRestoreReplicas, v, err)
-		}
-		savedReplicas = int32(parsed)
-	}
+	var replicas int32 = 2
 
-	if savedReplicas == 0 {
-		return nil
-	}
-
-	b.Logger.Info("Scaling up gardenlet Deployment after restore", "deployment", gardenletKey, "replicas", savedReplicas)
-	if err := kubernetesutils.ScaleDeployment(ctx, realClient, gardenletKey, savedReplicas); err != nil {
+	b.Logger.Info("Scaling up gardenlet Deployment after restore", "deployment", gardenletKey, "replicas", replicas)
+	if err := kubernetesutils.ScaleDeployment(ctx, realClient, gardenletKey, replicas); err != nil {
 		return fmt.Errorf("failed scaling up gardenlet Deployment: %w", err)
 	}
 
 	b.Logger.Info("Waiting until gardenlet Deployment is available", "deployment", gardenletKey)
-	if err := kubernetesutils.WaitUntilDeploymentScaledToDesiredReplicas(ctx, realClient, gardenletKey, savedReplicas); err != nil {
+	if err := kubernetesutils.WaitUntilDeploymentScaledToDesiredReplicas(ctx, realClient, gardenletKey, replicas); err != nil {
 		return fmt.Errorf("failed waiting for gardenlet Deployment to become available: %w", err)
-	}
-
-	patch := client.MergeFrom(deployment.DeepCopy())
-	delete(deployment.Annotations, annotationKeyPreRestoreReplicas)
-	if err := realClient.Patch(ctx, deployment, patch); err != nil {
-		return fmt.Errorf("failed removing %s annotation from gardenlet Deployment: %w", annotationKeyPreRestoreReplicas, err)
 	}
 
 	return nil

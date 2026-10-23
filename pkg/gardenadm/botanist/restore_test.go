@@ -213,7 +213,7 @@ var _ = Describe("Restore", func() {
 			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
 		})
 
-		It("should scale down the gardenlet Deployment and write the annotation with the previous replica count", func(ctx SpecContext) {
+		It("should scale down the gardenlet Deployment to zero replicas", func(ctx SpecContext) {
 			Expect(fakeClient.Create(ctx, gardenletDeployment(2))).To(Succeed())
 
 			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
@@ -221,19 +221,6 @@ var _ = Describe("Restore", func() {
 			dep := &appsv1.Deployment{}
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, dep)).To(Succeed())
 			Expect(dep.Spec.Replicas).To(Equal(new(int32(0))))
-			Expect(dep.Annotations).To(HaveKeyWithValue(annotationKeyPreRestoreReplicas, "2"))
-		})
-
-		It("should default to 1 when spec.replicas is nil", func(ctx SpecContext) {
-			dep := gardenletDeployment(1)
-			dep.Spec.Replicas = nil
-			Expect(fakeClient.Create(ctx, dep)).To(Succeed())
-
-			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
-
-			got := &appsv1.Deployment{}
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, got)).To(Succeed())
-			Expect(got.Annotations).To(HaveKeyWithValue(annotationKeyPreRestoreReplicas, "1"))
 		})
 
 		It("should force-delete gardenlet Pods", func(ctx SpecContext) {
@@ -262,40 +249,12 @@ var _ = Describe("Restore", func() {
 			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
 		})
 
-		It("should be a no-op when the Deployment has no annotation", func(ctx SpecContext) {
+		It("should scale up the gardenlet Deployment to 2 replicas", func(ctx SpecContext) {
 			dep := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       gardenletName,
 					Namespace:  oscSecretNamespace,
 					Generation: 1,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: new(int32(0)),
-					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "gardener", "role": "gardenlet"}},
-						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "gardenlet", Image: "gardenlet:latest"}}},
-					},
-				},
-			}
-			Expect(fakeClient.Create(ctx, dep)).To(Succeed())
-
-			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
-
-			got := &appsv1.Deployment{}
-			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, got)).To(Succeed())
-			Expect(got.Spec.Replicas).To(Equal(new(int32(0))))
-		})
-
-		It("should scale up the gardenlet Deployment to the annotated replica count and remove the annotation", func(ctx SpecContext) {
-			dep := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       gardenletName,
-					Namespace:  oscSecretNamespace,
-					Generation: 1,
-					Annotations: map[string]string{
-						annotationKeyPreRestoreReplicas: "2",
-					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas: new(int32(0)),
@@ -318,7 +277,6 @@ var _ = Describe("Restore", func() {
 			got := &appsv1.Deployment{}
 			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, got)).To(Succeed())
 			Expect(got.Spec.Replicas).To(Equal(new(int32(2))))
-			Expect(got.Annotations).NotTo(HaveKey(annotationKeyPreRestoreReplicas))
 		})
 	})
 
