@@ -141,6 +141,10 @@ func run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		return err
 	}
+	// Like in `gardenadm bootstrap`, the botanist doesn't run the control plane, so its Worker only contains the
+	// control plane worker pool reduced to a single machine. The Worker actuator only restores the machines of the
+	// worker pools in the Worker, so use all worker pools to restore and delete all machines.
+	b.Shoot.Components.Extensions.Worker = b.WorkerWithAllPools()
 
 	var (
 		g        = flow.NewGraph("destroy")

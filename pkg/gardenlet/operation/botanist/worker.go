@@ -33,6 +33,21 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 		return nil
 	}
 
+	return b.newWorker(b.workerPoolsForWorkerResource())
+}
+
+// WorkerWithAllPools creates a deployer for the Worker custom resource that contains all worker pools of the shoot,
+// also when the self-hosted shoot is bootstrapped. `gardenadm destroy` uses it to restore and delete the machines of
+// all worker pools, not only the one machine created by `gardenadm bootstrap`.
+func (b *Botanist) WorkerWithAllPools() worker.Interface {
+	if b.Shoot.IsWorkerless {
+		return nil
+	}
+
+	return b.newWorker(b.Shoot.GetInfo().Spec.Provider.Workers)
+}
+
+func (b *Botanist) newWorker(workers []gardencorev1beta1.Worker) worker.Interface {
 	return worker.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -41,7 +56,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 			Name:                b.Shoot.GetInfo().Name,
 			Type:                b.Shoot.GetInfo().Spec.Provider.Type,
 			Region:              b.Shoot.GetInfo().Spec.Region,
-			Workers:             b.workerPoolsForWorkerResource(),
+			Workers:             workers,
 			KubernetesVersion:   b.Shoot.KubernetesVersion,
 			KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
 			MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
