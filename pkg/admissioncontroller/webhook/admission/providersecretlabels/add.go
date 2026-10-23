@@ -22,10 +22,10 @@ const (
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(mgr manager.Manager) error {
 	h.secretHandler = admission.
-		WithCustomDefaulter(h.Client.Scheme(), &corev1.Secret{}, &SecretHandler{Handler: h}).
+		WithCustomDefaulter(mgr.GetScheme(), &corev1.Secret{}, &SecretHandler{Handler: h}).
 		WithRecoverPanic(true)
 	h.internalSecretHandler = admission.
-		WithCustomDefaulter(h.Client.Scheme(), &gardencorev1beta1.InternalSecret{}, &InternalSecretHandler{Handler: h}).
+		WithCustomDefaulter(mgr.GetScheme(), &gardencorev1beta1.InternalSecret{}, &InternalSecretHandler{Handler: h}).
 		WithRecoverPanic(true)
 
 	webhook := &admission.Webhook{

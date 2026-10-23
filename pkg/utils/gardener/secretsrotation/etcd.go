@@ -187,7 +187,7 @@ func rewriteEncryptedData(
 		}
 
 		// Execute the tasks for the current GVK in parallel.
-		taskFns = append(taskFns, flow.Parallel(fns...))
+		taskFns = append(taskFns, flow.ParallelN(100, fns...))
 	}
 
 	// Execute the sets of tasks for different GVKs in sequence.

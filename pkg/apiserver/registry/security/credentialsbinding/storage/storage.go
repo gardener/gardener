@@ -36,8 +36,9 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) CredentialsBindingStorage 
 // NewREST returns a RESTStorage object that will work against CredentialsBinding.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:     func() runtime.Object { return &security.CredentialsBinding{} },
-		NewListFunc: func() runtime.Object { return &security.CredentialsBindingList{} },
+		NewFunc:       func() runtime.Object { return &security.CredentialsBinding{} },
+		NewListFunc:   func() runtime.Object { return &security.CredentialsBindingList{} },
+		PredicateFunc: credentialsbinding.MatchCredentialsBinding,
 
 		DefaultQualifiedResource:  security.Resource("credentialsbindings"),
 		SingularQualifiedResource: security.Resource("credentialsbinding"),
@@ -49,8 +50,11 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 
 		TableConvertor: newTableConvertor(),
 	}
+	options := &generic.StoreOptions{
+		RESTOptions: optsGetter,
+		AttrFunc:    credentialsbinding.GetAttrs,
+	}
 
-	options := &generic.StoreOptions{RESTOptions: optsGetter}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}
