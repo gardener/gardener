@@ -554,6 +554,16 @@ var _ = Describe("Reconciler", func() {
 			)))
 		})
 
+		It("should require the DNS provider of each internal domain of the seed", func() {
+			seed := seed.DeepCopy()
+			seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{*seed.Spec.DNS.Internal, {Type: "former-internal-type"}}
+
+			Expect(computeKindTypesForHostedShoots(ctx, log, fakeClient, seed, SeedKind, controllerRegistrationList, shootList)).To(And(
+				HaveKey(extensionsv1alpha1.DNSRecordResource+"/"+type9),
+				HaveKey(extensionsv1alpha1.DNSRecordResource+"/former-internal-type"),
+			))
+		})
+
 		It("should correctly compute types for shoot that has the Seed's name as status not spec", func() {
 			shootList = []gardencorev1beta1.Shoot{
 				{

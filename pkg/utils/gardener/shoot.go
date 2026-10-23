@@ -728,8 +728,8 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 }
 
 // ComputeRequiredExtensionsForShoot computes the extension kind/type combinations that are required for the
-// shoot reconciliation flow.
-func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) sets.Set[string] {
+// shoot reconciliation flow. The internal domains can contain nil entries.
+func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDNSProviderTypes []string, externalDomain *Domain) sets.Set[string] {
 	requiredExtensions := sets.New[string]()
 
 	if backupConfig := v1beta1helper.GetBackupConfigForShoot(shoot, seed); backupConfig != nil {
@@ -780,8 +780,10 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		}
 	}
 
-	if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
-		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
+	for _, providerType := range internalDNSProviderTypes {
+		if providerType != core.DNSUnmanaged {
+			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, providerType))
+		}
 	}
 
 	if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged && externalDomain.Provider != "" {
