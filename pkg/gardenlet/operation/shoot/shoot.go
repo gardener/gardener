@@ -263,6 +263,9 @@ func (b *Builder) internalDomainForNewShoots() *gardenerutils.Domain {
 	if len(b.internalDomains) == 0 {
 		return nil
 	}
+	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) && b.seed != nil && !ptr.Deref(b.seed.Spec.DNS.InternalDomainEnabled, true) {
+		return nil
+	}
 	return b.internalDomains[0]
 }
 

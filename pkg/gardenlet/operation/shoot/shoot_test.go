@@ -793,6 +793,7 @@ var _ = Describe("shoot", func() {
 				c             client.Client
 				seedClientSet kubernetes.Interface
 				shootObject   *gardencorev1beta1.Shoot
+				seedObject    *gardencorev1beta1.Seed
 
 				newDomain, oldDomain, olderDomain *gardener.Domain
 				internalDomains                   []*gardener.Domain
@@ -803,6 +804,7 @@ var _ = Describe("shoot", func() {
 					WithShootObject(shootObject).
 					WithCloudProfileObject(nil).
 					WithoutShootCredentials().
+					WithSeedObject(seedObject).
 					WithProjectName("bar").
 					WithInternalDomains(internalDomains).
 					WithDefaultDomains([]*gardener.Domain{{Domain: "example.com"}}).
@@ -836,6 +838,7 @@ var _ = Describe("shoot", func() {
 				ctx = context.Background()
 				c = fake.NewFakeClient()
 				seedClientSet = fakekubernetes.NewClientSetBuilder().WithVersion("1.35.0").Build()
+				seedObject = &gardencorev1beta1.Seed{}
 
 				newDomain = &gardener.Domain{Domain: "internal.new.example.com", Provider: "new-provider"}
 				oldDomain = &gardener.Domain{Domain: "internal.old.example.com", Provider: "old-provider"}
@@ -894,6 +897,22 @@ var _ = Describe("shoot", func() {
 
 				It("should take the domain of the seed if the feature gate is disabled", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+				})
+
+				It("should be nil for a new shoot if the seed disables the internal domain", func() {
+					shootObject.Status.AdvertisedAddresses = nil
+					seedObject.Spec.DNS.InternalDomainEnabled = new(false)
+
+					s := buildShoot()
+					Expect(s.InternalClusterDomain).To(BeNil())
+					Expect(s.InternalDomain).To(BeNil())
+				})
+
+				It("should take the domain of the seed although the seed disables the internal domain if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					seedObject.Spec.DNS.InternalDomainEnabled = new(false)
 
 					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
 				})
