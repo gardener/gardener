@@ -461,8 +461,6 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 		})
 
 		It("should update the NamespacedCloudProfile status on CloudProfile spec update with new classification", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
-
 			var (
 				now    = time.Now().Truncate(time.Second)
 				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
@@ -580,8 +578,6 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 		})
 
 		It("should override only the expired lifecycle stage when the parent uses lifecycle and the override uses an expiration date", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
-
 			var (
 				now                = time.Now().Truncate(time.Second)
 				deprecatedStart    = &metav1.Time{Time: now.Add(12 * time.Hour)}
@@ -732,8 +728,6 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 		})
 
 		It("should replace legacy classification fields when the override defines a lifecycle", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
-
 			var (
 				now              = time.Now().Truncate(time.Second)
 				parentExpiration = &metav1.Time{Time: now.Add(24 * time.Hour)}
@@ -870,8 +864,6 @@ var _ = DescribeTableSubtree("NamespacedCloudProfile controller tests", func(isC
 		})
 
 		It("should replace the parent lifecycle when the override defines a lifecycle", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
-
 			var (
 				now    = time.Now().Truncate(time.Second)
 				future = &metav1.Time{Time: now.Add(24 * time.Hour)}
