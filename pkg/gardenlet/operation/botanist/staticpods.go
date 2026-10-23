@@ -409,46 +409,50 @@ func (b *Botanist) appendEtcdCAsToFiles(ctx context.Context, files []extensionsv
 		}
 	}
 
-	if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCD, secretsmanager.Current); found {
-		files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCD, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
-	}
-	if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCD, secretsmanager.Old); found {
-		files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCD, v1beta1constants.OperatingSystemConfigFolderOld))...)
+	maskOldCAsAsCurrent, err := b.mustMaskOldEtcdCAsAsCurrent(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed checking whether old ETCD CAs must be marked as 'current': %w", err)
 	}
 
-	if maskOldPeerCAAsCurrent, err := b.mustMaskOldPeerCAAsCurrent(ctx); err != nil {
-		return nil, fmt.Errorf("failed checking whether old ETCD peer CA must be marked as 'current': %w", err)
-	} else if !maskOldPeerCAAsCurrent {
-		if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Current); found {
-			files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
+	for _, ca := range []struct {
+		name     string
+		basePath string
+	}{
+		{name: v1beta1constants.SecretNameCAETCD, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCD},
+		{name: v1beta1constants.SecretNameCAETCDPeer, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer},
+	} {
+		if !maskOldCAsAsCurrent {
+			if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
+				files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
+			}
+			if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
+				files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderOld))...)
+			}
+		} else {
+			var data map[string][]byte
+			if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
+				data = secret.Data
+			} else if secret, found = b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
+				data = secret.Data
+			}
+			files = append(files, filesForCA(data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
 		}
-		if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Old); found {
-			files = append(files, filesForCA(secret.Data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer, v1beta1constants.OperatingSystemConfigFolderOld))...)
-		}
-	} else {
-		var data map[string][]byte
-		if secret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Old); found {
-			data = secret.Data
-		} else if secret, found = b.SecretsManager.Get(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.Current); found {
-			data = secret.Data
-		}
-		files = append(files, filesForCA(data, filepath.Join(v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
 	}
 
 	return files, nil
 }
 
-func (b *Botanist) mustMaskOldPeerCAAsCurrent(ctx context.Context) (bool, error) {
+func (b *Botanist) mustMaskOldEtcdCAsAsCurrent(ctx context.Context) (bool, error) {
 	// During the Preparing phase of certificate authority rotation, we are rolling out ETCD twice: First, to only
-	// populate the new peer CA (so that all peers know and trust it). Second, to regenerate new peer certificates
-	// (now that all peers know the new CA, we can issue new peer certificates for the members).
-	// gardener-node-agent always uses the current peer CA for signing the peer certificates. If we already
-	// populated the new peer CA in the first rollout, it would already issue these new certificates before all
-	// members know and trust the new peer CA – the peer certificate regeneration should only happen in the second
-	// rollout.
-	// Hence, `maskOldPeerCAAsCurrent` is true in the first rollout only. If so, we put the old peer CA into the
-	// /var/lib/etcd/ca-peer/current folder such that GNA keeps using it for the peer certificates, and only in the
-	// second rollout `maskOldPeerCAAsCurrent` gets false such that GNA uses the new CA and regenerates them.
+	// populate the new CAs (so that all peers and clients know and trust them). Second, to regenerate the peer and
+	// server certificates (now that everyone knows the new CAs, we can issue new certificates signed by them).
+	// gardener-node-agent always signs the peer certificates with the current etcd peer CA and the server
+	// certificate with the current etcd CA. If we already populated the new CAs in the first rollout, GNA would
+	// issue the new certificates before all peers and clients know and trust the new CAs – this regeneration should
+	// only happen in the second rollout.
+	// Hence, the return value is true in the first rollout only. If so, we put the old CAs into the respective
+	// /current folders such that GNA keeps signing with them, and only in the second rollout it gets false such that
+	// GNA uses the new CAs and regenerates the certificates.
 	if !sets.New(
 		gardencorev1beta1.RotationPreparing,
 		gardencorev1beta1.RotationPreparingWithoutWorkersRollout,

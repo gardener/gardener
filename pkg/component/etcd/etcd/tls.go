@@ -38,7 +38,7 @@ func GenerateServerCertificate(
 			CertType:                    secretsutils.ServerClientCert,
 			SkipPublishingCACertificate: true,
 		},
-		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD, signedByCAOptions...),
+		secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD, append([]secretsmanager.SignedByCAOption{secretsmanager.UseCurrentCA}, signedByCAOptions...)...),
 		secretsmanager.Rotate(secretsmanager.InPlace),
 	)
 }
