@@ -30,3 +30,7 @@ var WorkerPoolsForWorkerResource = func(b *Botanist) []gardencorev1beta1.Worker 
 }
 
 var MergeFilesIntoOSC = mergeFilesIntoOSC
+
+var AppendEtcdCAsToFiles = func(b *Botanist, ctx context.Context, files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
+	return b.appendEtcdCAsToFiles(ctx, files)
+}
