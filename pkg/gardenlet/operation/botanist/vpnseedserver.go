@@ -70,3 +70,13 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)
 }
+
+// DestroyVPNServer deletes the vpn-seed-server. During live control plane migration the source no longer serves shoot
+// traffic once it has been handed over to the destination, so its vpn-seed-server is removed during the source cleanup
+// rather than waiting for the source namespace teardown.
+func (b *Botanist) DestroyVPNServer(ctx context.Context) error {
+	if b.Shoot.Components.ControlPlane.VPNSeedServer == nil {
+		return nil
+	}
+	return b.Shoot.Components.ControlPlane.VPNSeedServer.Destroy(ctx)
+}
