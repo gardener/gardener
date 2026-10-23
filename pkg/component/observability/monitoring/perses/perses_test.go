@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -62,6 +63,8 @@ var _ = Describe("Perses", func() {
 
 		fakeOps      *retryfake.Ops
 		containsObjs func(...client.Object) gomegatypes.GomegaMatcher
+		// expectDashboards asserts the deployed dashboard set is exactly expected, naming any missing or extra entry.
+		expectDashboards func(expected ...string)
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -96,6 +99,30 @@ var _ = Describe("Perses", func() {
 		))
 
 		containsObjs = NewManagedResourceContainsObjectsMatcher(fakeClient, comptest.CmpOptsForIstio()...)
+
+		expectDashboards = func(expected ...string) {
+			GinkgoHelper()
+
+			secret := &corev1.Secret{}
+			secret.Name = managedResource.Spec.SecretRefs[0].Name
+			secret.Namespace = namespace
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+			objs, err := managedresources.ExtractObjectsFromSecret(kubernetes.SeedCodec.UniversalDeserializer(), secret)
+			Expect(err).NotTo(HaveOccurred())
+
+			got := sets.New[string]()
+			for _, obj := range objs {
+				if dashboard, ok := obj.(*persesv1alpha2.PersesDashboard); ok {
+					Expect(dashboard.Spec.Config.Panels).NotTo(BeEmpty(), "dashboard %q should have panels", dashboard.Name)
+					got.Insert(dashboard.Name)
+				}
+			}
+
+			want := sets.New(expected...)
+			Expect(got.UnsortedList()).To(ConsistOf(expected),
+				"missing: %v, extra: %v", sets.List(want.Difference(got)), sets.List(got.Difference(want)))
+		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -602,37 +629,15 @@ var _ = Describe("Perses", func() {
 			})
 
 			Context("dashboards", func() {
-				var dashboardNames func() []string
-
-				BeforeEach(func() {
-					dashboardNames = func() []string {
-						secret := &corev1.Secret{}
-						secret.Name = managedResource.Spec.SecretRefs[0].Name
-						secret.Namespace = namespace
-						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-
-						objs, err := managedresources.ExtractObjectsFromSecret(kubernetes.SeedCodec.UniversalDeserializer(), secret)
-						Expect(err).NotTo(HaveOccurred())
-
-						var names []string
-						for _, obj := range objs {
-							if dashboard, ok := obj.(*persesv1alpha2.PersesDashboard); ok {
-								Expect(dashboard.Spec.Config.Panels).NotTo(BeEmpty(), "dashboard %q should have panels", dashboard.Name)
-								names = append(names, dashboard.Name)
-							}
-						}
-						return names
-					}
-				})
-
 				Context("seed cluster", func() {
-					It("should deploy the seed + common dashboards without istio and vpa", func() {
-						names := dashboardNames()
-						Expect(names).To(ContainElements("gardener-resource-usage", "client-go", "controllers"))
-						Expect(names).NotTo(ContainElement(ContainSubstring("istio")))
-						// The common/vpa dashboards must not be deployed when VPA is disabled. Note vpa-misalignments
-						// is a plain seed dashboard, not a common/vpa one, so it is expected to be present.
-						Expect(names).NotTo(ContainElements("vpa-admission-controller", "vpa-recommender", "vpa-updater"))
+					It("should deploy the seed and common dashboards without istio and vpa", func() {
+						expectDashboards(
+							"alerts", "extensions", "fluent-bit", "gardener-resource-usage-by-container", "gardener-resource-usage",
+							"pod-logs", "seed-deployments-replicas", "seed-resource-usage", "shoot-control-plane-resource-usage-overview",
+							"shoot-control-plane-resource-usage", "shoot-operation-duration", "systemd-logs", "vpa-misalignments",
+							"client-go", "controller-details", "controllers", "shoot-control-plane-resource-usage-by-owner-container",
+							"victorialogs", "webhook-details", "webhooks",
+						)
 					})
 				})
 
@@ -643,8 +648,15 @@ var _ = Describe("Perses", func() {
 					})
 
 					It("should additionally deploy the istio and vpa dashboards", func() {
-						names := dashboardNames()
-						Expect(names).To(ContainElements("istio-mesh", "istio-control-plane", "vpa-admission-controller"))
+						expectDashboards(
+							"alerts", "extensions", "fluent-bit", "gardener-resource-usage-by-container", "gardener-resource-usage",
+							"pod-logs", "seed-deployments-replicas", "seed-resource-usage", "shoot-control-plane-resource-usage-overview",
+							"shoot-control-plane-resource-usage", "shoot-operation-duration", "systemd-logs", "vpa-misalignments",
+							"client-go", "controller-details", "controllers", "shoot-control-plane-resource-usage-by-owner-container",
+							"victorialogs", "webhook-details", "webhooks",
+							"istio-control-plane", "istio-ingress-gateway", "istio-mesh", "istio-service", "istio-workload",
+							"vpa-admission-controller", "vpa", "vpa-recommender", "vpa-updater",
+						)
 					})
 				})
 
@@ -652,12 +664,20 @@ var _ = Describe("Perses", func() {
 					BeforeEach(func() {
 						values.IsGardenCluster = true
 						values.IncludeIstioDashboards = true
+						values.VPAEnabled = true
 					})
 
-					It("should deploy the garden + garden-shoot dashboards including istio", func() {
-						names := dashboardNames()
-						Expect(names).To(ContainElements("gardener-controlplane", "apiserver-overview", "virtual-garden-etcd"))
-						Expect(names).To(ContainElements("istio-mesh", "istio-control-plane", "istio-ingress-gateway", "istio-service", "istio-workload"))
+					It("should deploy the garden, garden-shoot, istio and vpa dashboards", func() {
+						expectDashboards(
+							"container-runtime", "garden-alertmanager", "garden-alerts", "garden-availability", "garden-resource",
+							"garden-seed-resource-usage", "gardener-admission-controller", "gardener-admission-controller-seedauthorizer-details",
+							"gardener-controlplane", "kubernetes-pods", "resource-usage-by-container", "shoot-availability", "shoot-details",
+							"shoot-sla", "shoot-sli", "virtual-garden-etcd-backup", "virtual-garden-etcd",
+							"istio-control-plane", "istio-ingress-gateway", "istio-mesh", "istio-service", "istio-workload",
+							"apiserver-overview", "apiserver-request-duration-and-response-size", "apiserver-watch-details",
+							"apiserver-admission-details", "apiserver-request-details", "apiserver-storage-details",
+							"vpa-admission-controller", "vpa", "vpa-recommender", "vpa-updater",
+						)
 					})
 				})
 			})
@@ -693,12 +713,21 @@ var _ = Describe("Perses", func() {
 					dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", false, "perses-garden")
 				})
 
-				It("should only deploy seed-specific datasources", func() {
+				It("should only deploy seed-specific datasources and dashboards", func() {
 					dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-garden")
 					Expect(managedResource).To(containsObjs(
 						dsAggregate,
 						dsSeed,
 					))
+
+					// Seed that is also the garden cluster deploys the seed and common dashboards but skips the garden-seed istio dashboards.
+					expectDashboards(
+						"alerts", "extensions", "fluent-bit", "gardener-resource-usage-by-container", "gardener-resource-usage",
+						"pod-logs", "seed-deployments-replicas", "seed-resource-usage", "shoot-control-plane-resource-usage-overview",
+						"shoot-control-plane-resource-usage", "shoot-operation-duration", "systemd-logs", "vpa-misalignments",
+						"client-go", "controller-details", "controllers", "shoot-control-plane-resource-usage-by-owner-container",
+						"victorialogs", "webhook-details", "webhooks",
+					)
 				})
 			})
 		})
