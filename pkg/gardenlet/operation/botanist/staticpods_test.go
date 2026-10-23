@@ -393,6 +393,8 @@ var _ = Describe("StaticPods", func() {
 					},
 				}
 
+				createCASecret("ca-etcd-current", "etcd-current-crt", "etcd-current-key")
+				createCASecret("ca-etcd-old", "etcd-old-crt", "etcd-old-key")
 				createCASecret("ca-etcd-peer-current", "peer-current-crt", "peer-current-key")
 				createCASecret("ca-etcd-peer-old", "peer-old-crt", "peer-old-key")
 			})
@@ -405,23 +407,28 @@ var _ = Describe("StaticPods", func() {
 					etcdEvents.EXPECT().IsPeerCARolledOut(ctx).Return(false, nil).AnyTimes()
 				})
 
-				It("should mask the old peer CA as current and omit the old folder", func() {
+				It("should mask the old etcd and peer CAs as current and omit the old folders", func() {
 					files, err := AppendEtcdCAsToFiles(botanist, ctx, nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(files).To(ConsistOf(
+						fileWithContent("/var/lib/etcd/ca/current/ca.crt", "etcd-old-crt"),
+						fileWithContent("/var/lib/etcd/ca/current/ca.key", "etcd-old-key"),
 						fileWithContent("/var/lib/etcd/ca-peer/current/ca.crt", "peer-old-crt"),
 						fileWithContent("/var/lib/etcd/ca-peer/current/ca.key", "peer-old-key"),
 					))
 				})
 
-				It("should fall back to the current peer CA when no old one exists", func() {
+				It("should fall back to the current CAs when no old ones exist", func() {
+					Expect(fakeClient.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-old", Namespace: namespace}})).To(Succeed())
 					Expect(fakeClient.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer-old", Namespace: namespace}})).To(Succeed())
 
 					files, err := AppendEtcdCAsToFiles(botanist, ctx, nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(files).To(ConsistOf(
+						fileWithContent("/var/lib/etcd/ca/current/ca.crt", "etcd-current-crt"),
+						fileWithContent("/var/lib/etcd/ca/current/ca.key", "etcd-current-key"),
 						fileWithContent("/var/lib/etcd/ca-peer/current/ca.crt", "peer-current-crt"),
 						fileWithContent("/var/lib/etcd/ca-peer/current/ca.key", "peer-current-key"),
 					))
@@ -429,7 +436,7 @@ var _ = Describe("StaticPods", func() {
 			})
 
 			When("the peer CA rollout is completed for all members", func() {
-				It("should write both the current and old peer CAs", func() {
+				It("should write both the current and old etcd and peer CAs", func() {
 					etcdMain.EXPECT().IsPeerCARolledOut(ctx).Return(true, nil)
 					etcdEvents.EXPECT().IsPeerCARolledOut(ctx).Return(true, nil)
 
@@ -437,6 +444,10 @@ var _ = Describe("StaticPods", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(files).To(ConsistOf(
+						fileWithContent("/var/lib/etcd/ca/current/ca.crt", "etcd-current-crt"),
+						fileWithContent("/var/lib/etcd/ca/current/ca.key", "etcd-current-key"),
+						fileWithContent("/var/lib/etcd/ca/old/ca.crt", "etcd-old-crt"),
+						fileWithContent("/var/lib/etcd/ca/old/ca.key", "etcd-old-key"),
 						fileWithContent("/var/lib/etcd/ca-peer/current/ca.crt", "peer-current-crt"),
 						fileWithContent("/var/lib/etcd/ca-peer/current/ca.key", "peer-current-key"),
 						fileWithContent("/var/lib/etcd/ca-peer/old/ca.crt", "peer-old-crt"),
