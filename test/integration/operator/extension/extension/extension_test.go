@@ -15,6 +15,7 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -316,6 +317,9 @@ var _ = Describe("Extension controller tests", func() {
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
 		garden.Status = operatorv1alpha1.GardenStatus{
+			Gardener: &gardencorev1beta1.Gardener{
+				Version: version.Get().GitVersion,
+			},
 			LastOperation: &gardencorev1beta1.LastOperation{
 				LastUpdateTime: metav1.Now(),
 				State:          gardencorev1beta1.LastOperationStateSucceeded,

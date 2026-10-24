@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -166,6 +165,7 @@ func DeployGardenerResourceManager(
 		bootstrapKubeconfigSecret, err := reconcileGardenerResourceManagerBootstrapKubeconfigSecret(
 			ctx,
 			secretsManager,
+			gardenerResourceManager,
 			namespace,
 			getAPIServerAddress,
 		)
@@ -183,7 +183,7 @@ func DeployGardenerResourceManager(
 		timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForGardenerResourceManagerBootstrapping)
 		defer cancel()
 
-		if err := WaitUntilGardenerResourceManagerBootstrapped(timeoutCtx, c, clock, namespace); err != nil {
+		if err := WaitUntilGardenerResourceManagerBootstrapped(timeoutCtx, c, clock, namespace, gardenerResourceManager); err != nil {
 			return err
 		}
 	}
@@ -202,15 +202,15 @@ func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, 
 		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}
 
-	shootAccessSecret := gardenerutils.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, namespace)
-	if err := c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err != nil {
+	clusterAccessSecret := gardenerResourceManager.NewClusterAccessSecret()
+	if err := c.Get(ctx, client.ObjectKeyFromObject(clusterAccessSecret.Secret), clusterAccessSecret.Secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
 		}
 		return true, nil // Shoot access secret does not yet exist.
 	}
 
-	renewTimestamp, ok := shootAccessSecret.Secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+	renewTimestamp, ok := clusterAccessSecret.Secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
 	if !ok {
 		return true, nil // Shoot access secret was never reconciled yet
 	}
@@ -247,14 +247,14 @@ func mustBootstrapGardenerResourceManager(ctx context.Context, c client.Client, 
 	return false, nil
 }
 
-func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Context, secretsManager secretsmanager.Interface, namespace string, getAPIServerAddress func() string) (*corev1.Secret, error) {
+func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Context, secretsManager secretsmanager.Interface, gardenerResourceManager resourcemanager.Interface, namespace string, getAPIServerAddress func() string) (*corev1.Secret, error) {
 	caBundleSecret, found := secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
 	return secretsManager.Generate(ctx, &secretsutils.ControlPlaneSecretConfig{
-		Name: resourcemanager.SecretNameShootAccess + "-bootstrap",
+		Name: gardenerResourceManager.NewClusterAccessSecret().Secret.Name + "-bootstrap",
 		CertificateSecretConfig: &secretsutils.CertificateSecretConfig{
 			CommonName:                  "gardener.cloud:system:gardener-resource-manager",
 			Organization:                []string{user.SystemPrivilegedGroup},
@@ -273,18 +273,18 @@ func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Conte
 	)
 }
 
-func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.Client, clock clockutils.Clock, namespace string) error {
-	shootAccessSecret := gardenerutils.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, namespace)
+func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.Client, clock clockutils.Clock, namespace string, gardenerResourceManager resourcemanager.Interface) error {
+	clusterAccessSecret := gardenerResourceManager.NewClusterAccessSecret()
 
 	if err := retryutils.Until(ctx, IntervalWaitForGardenerResourceManagerBootstrapping, func(ctx context.Context) (bool, error) {
-		if err2 := c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err2 != nil {
+		if err2 := c.Get(ctx, client.ObjectKeyFromObject(clusterAccessSecret.Secret), clusterAccessSecret.Secret); err2 != nil {
 			if apierrors.IsNotFound(err2) {
 				return retryutils.MinorError(err2)
 			}
 			return retryutils.SevereError(err2)
 		}
 
-		renewTimestamp, ok := shootAccessSecret.Secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+		renewTimestamp, ok := clusterAccessSecret.Secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
 		if !ok {
 			return retryutils.MinorError(errors.New("token not yet generated"))
 		}
