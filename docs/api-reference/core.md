@@ -7065,7 +7065,7 @@ string
 </em>
 </td>
 <td>
-<p>TriggeredTime is the time when maintenance was triggered.</p>
+<p>TriggeredTime is the time when the last maintenance run was triggered. It is set on every maintenance run,<br />including runs that performed no changes.</p>
 </td>
 </tr>
 <tr>
@@ -7089,6 +7089,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>FailureReason holds the information about the last maintenance operation failure reason.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastUpdateTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">Time</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastUpdateTime is the time when maintenance last updated the Shoot spec. It is nil if maintenance<br />has never updated the Shoot spec.</p>
 </td>
 </tr>
 
