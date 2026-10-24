@@ -721,11 +721,14 @@ var _ = Describe("VpnSeedServer", func() {
 			HighAvailabilityNumberOfSeedServers:  2,
 			HighAvailabilityNumberOfShootClients: 1,
 		}
-
-		expectedConfigMap = seedConfigMap(namespace)
 	})
 
 	JustBeforeEach(func() {
+		expectedConfigMap = seedConfigMap(namespace, append(append(append([]net.IPNet{},
+			values.Network.NodeCIDRs...),
+			values.Network.PodCIDRs...),
+			values.Network.ServiceCIDRs...))
+
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
 
@@ -1026,8 +1029,8 @@ var _ = Describe("VpnSeedServer", func() {
 	})
 })
 
-func seedConfigMap(namespace string) *corev1.ConfigMap {
-	envoyConfig, err := envoy.GetEnvoyConfig()
+func seedConfigMap(namespace string, allowedDestinationCIDRs []net.IPNet) *corev1.ConfigMap {
+	envoyConfig, err := envoy.GetEnvoyConfig(allowedDestinationCIDRs)
 	Expect(err).NotTo(HaveOccurred())
 
 	configMap := &corev1.ConfigMap{

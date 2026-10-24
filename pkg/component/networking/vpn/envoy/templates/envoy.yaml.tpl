@@ -20,6 +20,9 @@ static_resources:
         name: envoy.transport_sockets.tls
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          # require_client_certificate ensures that only clients presenting a certificate signed by
+          # the trusted CA (ca-vpn) may use the CONNECT proxy.
+          require_client_certificate: true
           common_tls_context:
             tls_certificates:
             - certificate_chain: { filename: {{ .certChain }} }
@@ -75,6 +78,25 @@ static_resources:
                 name: dynamic_forward_proxy_cache_config
                 dns_lookup_family: {{ .dnsLookupFamily }}
                 max_hosts: 8192
+                # resolved_address_filter restricts the CONNECT proxy to the shoot's own node, pod,
+                # and service networks. It matches on the RESOLVED upstream IP (so it also covers
+                # IP-literal CONNECT targets and resists DNS rebinding). With invert_match: true the
+                # listed CIDRs are the allow-list: any resolved address outside them is removed from
+                # the DNS response, so the connection fails (counter dns_cache.<name>.dns_address_filter_out).
+                # This prevents the proxy from being used as a pivot into seed-adjacent networks.
+                resolved_address_filter:
+                  invert_match: true
+                  {{- if .allowedDestinationCIDRs }}
+                  ranges:
+                  {{- range .allowedDestinationCIDRs }}
+                  - address_prefix: "{{ .Address }}"
+                    prefix_len: {{ .PrefixLen }}
+                  {{- end }}
+                  {{- else }}
+                  # No shoot CIDRs configured: an empty allow-list with invert_match removes every
+                  # resolved address, denying all connections (fail-closed).
+                  ranges: []
+                  {{- end }}
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -132,6 +154,19 @@ static_resources:
           name: dynamic_forward_proxy_cache_config
           dns_lookup_family: {{ .dnsLookupFamily }}
           max_hosts: 8192
+          # Must stay identical to the dns_cache_config on the dynamic_forward_proxy HTTP filter
+          # (same named cache). See the resolved_address_filter explanation there.
+          resolved_address_filter:
+            invert_match: true
+            {{- if .allowedDestinationCIDRs }}
+            ranges:
+            {{- range .allowedDestinationCIDRs }}
+            - address_prefix: "{{ .Address }}"
+              prefix_len: {{ .PrefixLen }}
+            {{- end }}
+            {{- else }}
+            ranges: []
+            {{- end }}
   - name: prometheus_stats
     connect_timeout: 0.25s
     type: static
