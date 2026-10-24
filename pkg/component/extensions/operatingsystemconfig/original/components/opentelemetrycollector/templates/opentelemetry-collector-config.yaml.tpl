@@ -34,7 +34,7 @@ receivers:
     # Due to this, it is required we filter based on the '_SYSTEMD_UNIT' field.
     # We can then rely on it to set the 'resource.unit' field correctly.
     # TODO(rrhubenov): Reimplement this using the 'identifier' field once
-    # we move from 'Vali' to 'VictoriaLogs'. Revisit whether 
+    # we move from 'Vali' to 'VictoriaLogs'. Revisit whether
     # - we still want to call the field 'unit'
     # - we can remove the '-service' suffix
     operators:
@@ -48,6 +48,10 @@ receivers:
       - type: move
         from: body._HOSTNAME
         to: resource.nodename
+        # TODO(iypetrov): Keep just 'k8s.node.name' once we move from 'Vali' to 'VictoriaLogs'.
+      - type: copy
+        from: resource.nodename
+        to: resource.k8s.node.name
       - type: move
         from: body.MESSAGE
         to: body
