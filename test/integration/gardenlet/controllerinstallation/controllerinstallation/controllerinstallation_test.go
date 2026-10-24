@@ -720,17 +720,29 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 						Region:           "foo-region",
 						Provider: gardencorev1beta1.Provider{
 							Type: "foo-provider",
-							Workers: []gardencorev1beta1.Worker{{
-								Name:    "control-plane",
-								Minimum: 1,
-								Maximum: 1,
-								Machine: gardencorev1beta1.Machine{
-									Type:  "large",
-									Image: &gardencorev1beta1.ShootMachineImage{Name: "gardenlinux", Version: new("1.0.0")},
+							Workers: []gardencorev1beta1.Worker{
+								{
+									Name:    "control-plane",
+									Minimum: 1,
+									Maximum: 1,
+									Machine: gardencorev1beta1.Machine{
+										Type:  "large",
+										Image: &gardencorev1beta1.ShootMachineImage{Name: "gardenlinux", Version: new("1.0.0")},
+									},
+									Zones:        []string{"zone-a"},
+									ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
 								},
-								Zones:        []string{"zone-a"},
-								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
-							}},
+								{
+									Name:    "worker",
+									Minimum: 1,
+									Maximum: 1,
+									Machine: gardencorev1beta1.Machine{
+										Type:  "large",
+										Image: &gardencorev1beta1.ShootMachineImage{Name: "gardenlinux", Version: new("1.0.0")},
+									},
+									Zones: []string{"zone-a"},
+								},
+							},
 						},
 						Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
 						Networking: &gardencorev1beta1.Networking{Type: new("foo-networking")},

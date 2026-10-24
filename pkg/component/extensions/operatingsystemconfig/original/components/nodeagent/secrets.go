@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -26,7 +27,7 @@ func OperatingSystemConfigSecret(
 	seedClient client.Client,
 	osc *extensionsv1alpha1.OperatingSystemConfig,
 	secretName string,
-	workerPoolName string,
+	worker gardencorev1beta1.Worker,
 	resolveSecretRefs bool,
 ) (
 	*corev1.Secret,
@@ -76,16 +77,21 @@ func OperatingSystemConfigSecret(
 		return nil, fmt.Errorf("failed encoding OperatingSystemConfig: %w", err)
 	}
 
+	annotations := map[string]string{
+		nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: utils.ComputeSHA256Hex(operatingSystemConfigRaw),
+	}
+	if worker.ControlPlane != nil {
+		annotations[v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation] = "true"
+	}
+
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: metav1.NamespaceSystem,
-			Annotations: map[string]string{
-				nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: utils.ComputeSHA256Hex(operatingSystemConfigRaw),
-			},
+			Name:        secretName,
+			Namespace:   metav1.NamespaceSystem,
+			Annotations: annotations,
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:      v1beta1constants.GardenRoleOperatingSystemConfig,
-				v1beta1constants.LabelWorkerPool: workerPoolName,
+				v1beta1constants.LabelWorkerPool: worker.Name,
 			},
 		},
 		Data: map[string][]byte{nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig: operatingSystemConfigRaw},
