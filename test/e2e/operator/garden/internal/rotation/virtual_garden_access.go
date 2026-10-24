@@ -22,8 +22,8 @@ type clients struct {
 
 // VirtualGardenAccessVerifier uses the various access methods to access the virtual garden.
 type VirtualGardenAccessVerifier struct {
-	RuntimeClient client.Client
-	Namespace     string
+	GetRuntimeClient func() client.Client
+	Namespace        string
 
 	clientsBefore, clientsPrepared, clientsAfter clients
 }
@@ -31,7 +31,7 @@ type VirtualGardenAccessVerifier struct {
 // Before is called before the rotation is started.
 func (v *VirtualGardenAccessVerifier) Before(ctx context.Context) {
 	var err error
-	v.clientsBefore.accessSecret, err = kubernetes.NewClientFromSecret(ctx, v.RuntimeClient, v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
+	v.clientsBefore.accessSecret, err = kubernetes.NewClientFromSecret(ctx, v.GetRuntimeClient(), v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Request new client certificate and using it to access virtual garden")
@@ -77,7 +77,7 @@ func (v *VirtualGardenAccessVerifier) AfterPrepared(ctx context.Context) {
 	}).Should(Succeed())
 
 	var err error
-	v.clientsPrepared.accessSecret, err = kubernetes.NewClientFromSecret(ctx, v.RuntimeClient, v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
+	v.clientsPrepared.accessSecret, err = kubernetes.NewClientFromSecret(ctx, v.GetRuntimeClient(), v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Request new client certificate and using it to access target cluster")
@@ -127,7 +127,7 @@ func (v *VirtualGardenAccessVerifier) AfterCompleted(ctx context.Context) {
 	}).Should(Succeed())
 
 	var err error
-	v.clientsAfter.accessSecret, err = kubernetes.NewClientFromSecret(ctx, v.RuntimeClient, v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
+	v.clientsAfter.accessSecret, err = kubernetes.NewClientFromSecret(ctx, v.GetRuntimeClient(), v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Request new client certificate and using it to access target cluster")
@@ -153,7 +153,7 @@ func (v *VirtualGardenAccessVerifier) AfterCompleted(ctx context.Context) {
 
 // Cleanup is passed to ginkgo.DeferCleanup.
 func (v *VirtualGardenAccessVerifier) Cleanup(ctx context.Context) {
-	virtualGardenClient, err := kubernetes.NewClientFromSecret(ctx, v.RuntimeClient, v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
+	virtualGardenClient, err := kubernetes.NewClientFromSecret(ctx, v.GetRuntimeClient(), v.Namespace, "gardener", kubernetes.WithDisabledCachedClient())
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Clean up objects in virtual garden from client certificate access")

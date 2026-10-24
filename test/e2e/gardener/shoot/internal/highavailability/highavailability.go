@@ -30,20 +30,20 @@ import (
 // VerifyHighAvailability verifies the high-availability settings of a shoot cluster. It checks the topology spread
 // constraints, ETCD affinity, and envoy filters to ensure the shoot cluster is correctly updated to high-availability
 // configuration.
-func VerifyHighAvailability(s *ShootContext) {
+func VerifyHighAvailability(tc *ShootContext) {
 	GinkgoHelper()
 
 	Describe("verify high-availability", func() {
 		It("should verify the topology spread constraints", func(ctx SpecContext) {
-			verifyTopologySpreadConstraints(ctx, s.SeedKomega, s.Shoot.Status.TechnicalID, s.Shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
+			verifyTopologySpreadConstraints(ctx, tc.SeedKomega, tc.Shoot.Status.TechnicalID, tc.Shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
 		}, SpecTimeout(time.Minute))
 
 		It("should verify the ETCD affinity", func(ctx SpecContext) {
-			verifyETCDAffinity(ctx, s.SeedClient, s.Shoot.Status.TechnicalID, s.Shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
+			verifyETCDAffinity(ctx, tc.SeedClient, tc.Shoot.Status.TechnicalID, tc.Shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
 		}, SpecTimeout(time.Minute))
 
 		It("should verify the envoy filters", func(ctx SpecContext) {
-			verifyEnvoyFilters(ctx, s.SeedClient, s.Shoot.Status.TechnicalID)
+			verifyEnvoyFilters(ctx, tc.SeedClient, tc.Shoot.Status.TechnicalID)
 		}, SpecTimeout(time.Minute))
 	})
 }

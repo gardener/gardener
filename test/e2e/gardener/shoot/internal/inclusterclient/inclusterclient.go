@@ -59,10 +59,10 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 // - one pod disables injection and relies on the default service link env vars
 // - one pod explicitly overwrites the env var
 // See docs/usage/networking/shoot_kubernetes_service_host_injection.md and https://github.com/gardener/enhancements/tree/main/geps/0008-shoot-apiserver-via-sni
-func VerifyInClusterAccessToAPIServer(s *ShootContext) {
+func VerifyInClusterAccessToAPIServer(tc *ShootContext) {
 	GinkgoHelper()
 
-	if gardencorev1beta1.IsIPv6SingleStack(s.Shoot.Spec.Networking.IPFamilies) && len(s.Shoot.Spec.Provider.Workers) > 1 {
+	if gardencorev1beta1.IsIPv6SingleStack(tc.Shoot.Spec.Networking.IPFamilies) && len(tc.Shoot.Spec.Provider.Workers) > 1 {
 		// On local IPv6 single-stack clusters, the in-cluster DNS resolution can fail if it requires cross-node pod-to-pod
 		// communication, see https://github.com/gardener/gardener/pull/11287#discussion_r1950320268 and
 		// https://github.com/gardener/gardener/pull/11148#issuecomment-2653202171.
@@ -73,11 +73,11 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 
 	Describe("in-cluster access to API server", func() {
 		It("should create test objects", func(ctx SpecContext) {
-			Expect(s.ShootClient).NotTo(BeNil(), "ItShouldInitializeShootClient should be called first")
+			Expect(tc.ShootClient).NotTo(BeNil(), "ItShouldInitializeShootClient should be called first")
 
 			for _, obj := range getRBACObjects() {
 				Eventually(ctx, func() error {
-					return s.ShootClient.Create(ctx, obj)
+					return tc.ShootClient.Create(ctx, obj)
 				}).Should(Or(Succeed(), BeAlreadyExistsError()), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
 			}
 		}, SpecTimeout(time.Minute))
@@ -88,19 +88,19 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 		)
 
 		It("should create test pods", func(ctx SpecContext) {
-			pods = getPods(s.Shoot.Spec.Kubernetes.Version)
+			pods = getPods(tc.Shoot.Spec.Kubernetes.Version)
 			podNames = make(map[string]string, len(pods))
 
 			for _, pod := range pods {
 				Eventually(ctx, func(g Gomega) {
 					// if pod has already been created, delete it and try again with a new generated name
 					if pod.Name != "" {
-						g.Expect(s.ShootClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
+						g.Expect(tc.ShootClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
 						pod.Name = ""
 						pod.ResourceVersion = ""
 					}
 
-					g.Expect(s.ShootClient.Create(ctx, pod)).To(Succeed())
+					g.Expect(tc.ShootClient.Create(ctx, pod)).To(Succeed())
 					podNames[pod.GenerateName] = pod.Name
 
 					if pod.Labels[resourcesv1alpha1.KubernetesServiceHostInject] != "disable" {
@@ -120,7 +120,7 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 		It("should wait for test pods to be ready", func(ctx SpecContext) {
 			for _, pod := range pods {
 				Eventually(ctx, func(g Gomega) {
-					g.Expect(s.ShootKomega.Get(pod)()).To(Succeed())
+					g.Expect(tc.ShootKomega.Get(pod)()).To(Succeed())
 					g.Expect(health.IsPodReady(pod)).To(BeTrue())
 				}).Should(Succeed(), "pod %q should get ready", client.ObjectKeyFromObject(pod))
 			}
@@ -128,33 +128,33 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 
 		It("should access the API server via direct path", func(ctx SpecContext) {
 			// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
-			expectedAddress := getInternalAPIServerAddress(s.Shoot)
-			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameDirect], expectedAddress, *s.Shoot.Status.ClusterIdentity)
+			expectedAddress := getInternalAPIServerAddress(tc.Shoot)
+			verifyAccessFromPod(ctx, tc.ShootClientSet, podNames[podNameDirect], expectedAddress, *tc.Shoot.Status.ClusterIdentity)
 		}, SpecTimeout(time.Minute))
 
 		It("should access the API server via the kubernetes service's clusterIP", func(ctx SpecContext) {
 			// this pod connects via the API server proxy using the KUBERNETES_SERVICE_HOST env var injected by kubelet, i.e.,
 			// via the clusterIP of kubernetes.default.svc.cluster.local
-			expectedAddress := getInClusterAPIServerAddress(ctx, s)
-			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyIP], expectedAddress, *s.Shoot.Status.ClusterIdentity)
+			expectedAddress := getInClusterAPIServerAddress(ctx, tc)
+			verifyAccessFromPod(ctx, tc.ShootClientSet, podNames[podNameAPIServerProxyIP], expectedAddress, *tc.Shoot.Status.ClusterIdentity)
 		}, SpecTimeout(time.Minute))
 
 		It("should access the API server via the kubernetes service's hostname", func(ctx SpecContext) {
 			// this pod connects via the API server proxy via the kubernetes.default.svc.cluster.local hostname
-			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyHostname], "https://kubernetes.default.svc.cluster.local:443", *s.Shoot.Status.ClusterIdentity)
+			verifyAccessFromPod(ctx, tc.ShootClientSet, podNames[podNameAPIServerProxyHostname], "https://kubernetes.default.svc.cluster.local:443", *tc.Shoot.Status.ClusterIdentity)
 		}, SpecTimeout(time.Minute))
 
 		AfterAll(func(ctx SpecContext) {
 			By("Clean up test objects")
 			for _, obj := range getRBACObjects() {
 				Eventually(ctx, func() error {
-					return s.ShootClient.Delete(ctx, obj)
+					return tc.ShootClient.Delete(ctx, obj)
 				}).Should(Or(Succeed(), BeNotFoundError()), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
 			}
 
 			By("Clean up test pods")
 			Eventually(ctx, func() error {
-				return s.ShootClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels(labels))
+				return tc.ShootClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels(labels))
 			}).Should(Succeed(), "should delete all test pods")
 		}, NodeTimeout(time.Minute))
 	})
@@ -192,11 +192,11 @@ func getInternalAPIServerAddress(shoot *gardencorev1beta1.Shoot) string {
 	return address + ":443"
 }
 
-func getInClusterAPIServerAddress(ctx context.Context, s *ShootContext) string {
+func getInClusterAPIServerAddress(ctx context.Context, tc *ShootContext) string {
 	GinkgoHelper()
 
 	service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kubernetes", Namespace: metav1.NamespaceDefault}}
-	Eventually(ctx, s.ShootKomega.Get(service)).Should(Succeed())
+	Eventually(ctx, tc.ShootKomega.Get(service)).Should(Succeed())
 
 	clusterIP := service.Spec.ClusterIP
 	Expect(clusterIP).NotTo(BeEmpty(), "kubernetes service should have a ClusterIP")
