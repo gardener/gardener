@@ -82,6 +82,14 @@ case "$COMMAND" in
         exit 1
       fi
 
+      # Generate the discovery-server TLS certificate that operator-up injects into the operator chart.  
+      # On the regular kind-based setup this is done by kind.sh, but the gardenadm connect scenario brings
+      # the cluster up via gind.sh, which does not. The script is idempotent and skips generation if certs exist.
+      "$(dirname "$0")/../hack/generate-certs.sh" \
+        "$(dirname "$0")/../dev/garden/discovery-server" \
+        "discovery.local.gardener.cloud" \
+        "DNS:localhost,DNS:discovery.local.gardener.cloud,IP:127.0.0.1"
+
       make operator-up garden-up \
         -f "$(dirname "$0")/../Makefile" \
         KUBECONFIG="$garden_runtime_cluster_kubeconfig"
