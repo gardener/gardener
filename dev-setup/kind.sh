@@ -198,7 +198,13 @@ EOF
     for path_kubeconfig in "${KUBECONFIG_SEED_CLUSTER:-}" "${KUBECONFIG_SEED2_CLUSTER:-}" "${KUBECONFIG_SEED_SECRET_PATH:-}"; do
       [[ -z "$path_kubeconfig" ]] && continue
 
-      if [[ "$(realpath "$KUBECONFIG")" != "$(realpath "$path_kubeconfig")" ]]; then
+      # Copy only when:
+      # - source and dest are different files (avoid cp file onto itself)
+      # - dest is seed/kubeconfig only if source is runtime/kubeconfig (owned by kind-up)
+      # - dest is seed2/kubeconfig only if source is seed2/kubeconfig (owned by kind2-up)
+      if [[ "$(realpath "$KUBECONFIG")" != "$(realpath "$path_kubeconfig")" ]] && \
+         ! { [[ -n "${KUBECONFIG_SEED_CLUSTER:-}"  && "$(realpath "$path_kubeconfig")" == "$(realpath "$KUBECONFIG_SEED_CLUSTER")"  && ( -z "${KUBECONFIG_RUNTIME_CLUSTER:-}" || "$(realpath "$KUBECONFIG")" != "$(realpath "$KUBECONFIG_RUNTIME_CLUSTER")" ) ]]; } && \
+         ! { [[ -n "${KUBECONFIG_SEED2_CLUSTER:-}" && "$(realpath "$path_kubeconfig")" == "$(realpath "$KUBECONFIG_SEED2_CLUSTER")" && "$(realpath "$KUBECONFIG")" != "$(realpath "$KUBECONFIG_SEED2_CLUSTER")" ]]; }; then
         cp "$KUBECONFIG" "$path_kubeconfig"
       fi
       # Replace 127.0.0.1 in the kind cluster kubeconfig with  the container name of the Docker container for the second
@@ -206,13 +212,13 @@ EOF
       # cluster as Seed). `gardener-operator` will read this kubeconfig when attempting to deploy `gardenlet` into it.
       # Since `gardener-operator` runs in a pod, 127.0.0.1 would not work to communicate with the second kind cluster - but
       # the Docker container name is resolvable.
-      if [[ "$path_kubeconfig" == *"seed-local2"* ]]; then
+      if [[ "$path_kubeconfig" == *"seed-local2"* ]] && [[ -f "$path_kubeconfig" ]]; then
         sed "s/127\.0\.0\.1:[0-9]\+/gardener-local2-control-plane:6443/g" "$path_kubeconfig" > "${path_kubeconfig}-gardener-operator"
       fi
 
       # Prepare a kubeconfig that can be used by provider-local as the provider credentials to always talk to the "main" kind cluster cluster.
       # See docs/extensions/provider-local.md#credentials.
-      if [[ "$CLUSTER_NAME" == "gardener-local" ]] ; then
+      if [[ "$CLUSTER_NAME" == "gardener-local" ]] && [[ -f "$path_kubeconfig" ]]; then
         sed "s/\(127\.0\.0\.1\|\[::1\]\):[0-9]\+/$CLUSTER_NAME-control-plane:6443/g" "$path_kubeconfig" > "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig"
         cp "$(dirname "$0")/gardenconfig/components/credentials/secret-project-garden/kubeconfig/kubeconfig" "$(dirname "$0")/gardenconfig/components/credentials/secret-project-local/kubeconfig/kubeconfig"
       fi
