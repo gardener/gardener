@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -175,6 +176,107 @@ var _ = Describe("Restore", func() {
 			Expect(b.FinalizeGardenerNodeAgentManagedResource(ctx, fakeClient)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+		})
+	})
+
+	Describe("#ScaleDownGardenlet", func() {
+		const gardenletName = "gardenlet"
+
+		gardenletDeployment := func(replicas int32) *appsv1.Deployment {
+			return &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gardenletName,
+					Namespace: oscSecretNamespace,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "gardenlet", Image: "gardenlet:latest"}}},
+					},
+				},
+			}
+		}
+
+		gardenletPod := func(name string) *corev1.Pod {
+			return &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: oscSecretNamespace,
+					Labels:    map[string]string{"app": "gardener", "role": "gardenlet"},
+				},
+			}
+		}
+
+		It("should be a no-op when the gardenlet Deployment does not exist", func(ctx SpecContext) {
+			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should scale down the gardenlet Deployment to zero replicas", func(ctx SpecContext) {
+			Expect(fakeClient.Create(ctx, gardenletDeployment(2))).To(Succeed())
+
+			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
+
+			dep := &appsv1.Deployment{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, dep)).To(Succeed())
+			Expect(dep.Spec.Replicas).To(Equal(new(int32(0))))
+		})
+
+		It("should force-delete gardenlet Pods", func(ctx SpecContext) {
+			Expect(fakeClient.Create(ctx, gardenletDeployment(2))).To(Succeed())
+			pod1 := gardenletPod("gardenlet-abc")
+			pod2 := gardenletPod("gardenlet-def")
+			otherPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "other-pod", Namespace: oscSecretNamespace, Labels: map[string]string{"app": "other"}},
+			}
+			Expect(fakeClient.Create(ctx, pod1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, pod2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, otherPod)).To(Succeed())
+
+			Expect(b.ScaleDownGardenlet(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod1), &corev1.Pod{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pod2), &corev1.Pod{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(otherPod), &corev1.Pod{})).To(Succeed())
+		})
+	})
+
+	Describe("#ScaleUpGardenlet", func() {
+		const gardenletName = "gardenlet"
+
+		It("should be a no-op when the Deployment does not exist", func(ctx SpecContext) {
+			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should scale up the gardenlet Deployment to 2 replicas", func(ctx SpecContext) {
+			dep := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       gardenletName,
+					Namespace:  oscSecretNamespace,
+					Generation: 1,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(0)),
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+						Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "gardenlet", Image: "gardenlet:latest"}}},
+					},
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: 1,
+					Replicas:           2,
+					AvailableReplicas:  2,
+				},
+			}
+			Expect(fakeClient.Create(ctx, dep)).To(Succeed())
+
+			Expect(b.ScaleUpGardenlet(ctx, fakeClient)).To(Succeed())
+
+			got := &appsv1.Deployment{}
+			Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: oscSecretNamespace, Name: gardenletName}, got)).To(Succeed())
+			Expect(got.Spec.Replicas).To(Equal(new(int32(2))))
 		})
 	})
 

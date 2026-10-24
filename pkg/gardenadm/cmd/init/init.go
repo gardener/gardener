@@ -432,17 +432,29 @@ func BootstrapControlPlane(ctx context.Context, opts *Options, backupDataPath, p
 		// For `gardenadm restore` these cleanups run after the connection to the control plane is established and
 		// before the bootstrap secrets are imported. They are skipped for `gardenadm init` (nothing was restored, so
 		// b.IsRestore is false even on an init retry) and when a kubeconfig already exists locally (a retried restore,
-		// where the OperatingSystemConfig Secret was not recomputed).
+		// where the OperatingSystemConfig Secret was not recomputed). ScaleDownGardenlet is intentionally not part of
+		// this group — it must run on every restore invocation, including retries.
 		cleanUpStaleRestoredResources = g.AddGroup(b.CleanUpStaleRestoredResourcesTaskGroup(&clientSet, priorNodeName).
 						WithDependencies(initializeClientSet).
 						SkipIf(kubeconfigFileExists || !b.IsRestore))
+		// Scale down gardenlet on every restore invocation (including retries where kubeconfigFileExists=true) so
+		// that gardenlet cannot interfere with the restore flow. This must not be part of
+		// CleanUpStaleRestoredResourcesTaskGroup because that group is skipped on retries.
+		scaleDownGardenlet = g.Add(flow.Task{
+			Name: "Scaling down gardenlet to prevent interference with restore",
+			Fn: func(ctx context.Context) error {
+				return b.ScaleDownGardenlet(ctx, clientSet.Client())
+			},
+			SkipIf:       !b.IsRestore,
+			Dependencies: flow.NewTaskIDs(initializeClientSet),
+		})
 		importSecrets = g.Add(flow.Task{
 			Name: "Importing secrets into control plane",
 			Fn: func(ctx context.Context) error {
 				return b.MigrateSecrets(ctx, b.SeedClientSet.Client(), clientSet.Client())
 			},
 			SkipIf:       kubeconfigFileExists && !b.Shoot.IsRestorePhase(),
-			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet, cleanUpStaleRestoredResources),
+			Dependencies: flow.NewTaskIDs(persistBootstrapSecrets, initializeClientSet, cleanUpStaleRestoredResources, scaleDownGardenlet),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deleting temporary ShootState containing bootstrap secrets",

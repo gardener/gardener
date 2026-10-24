@@ -11,12 +11,16 @@ import (
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -164,6 +168,68 @@ func (b *GardenadmBotanist) DeleteStaleEtcdMemberLeases(ctx context.Context, rea
 				return fmt.Errorf("failed clearing status members of Etcd %s: %w", client.ObjectKeyFromObject(&etcd), err)
 			}
 		}
+	}
+
+	return nil
+}
+
+// ScaleDownGardenlet scales the gardenlet Deployment restored from the ETCD snapshot to zero replicas and force-deletes
+// its Pods so that gardenlet cannot interfere with the restore flow. If the gardenlet Deployment does not exist (e.g.
+// the snapshot predates `gardenadm connect`), the function is a no-op.
+func (b *GardenadmBotanist) ScaleDownGardenlet(ctx context.Context, realClient client.Client) error {
+	gardenletKey := client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenlet}
+
+	deployment := &appsv1.Deployment{}
+	if err := realClient.Get(ctx, gardenletKey, deployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed getting gardenlet Deployment: %w", err)
+	}
+
+	b.Logger.Info("Scaling down gardenlet Deployment to prevent interference with restore", "deployment", gardenletKey, "previousReplicas", ptr.Deref(deployment.Spec.Replicas, 1))
+	if err := kubernetesutils.ScaleDeployment(ctx, realClient, gardenletKey, 0); err != nil {
+		return fmt.Errorf("failed scaling down gardenlet Deployment: %w", err)
+	}
+
+	b.Logger.Info("Force deleting gardenlet Pods", "deployment", gardenletKey)
+	if err := realClient.DeleteAllOf(ctx, &corev1.Pod{},
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
+		client.MatchingLabels(deployment.Spec.Selector.MatchLabels),
+		&client.DeleteAllOfOptions{DeleteOptions: client.DeleteOptions{
+			GracePeriodSeconds: new(int64(0)),
+			PropagationPolicy:  new(metav1.DeletePropagationBackground),
+		}},
+	); err != nil {
+		return fmt.Errorf("failed force deleting gardenlet Pods: %w", err)
+	}
+
+	return nil
+}
+
+// ScaleUpGardenlet scales the gardenlet Deployment back to 2 replicas after the restore completes and waits until the
+// Deployment is available. It is a no-op when the Deployment does not exist (e.g. the snapshot predates `gardenadm
+// connect`).
+func (b *GardenadmBotanist) ScaleUpGardenlet(ctx context.Context, realClient client.Client) error {
+	gardenletKey := client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenlet}
+
+	if err := realClient.Get(ctx, gardenletKey, &appsv1.Deployment{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed getting gardenlet Deployment: %w", err)
+	}
+
+	var replicas int32 = 2
+
+	b.Logger.Info("Scaling up gardenlet Deployment after restore", "deployment", gardenletKey, "replicas", replicas)
+	if err := kubernetesutils.ScaleDeployment(ctx, realClient, gardenletKey, replicas); err != nil {
+		return fmt.Errorf("failed scaling up gardenlet Deployment: %w", err)
+	}
+
+	b.Logger.Info("Waiting until gardenlet Deployment is available", "deployment", gardenletKey)
+	if err := kubernetesutils.WaitUntilDeploymentScaledToDesiredReplicas(ctx, realClient, gardenletKey, replicas); err != nil {
+		return fmt.Errorf("failed waiting for gardenlet Deployment to become available: %w", err)
 	}
 
 	return nil

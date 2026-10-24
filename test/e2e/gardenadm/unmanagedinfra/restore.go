@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -260,6 +261,12 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			By("Verify the Shoot UID was preserved across recovery")
 			Expect(shootInfo.Data).To(HaveKeyWithValue("statusUID", gardenUID),
 				"the shoot-info statusUID should match the garden Shoot .status.uid after recovery")
+
+			By("Verify gardenlet was scaled back to 2 replicas after restore")
+			gardenletDep := &appsv1.Deployment{}
+			Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "gardenlet"}, gardenletDep)).To(Succeed())
+			Expect(gardenletDep.Status.AvailableReplicas).To(Equal(int32(2)),
+				"gardenlet Deployment should have 2 available replicas after restore")
 
 			log.Info("The control plane Node was successfully restored", "shootUID", gardenUID)
 		}, SpecTimeout(5*time.Minute))
