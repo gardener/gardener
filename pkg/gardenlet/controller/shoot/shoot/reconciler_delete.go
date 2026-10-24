@@ -614,6 +614,12 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilKubeAPIServerDeleted),
 		})
+		destroyPriorExternalDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Destroying prior external domain DNS record",
+			Fn:           botanist.DestroyPriorExternalDNSRecord,
+			SkipIf:       !nonTerminatingNamespace,
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilKubeAPIServerDeleted),
+		})
 
 		syncPointControlPlaneDown = flow.NewTaskIDs(
 			waitUntilKubeAPIServerDeleted,
@@ -622,6 +628,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			waitUntilExtensionResourcesDeleted,
 			destroyIngressDomainDNSRecord,
 			destroyExternalDomainDNSRecord,
+			destroyPriorExternalDomainDNSRecord,
 			waitUntilInfrastructureDeleted,
 		)
 
