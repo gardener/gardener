@@ -301,6 +301,9 @@ func GetOverallLatestVersionForAutoUpdate(versions []gardencorev1beta1.Expirable
 // getVersionForAutoUpdate finds the latest eligible version higher than a given <currentVersion> from a slice of versions.
 // Versions <= the current version, preview and expired versions do not qualify for patch updates.
 // First tries to find a non-deprecated version.
+// If none is found and the current version is itself already deprecated or expired (i.e. it has to be moved away
+// from regardless), also considers deprecated versions. A current version that is still supported or in preview is
+// never auto-updated to a deprecated version, since that would downgrade its classification without any need to do so.
 // In case no newer patch version is found, returns false and an empty string. Otherwise, returns true and the found version.
 func getVersionForAutoUpdate(versions []gardencorev1beta1.ExpirableVersion, currentSemVerVersion *semver.Version, predicates []VersionPredicate) (bool, string, error) {
 	versionPredicates := append([]VersionPredicate{FilterExpiredVersion(), FilterSameVersion(*currentSemVerVersion), FilterLowerVersion(*currentSemVerVersion)}, predicates...)
@@ -314,6 +317,10 @@ func getVersionForAutoUpdate(versions []gardencorev1beta1.ExpirableVersion, curr
 		return true, latestNonDeprecatedImageVersion.Version, nil
 	}
 
+	if !currentVersionQualifiesForDeprecatedFallback(versions, currentSemVerVersion) {
+		return false, "", nil
+	}
+
 	// otherwise, also consider deprecated versions
 	qualifyingVersionFound, latestVersion, err := GetLatestQualifyingVersion(versions, versionPredicates...)
 	if err != nil {
@@ -325,6 +332,25 @@ func getVersionForAutoUpdate(versions []gardencorev1beta1.ExpirableVersion, curr
 	}
 
 	return true, latestVersion.Version, nil
+}
+
+// currentVersionQualifiesForDeprecatedFallback reports whether the auto-update logic is allowed to fall back to a
+// deprecated version because no non-deprecated qualifying version could be found. This is only the case if the
+// current version itself is not currently supported or in preview, i.e. it already has to be moved away from. If the
+// current version cannot be found in the given versions (e.g. it was removed from the CloudProfile), it is treated
+// as if it needs to be moved away from as well.
+func currentVersionQualifiesForDeprecatedFallback(versions []gardencorev1beta1.ExpirableVersion, currentSemVerVersion *semver.Version) bool {
+	for _, version := range versions {
+		semVerVersion, err := semver.NewVersion(version.Version)
+		if err != nil || !semVerVersion.Equal(currentSemVerVersion) {
+			continue
+		}
+
+		classification := CurrentLifecycleClassification(version)
+		return classification != gardencorev1beta1.ClassificationSupported && classification != gardencorev1beta1.ClassificationPreview
+	}
+
+	return true
 }
 
 // GetVersionForForcefulUpdateToConsecutiveMinor finds a version from a slice of expirable versions that qualifies for a minor level update given a <currentVersion>.
