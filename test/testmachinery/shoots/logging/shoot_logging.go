@@ -6,6 +6,7 @@ package logging
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -55,14 +56,22 @@ var _ = ginkgo.Describe("Shoot logging testing", func() {
 
 	framework.CBeforeEach(func(ctx context.Context) {
 
-		checkRequiredResources(ctx, shootFramework.SeedClient)
+		fluentBitPresent, err := isFluentBitPresent(ctx, shootFramework.SeedClient)
+		if err != nil || !fluentBitPresent {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		}
+
+		valiPresent, err := isValiPresent(ctx, shootFramework.SeedClient.Client())
+		if err != nil || !valiPresent {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		}
 
 		// Get shoot namespace name
 		shootNamespace.Name = shootFramework.ShootSeedNamespace()
 
 		seedClient := shootFramework.SeedClient.Client()
 		// Set label to the testing namespace
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx,
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx,
 			seedClient, shootNamespace,
 			func() error {
 				metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
