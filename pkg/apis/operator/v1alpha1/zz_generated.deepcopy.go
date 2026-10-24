@@ -74,6 +74,21 @@ func (in *AuditWebhook) DeepCopyInto(out *AuditWebhook) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.TruncateEnabled != nil {
+		in, out := &in.TruncateEnabled, &out.TruncateEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.TruncateMaxBatchSize != nil {
+		in, out := &in.TruncateMaxBatchSize, &out.TruncateMaxBatchSize
+		*out = new(int64)
+		**out = **in
+	}
+	if in.TruncateMaxEventSize != nil {
+		in, out := &in.TruncateMaxEventSize, &out.TruncateMaxEventSize
+		*out = new(int64)
+		**out = **in
+	}
 	if in.Version != nil {
 		in, out := &in.Version, &out.Version
 		*out = new(string)
