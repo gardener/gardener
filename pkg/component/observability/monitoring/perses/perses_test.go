@@ -174,6 +174,9 @@ var _ = Describe("Perses", func() {
 								Enable: true,
 							},
 						},
+						Plugin: persesconfig.Plugin{
+							Disabled: []string{"ClickHouse", "GreptimeDB", "Jaeger", "Loki", "OpenSearch", "Pyroscope", "Splunk", "Tempo"},
+						},
 					},
 				},
 				Replicas:      new(int32(1)),

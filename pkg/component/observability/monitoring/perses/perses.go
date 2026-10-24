@@ -63,6 +63,10 @@ func (p *perses) perses() *persesv1alpha2.Perses {
 							Enable: true,
 						},
 					},
+					// Disable bundled datasource plugins for backends we do not run so they do not clutter the Explore picker.
+					Plugin: persesconfig.Plugin{
+						Disabled: []string{"ClickHouse", "GreptimeDB", "Jaeger", "Loki", "OpenSearch", "Pyroscope", "Splunk", "Tempo"},
+					},
 				},
 			},
 			Replicas:      &p.values.Replicas,
