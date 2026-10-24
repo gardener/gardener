@@ -784,7 +784,16 @@ func (s *Shoot) HasExtensionExposure() bool {
 	return v1beta1helper.HasExtensionExposure(s.GetInfo())
 }
 
-// IsRestorePhase returns true when the shoot is in phase 'restore'.
+// IsRestorePhase returns true when the shoot is in phase 'restore'. During a live control plane migration the
+// destination seed also restores all migrated resources from the ShootState, so it reports the restore phase as well -
+// except for the etcd join, which must not take the snapshot-restore path (see isRestorationOfMultiNodeMainEtcdRequired).
 func (s *Shoot) IsRestorePhase() bool {
-	return v1beta1helper.ShootHasOperationType(s.GetInfo().Status.LastOperation, gardencorev1beta1.LastOperationTypeRestore)
+	return v1beta1helper.ShootHasOperationType(s.GetInfo().Status.LastOperation, gardencorev1beta1.LastOperationTypeRestore) ||
+		s.IsLiveMigrationDestination()
+}
+
+// IsLiveMigrationDestination returns true when this gardenlet's seed is the destination of a live control plane
+// migration of the shoot.
+func (s *Shoot) IsLiveMigrationDestination() bool {
+	return s.LiveMigrationRole == v1beta1helper.LiveMigrationRoleDestination
 }

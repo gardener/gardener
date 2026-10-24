@@ -219,6 +219,15 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 		return reconcile.Result{}, errorsutils.WithSuppressed(fmt.Errorf("%s", flowErr.Description), updateErr)
 	}
 
+	if role == v1beta1helper.LiveMigrationRoleSource {
+		log.Info("Live migration successful from source seed's perspective, destination seed will finalize migration")
+		return reconcile.Result{}, nil
+	}
+
+	if err := r.finalizeLiveMigration(ctx, shoot); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to finalize live migration: %w", err)
+	}
+
 	log.Info("Live control plane migration completed")
 	return reconcile.Result{}, r.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeLiveMigrate)
 }

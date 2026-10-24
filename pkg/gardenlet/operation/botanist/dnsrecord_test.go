@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -645,6 +646,32 @@ var _ = Describe("dnsrecord", func() {
 		It("should call Migrate and fail if it failed", func() {
 			internalDNSRecord.EXPECT().Migrate(ctx).Return(testErr)
 			Expect(b.MigrateInternalDNSRecord(ctx)).To(MatchError(testErr))
+		})
+	})
+
+	Describe("#WaitForLiveMigrationDNSCacheSync", func() {
+		It("should return nil once the DNS cache sync wait duration has elapsed", func() {
+			fakeClock := testclock.NewFakeClock(time.Now())
+			botanist := &Botanist{Operation: &operation.Operation{Clock: fakeClock, Logger: logr.Discard()}}
+
+			errCh := make(chan error, 1)
+			go func() {
+				defer GinkgoRecover()
+				errCh <- botanist.WaitForLiveMigrationDNSCacheSync(ctx)
+			}()
+
+			Eventually(fakeClock.HasWaiters).Should(BeTrue())
+			fakeClock.Step(2 * time.Minute)
+			Eventually(errCh).Should(Receive(BeNil()))
+		})
+
+		It("should return ctx.Err() when the context is cancelled before the timer fires", func() {
+			fakeClock := testclock.NewFakeClock(time.Now())
+			botanist := &Botanist{Operation: &operation.Operation{Clock: fakeClock, Logger: logr.Discard()}}
+
+			cancelCtx, cancel := context.WithCancel(ctx)
+			cancel()
+			Expect(botanist.WaitForLiveMigrationDNSCacheSync(cancelCtx)).To(MatchError(context.Canceled))
 		})
 	})
 })
