@@ -39,16 +39,17 @@ type SecretState struct {
 // Deploy deploys the ShootState resource with the effective state for the given shoot into the garden
 // cluster.
 func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient client.Client, shoot *gardencorev1beta1.Shoot, controlPlaneNamespace string, overwriteSpec bool) error {
+	computed, err := Compute(ctx, seedClient, shoot, controlPlaneNamespace)
+	if err != nil {
+		return err
+	}
+	spec := &computed.Spec
+
 	shootState := &gardencorev1beta1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shoot.Name,
 			Namespace: shoot.Namespace,
 		},
-	}
-
-	spec, err := computeSpec(ctx, seedClient, controlPlaneNamespace)
-	if err != nil {
-		return fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
 
 	// Use a regular merge patch here. A strategic merge patch fails when computing the diff over
@@ -83,6 +84,23 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 		return nil
 	})
 	return err
+}
+
+// Compute computes the ShootState with the effective state for the given shoot from the objects in the given control
+// plane namespace, without deploying it.
+func Compute(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot, controlPlaneNamespace string) (*gardencorev1beta1.ShootState, error) {
+	spec, err := computeSpec(ctx, seedClient, controlPlaneNamespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
+	}
+
+	return &gardencorev1beta1.ShootState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      shoot.Name,
+			Namespace: shoot.Namespace,
+		},
+		Spec: *spec,
+	}, nil
 }
 
 // Delete deletes the ShootState resource for the given shoot from the garden cluster.
