@@ -21,6 +21,9 @@ import (
 //go:embed lua/add_kubernetes_namespace_name_to_record.lua
 var add_kubernetes_namespace_name_to_record_lua string
 
+//go:embed lua/parse_envoy_access_log_to_record.lua
+var parse_envoy_access_log_to_record_lua string
+
 var _ = Describe("Logging", func() {
 	Describe("#CentralLoggingConfiguration", func() {
 		It("should return the expected logging parser and filter", func() {
@@ -49,6 +52,12 @@ var _ = Describe("Logging", func() {
 									Lua: &fluentbitv1alpha2filter.Lua{
 										Call: "add_kubernetes_namespace_name_to_record",
 										Code: add_kubernetes_namespace_name_to_record_lua,
+									},
+								},
+								{
+									Lua: &fluentbitv1alpha2filter.Lua{
+										Call: "parse_envoy_access_log_to_record",
+										Code: parse_envoy_access_log_to_record_lua,
 									},
 								},
 							},
