@@ -220,6 +220,11 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
+		istioIngressServiceSourceRanges = func() string {
+			data, _ := os.ReadFile("./test_charts/ingress_service_source_ranges.yaml")
+			return string(data)
+		}
+
 		istioIngressServiceWithEtcdPorts = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_service_etcd_ports.yaml")
 			return string(data)
@@ -630,6 +635,37 @@ var _ = Describe("istiod", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(istioManifests).To(ContainElement(istioIngressServiceClass()))
+			})
+		})
+
+		Context("LoadBalancer source ranges", func() {
+			BeforeEach(func() {
+				igw[0].LoadBalancerSourceRanges = []string{"192.168.123.56/32", "2001:db8::/64"}
+				istiod = NewIstio(
+					c,
+					renderer,
+					Values{
+						Istiod: IstiodValues{
+							Enabled:     true,
+							Image:       "foo/bar",
+							Namespace:   deployNS,
+							TrustDomain: "foo.local",
+							Zones:       []string{"a", "b", "c"},
+						},
+						IngressGateway: igw,
+					},
+				)
+			})
+
+			It("should successfully deploy correct loadBalancerSourceRanges only on the load balancer service", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
+
+				var err error
+				istioManifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceIstioSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(istioManifests).To(ContainElement(istioIngressServiceSourceRanges()))
+				Expect(istioManifests).To(ContainElement(istioIngressServiceInternal()))
 			})
 		})
 
