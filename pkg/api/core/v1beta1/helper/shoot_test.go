@@ -53,6 +53,17 @@ var _ = Describe("Helper", func() {
 		Entry("no hibernation section and status.isHibernated is true", &gardencorev1beta1.Shoot{
 			Status: gardencorev1beta1.ShootStatus{IsHibernated: true},
 		}, true),
+		Entry("hibernation.enabled unset and status.isHibernated is false", &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Hibernation: &gardencorev1beta1.Hibernation{},
+			},
+		}, false),
+		Entry("hibernation.enabled unset and status.isHibernated is true", &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Hibernation: &gardencorev1beta1.Hibernation{},
+			},
+			Status: gardencorev1beta1.ShootStatus{IsHibernated: true},
+		}, true),
 		Entry("hibernation.enabled = false and status.isHibernated is false", &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Hibernation: &gardencorev1beta1.Hibernation{Enabled: &falseVar},
