@@ -397,7 +397,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings, secretsManager)
+	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1507,7 +1507,17 @@ func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGateway
 	return deployer, nil
 }
 
-func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newVictoriaLogs(
+	settings *operatorv1alpha1.Settings,
+	secretsManager secretsmanager.Interface,
+	ingressDomain string,
+	wildcardCertSecretName *string,
+	ingressGatewayValues []istio.IngressGatewayValues,
+) (component.DeployWaiter, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("expected exactly one Istio ingress gateway but got %d", len(ingressGatewayValues))
+	}
+
 	deployer, err := sharedcomponent.NewVictoriaLogs(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1522,6 +1532,14 @@ func (r *Reconciler) newVictoriaLogs(settings *operatorv1alpha1.Settings, secret
 		},
 		secretsManager,
 		operatorv1alpha1.SecretNameCARuntime,
+		&victorialogs.ExposureValues{
+			AuthSecretName:               v1beta1constants.SecretNameObservabilityIngress,
+			AuthSecretManaged:            true,
+			Host:                         "vl-garden." + ingressDomain,
+			IstioIngressGatewayLabels:    ingressGatewayValues[0].Labels,
+			IstioIngressGatewayNamespace: ingressGatewayValues[0].Namespace,
+			WildcardCertSecretName:       wildcardCertSecretName,
+		},
 	)
 	if err != nil {
 		return nil, err

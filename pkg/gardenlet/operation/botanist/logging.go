@@ -248,6 +248,19 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 		storage = new(resource.MustParse(b.GetValidVolumeSize("5Gi")))
 	}
 
+	var (
+		istioLabels            map[string]string
+		istioNamespace         string
+		wildcardCertSecretName *string
+	)
+	if !b.Shoot.IsSelfHosted() {
+		istioLabels = b.WildcardIstioLabels()
+		istioNamespace = b.WildcardIstioNamespace()
+	}
+	if b.ControlPlaneWildcardCert != nil {
+		wildcardCertSecretName = &b.ControlPlaneWildcardCert.Name
+	}
+
 	deployer, err := shared.NewVictoriaLogs(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
@@ -262,6 +275,14 @@ func (b *Botanist) DefaultVictoriaLogs() (component.DeployWaiter, error) {
 		},
 		b.SecretsManager,
 		v1beta1constants.SecretNameCACluster,
+		&victorialogs.ExposureValues{
+			AuthSecretName:               v1beta1constants.SecretNameObservabilityIngressUsers,
+			AuthSecretManaged:            true,
+			Host:                         b.ComputeVictoriaLogsHost(),
+			IstioIngressGatewayLabels:    istioLabels,
+			IstioIngressGatewayNamespace: istioNamespace,
+			WildcardCertSecretName:       wildcardCertSecretName,
+		},
 	)
 	if err != nil {
 		return nil, err
