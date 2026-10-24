@@ -12,6 +12,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
@@ -73,6 +74,20 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	if shoot.Spec.DNS != nil {
 		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"), ignoreWarningsForDNSIndexes)...)
+	}
+
+	for i, worker := range shoot.Spec.Provider.Workers {
+		if worker.MachineControllerManagerSettings != nil {
+			if autoPreserveFailedMachineMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0); autoPreserveFailedMachineMax > 0 {
+				numZones := len(sets.New(worker.Zones...))
+				if int(autoPreserveFailedMachineMax) < numZones {
+					fldPath := field.NewPath("spec", "provider", "workers").Index(i).Child("machineControllerManagerSettings", "autoPreserveFailedMachineMax")
+					warnings = append(warnings,
+						fmt.Sprintf("you are setting the %s field to a value less than the number of zones. This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.",
+							fldPath.String()))
+				}
+			}
+		}
 	}
 
 	return warnings
