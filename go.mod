@@ -46,9 +46,9 @@ require (
 	github.com/perses/perses-operator v0.5.0
 	github.com/perses/spec v0.2.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1
-	github.com/prometheus/blackbox_exporter v0.29.0
+	github.com/prometheus/blackbox_exporter v0.29.1
 	github.com/prometheus/client_golang v1.25.0
-	github.com/prometheus/common v0.72.0
+	github.com/prometheus/common v0.72.1
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2
@@ -117,6 +117,7 @@ exclude github.com/gardener/gardener/pkg/apis v1.147.1
 tool github.com/joelanford/go-apidiff
 
 require (
+	cel.dev/cel-go v0.32.0 // indirect
 	cel.dev/expr v0.25.3 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect

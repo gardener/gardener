@@ -1,3 +1,5 @@
+cel.dev/cel-go v0.32.0 h1:irvpFKr5EuGPyxeME03ERh0rii1TX+BDAnB9eL3IvNk=
+cel.dev/cel-go v0.32.0/go.mod h1:DnVip7tpJSsgZymwfT+m1tnEVy3ivAjSMXPx12YrMkU=
 cel.dev/expr v0.25.3 h1:A2jO8jwOugrrovveCWfj0KEZOfqiLgAcwjpHPhzIGw0=
 cel.dev/expr v0.25.3/go.mod h1:hrXvqGP6G6gyx8UAHSHJ5RGk//1Oj5nXQ2NI02Nrsg4=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
@@ -657,8 +659,8 @@ github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1 h
 github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.93.1/go.mod h1:rZ+wRKDneCC/jJk24Mdb+6bAc6y/UjRliuMz6U20s6Y=
 github.com/prometheus/alertmanager v0.33.1 h1:PJHGvTdb8Q0ZEpJnWff120WxB2kxIScLa707AaIudTo=
 github.com/prometheus/alertmanager v0.33.1/go.mod h1:V06Uc8EZ5X5wLOJRGhtXx+EE2LgrinFIADbKWMVm1RY=
-github.com/prometheus/blackbox_exporter v0.29.0 h1:u583/TwXAqFTflpuKx63xnvgoqL2HuRbtLkNHqjXCzs=
-github.com/prometheus/blackbox_exporter v0.29.0/go.mod h1:Uaad0N1HqVV7oMZ0xXVy/WUtARZlnRzJ25DYEJtzrv4=
+github.com/prometheus/blackbox_exporter v0.29.1 h1:D3qRLIPtUyDzU+CmqaiubV3EOrUD7RGQv2OObyOZNbA=
+github.com/prometheus/blackbox_exporter v0.29.1/go.mod h1:YmF6tpODn88gBel0kkXaPRVPevNsj/WRPTS17WtlSmU=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v1.0.0/go.mod h1:db9x61etRT2tGnBNRi70OPL5FsnadC4Ky3P0J6CfImo=
 github.com/prometheus/client_golang v1.4.0/go.mod h1:e9GMxYsXl05ICDXkRhurwBS4Q3OK1iX/F2sw+iXX5zU=
@@ -676,8 +678,8 @@ github.com/prometheus/common v0.4.1/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y8
 github.com/prometheus/common v0.9.1/go.mod h1:yhUN8i9wzaXS3w1O07YhxHEBxD+W35wd8bs7vj7HSQ4=
 github.com/prometheus/common v0.10.0/go.mod h1:Tlit/dnDKsSWFlCLTWaA1cyBgKHSMdTB80sz/V91rCo=
 github.com/prometheus/common v0.26.0/go.mod h1:M7rCNAaPfAosfx8veZJCuw84e35h3Cfd9VFqTh1DIvc=
-github.com/prometheus/common v0.72.0 h1:tAYsE+sPJxIncDAobm4H5aQjmox9ZxEIIqPbiffa8G4=
-github.com/prometheus/common v0.72.0/go.mod h1:77NWqAQ2tXT7BIK40qjJdw5Acrsrg1TlHAnsQi3i6mk=
+github.com/prometheus/common v0.72.1 h1:ZAiQed/nk8IIcsdzb2TlJu23NEUDyDLQ9TXTN2WRK6Y=
+github.com/prometheus/common v0.72.1/go.mod h1:1IoBY4IRaJnhs2ESjNzjilP1cJ/P8pimGoomq7zRXrA=
 github.com/prometheus/exporter-toolkit v0.20.0 h1:hz3g2aPcq3mXlQSt1MGjj2rwVk1wtRalF+/FjYxFRkI=
 github.com/prometheus/exporter-toolkit v0.20.0/go.mod h1:gIIY0Mw0ci1wgYscdeMqVh6FUPYJca549eOkE39nU64=
 github.com/prometheus/otlptranslator v1.0.0 h1:s0LJW/iN9dkIH+EnhiD3BlkkP5QVIUVEoIwkU+A6qos=
