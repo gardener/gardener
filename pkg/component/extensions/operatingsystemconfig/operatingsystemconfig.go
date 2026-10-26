@@ -207,6 +207,8 @@ type OperatingSystemConfigs struct {
 	Init Data
 	// Original is the data for the to-be-downloaded original config.
 	Original Data
+	// OldOriginals contains the old original configs still residing in the system.
+	OldOriginals []Data
 }
 
 // Data contains the actual content, a command to load it and all units that shall be considered for restart on change.
@@ -221,10 +223,14 @@ type Data struct {
 
 // Deploy uses the client to create or update the OperatingSystemConfig custom resources.
 func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
-	return o.reconcile(ctx, func(d deployer) error {
+	if err := o.reconcile(ctx, func(d deployer) error {
 		_, err := d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 		return err
-	})
+	}); err != nil {
+		return err
+	}
+
+	return o.loadOldOriginalsFromSystem(ctx)
 }
 
 // Restore uses the seed client and the ShootState to create the OperatingSystemConfig custom resources in the Shoot
@@ -275,6 +281,52 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+func (o *operatingSystemConfig) loadOldOriginalsFromSystem(ctx context.Context) error {
+	oscList := &extensionsv1alpha1.OperatingSystemConfigList{}
+	if err := o.client.List(ctx, oscList, client.InNamespace(o.values.Namespace)); err != nil {
+		return fmt.Errorf("failed to list OperatingSystemConfigs: %w", err)
+	}
+
+	for _, osc := range oscList.Items {
+		if osc.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+			continue
+		}
+
+		workerPoolName, ok := osc.Labels[v1beta1constants.LabelWorkerPool]
+		if !ok {
+			continue
+		}
+
+		workerPoolOSCs, ok := o.workerPoolNameToOSCs[workerPoolName]
+		if !ok {
+			// The worker pool no longer exists in the current spec. Create an entry so that we can still
+			// serve the old OSC secrets for machines of deleted/rolling MachineDeployments.
+			workerPoolOSCs = &OperatingSystemConfigs{}
+			o.workerPoolNameToOSCs[workerPoolName] = workerPoolOSCs
+		}
+
+		// We are only interested in the old OperatingSystemConfigs, so skip the desired/computed OSC.
+		if workerPoolOSCs.Original.Object != nil && osc.Name == workerPoolOSCs.Original.Object.Name {
+			continue
+		}
+
+		oscData := Data{
+			Object:                      &osc,
+			GardenerNodeAgentSecretName: strings.TrimSuffix(osc.Name, oscPurposeSuffix(osc.Spec.Purpose)),
+		}
+
+		if idx := slices.IndexFunc(workerPoolOSCs.OldOriginals, func(oscData Data) bool {
+			return oscData.Object.Name == osc.Name && oscData.Object.Namespace == osc.Namespace
+		}); idx == -1 {
+			workerPoolOSCs.OldOriginals = append(workerPoolOSCs.OldOriginals, oscData)
+		} else {
+			workerPoolOSCs.OldOriginals[idx] = oscData
+		}
+	}
+
+	return nil
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
