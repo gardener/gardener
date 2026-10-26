@@ -732,7 +732,7 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
-	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClient.Client())
+	workerPoolToOSCSecretNameToChecksum, err := botanist.WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx, shootClient.Client())
 	if err != nil {
 		return nil, err
 	}
@@ -774,7 +774,7 @@ func (h *Health) CheckClusterNodes(
 		}
 	}
 
-	if err := botanist.OperatingSystemConfigUpdatedForAllWorkerPools(h.shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
+	if err := botanist.OperatingSystemConfigUpdatedForAllWorkerPools(h.shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToOSCSecretNameToChecksum); err != nil {
 		return new(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, everyNodeReadyCondition, "OperatingSystemConfigOutdated", err.Error())), nil
 	}
 
