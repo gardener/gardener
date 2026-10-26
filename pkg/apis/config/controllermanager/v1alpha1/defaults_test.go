@@ -600,6 +600,31 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("SeedReferenceAllowlistControllerConfiguration defaulting", func() {
+		It("should default SeedReferenceAllowlistControllerConfiguration correctly", func() {
+			expected := &SeedReferenceAllowlistControllerConfiguration{
+				ConcurrentSyncs: new(DefaultSeedReferenceAllowlistControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SeedReferenceAllowlist).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					SeedReferenceAllowlist: &SeedReferenceAllowlistControllerConfiguration{
+						ConcurrentSyncs: new(int32(50)),
+					},
+				},
+			}
+			expected := &SeedReferenceAllowlistControllerConfiguration{ConcurrentSyncs: new(int32(50))}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.SeedReferenceAllowlist).To(Equal(expected))
+		})
+	})
+
 	Describe("ShootHibernationControllerConfiguration defaulting", func() {
 		It("should default ShootHibernationControllerConfiguration correctly", func() {
 			expected := &ShootHibernationControllerConfiguration{

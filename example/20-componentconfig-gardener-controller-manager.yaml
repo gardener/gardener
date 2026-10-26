@@ -38,6 +38,8 @@ controllers:
         duration: 1m
   seedReference:
     concurrentSyncs: 5
+  seedReferenceAllowlist:
+    concurrentSyncs: 100
   shootMaintenance:
     concurrentSyncs: 5
   # enableShootControlPlaneRestarter: true
