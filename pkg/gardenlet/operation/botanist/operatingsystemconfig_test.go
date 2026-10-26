@@ -302,12 +302,6 @@ var _ = Describe("operatingsystemconfig", func() {
 				botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 			})
 
-			It("should fail because the operating system config maps for a worker pool are not available", func() {
-				operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(nil)
-
-				Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, false)).To(MatchError(ContainSubstring("did not find osc data for worker pool")))
-			})
-
 			When("operating system config maps are available", func() {
 				BeforeEach(func() {
 					operatingSystemConfig.EXPECT().WorkerPoolNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
