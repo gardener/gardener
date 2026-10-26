@@ -603,7 +603,7 @@ var _ = Describe("Defaults", func() {
 	Describe("SeedReferenceAllowlistControllerConfiguration defaulting", func() {
 		It("should default SeedReferenceAllowlistControllerConfiguration correctly", func() {
 			expected := &SeedReferenceAllowlistControllerConfiguration{
-				ConcurrentSyncs: new(100),
+				ConcurrentSyncs: new(DefaultSeedReferenceAllowlistControllerConcurrentSyncs),
 			}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
@@ -614,11 +614,11 @@ var _ = Describe("Defaults", func() {
 			obj = &ControllerManagerConfiguration{
 				Controllers: ControllerManagerControllerConfiguration{
 					SeedReferenceAllowlist: &SeedReferenceAllowlistControllerConfiguration{
-						ConcurrentSyncs: new(50),
+						ConcurrentSyncs: new(int32(50)),
 					},
 				},
 			}
-			expected := &SeedReferenceAllowlistControllerConfiguration{ConcurrentSyncs: new(50)}
+			expected := &SeedReferenceAllowlistControllerConfiguration{ConcurrentSyncs: new(int32(50))}
 			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
 			Expect(obj.Controllers.SeedReferenceAllowlist).To(Equal(expected))

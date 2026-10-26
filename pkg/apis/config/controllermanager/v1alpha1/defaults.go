@@ -238,7 +238,7 @@ func SetDefaults_SeedReferenceControllerConfiguration(obj *SeedReferenceControll
 // SetDefaults_SeedReferenceAllowlistControllerConfiguration sets defaults for the SeedReferenceAllowlistControllerConfiguration.
 func SetDefaults_SeedReferenceAllowlistControllerConfiguration(obj *SeedReferenceAllowlistControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(100)
+		obj.ConcurrentSyncs = new(DefaultSeedReferenceAllowlistControllerConcurrentSyncs)
 	}
 }
 

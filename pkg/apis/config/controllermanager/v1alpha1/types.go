@@ -347,7 +347,7 @@ type SeedReferenceAllowlistControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// secrets, configmaps, and workload identities.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootMaintenanceControllerConfiguration defines the configuration of the
@@ -503,4 +503,8 @@ const (
 
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
 	DefaultControllerConcurrentSyncs int32 = 5
+
+	// DefaultSeedReferenceAllowlistControllerConcurrentSyncs is the default value for concurrent syncs for the
+	// SeedReferenceAllowlist controller.
+	DefaultSeedReferenceAllowlistControllerConcurrentSyncs int32 = 100
 )

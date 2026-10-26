@@ -7,6 +7,7 @@ package refallowlist
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -84,7 +85,7 @@ func (r *Reconciler) desiredSeedNames(ctx context.Context, req Request) (string,
 		return "", fmt.Errorf("failed listing Gardenlets: %w", err)
 	}
 	for _, gardenlet := range gardenletList.Items {
-		if containsRef(refsFromConfig(&gardenlet.Spec.Config), req) {
+		if slices.Contains(refsFromConfig(&gardenlet.Spec.Config), req) {
 			seedNames.Insert(gardenlet.Name)
 		}
 	}
@@ -94,7 +95,7 @@ func (r *Reconciler) desiredSeedNames(ctx context.Context, req Request) (string,
 		return "", fmt.Errorf("failed listing ManagedSeeds: %w", err)
 	}
 	for _, managedSeed := range managedSeedList.Items {
-		if containsRef(refsFromConfig(&managedSeed.Spec.Gardenlet.Config), req) {
+		if slices.Contains(refsFromConfig(&managedSeed.Spec.Gardenlet.Config), req) {
 			seedNames.Insert(managedSeed.Name)
 		}
 	}
@@ -110,16 +111,6 @@ func refsFromConfig(config *runtime.RawExtension) []Request {
 		return nil
 	}
 	return refsFromSeedSpec(&gardenletConfig.SeedConfig.Spec)
-}
-
-// containsRef reports whether refs contains a Request equal to target.
-func containsRef(refs []Request, target Request) bool {
-	for _, r := range refs {
-		if r == target {
-			return true
-		}
-	}
-	return false
 }
 
 // groupVersionKindForRequest returns the GroupVersionKind for the given Request.

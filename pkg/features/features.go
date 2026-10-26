@@ -144,7 +144,7 @@ const (
 	// for a wildcard) before the reference is accepted. This prevents a compromised gardenlet from pointing
 	// its Seed's credential references at arbitrary resources to gain access.
 	// owner: @rfranzke
-	// alpha: v1.154.0
+	// alpha: v1.155.0
 	AllowlistSeedReferences featuregate.Feature = "AllowlistSeedReferences"
 )
 
