@@ -232,7 +232,7 @@
     },
     {
       "datasource": "prometheus",
-      "description": "Percentage of unary gRPC requests that failed with a server-side error code. Only infrastructure-failure codes are counted (Unknown, ResourceExhausted, Unavailable, etc.) \u2014 application-level codes such as NotFound are excluded.",
+      "description": "Percentage of unary gRPC requests that failed with a server-side error code for the selected duration. Only infrastructure-failure codes are counted (Unknown, ResourceExhausted, Unavailable, etc.) \u2014 application-level codes such as NotFound are excluded.",
       "fieldConfig": {
         "defaults": {
           "color": {
