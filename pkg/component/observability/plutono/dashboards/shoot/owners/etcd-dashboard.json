@@ -492,7 +492,7 @@
     },
     {
       "datasource": "prometheus",
-      "description": "Percentage of the in-use etcd DB currently resident in the page cache via mmap (worst pod). A drop below 100% means the kernel is evicting mapped pages, causing elevated read IOPS. Drill down to the Memory / Page Cache section for details.",
+      "description": "Percentage of the in-use etcd DB that has been evicted from the Linux page cache (worst pod). 0% means all in-use data is cached via mmap \u2014 ideal. Any value above 0% means etcd must read those pages from disk, causing elevated read IOPS. Correlate with Container Read IOPS and DB Page Cache Eviction % graph below.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -503,16 +503,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 70
+                "value": 10
               },
               {
-                "color": "green",
-                "value": 90
+                "color": "red",
+                "value": 30
               }
             ]
           },
@@ -546,13 +546,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(\n  sum by (pod) (container_memory_mapped_file{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n  / sum by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n) * 100",
+          "expr": "clamp_min(\n  max(\n    100 * (1 - sum by (pod) (container_memory_mapped_file{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n    / sum by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"}))\n), 0)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "DB Page Cache %",
+      "title": "DB Page Cache Eviction %",
       "type": "stat"
     },
     {
@@ -1241,7 +1241,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Percentage of the etcd in-use DB size currently resident in the Linux page cache via mmap. A drop below 100% indicates the kernel is evicting etcd's mapped DB pages, which forces reads back to disk and causes elevated read IOPS.",
+      "description": "Percentage of the in-use etcd DB not resident in the Linux page cache per pod. 0% is the healthy baseline \u2014 all mmap'd pages are in RAM. A rising value means the kernel is evicting etcd's pages under memory pressure, forcing reads from disk on every access to evicted pages.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1283,7 +1283,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "100 * (\n  sum by (pod) (container_memory_mapped_file{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n  /\n  sum by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n)",
+          "expr": "clamp_min(\n  100 * (1 - sum by (pod) (container_memory_mapped_file{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})\n  / sum by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes{container=\"etcd\", pod=~\"etcd-(${role:pipe}).*\"})),\n0)",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1293,7 +1293,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DB Page Cache Coverage %",
+      "title": "DB Page Cache Eviction %",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1313,7 +1313,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
