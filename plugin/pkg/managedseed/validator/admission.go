@@ -611,12 +611,13 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 
 func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencorev1beta1.Shoot) (field.ErrorList, error) {
 	var (
-		allErrs                  = field.ErrorList{}
-		seedConfigSpecBasePath   = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
-		zonesFieldPath           = seedConfigSpecBasePath.Child("provider", "zones")
-		internalDomainFieldPath  = seedConfigSpecBasePath.Child("dns", "internal", "domain")
-		internalDomainsFieldPath = seedConfigSpecBasePath.Child("dns", "internalDomains")
-		defaultDomainsFieldPath  = seedConfigSpecBasePath.Child("dns", "defaults")
+		allErrs                        = field.ErrorList{}
+		seedConfigSpecBasePath         = field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec")
+		zonesFieldPath                 = seedConfigSpecBasePath.Child("provider", "zones")
+		internalDomainFieldPath        = seedConfigSpecBasePath.Child("dns", "internal", "domain")
+		internalDomainsFieldPath       = seedConfigSpecBasePath.Child("dns", "internalDomains")
+		internalDomainEnabledFieldPath = seedConfigSpecBasePath.Child("dns", "internalDomainEnabled")
+		defaultDomainsFieldPath        = seedConfigSpecBasePath.Child("dns", "defaults")
 	)
 
 	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
@@ -640,6 +641,10 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 		} else {
 			allErrs = append(allErrs, field.Forbidden(internalDomainFieldPath, "internal domain must not be changed while shoots are still scheduled onto seed"))
 		}
+	}
+
+	if err := admissionutils.ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(internalDomainEnabledFieldPath, err.Error()))
 	}
 
 	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, v.secretLister, "ManagedSeed"); err != nil {

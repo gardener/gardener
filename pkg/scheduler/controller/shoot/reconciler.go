@@ -440,7 +440,7 @@ func filterSeedsMatchingDomain(seedList []gardencorev1beta1.Seed, shoot *gardenc
 }
 
 func filterSeedsWithInternalDomainForShootWithoutManagedDomain(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
-	if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil && !v1beta1helper.ShootUsesUnmanagedDNS(shoot) {
+	if v1beta1helper.ShootHasManagedExternalDomain(shoot) {
 		return seedList, nil
 	}
 

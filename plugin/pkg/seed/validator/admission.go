@@ -178,6 +178,10 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 		return err
 	}
 
+	if err := admissionutils.ValidateInternalDomainDisableForSeed(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed"); err != nil {
+		return err
+	}
+
 	// A gardenlet which has not observed the current generation can still assign a removed internal domain to a shoot.
 	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) &&
 		oldSeed.Status.ObservedGeneration != oldSeed.Generation &&

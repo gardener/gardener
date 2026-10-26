@@ -638,7 +638,7 @@ func (c *validationContext) validateExternalDomainForSeedWithoutInternalDomain(a
 		return nil
 	}
 
-	if c.shoot.Spec.DNS != nil && c.shoot.Spec.DNS.Domain != nil && !helper.ShootUsesUnmanagedDNS(c.shoot) {
+	if helper.ShootHasManagedExternalDomain(c.shoot) {
 		return nil
 	}
 

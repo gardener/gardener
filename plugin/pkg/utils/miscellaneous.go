@@ -6,6 +6,7 @@ package utils
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
+	"github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -134,6 +136,33 @@ func validateInternalDomainsRemovalFromSeed(oldSeedSpec, newSeedSpec *core.SeedS
 	// does not show yet. Thus, the first internal domain must be replaced and removed in two separate updates.
 	if firstDomain := firstInternalDomain(oldSeedSpec); len(seedShoots) > 0 && removedDomains.Has(firstDomain) {
 		return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove the first internal domain %q from %s %q in the same update that replaces it while shoots are scheduled onto it, make another internal domain the first one before", firstDomain, kind, seedName))
+	}
+
+	return nil
+}
+
+// ValidateInternalDomainDisableForSeed returns an error when the internal domain of a seed is disabled while shoots
+// without a managed external domain are scheduled onto it.
+func ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorev1beta1listers.ShootLister, kind string) error {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) ||
+		!helper.SeedInternalDomainEnabled(oldSeedSpec.DNS) || helper.SeedInternalDomainEnabled(newSeedSpec.DNS) {
+		return nil
+	}
+
+	shootsWithoutManagedExternalDomain, err := GetFilteredShootList(shootLister, func(shoot *gardencorev1beta1.Shoot) bool {
+		return isSeedUsedByShoot(seedName, shoot) && !v1beta1helper.ShootHasManagedExternalDomain(shoot)
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(shootsWithoutManagedExternalDomain) > 0 {
+		shootNames := make([]string, 0, len(shootsWithoutManagedExternalDomain))
+		for _, shoot := range shootsWithoutManagedExternalDomain {
+			shootNames = append(shootNames, shoot.Namespace+"/"+shoot.Name)
+		}
+		slices.Sort(shootNames)
+		return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot disable the internal domain of %s %q as the shoots %v have no managed external domain", kind, seedName, shootNames))
 	}
 
 	return nil

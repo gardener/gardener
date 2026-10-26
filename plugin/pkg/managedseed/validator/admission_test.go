@@ -1153,6 +1153,30 @@ var _ = Describe("ManagedSeed", func() {
 					))
 				})
 
+				It("should forbid the disable of the internal domain when a shoot on the seed has no managed external domain", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+					newGardenletConfig.SeedConfig.Spec.DNS.InternalDomainEnabled = new(false)
+
+					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, shoot, nil
+					})
+
+					shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &newManagedSeed.Name}}
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+					err := admissionHandler.Validate(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)
+					Expect(err).To(BeInvalidError())
+					Expect(getErrorList(err)).To(ContainElement(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.dns.internalDomainEnabled"),
+							"Detail": ContainSubstring("cannot disable the internal domain"),
+						})),
+					))
+				})
+
 				It("should forbid default domain change when at least one shoot is scheduled to seed", func() {
 					oldGardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 					oldGardenletConfig.SeedConfig.Spec.DNS.Defaults = []gardencorev1beta1.SeedDNSProviderConfig{

@@ -95,6 +95,18 @@ var _ = Describe("Helper", func() {
 		Entry("dns providers and unmanaged type", &core.DNS{Providers: []core.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
 
+	DescribeTable("#ShootHasManagedExternalDomain",
+		func(dns *core.DNS, expectation bool) {
+			Expect(ShootHasManagedExternalDomain(&core.Shoot{Spec: core.ShootSpec{DNS: dns}})).To(Equal(expectation))
+		},
+
+		Entry("no dns", nil, false),
+		Entry("no domain", &core.DNS{Providers: []core.DNSProvider{{Type: &differentType}}}, false),
+		Entry("domain without providers", &core.DNS{Domain: new("shoot.example.com")}, true),
+		Entry("domain and managed provider", &core.DNS{Domain: new("shoot.example.com"), Providers: []core.DNSProvider{{Type: &differentType}}}, true),
+		Entry("domain and unmanaged provider", &core.DNS{Domain: new("shoot.example.com"), Providers: []core.DNSProvider{{Type: &unmanagedType}}}, false),
+	)
+
 	DescribeTable("#ShootNeedsForceDeletion",
 		func(shoot *core.Shoot, match gomegatypes.GomegaMatcher) {
 			Expect(ShootNeedsForceDeletion(shoot)).To(match)

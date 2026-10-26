@@ -178,6 +178,15 @@ var _ = Describe("validator", func() {
 
 						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
 					})
+
+					It("should forbid the disable of the internal domain when a shoot on the seed has no managed external domain", func() {
+						newSeed.Spec.DNS.Internal.Domain = oldSeed.Spec.DNS.Internal.Domain
+						newSeed.Spec.DNS.InternalDomainEnabled = new(false)
+						Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot disable the internal domain")))
+					})
 				})
 			})
 

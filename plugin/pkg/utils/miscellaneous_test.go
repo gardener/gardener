@@ -349,6 +349,76 @@ var _ = Describe("Miscellaneous", func() {
 		})
 	})
 
+	Describe("#ValidateInternalDomainDisableForSeed", func() {
+		var (
+			seedName = "foo"
+			kind     = "Seed"
+
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
+			shootLister         gardencorev1beta1listers.ShootLister
+
+			oldSeedSpec, newSeedSpec *core.SeedSpec
+			shoot                    *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			shootLister = coreInformerFactory.Core().V1beta1().Shoots().Lister()
+
+			oldSeedSpec = &core.SeedSpec{DNS: core.SeedDNS{InternalDomainEnabled: new(true)}}
+			newSeedSpec = &core.SeedSpec{DNS: core.SeedDNS{InternalDomainEnabled: new(false)}}
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "garden-project", Name: "shoot"},
+				Spec:       gardencorev1beta1.ShootSpec{SeedName: &seedName},
+			}
+			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+		})
+
+		It("should refuse the disable if a shoot on the seed has no external domain", func() {
+			err := ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)
+			Expect(err).To(MatchError(ContainSubstring(`cannot disable the internal domain of Seed "foo" as the shoots [garden-project/shoot] have no managed external domain`)))
+		})
+
+		It("should refuse the disable if a shoot on the seed has an unmanaged external domain", func() {
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("shoot.example.com"), Providers: []gardencorev1beta1.DNSProvider{{Type: new("unmanaged")}}}
+
+			Expect(ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("cannot disable the internal domain")))
+		})
+
+		It("should refuse the disable if the old seed spec does not set the field", func() {
+			oldSeedSpec.DNS.InternalDomainEnabled = nil
+
+			Expect(ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(MatchError(ContainSubstring("cannot disable the internal domain")))
+		})
+
+		It("should accept the disable if each shoot on the seed has a managed external domain", func() {
+			shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: new("shoot.example.com"), Providers: []gardencorev1beta1.DNSProvider{{Type: new("some-provider"), Primary: new(true)}}}
+
+			Expect(ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should accept the disable if the shoot without external domain is on another seed", func() {
+			shoot.Spec.SeedName = new("other-seed")
+
+			Expect(ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should accept an update if the internal domain stays disabled", func() {
+			oldSeedSpec.DNS.InternalDomainEnabled = new(false)
+
+			Expect(ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+
+		It("should accept the disable if the feature gate is off", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+			Expect(ValidateInternalDomainDisableForSeed(oldSeedSpec, newSeedSpec, seedName, shootLister, kind)).To(Succeed())
+		})
+	})
+
 	Describe("#ValidateDefaultDomainsChangeForSeed", func() {
 		var (
 			seedName = "foo"

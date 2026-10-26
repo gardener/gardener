@@ -60,6 +60,11 @@ func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
 	return len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == core.DNSUnmanaged
 }
 
+// ShootHasManagedExternalDomain returns true if the shoot sets spec.dns.domain and its DNS is not 'unmanaged'.
+func ShootHasManagedExternalDomain(shoot *core.Shoot) bool {
+	return shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil && !ShootUsesUnmanagedDNS(shoot)
+}
+
 // ShootNeedsForceDeletion determines whether a Shoot should be force deleted or not.
 func ShootNeedsForceDeletion(shoot *core.Shoot) bool {
 	if shoot == nil {
