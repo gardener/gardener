@@ -151,6 +151,16 @@ var _ = Describe("Helper", func() {
 		Entry("topology-aware routing disabled", &core.SeedSettings{TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{Enabled: false}}, false),
 	)
 
+	DescribeTable("#SeedInternalDomainEnabled",
+		func(internalDomainEnabled *bool, expected bool) {
+			Expect(SeedInternalDomainEnabled(core.SeedDNS{InternalDomainEnabled: internalDomainEnabled})).To(Equal(expected))
+		},
+
+		Entry("not set", nil, true),
+		Entry("enabled", new(true), true),
+		Entry("disabled", new(false), false),
+	)
+
 	Describe("#CalculateSeedUsage", func() {
 		type shootCase struct {
 			specSeedName, statusSeedName string

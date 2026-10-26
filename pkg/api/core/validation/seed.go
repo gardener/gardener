@@ -13,7 +13,6 @@ import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -482,7 +481,7 @@ func validateSeedInternalDomains(dns core.SeedDNS, fldPath *field.Path) field.Er
 	allErrs := field.ErrorList{}
 
 	if dns.Internal == nil && len(dns.InternalDomains) == 0 {
-		if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || ptr.Deref(dns.InternalDomainEnabled, true) {
+		if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || helper.SeedInternalDomainEnabled(dns) {
 			allErrs = append(allErrs, field.Required(fldPath.Child("internal"), "internal DNS configuration is required"))
 		}
 		return allErrs

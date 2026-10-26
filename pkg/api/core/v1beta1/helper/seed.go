@@ -109,6 +109,11 @@ func SeedSettingZoneSelectionMode(settings *gardencorev1beta1.SeedSettings) gard
 	return settings.ZoneSelection.Mode
 }
 
+// SeedInternalDomainEnabled returns true unless the given seed DNS sets internalDomainEnabled to false.
+func SeedInternalDomainEnabled(dns gardencorev1beta1.SeedDNS) bool {
+	return ptr.Deref(dns.InternalDomainEnabled, true)
+}
+
 // SeedBackupCredentialsRefEqual returns true when the credentials reference of the backup configuration is the same.
 func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.Backup) bool {
 	var (

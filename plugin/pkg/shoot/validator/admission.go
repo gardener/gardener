@@ -354,6 +354,9 @@ func (v *ValidateShoot) Validate(ctx context.Context, a admission.Attributes, _ 
 	if err := validationContext.validateScheduling(ctx, a, v.authorizer, v.shootLister, v.seedLister, v.managedSeedLister); err != nil {
 		return err
 	}
+	if err := validationContext.validateExternalDomainForSeedWithoutInternalDomain(a); err != nil {
+		return err
+	}
 	if err := validationContext.validateDeletion(a); err != nil {
 		return err
 	}
@@ -621,6 +624,25 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 	}
 
 	return nil
+}
+
+func (c *validationContext) validateExternalDomainForSeedWithoutInternalDomain(a admission.Attributes) error {
+	if c.seed == nil || a.GetOperation() == admission.Delete || v1beta1helper.SeedInternalDomainEnabled(c.seed.Spec.DNS) ||
+		!features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return nil
+	}
+
+	if a.GetOperation() == admission.Update &&
+		apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) &&
+		apiequality.Semantic.DeepEqual(c.oldShoot.Spec.DNS, c.shoot.Spec.DNS) {
+		return nil
+	}
+
+	if c.shoot.Spec.DNS != nil && c.shoot.Spec.DNS.Domain != nil && !helper.ShootUsesUnmanagedDNS(c.shoot) {
+		return nil
+	}
+
+	return admission.NewForbidden(a, fmt.Errorf("seed %q has no internal domain for new shoots, thus the shoot needs a domain in spec.dns.domain whose DNS provider is not unmanaged", c.seed.Name))
 }
 
 func getNumberOfShootsOnSeed(shootLister gardencorev1beta1listers.ShootLister, seedName string) (int64, error) {

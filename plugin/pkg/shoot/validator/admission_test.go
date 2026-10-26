@@ -1750,6 +1750,73 @@ var _ = Describe("validator", func() {
 			})
 		})
 
+		Context("seed without internal domain for new shoots", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+				seed.Spec.DNS.InternalDomainEnabled = new(false)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+			})
+
+			It("should refuse a shoot with an unmanaged external domain", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(And(
+					BeForbiddenError(),
+					MatchError(ContainSubstring(`seed "seed" has no internal domain for new shoots`)),
+				))
+			})
+
+			It("should refuse a shoot without external domain", func() {
+				shoot.Spec.DNS = nil
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(BeForbiddenError())
+			})
+
+			It("should allow a shoot with a managed external domain", func() {
+				shoot.Spec.DNS.Providers = []core.DNSProvider{{Type: new("some-provider"), Primary: new(true)}}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow a shoot with an unmanaged external domain if the feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should refuse the scheduling of a shoot with an unmanaged external domain", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = nil
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(BeForbiddenError())
+			})
+
+			It("should refuse the change to an unmanaged external domain", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.DNS.Providers = []core.DNSProvider{{Type: new("some-provider"), Primary: new(true)}}
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(BeForbiddenError())
+			})
+
+			It("should allow an update of an existing shoot which changes neither the seed nor the DNS", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Labels = map[string]string{"foo": "bar"}
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+		})
+
 		Context("scheduling checks for Create operation", func() {
 			var (
 				oldShoot *core.Shoot
