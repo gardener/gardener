@@ -38,7 +38,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | RemoveHTTPProxyLegacyPort      | `true`  | `Beta`  | `1.154` |         |
 | StrictAuditPolicyValidation    | `false` | `Alpha` | `1.152` |         |
 | AllowlistSeedReferences        | `false` | `Alpha` | `1.155` |         |
-| MutableShootDomains            | `false` | `Alpha` | `1.154` |         |
+| MutableShootDomains            | `false` | `Alpha` | `1.155` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
