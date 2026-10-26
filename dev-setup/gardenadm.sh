@@ -40,8 +40,8 @@ function generate_manifests() {
   local scenario="$1"
   local profiles="$2"
 
-  # Prepare resources and generate manifests.
-  # The manifests are copied to the unmanaged-infra machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
+  # Prepare resources and generate manifests into generated/$scenario/manifests.yaml.
+  # For the unmanaged-infra scenario, they are copied to the machine pods or can be passed to the `--config-dir` flag of `gardenadm bootstrap`.
   skaffold build \
     ${profiles} \
     -m gardenadm,provider-local \
