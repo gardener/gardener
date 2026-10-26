@@ -261,7 +261,7 @@ var _ = Describe("Worker", func() {
 		})
 	})
 
-	Describe("#WorkerPoolToOperatingSystemConfigSecretMetaMap", func() {
+	Describe("#WorkerPoolToOperatingSystemConfigSecretNameToChecksum", func() {
 		It("should return an error when the list fails", func() {
 			c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
 				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
@@ -269,14 +269,14 @@ var _ = Describe("Worker", func() {
 				},
 			}).Build()
 
-			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretMeta).To(BeNil())
+			workerPoolToOSCSecretNameToChecksum, err := WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx, c)
+			Expect(workerPoolToOSCSecretNameToChecksum).To(BeNil())
 			Expect(err).To(MatchError(fakeErr))
 		})
 
 		It("should return an empty map when there are no secrets", func() {
-			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c)
-			Expect(workerPoolToCloudConfigSecretMeta).To(BeEmpty())
+			workerPoolToOSCSecretNameToChecksum, err := WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx, c)
+			Expect(workerPoolToOSCSecretNameToChecksum).To(BeEmpty())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -334,35 +334,18 @@ var _ = Describe("Worker", func() {
 			Expect(c.Create(ctx, &secret3WithoutWorkerPoolLabel)).To(Succeed())
 			Expect(c.Create(ctx, &secret4WithoutAnnotations)).To(Succeed())
 
-			workerPoolToCloudConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, c)
+			workerPoolToOSCSecretNameToChecksum, err := WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx, c)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(workerPoolToCloudConfigSecretMeta).To(Equal(map[string]metav1.ObjectMeta{
-				pool1: {
-					Name:            "secret1",
-					Namespace:       metav1.NamespaceSystem,
-					ResourceVersion: "1",
-					Labels: map[string]string{
-						"worker.gardener.cloud/pool": pool1,
-						"gardener.cloud/role":        "operating-system-config",
-					},
-					Annotations: map[string]string{"checksum/data-script": checksum1},
-				},
-				pool2: {
-					Name:            "secret2",
-					Namespace:       metav1.NamespaceSystem,
-					ResourceVersion: "1",
-					Labels: map[string]string{
-						"worker.gardener.cloud/pool": pool2,
-						"gardener.cloud/role":        "operating-system-config"},
-					Annotations: map[string]string{"checksum/data-script": checksum2},
-				},
+			Expect(workerPoolToOSCSecretNameToChecksum).To(Equal(map[string]map[string]string{
+				pool1: {"secret1": checksum1},
+				pool2: {"secret2": checksum2},
 			}))
 		})
 	})
 
 	DescribeTable("#OperatingSystemConfigUpdatedForAllWorkerPools",
-		func(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToCloudConfigSecretMeta map[string]metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
-			Expect(OperatingSystemConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta)).To(matcher)
+		func(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToOSCSecretNameToChecksum map[string]map[string]string, matcher gomegatypes.GomegaMatcher) {
+			Expect(OperatingSystemConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToOSCSecretNameToChecksum)).To(matcher)
 		},
 
 		Entry("secret meta missing",
@@ -379,10 +362,7 @@ var _ = Describe("Worker", func() {
 					"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
 				},
 			}}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{"checksum/data-script": "foo"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "foo"}},
 			MatchError(ContainSubstring("hasn't been reported yet")),
 		),
 		Entry("checksum annotation outdated",
@@ -394,10 +374,7 @@ var _ = Describe("Worker", func() {
 					"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
 				},
 			}}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{"checksum/data-script": "foo"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "foo"}},
 			MatchError(ContainSubstring("is outdated")),
 		),
 		Entry("skip node marked by MCM for termination",
@@ -412,24 +389,21 @@ var _ = Describe("Worker", func() {
 				},
 				Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: "deployment.machine.sapcloud.io/prefer-no-schedule", Effect: corev1.TaintEffectPreferNoSchedule}}},
 			}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{"checksum/data-script": "foo"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "foo"}},
 			BeNil(),
 		),
-		Entry("skip node whose OSC key does not match secret OSC key",
+		Entry("validate node against the old OperatingSystemConfig secret it still references",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
 			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{"checksum/cloud-config-data": "foo"},
 				Labels: map[string]string{
 					"worker.gardener.cloud/kubernetes-version":              "1.24.0",
-					"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
+					"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c1",
 				},
 			}}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c1",
-				Annotations: map[string]string{"checksum/data-script": "foo"},
+			map[string]map[string]string{"pool1": {
+				"gardener-node-agent--c63c0": "bar",
+				"gardener-node-agent--c63c1": "foo",
 			}},
 			BeNil(),
 		),
@@ -452,10 +426,7 @@ var _ = Describe("Worker", func() {
 					},
 				},
 			}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "current"}},
 			BeNil(),
 		),
 		Entry("skip node that is preserved and not ready (Ready=Unknown)",
@@ -477,10 +448,7 @@ var _ = Describe("Worker", func() {
 					},
 				},
 			}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "current"}},
 			BeNil(),
 		),
 		Entry("do not skip node that is preserved but ready (Ready=True)",
@@ -502,10 +470,7 @@ var _ = Describe("Worker", func() {
 					},
 				},
 			}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "current"}},
 			MatchError(ContainSubstring("is outdated")),
 		),
 		Entry("do not skip node that is not preserved but not ready",
@@ -526,10 +491,7 @@ var _ = Describe("Worker", func() {
 					},
 				},
 			}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "current"}},
 			MatchError(ContainSubstring("is outdated")),
 		),
 		Entry("do not skip node that has Preserved=False and is not ready",
@@ -551,10 +513,7 @@ var _ = Describe("Worker", func() {
 					},
 				},
 			}}},
-			map[string]metav1.ObjectMeta{"pool1": {
-				Name:        "gardener-node-agent--c63c0",
-				Annotations: map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: "current"},
-			}},
+			map[string]map[string]string{"pool1": {"gardener-node-agent--c63c0": "current"}},
 			MatchError(ContainSubstring("is outdated")),
 		),
 
@@ -576,15 +535,9 @@ var _ = Describe("Worker", func() {
 					},
 				}}},
 			},
-			map[string]metav1.ObjectMeta{
-				"pool1": {
-					Name:        "gardener-node-agent--c63c0",
-					Annotations: map[string]string{"checksum/data-script": "uptodate1"},
-				},
-				"pool2": {
-					Name:        "gardener-node-agent--5dcdf",
-					Annotations: map[string]string{"checksum/data-script": "uptodate2"},
-				},
+			map[string]map[string]string{
+				"pool1": {"gardener-node-agent--c63c0": "uptodate1"},
+				"pool2": {"gardener-node-agent--5dcdf": "uptodate2"},
 			},
 			BeNil(),
 		),
