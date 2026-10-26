@@ -286,6 +286,7 @@ linters:
               - jsontags
               - nonullable
               - optionalfields
+              - uniquemarkers
           lintersConfig:
             optionalfields:
               pointers:
