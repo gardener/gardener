@@ -90,7 +90,7 @@ var _ = Describe("Admission", func() {
 				Architecture: new("arm64"),
 			}
 
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
@@ -1090,8 +1090,7 @@ var _ = Describe("Admission", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE and UPDATE operations", func() {
-			dr, err := New()
-			Expect(err).ToNot(HaveOccurred())
+			dr := New()
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).To(BeFalse())

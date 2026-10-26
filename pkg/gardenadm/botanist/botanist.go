@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenadm"
+	gardenadmadmission "github.com/gardener/gardener/pkg/gardenadm/admission"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -87,6 +88,8 @@ var (
 )
 
 // NewGardenadmBotanistFromManifests reads the manifests from dir and initializes a new GardenadmBotanist with them.
+// The gardener-apiserver admission chain is run against the Shoot before constructing the botanist — mutations are
+// applied in-memory.
 func NewGardenadmBotanistFromManifests(
 	ctx context.Context,
 	log logr.Logger,
@@ -100,6 +103,10 @@ func NewGardenadmBotanistFromManifests(
 	resources, err := gardenadm.ReadManifests(log, DirFS(dir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
+	}
+
+	if err := gardenadmadmission.RunAdmissionChain(ctx, log, &resources); err != nil {
+		return nil, fmt.Errorf("admission chain rejected the configuration: %w", err)
 	}
 
 	return NewGardenadmBotanistFromResources(ctx, log, clientSet, resources, runsControlPlane)

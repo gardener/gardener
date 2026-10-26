@@ -114,6 +114,34 @@ func AllOrderedPluginNames() []string {
 	}
 }
 
+// GardenadmSkipPlugins returns the set of default-on admission plugins that are NOT run by gardenadm
+// before executing any flow that mutates the self-hosted shoot cluster. Only default-on plugins not
+// in this set are run. New default-on plugins are included automatically — add them here only if they
+// are explicitly not applicable in the gardenadm context.
+func GardenadmSkipPlugins() sets.Set[string] {
+	return sets.New[string](
+		lifecycle.PluginName,                      // NamespaceLifecycle — not applicable offline
+		PluginNameShootManagedSeed,                // UPDATE/DELETE only; gardenadm shoots are never ManagedSeeds
+		PluginNameSeedValidator,                   // not a Shoot plugin
+		PluginNameSeedMutator,                     // not a Shoot plugin
+		PluginNameControllerRegistrationResources, // not a Shoot plugin
+		PluginNameNamespacedCloudProfileValidator, // not a Shoot plugin
+		PluginNameProjectMutator,                  // not a Shoot plugin
+		PluginNameDeletionConfirmation,            // DELETE only
+		PluginNameFinalizerRemoval,                // DELETE only
+		PluginNameCustomVerbAuthorizer,            // RBAC; not applicable offline
+		PluginNameManagedSeed,                     // not a Shoot plugin
+		PluginNameManagedSeedShoot,                // not a Shoot plugin
+		PluginNameBastion,                         // not a Shoot plugin
+		PluginNameBackupBucketValidator,           // not a Shoot plugin
+		mutating.PluginName,                       // mutating admission policies; no policy infrastructure in gardenadm
+		mutatingwebhook.PluginName,                // no webhook server in gardenadm
+		validating.PluginName,                     // validating admission policies; no policy infrastructure in gardenadm
+		validatingwebhook.PluginName,              // no webhook server in gardenadm
+		resourcequota.PluginName,                  // no quota infrastructure in gardenadm
+	)
+}
+
 // DefaultOnPlugins is the set of admission plugins that are enabled by default.
 func DefaultOnPlugins() sets.Set[string] {
 	return sets.New[string](

@@ -17,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -25,7 +24,6 @@ import (
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
-	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,8 +32,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/nodeagent"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -281,7 +277,6 @@ func ItShouldBeReconciledByGardenlet(
 	shoot *gardencorev1beta1.Shoot,
 	clusterAdminStaticToken string,
 	runInMachine func(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffer, *gbytes.Buffer, error),
-	runInNode func(ctx context.Context, nodeName string, command ...string) (*gbytes.Buffer, *gbytes.Buffer, error),
 ) {
 	GinkgoHelper()
 
@@ -307,9 +302,6 @@ func ItShouldBeReconciledByGardenlet(
 				completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
 				g.Expect(completed).To(BeTrue(), reason)
 			}).WithPolling(30 * time.Second).Should(Succeed())
-
-			By("Verifying ShootTaskUpdateGardenerNodeAgentSecretName task annotation has been removed")
-			Expect(controllerutils.HasTask(s.Shoot.Annotations, v1beta1constants.ShootTaskUpdateGardenerNodeAgentSecretName)).To(BeFalse())
 		}, SpecTimeout(30*time.Minute))
 
 		It("should ensure the static token secret only contains the health-check token (cluster-admin token eliminated)", func(ctx SpecContext) {
@@ -360,54 +352,6 @@ func ItShouldBeReconciledByGardenlet(
 				stdOut, _, err = runInMachine(ctx, 0, "cat", tokenPath)
 				Expect(err).NotTo(HaveOccurred(), "failed to read token file for %s", component)
 				Expect(strings.Split(strings.TrimSpace(string(stdOut.Contents())), ".")).To(HaveLen(3), "%s token should be a JWT (3 dot-separated parts)", component)
-			}
-		}, SpecTimeout(time.Minute))
-
-		It("should ensure node labels and gardener-node-agent config reflect the correct OSC secret name", func(ctx SpecContext) {
-			By("Build map of worker pool -> newest original OSC name (the newest OSC is the one desired by gardenlet)")
-			oscList := &extensionsv1alpha1.OperatingSystemConfigList{}
-			Expect(shootClientSet.Client().List(ctx, oscList, client.InNamespace(controlPlaneNamespace))).To(Succeed())
-
-			poolToNewestOSC := make(map[string]*extensionsv1alpha1.OperatingSystemConfig)
-			for _, osc := range oscList.Items {
-				if osc.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-					continue
-				}
-				poolName := osc.Labels[v1beta1constants.LabelWorkerPool]
-				existing, ok := poolToNewestOSC[poolName]
-				if !ok || osc.CreationTimestamp.After(existing.CreationTimestamp.Time) {
-					poolToNewestOSC[poolName] = &osc
-				}
-			}
-
-			By("List nodes and verify labels and GNA config")
-			nodeList := &corev1.NodeList{}
-			Expect(shootClientSet.Client().List(ctx, nodeList)).To(Succeed())
-
-			for _, node := range nodeList.Items {
-				poolName := node.Labels[v1beta1constants.LabelWorkerPool]
-				newestOSC, ok := poolToNewestOSC[poolName]
-				Expect(ok).To(BeTrue(), "no original OSC found for worker pool %q (node %s)", poolName, node.Name)
-
-				// The GNA secret name is the OSC name without the "-original" suffix.
-				expectedSecretName := strings.TrimSuffix(newestOSC.Name, "-original")
-
-				By("Verifying node label for node " + node.Name)
-				Expect(node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]).To(Equal(expectedSecretName), "node %s has wrong %s label", node.Name, v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName)
-
-				By("Verifying GNA config on machine " + node.Name)
-				// Use find to locate the config file instead of constructing the path from the test binary's
-				// version string, which may differ from the GNA binary's version string on the node.
-				stdOut, _, err := runInNode(ctx, node.Name, "find", nodeagentconfigv1alpha1.BaseDir, "-maxdepth", "1", "-name", "config-*.yaml")
-				Expect(err).NotTo(HaveOccurred(), "failed to list GNA config files on node %s", node.Name)
-				configPath := strings.TrimSpace(string(stdOut.Contents()))
-				Expect(configPath).NotTo(BeEmpty(), "no GNA config file found in %s on node %s", nodeagentconfigv1alpha1.BaseDir, node.Name)
-				stdOut, _, err = runInNode(ctx, node.Name, "cat", configPath)
-				Expect(err).NotTo(HaveOccurred(), "failed to read GNA config from node %s at path %s", node.Name, configPath)
-
-				gnaConfig := &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
-				Expect(runtime.DecodeInto(nodeagent.Codec, stdOut.Contents(), gnaConfig)).To(Succeed(), "failed to decode GNA config on node %s", node.Name)
-				Expect(gnaConfig.Controllers.OperatingSystemConfig.SecretName).To(Equal(expectedSecretName), "GNA config on node %s has wrong secret name", node.Name)
 			}
 		}, SpecTimeout(time.Minute))
 

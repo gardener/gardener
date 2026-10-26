@@ -26,7 +26,7 @@ import (
 )
 
 var _ = Describe("GardenadmBotanist", func() {
-	Describe("#NewGardenadmBotanistFromManifests", func() {
+	Describe("#NewGardenadmBotanistFromResources", func() {
 		const configDir = "manifests"
 
 		var (
@@ -50,14 +50,20 @@ var _ = Describe("GardenadmBotanist", func() {
 			))
 		})
 
+		readResources := func() gardenadm.Resources {
+			resources, err := gardenadm.ReadManifests(log, DirFS(configDir))
+			Expect(err).NotTo(HaveOccurred())
+			return resources
+		}
+
 		It("should fail if the directory does not exist", func() {
-			Expect(NewGardenadmBotanistFromManifests(ctx, log, nil, "does/not/exist", false)).Error().To(MatchError(fs.ErrNotExist))
+			Expect(gardenadm.ReadManifests(log, DirFS("does/not/exist"))).Error().To(MatchError(fs.ErrNotExist))
 		})
 
 		When("running the control plane (acting on the self-hosted shoot cluster)", func() {
 			Context("with unmanaged infrastructure", func() {
 				It("should create a new Self-Hosted Botanist", func() {
-					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
@@ -77,7 +83,7 @@ metadata:
   name: gardenadm
 `)}
 
-					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(b.Shoot.GetInfo().Status.LastOperation).NotTo(BeNil())
@@ -100,13 +106,13 @@ metadata:
 
 				It("should not fail if the ShootState is missing (validated separately by ValidateShootStateForInit)", func() {
 					delete(fsys, configDir+"/shootstate.yaml")
-					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(b.Shoot.GetInfo().Status.LastOperation).To(BeNil())
 				})
 
 				It("should set the LastOperation to Restore and fetch the ShootState", func() {
-					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(b.Shoot.GetInfo().Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
@@ -116,7 +122,7 @@ metadata:
 			})
 
 			It("should use kube-system as the control plane namespace", func() {
-				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+				b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("kube-system"))
 			})
@@ -127,7 +133,7 @@ metadata:
 					DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
 
 					By("Generate new shoot UID and write it to the host")
-					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 					Expect(err).NotTo(HaveOccurred())
 
 					uid := b.Shoot.GetInfo().Status.UID
@@ -140,7 +146,7 @@ metadata:
 					Expect(string(content)).To(Equal(string(uid)))
 
 					By("Do not regenerate shoot UID when file is present on host")
-					b, err = NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err = NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(b.Shoot.GetInfo().Status.UID).To(Equal(uid))
@@ -162,7 +168,7 @@ metadata:
 					DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
 
 					By("Ensure the shoot UID is preserved")
-					b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+					b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(string(b.Shoot.GetInfo().Status.UID)).To(Equal(uid))
@@ -175,7 +181,7 @@ metadata:
 
 		When("not running the control plane (acting on the bootstrap cluster)", func() {
 			It("should create a new Self-Hosted Botanist", func() {
-				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
+				b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), false)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
@@ -189,7 +195,7 @@ metadata:
 			})
 
 			It("should use the technical ID as the control plane namespace", func() {
-				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
+				b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("shoot--gardenadm--gardenadm"))
 			})
@@ -198,7 +204,7 @@ metadata:
 				fs := afero.NewMemMapFs()
 				DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
 
-				b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
+				b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), false)
 				Expect(err).NotTo(HaveOccurred())
 
 				uid := b.Shoot.GetInfo().Status.UID
@@ -210,7 +216,7 @@ metadata:
 		})
 
 		It("should create the secrets with the fake garden client", func() {
-			b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, false)
+			b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret1"}, &corev1.Secret{})).To(Succeed())
@@ -219,7 +225,7 @@ metadata:
 		})
 
 		It("should create the secret binding and credentials binding", func() {
-			b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+			b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &corev1.Secret{})).To(Succeed())
@@ -228,7 +234,7 @@ metadata:
 		})
 
 		It("should create the workload identity", func() {
-			b, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+			b, err := NewGardenadmBotanistFromResources(ctx, log, nil, readResources(), true)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "local"}, &securityv1alpha1.WorkloadIdentity{})).To(Succeed())

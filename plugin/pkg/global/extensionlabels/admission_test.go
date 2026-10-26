@@ -28,7 +28,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 	)
 
 	BeforeEach(func() {
-		admissionHandler, _ = New()
+		admissionHandler = New()
 		admissionHandler.AssignReadyFunc(func() bool { return true })
 
 		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
@@ -813,9 +813,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE + UPDATE operations", func() {
-			el, err := New()
+			el := New()
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(el.Handles(admission.Create)).To(BeTrue())
 			Expect(el.Handles(admission.Update)).To(BeTrue())
 			Expect(el.Handles(admission.Connect)).NotTo(BeTrue())
@@ -825,13 +824,13 @@ var _ = Describe("ExtensionLabels tests", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if no BackupBucketLister is set", func() {
-			el, _ := New()
+			el := New()
 			err := el.ValidateInitialization()
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not return error if BackupBucketLister and core client are set", func() {
-			el, _ := New()
+			el := New()
 			el.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			err := el.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

@@ -42,10 +42,7 @@ var _ = Describe("validator", func() {
 		BeforeEach(func() {
 			backupBucket = backupBucketBase.DeepCopy()
 
-			var err error
-			admissionHandler, err = New()
-			Expect(err).ToNot(HaveOccurred())
-
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			securityInformerFactory = gardensecurityinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
@@ -159,8 +156,7 @@ var _ = Describe("validator", func() {
 
 	Describe("#New", func() {
 		It("should handle only CREATE and UPDATE operations", func() {
-			dr, err := New()
-			Expect(err).ToNot(HaveOccurred())
+			dr := New()
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).To(BeFalse())
@@ -170,7 +166,7 @@ var _ = Describe("validator", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if no WorkloadIdentityLister is set", func() {
-			dr, _ := New()
+			dr := New()
 
 			err := dr.ValidateInitialization()
 
@@ -179,7 +175,7 @@ var _ = Describe("validator", func() {
 		})
 
 		It("should not return error if WorkloadIdentityLister is set", func() {
-			dr, _ := New()
+			dr := New()
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()

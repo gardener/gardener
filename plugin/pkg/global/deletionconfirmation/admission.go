@@ -43,7 +43,7 @@ func Register(plugins *admission.Plugins) {
 
 // NewFactory creates a new PluginFactory.
 func NewFactory(_ io.Reader) (admission.Interface, error) {
-	return New()
+	return New(), nil
 }
 
 // DeletionConfirmation contains an admission handler and listers.
@@ -65,10 +65,10 @@ var (
 )
 
 // New creates a new DeletionConfirmation admission plugin.
-func New() (*DeletionConfirmation, error) {
+func New() *DeletionConfirmation {
 	return &DeletionConfirmation{
 		Handler: admission.NewHandler(admission.Create, admission.Update, admission.Delete),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.
