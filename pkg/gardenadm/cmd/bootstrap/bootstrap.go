@@ -133,7 +133,7 @@ func run(ctx context.Context, opts *Options) error {
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.InfrastructureResource]),
 		)
 		_ = g.AddGroup(
-			b.ReconcileOperatingSystemConfigTaskGroup(false).
+			b.ReconcileOperatingSystemConfigTaskGroup().
 				WithDependencies(syncPointBootstrapped),
 		)
 		_ = g.AddGroup(
