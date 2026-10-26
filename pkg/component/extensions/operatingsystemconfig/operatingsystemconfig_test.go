@@ -519,6 +519,61 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			})
 
+			It("should load old OperatingSystemConfigs still residing in the system into OldOriginals", func() {
+				DeferCleanup(test.WithVars(
+					&TimeNow, fakeClock.Now,
+					&InitConfigFn, initConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				))
+
+				oldOriginal := &extensionsv1alpha1.OperatingSystemConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-node-agent-" + worker1Name + "-0000000000000000-original",
+						Namespace: namespace,
+						Labels:    map[string]string{"worker.gardener.cloud/pool": worker1Name},
+					},
+					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeReconcile},
+				}
+				Expect(c.Create(ctx, oldOriginal)).To(Succeed())
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()[worker1Name].OldOriginals).To(ConsistOf(Data{
+					GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-0000000000000000",
+					Object:                      oldOriginal,
+				}))
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()[worker2Name].OldOriginals).To(BeEmpty())
+			})
+
+			It("should track old OperatingSystemConfigs for worker pools no longer in the current values", func() {
+				DeferCleanup(test.WithVars(
+					&TimeNow, fakeClock.Now,
+					&InitConfigFn, initConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				))
+
+				orphanedPoolOSC := &extensionsv1alpha1.OperatingSystemConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-node-agent-deleted-pool-0000000000000000-original",
+						Namespace: namespace,
+						Labels:    map[string]string{"worker.gardener.cloud/pool": "deleted-pool"},
+					},
+					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeReconcile},
+				}
+				Expect(c.Create(ctx, orphanedPoolOSC)).To(Succeed())
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(HaveKey("deleted-pool"))
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()["deleted-pool"].Original.Object).To(BeNil())
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()["deleted-pool"].OldOriginals).To(ConsistOf(Data{
+					GardenerNodeAgentSecretName: "gardener-node-agent-deleted-pool-0000000000000000",
+					Object:                      orphanedPoolOSC,
+				}))
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()[worker1Name].OldOriginals).To(BeEmpty())
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()[worker2Name].OldOriginals).To(BeEmpty())
+			})
+
 			It("should successfully deploy all extensions resources and SSH access is enabled", func() {
 				DeferCleanup(test.WithVars(
 					&TimeNow, fakeClock.Now,
