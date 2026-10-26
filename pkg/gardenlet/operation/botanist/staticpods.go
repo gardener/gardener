@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -28,14 +29,18 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/kubernetes/adminaccess"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -326,6 +331,10 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 		}
 	}
 
+	if err := b.reconcileStaticPodFilesInOldOperatingSystemConfigs(ctx, oscData.OldOriginals, files); err != nil {
+		return nil, nil, fmt.Errorf("failed reconciling static pod files in old OperatingSystemConfigs: %w", err)
+	}
+
 	return &oscData.Original, controlPlaneWorkerPool, nil
 }
 
@@ -484,4 +493,116 @@ func (b *Botanist) useShootAccessTokensForSelfHostedShootControlPlane(ctx contex
 	}
 
 	return !deployment.Spec.Template.Spec.HostNetwork, nil
+}
+
+func (b *Botanist) reconcileStaticPodFilesInOldOperatingSystemConfigs(ctx context.Context, oldOSCData []operatingsystemconfig.Data, files []extensionsv1alpha1.File) error {
+	taskFns := make([]flow.TaskFn, 0, len(oldOSCData))
+
+	for _, oscData := range oldOSCData {
+		osc := oscData.Object
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(osc.DeepCopy())
+			metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().Format(time.RFC3339Nano))
+			if err := mergeFilesIntoOSC(osc, files); err != nil {
+				return fmt.Errorf("failed merging static pod files into OperatingSystemConfig %s: %w", client.ObjectKeyFromObject(osc), err)
+			}
+			if err := b.SeedClientSet.Client().Patch(ctx, osc, patch); err != nil {
+				return fmt.Errorf("failed patching OperatingSystemConfig %s with additional files for static control plane pods: %w", client.ObjectKeyFromObject(osc), err)
+			}
+
+			if err := extensions.WaitUntilExtensionObjectReady(ctx,
+				b.SeedClientSet.Client(),
+				b.Logger,
+				osc,
+				extensionsv1alpha1.OperatingSystemConfigResource,
+				operatingsystemconfig.DefaultInterval,
+				operatingsystemconfig.DefaultSevereThreshold,
+				operatingsystemconfig.DefaultTimeout,
+				nil,
+			); err != nil {
+				return fmt.Errorf("failed waiting for OperatingSystemConfig %s to be ready: %w", client.ObjectKeyFromObject(osc), err)
+			}
+
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// mergeFilesIntoOSC updates files in osc.Spec.Files that share a path with entries in files, and appends new ones.
+// Static pod manifests under kubelet.FilePathKubernetesManifests are a special case: their spec belongs to the OSC's
+// own (possibly outdated) generation and must not be overwritten with the current generation's manifest. Instead, only
+// the hash annotation is carried over so that gardener-node-agent restarts the static pod to pick up the updated
+// content of its referenced files (e.g., rotated CA certificates).
+func mergeFilesIntoOSC(osc *extensionsv1alpha1.OperatingSystemConfig, files []extensionsv1alpha1.File) error {
+	for _, file := range files {
+		var (
+			idx                 = slices.IndexFunc(osc.Spec.Files, func(f extensionsv1alpha1.File) bool { return f.Path == file.Path })
+			isStaticPodManifest = filepath.Dir(file.Path) == kubelet.FilePathKubernetesManifests && filepath.Ext(file.Path) == ".yaml"
+		)
+
+		if isStaticPodManifest {
+			if idx >= 0 {
+				merged, err := mergeStaticPodHashAnnotation(osc.Spec.Files[idx], file)
+				if err != nil {
+					return fmt.Errorf("failed merging hash annotation for static pod manifest %q: %w", file.Path, err)
+				}
+				osc.Spec.Files[idx] = merged
+			}
+			continue
+		}
+
+		if idx >= 0 {
+			osc.Spec.Files[idx] = file
+		} else {
+			osc.Spec.Files = append(osc.Spec.Files, file)
+		}
+	}
+
+	return nil
+}
+
+// mergeStaticPodHashAnnotation returns oldFile with its static pod's hash annotation set to the value from newFile,
+// keeping the rest of the old pod spec unchanged.
+func mergeStaticPodHashAnnotation(oldFile, newFile extensionsv1alpha1.File) (extensionsv1alpha1.File, error) {
+	oldPod, err := decodeStaticPodFile(oldFile)
+	if err != nil {
+		return extensionsv1alpha1.File{}, fmt.Errorf("failed decoding existing manifest: %w", err)
+	}
+
+	newPod, err := decodeStaticPodFile(newFile)
+	if err != nil {
+		return extensionsv1alpha1.File{}, fmt.Errorf("failed decoding current manifest: %w", err)
+	}
+
+	metav1.SetMetaDataAnnotation(&oldPod.ObjectMeta, staticpod.AnnotationKeyHash, newPod.Annotations[staticpod.AnnotationKeyHash])
+
+	manifest, err := kubernetesutils.Serialize(oldPod, kubernetes.ShootScheme)
+	if err != nil {
+		return extensionsv1alpha1.File{}, fmt.Errorf("failed serializing manifest: %w", err)
+	}
+
+	oldFile.Content.Inline.Data = utils.EncodeBase64([]byte(manifest))
+	return oldFile, nil
+}
+
+func decodeStaticPodFile(file extensionsv1alpha1.File) (*corev1.Pod, error) {
+	if file.Content.Inline == nil {
+		return nil, fmt.Errorf("file %q has no inline content", file.Path)
+	}
+
+	data, err := utils.DecodeBase64(file.Content.Inline.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed decoding base64 content: %w", err)
+	}
+
+	pod := &corev1.Pod{}
+	if _, _, err := serializer.NewCodecFactory(kubernetes.ShootScheme).UniversalDeserializer().Decode(data, nil, pod); err != nil {
+		return nil, fmt.Errorf("failed decoding into Pod: %w", err)
+	}
+
+	return pod, nil
 }

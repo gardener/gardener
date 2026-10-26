@@ -28,3 +28,5 @@ var AppendDynamicAdminKubeconfigToFiles = func(b *Botanist, files []extensionsv1
 var WorkerPoolsForWorkerResource = func(b *Botanist) []gardencorev1beta1.Worker {
 	return b.workerPoolsForWorkerResource()
 }
+
+var MergeFilesIntoOSC = mergeFilesIntoOSC
