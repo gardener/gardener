@@ -13,7 +13,7 @@ import (
 )
 
 // FetchNodeByHostName tries to fetch the node (metadata-only) object based on the hostname.
-func FetchNodeByHostName(ctx context.Context, c client.Client, hostName string) (*corev1.Node, error) {
+func FetchNodeByHostName(ctx context.Context, c client.Reader, hostName string) (*corev1.Node, error) {
 	// node name not known yet, try to fetch it via label selector based on hostname
 	nodeList := &corev1.NodeList{}
 	if err := c.List(ctx, nodeList, client.MatchingLabels{corev1.LabelHostname: hostName}); err != nil {
