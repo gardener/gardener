@@ -6026,6 +6026,68 @@ var _ = Describe("validator", func() {
 				Entry("should allow networking status with only egressCIDRs filled", &core.NetworkingStatus{EgressCIDRs: []string{"1.2.3.4/5"}}, false, Not(HaveOccurred())),
 			)
 
+			Context("with the MutableShootDomains feature gate", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+					oldSeed.Spec.DNS.Internal = &internalDNS1
+					oldSeed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS1}
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(oldSeed)).To(Succeed())
+
+					shoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+						{Name: v1beta1constants.AdvertisedAddressInternal, URL: "https://api." + shoot.Name + "." + projectName + ".test1.internal"},
+					}
+				})
+
+				validateBinding := func() error {
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					return admissionHandler.Validate(ctx, attrs, nil)
+				}
+
+				It("should allow the migration if the target seed lists the internal domain of the shoot", func() {
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2, internalDNS1}
+
+					Expect(validateBinding()).To(Succeed())
+				})
+
+				It("should reject the migration if the target seed does not list the internal domain of the shoot", func() {
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2}
+
+					Expect(validateBinding()).To(MatchError(ContainSubstring(`has no internal domain for the internal cluster domain "` + shoot.Name + "." + projectName + `.test1.internal"`)))
+				})
+
+				It("should reject the migration if the target seed does not list the prior internal domain of the shoot", func() {
+					shoot.Status.AdvertisedAddresses = append(shoot.Status.AdvertisedAddresses, core.ShootAdvertisedAddress{
+						Name: v1beta1constants.AdvertisedAddressPriorInternal, URL: "https://api." + shoot.Name + "." + projectName + ".test2.internal",
+					})
+					seed.Spec.DNS.Internal = &internalDNS1
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS1}
+
+					Expect(validateBinding()).To(MatchError(ContainSubstring(`internal cluster domain "` + shoot.Name + "." + projectName + `.test2.internal"`)))
+				})
+
+				It("should allow the migration if the shoot has no internal domain", func() {
+					shoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+						{Name: v1beta1constants.AdvertisedAddressExternal, URL: "https://api.shoot.example.com"},
+					}
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2}
+
+					Expect(validateBinding()).To(Succeed())
+				})
+
+				It("should allow the migration if the shoot has no advertised addresses and the seeds have different internal domains", func() {
+					shoot.Status.AdvertisedAddresses = nil
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2}
+
+					Expect(validateBinding()).To(Succeed())
+				})
+			})
+
 			DescribeTable("Validating internal dns secret reference change by migration",
 				func(oldDNSInternalRef, newDNSInternalRef *gardencorev1beta1.SeedDNSProviderConfig, matcher types.GomegaMatcher) {
 					oldSeed.Spec.DNS.Internal = oldDNSInternalRef

@@ -566,15 +566,8 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for seed %q", c.seed.Name))
 		}
 
-		var oldDomain, newDomain string
-		if oldSeed.Spec.DNS.Internal != nil {
-			oldDomain = oldSeed.Spec.DNS.Internal.Domain
-		}
-		if c.seed.Spec.DNS.Internal != nil {
-			newDomain = c.seed.Spec.DNS.Internal.Domain
-		}
-		if oldDomain != newDomain {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because internal domain would change from %q to %q", oldDomain, newDomain))
+		if err := c.validateInternalDomainForRescheduling(oldSeed); err != nil {
+			return admission.NewForbidden(a, err)
 		}
 
 		if err := c.validateDefaultDomainCompatibilityForRescheduling(oldSeed); err != nil {
@@ -1823,6 +1816,48 @@ func validateKubeletVersion(constraints []gardencorev1beta1.MachineImage, worker
 		}
 	}
 
+	return nil
+}
+
+func (c *validationContext) validateInternalDomainForRescheduling(oldSeed *gardencorev1beta1.Seed) error {
+	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return c.validateInternalDomainsInUseOnSeed()
+	}
+
+	var oldDomain, newDomain string
+	if oldSeed.Spec.DNS.Internal != nil {
+		oldDomain = oldSeed.Spec.DNS.Internal.Domain
+	}
+	if c.seed.Spec.DNS.Internal != nil {
+		newDomain = c.seed.Spec.DNS.Internal.Domain
+	}
+	if oldDomain != newDomain {
+		return fmt.Errorf("cannot change seed name because internal domain would change from %q to %q", oldDomain, newDomain)
+	}
+	return nil
+}
+
+func (c *validationContext) validateInternalDomainsInUseOnSeed() error {
+	var seedDomains []string
+	if c.seed.Spec.DNS.Internal != nil {
+		seedDomains = append(seedDomains, c.seed.Spec.DNS.Internal.Domain)
+	}
+	for _, internalDomain := range c.seed.Spec.DNS.InternalDomains {
+		seedDomains = append(seedDomains, internalDomain.Domain)
+	}
+
+	for _, address := range c.shoot.Status.AdvertisedAddresses {
+		if address.Name != v1beta1constants.AdvertisedAddressInternal && address.Name != v1beta1constants.AdvertisedAddressPriorInternal {
+			continue
+		}
+
+		clusterDomain := v1beta1helper.GetDomainFromAPIServerURL(address.URL)
+		if !slices.ContainsFunc(seedDomains, func(seedDomain string) bool {
+			return ptr.Equal(gardenerutils.ConstructInternalClusterDomain(c.shoot.Name, c.project.Name, &gardenerutils.Domain{Domain: seedDomain}), &clusterDomain)
+		}) {
+			return fmt.Errorf("cannot change seed name because seed %q has no internal domain for the internal cluster domain %q of the shoot", c.seed.Name, clusterDomain)
+		}
+	}
 	return nil
 }
 
