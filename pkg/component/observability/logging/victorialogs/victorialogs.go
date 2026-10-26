@@ -49,8 +49,6 @@ import (
 )
 
 const (
-	name = "victoria-logs"
-
 	timeoutWaitForManagedResources = 2 * time.Minute
 
 	vlServerTLSVolumeName = "vl-server-tls"
@@ -421,7 +419,7 @@ func (v *victoriaLogs) getAutoscalerName() string {
 
 func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(name, v.namespace, v.getPrometheusLabel()),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(constants.VLSingleResourceName, v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -437,7 +435,7 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: new(name),
+						Replacement: new(constants.VLSingleResourceName),
 						TargetLabel: "job",
 					},
 					{
@@ -463,7 +461,7 @@ func (v *victoriaLogs) getPrometheusRule() *monitoringv1.PrometheusRule {
 	}
 
 	return &monitoringv1.PrometheusRule{
-		ObjectMeta: monitoringutils.ConfigObjectMeta(name, v.namespace, v.getPrometheusLabel()),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(constants.VLSingleResourceName, v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{{
 				Name: "victoria-logs.rules",
@@ -494,22 +492,22 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 
 	var (
 		ingressNamespace = v.values.ExternalExposure.IstioIngressGatewayNamespace
-		gatewayName      = name
+		gatewayName      = constants.VLSingleResourceName
 	)
 
 	switch {
 	case v.values.IsGardenCluster:
-		gatewayName = name + "-garden"
+		gatewayName = constants.VLSingleResourceName + "-garden"
 	case v.values.ClusterType == component.ClusterTypeSeed:
-		gatewayName = name + "-seed"
+		gatewayName = constants.VLSingleResourceName + "-seed"
 	}
 
 	tlsSecretName := ptr.Deref(v.values.ExternalExposure.WildcardCertSecretName, "")
 	if tlsSecretName == "" {
 		// On purpose creating a separate server certificate dedicated to the ingress
 		ingressTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        name + "-ingress-tls",
-			CommonName:                  name,
+			Name:                        constants.VLSingleResourceName + "-ingress-tls",
+			CommonName:                  constants.VLSingleResourceName,
 			Organization:                []string{"gardener.cloud:logging:ingress"},
 			DNSNames:                    []string{v.values.ExternalExposure.Host},
 			CertType:                    secrets.ServerCert,
@@ -535,7 +533,7 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, name, tlsSecretName),
+			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, constants.VLSingleResourceName, tlsSecretName),
 			Namespace: ingressNamespace,
 			Labels:    getLabels(),
 		},
@@ -550,7 +548,7 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 
 	caBundleInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, name, caBundle.Name),
+			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, constants.VLSingleResourceName, caBundle.Name),
 			Namespace: v.values.ExternalExposure.IstioIngressGatewayNamespace,
 			Labels:    getLabels(),
 		},
