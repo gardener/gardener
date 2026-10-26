@@ -191,6 +191,10 @@ func (r *Reconciler) DetermineSeed(
 	if err != nil {
 		return nil, err
 	}
+	filteredSeeds, err = filterSeedsWithInternalDomainForShootWithoutManagedDomain(filteredSeeds, shoot)
+	if err != nil {
+		return nil, err
+	}
 	filteredSeeds, err = filterSeedsWithDisabledShootReconciliations(filteredSeeds)
 	if err != nil {
 		return nil, err
@@ -433,6 +437,24 @@ func filterSeedsMatchingDomain(seedList []gardencorev1beta1.Seed, shoot *gardenc
 	// we have not matched a gardener managed domain
 	// all seeds are eligible
 	return seedList, nil
+}
+
+func filterSeedsWithInternalDomainForShootWithoutManagedDomain(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
+	if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil && !v1beta1helper.ShootUsesUnmanagedDNS(shoot) {
+		return seedList, nil
+	}
+
+	var seedsWithInternalDomain []gardencorev1beta1.Seed
+	for _, seed := range seedList {
+		if v1beta1helper.SeedInternalDomainEnabled(seed.Spec.DNS) {
+			seedsWithInternalDomain = append(seedsWithInternalDomain, seed)
+		}
+	}
+
+	if len(seedsWithInternalDomain) == 0 {
+		return nil, fmt.Errorf("none of the %d seeds has an internal domain for new shoots, thus the shoot needs a domain in spec.dns.domain whose DNS provider is not unmanaged", len(seedList))
+	}
+	return seedsWithInternalDomain, nil
 }
 
 func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy schedulerconfigv1alpha1.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
