@@ -137,6 +137,22 @@ var _ = Describe("leaderElector", func() {
 		})
 	})
 
+	Describe("#holderIdentity", func() {
+		It("should return empty string when lease is nil", func() {
+			le.lease = nil
+			Expect(le.holderIdentity()).To(BeEmpty())
+		})
+
+		It("should return empty string when HolderIdentity is nil", func() {
+			Expect(le.holderIdentity()).To(BeEmpty())
+		})
+
+		It("should return the HolderIdentity", func() {
+			le.lease.Spec.HolderIdentity = new("other")
+			Expect(le.holderIdentity()).To(Equal("other"))
+		})
+	})
+
 	Describe("#acquiredByAnotherInstance", func() {
 		It("should return false when HolderIdentity is nil", func() {
 			Expect(le.acquiredByAnotherInstance()).To(BeFalse())
@@ -207,6 +223,72 @@ var _ = Describe("leaderElector", func() {
 			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
 			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now.Add(-600 * time.Second)}
 			Expect(le.renewedInTime()).To(BeFalse())
+		})
+	})
+
+	Describe("#renewedRecently", func() {
+		It("should return false when LeaseDurationSeconds is nil", func() {
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
+			Expect(le.renewedRecently()).To(BeFalse())
+		})
+
+		It("should return false when LeaseDurationSeconds is negative", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(-1))
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
+			Expect(le.renewedRecently()).To(BeFalse())
+		})
+
+		It("should return false when RenewTime is nil", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			Expect(le.renewedRecently()).To(BeFalse())
+		})
+
+		It("should return true when within half the lease duration", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now.Add(-299 * time.Second)}
+			Expect(le.renewedRecently()).To(BeTrue())
+		})
+
+		It("should return false when past half the lease duration but not yet expired", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now.Add(-400 * time.Second)}
+			Expect(le.renewedRecently()).To(BeFalse())
+		})
+
+		It("should return false when renewTime+half-duration exactly equals now", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now.Add(-300 * time.Second)}
+			Expect(le.renewedRecently()).To(BeFalse())
+		})
+	})
+
+	Describe("#durationUntilNotRenewedRecently", func() {
+		It("should return zero when LeaseDurationSeconds is nil", func() {
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
+			Expect(le.durationUntilNotRenewedRecently()).To(Equal(time.Duration(0)))
+		})
+
+		It("should return zero when LeaseDurationSeconds is negative", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(-1))
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
+			Expect(le.durationUntilNotRenewedRecently()).To(Equal(time.Duration(0)))
+		})
+
+		It("should return zero when RenewTime is nil", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			Expect(le.durationUntilNotRenewedRecently()).To(Equal(time.Duration(0)))
+		})
+
+		It("should return the remaining duration until half the lease duration elapses", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now.Add(-100 * time.Second)}
+			Expect(le.durationUntilNotRenewedRecently()).To(Equal(200 * time.Second))
+		})
+
+		It("should return a negative duration when past half the lease duration", func() {
+			le.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now.Add(-400 * time.Second)}
+			Expect(le.durationUntilNotRenewedRecently()).To(BeNumerically("<", 0))
 		})
 	})
 

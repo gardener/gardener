@@ -24,6 +24,9 @@ func serialReconciliation(secret *corev1.Secret) bool {
 	return secret.Annotations[v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation] == "true"
 }
 
+// LeaseDurationSeconds is the duration for which the serial reconciliation Lease is held. Exposed for testing.
+var LeaseDurationSeconds int32 = 600
+
 type leaderElector struct {
 	log    logr.Logger
 	client client.Client
@@ -91,6 +94,14 @@ func (l *leaderElector) acquiredByMe() bool {
 	return ptr.Deref(l.lease.Spec.HolderIdentity, "") == l.identity
 }
 
+func (l *leaderElector) holderIdentity() string {
+	if l.lease == nil {
+		return ""
+	}
+
+	return ptr.Deref(l.lease.Spec.HolderIdentity, "")
+}
+
 func (l *leaderElector) acquiredByAnotherInstance() bool {
 	if l.lease == nil {
 		return false
@@ -117,6 +128,26 @@ func (l *leaderElector) renewedInTime() bool {
 		return false
 	}
 	return l.lease.Spec.RenewTime.Add(l.leaseDuration()).UTC().After(l.clock.Now().UTC())
+}
+
+// renewedRecently reports whether the Lease was renewed within the last half of its duration. A healthy holder renews
+// on every reconciliation, so crossing this threshold without a renewal is already anomalous and warrants checking
+// whether the holder node still exists.
+func (l *leaderElector) renewedRecently() bool {
+	return l.durationUntilNotRenewedRecently() > 0
+}
+
+// durationUntilNotRenewedRecently returns how long until the Lease is no longer considered renewed recently (see
+// renewedRecently), i.e., until the holder node existence should be rechecked.
+func (l *leaderElector) durationUntilNotRenewedRecently() time.Duration {
+	if l.lease == nil {
+		return 0
+	}
+
+	if ptr.Deref(l.lease.Spec.LeaseDurationSeconds, 0) < 0 || l.lease.Spec.RenewTime == nil {
+		return 0
+	}
+	return l.lease.Spec.RenewTime.UTC().Add(l.leaseDuration() / 2).UTC().Sub(l.clock.Now().UTC())
 }
 
 func (l *leaderElector) durationUntilLeaseExpires() time.Duration {
@@ -148,7 +179,7 @@ func (l *leaderElector) tryAcquireOrRenew(ctx context.Context) error {
 	setLeaseSpec := func() {
 		if !l.acquiredByMe() {
 			l.lease.Spec.HolderIdentity = &l.identity
-			l.lease.Spec.LeaseDurationSeconds = new(int32(600))
+			l.lease.Spec.LeaseDurationSeconds = &LeaseDurationSeconds
 			l.lease.Spec.AcquireTime = &metav1.MicroTime{Time: l.clock.Now().UTC()}
 		}
 		l.lease.Spec.RenewTime = &metav1.MicroTime{Time: l.clock.Now().UTC()}
