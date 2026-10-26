@@ -83,8 +83,11 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 				if int(autoPreserveFailedMachineMax) < numZones {
 					fldPath := field.NewPath("spec", "provider", "workers").Index(i).Child("machineControllerManagerSettings", "autoPreserveFailedMachineMax")
 					warnings = append(warnings,
-						fmt.Sprintf("you are setting the %s field to a value less than the number of zones. This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.",
-							fldPath.String()))
+						fmt.Sprintf("you are setting the %s field to a value (%d) less than the number of zones for worker %q (%d) . This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.",
+							fldPath.String(),
+							autoPreserveFailedMachineMax,
+							worker.Name,
+							numZones))
 				}
 			}
 		}
