@@ -17,16 +17,16 @@ gardenadm reset [flags]
 
 ```
 # Reset a node and remove it from the cluster
-gardenadm reset --token <token> --ca-certificate <ca-cert> <control-plane-address>
+gardenadm reset --bootstrap-token <token> --ca-certificate <ca-cert> <control-plane-address>
 ```
 
 ### Options
 
 ```
+      --bootstrap-token string       Bootstrap token for removing the node from the cluster (create it with 'gardenadm token' on a control plane node)
       --ca-certificate bytesBase64   Base64-encoded certificate authority bundle of the control plane
       --drain-timeout duration       Timeout for draining the node (default 2h0m0s)
   -h, --help                         help for reset
-      --token string                 Token for removing the node from the cluster (create it with 'gardenadm token' on a control plane node)
 ```
 
 ### Options inherited from parent commands

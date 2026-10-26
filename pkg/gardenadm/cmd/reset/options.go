@@ -21,8 +21,8 @@ type Options struct {
 
 	// ControlPlaneAddress is the address of the control plane from which the node should be removed.
 	ControlPlaneAddress string
-	// Token is the token to use for resetting the node.
-	Token string
+	// BootstrapToken is the bootstrap token to use for resetting the node.
+	BootstrapToken string
 	// CertificateAuthority is the CA bundle of the control plane.
 	CertificateAuthority []byte
 	// DrainTimeout is the timeout for the node drain.
@@ -40,7 +40,7 @@ func (o *Options) ParseArgs(args []string) error {
 
 // Validate validates the options.
 func (o *Options) Validate() error {
-	if len(o.Token) == 0 {
+	if len(o.BootstrapToken) == 0 {
 		return fmt.Errorf("must provide a token")
 	}
 
@@ -56,6 +56,6 @@ func (o *Options) Complete() error { return nil }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.BytesBase64Var(&o.CertificateAuthority, "ca-certificate", nil, "Base64-encoded certificate authority bundle of the control plane")
-	fs.StringVar(&o.Token, "token", "", "Token for removing the node from the cluster (create it with 'gardenadm token' on a control plane node)")
+	fs.StringVar(&o.BootstrapToken, "bootstrap-token", "", "Bootstrap token for removing the node from the cluster (create it with 'gardenadm token' on a control plane node)")
 	fs.DurationVar(&o.DrainTimeout, "drain-timeout", drain.DefaultMachineDrainTimeout, "Timeout for draining the node")
 }

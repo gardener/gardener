@@ -38,7 +38,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 This command helps to remove a node from an existing self-hosted shoot cluster.
 It ensures that the components deployed to this node are removed and the node is properly deregistered as a control plane or worker node.`,
 		Example: `# Reset a node and remove it from the cluster
-gardenadm reset --token <token> --ca-certificate <ca-cert> <control-plane-address>`,
+gardenadm reset --bootstrap-token <token> --ca-certificate <ca-cert> <control-plane-address>`,
 
 		Args: cobra.ExactArgs(1),
 
@@ -65,7 +65,7 @@ gardenadm reset --token <token> --ca-certificate <ca-cert> <control-plane-addres
 }
 
 func run(ctx context.Context, opts *Options) error {
-	b, err := cmd.InitializeGardenadmWithTemporaryClientSet(ctx, opts.Log, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.Token)
+	b, err := cmd.InitializeGardenadmWithTemporaryClientSet(ctx, opts.Log, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
 	if err != nil {
 		return fmt.Errorf("failed initializing gardenadm botanist with temporary client set: %w", err)
 	}
@@ -133,7 +133,7 @@ after it has expired. If you want to delete it right away, run the following
 command on any control plane node:
 
   gardenadm token delete %s
-`, opts.Token)
+`, opts.BootstrapToken)
 
 	return nil
 }
