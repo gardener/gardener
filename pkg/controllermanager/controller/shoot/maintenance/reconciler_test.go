@@ -2698,6 +2698,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
 			Expect(shoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
 			Expect(*shoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
+			Expect(shoot.Status.LastMaintenance.LastUpdateTime).To(BeNil())
 
 			fetchedShoot := &gardencorev1beta1.Shoot{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
@@ -2705,6 +2706,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(fetchedShoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
 			Expect(fetchedShoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
 			Expect(*fetchedShoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
+			Expect(fetchedShoot.Status.LastMaintenance.LastUpdateTime).To(BeNil())
 		})
 
 		It("should record TriggeredTime in a newly created LastMaintenance even when no changes are performed", func() {

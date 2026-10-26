@@ -327,10 +327,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		)
 
 		shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{
-			Description:    description,
-			TriggeredTime:  now,
-			LastUpdateTime: &now,
-			State:          gardencorev1beta1.LastOperationStateProcessing,
+			Description:   description,
+			TriggeredTime: now,
+			State:         gardencorev1beta1.LastOperationStateProcessing,
 		}
 
 		// if any maintenance operation failed, set the status to 'Failed' and retry in the next maintenance cycle
@@ -383,6 +382,17 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	if err := r.Client.Update(ctx, shoot); err != nil {
 		r.Recorder.Eventf(shoot, nil, corev1.EventTypeWarning, gardencorev1beta1.ShootMaintenanceFailed, gardencorev1beta1.EventActionReconcile, err.Error())
 		return err
+	}
+
+	// The Shoot spec was successfully updated, so stamp LastUpdateTime and persist it.
+	// Only on a run that required a patch was the spec actually changed; on an idle run
+	// LastUpdateTime must stay frozen at the previous run.
+	if requirePatch && shoot.Status.LastMaintenance != nil {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		shoot.Status.LastMaintenance.LastUpdateTime = &now
+		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
+			return err
+		}
 	}
 
 	// On an idle maintenance run (no patch required), no LastMaintenance struct was constructed above.
