@@ -702,6 +702,101 @@ var _ = Describe("Constraints", func() {
 				})
 			})
 
+			Context("#InternalDomainUpToDate", func() {
+				var (
+					shootObject *gardencorev1beta1.Shoot
+					shootPkg    *shootpkg.Shoot
+				)
+
+				newConstraintWithAPIServerRunning := func(apiServerRunning bool) *Constraint {
+					shootPkg.SetInfo(shootObject)
+					return NewConstraint(
+						GinkgoLogr,
+						shootPkg,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), apiServerRunning, nil
+						},
+						clock,
+					)
+				}
+
+				BeforeEach(func() {
+					shootObject = &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							Type:  gardencorev1beta1.LastOperationTypeReconcile,
+							State: gardencorev1beta1.LastOperationStateSucceeded,
+						},
+					}}
+					shootPkg = &shootpkg.Shoot{
+						ControlPlaneNamespace:        controlPlaneNamespace,
+						InternalClusterDomain:        new("bar.foo.internal.old.example.com"),
+						DesiredInternalClusterDomain: new("bar.foo.internal.new.example.com"),
+					}
+				})
+
+				It("should remove the constraint when the shoot uses the internal domain of the seed for new shoots", func() {
+					shootPkg.InternalClusterDomain = shootPkg.DesiredInternalClusterDomain
+
+					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
+					))
+				})
+
+				It("should remove the constraint when neither the shoot nor the seed has an internal domain", func() {
+					shootPkg.InternalClusterDomain = nil
+					shootPkg.DesiredInternalClusterDomain = nil
+
+					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
+					))
+				})
+
+				It("should keep the constraint when the seed gives another internal domain to new shoots", func() {
+					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
+						WithStatus(gardencorev1beta1.ConditionFalse),
+						WithReason("InternalDomainOutdated"),
+						WithMessage(`The shoot uses the internal domain "bar.foo.internal.old.example.com", but the seed gives the internal domain "bar.foo.internal.new.example.com" to new shoots.`),
+					))
+				})
+
+				It("should keep the constraint when the shoot has no internal domain but the seed gives one to new shoots", func() {
+					shootPkg.InternalClusterDomain = nil
+
+					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
+						WithStatus(gardencorev1beta1.ConditionFalse),
+						WithMessage(`The shoot uses the internal domain "<none>", but the seed gives the internal domain "bar.foo.internal.new.example.com" to new shoots.`),
+					))
+				})
+
+				It("should keep the constraint when the seed gives no internal domain to new shoots", func() {
+					shootPkg.DesiredInternalClusterDomain = nil
+
+					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
+						WithStatus(gardencorev1beta1.ConditionFalse),
+						WithMessage(`The shoot uses the internal domain "bar.foo.internal.old.example.com", but the seed gives the internal domain "<none>" to new shoots.`),
+					))
+				})
+
+				It("should keep the constraint when the control plane is not running", func() {
+					Expect(newConstraintWithAPIServerRunning(false).Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
+						WithStatus(gardencorev1beta1.ConditionFalse),
+					))
+				})
+
+				It("should remove the constraint when the shoot is hibernated", func() {
+					shootPkg.HibernationEnabled = true
+
+					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
+					))
+				})
+			})
+
 			Context("#AutomaticCredentialsRotationPossible", func() {
 				BeforeEach(func() {
 					shoot = &gardencorev1beta1.Shoot{
@@ -1063,6 +1158,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -1079,6 +1175,7 @@ var _ = Describe("Constraints", func() {
 
 				Expect(constraints.ConvertToSlice()).To(ConsistOf(
 					hibernationPossibleConstraint,
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
@@ -1103,6 +1200,7 @@ var _ = Describe("Constraints", func() {
 					OfType("AutomaticCredentialsRotationPossible"),
 					OfType("ManagedResourcesHonored"),
 					OfType("PreservedFailedMachinesAbsent"),
+					OfType("InternalDomainUpToDate"),
 				))
 			})
 		})
@@ -1120,6 +1218,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("AutomaticCredentialsRotationPossible"),
 					gardencorev1beta1.ConditionType("ManagedResourcesHonored"),
 					gardencorev1beta1.ConditionType("PreservedFailedMachinesAbsent"),
+					gardencorev1beta1.ConditionType("InternalDomainUpToDate"),
 				))
 			})
 		})

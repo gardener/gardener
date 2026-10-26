@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -52,7 +53,8 @@ func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1bet
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
 		// Not applicable during hibernation — skip entirely.
-		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated || cond.Type == gardencorev1beta1.ShootPreservedFailedMachinesAbsent {
+		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated || cond.Type == gardencorev1beta1.ShootPreservedFailedMachinesAbsent ||
+			cond.Type == gardencorev1beta1.ShootInternalDomainUpToDate {
 			continue
 		}
 		// Optional constraint computed before the hibernation guard.
@@ -165,6 +167,9 @@ func (c *Constraint) constraintsChecks(
 	status, reason, message = c.checkIfManualInPlaceWorkersUpdated()
 	constraints.manualInPlaceWorkersUpdated = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.manualInPlaceWorkersUpdated, status, reason, message)
 
+	status, reason, message = c.CheckIfInternalDomainUpToDate()
+	constraints.internalDomainUpToDate = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.internalDomainUpToDate, status, reason, message)
+
 	// Now check constraints depending on the shoot's kube-apiserver to be up and running
 	shootClient, apiServerRunning, err := c.initializeShootClients()
 	if err != nil {
@@ -176,14 +181,14 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.internalDomainUpToDate},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.internalDomainUpToDate},
 		)
 	}
 	c.shootClient = shootClient.Client()
@@ -206,7 +211,7 @@ func (c *Constraint) constraintsChecks(
 
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.internalDomainUpToDate},
 	)
 }
 
@@ -335,6 +340,20 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 		"NoCRDsWithProblematicConversionWebhooks",
 		"No CRDs have multiple stored versions present and a conversion webhook configured",
 		nil
+}
+
+// CheckIfInternalDomainUpToDate checks whether the shoot uses the internal domain that the seed gives to new shoots.
+func (c *Constraint) CheckIfInternalDomainUpToDate() (gardencorev1beta1.ConditionStatus, string, string) {
+	if ptr.Equal(c.shoot.InternalClusterDomain, c.shoot.DesiredInternalClusterDomain) {
+		return gardencorev1beta1.ConditionTrue,
+			"InternalDomainUpToDate",
+			"The shoot uses the internal domain of the seed for new shoots."
+	}
+
+	return gardencorev1beta1.ConditionFalse,
+		"InternalDomainOutdated",
+		fmt.Sprintf("The shoot uses the internal domain %q, but the seed gives the internal domain %q to new shoots.",
+			ptr.Deref(c.shoot.InternalClusterDomain, "<none>"), ptr.Deref(c.shoot.DesiredInternalClusterDomain, "<none>"))
 }
 
 // checkPreservation checks whether the shoot has preserved failed machines and returns the corresponding condition.
@@ -546,6 +565,7 @@ type ShootConstraints struct {
 	automaticCredentialsRotationPossible  gardencorev1beta1.Condition
 	managedResourcesHonored               gardencorev1beta1.Condition
 	preservedFailedMachinesAbsent         gardencorev1beta1.Condition
+	internalDomainUpToDate                gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the shoot constraints as a slice.
@@ -559,6 +579,7 @@ func (g ShootConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
 		g.automaticCredentialsRotationPossible,
 		g.managedResourcesHonored,
 		g.preservedFailedMachinesAbsent,
+		g.internalDomainUpToDate,
 	}
 }
 
@@ -573,6 +594,7 @@ func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
 		g.automaticCredentialsRotationPossible.Type,
 		g.managedResourcesHonored.Type,
 		g.preservedFailedMachinesAbsent.Type,
+		g.internalDomainUpToDate.Type,
 	}
 }
 
@@ -588,5 +610,6 @@ func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoo
 		automaticCredentialsRotationPossible:  v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 		managedResourcesHonored:               v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootManagedResourcesHonored),
 		preservedFailedMachinesAbsent:         v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
+		internalDomainUpToDate:                v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootInternalDomainUpToDate),
 	}
 }

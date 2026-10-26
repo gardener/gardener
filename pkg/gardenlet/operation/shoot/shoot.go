@@ -325,7 +325,8 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
-	shoot.InternalClusterDomain = internalClusterDomain(shootObject, gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots()))
+	shoot.DesiredInternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots())
+	shoot.InternalClusterDomain = internalClusterDomain(shootObject, shoot.DesiredInternalClusterDomain)
 	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
 	if shoot.InternalDomain, err = b.findInternalDomain(shootObject.Name, shoot.InternalClusterDomain); err != nil {
 		return nil, err

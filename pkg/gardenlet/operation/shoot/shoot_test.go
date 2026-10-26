@@ -918,6 +918,25 @@ var _ = Describe("shoot", func() {
 				})
 			})
 
+			Describe("#DesiredInternalClusterDomain", func() {
+				It("should take the first internal domain of the seed although the shoot uses another one", func() {
+					Expect(buildShoot().DesiredInternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+				})
+
+				It("should be nil if the seed disables the internal domain", func() {
+					seedObject.Spec.DNS.InternalDomainEnabled = new(false)
+
+					Expect(buildShoot().DesiredInternalClusterDomain).To(BeNil())
+				})
+
+				It("should take the first internal domain of the seed although the seed disables the internal domain if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					seedObject.Spec.DNS.InternalDomainEnabled = new(false)
+
+					Expect(buildShoot().DesiredInternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+				})
+			})
+
 			Describe("#InternalDomain", func() {
 				It("should take the internal domain of the seed which belongs to the applied domain", func() {
 					Expect(buildShoot().InternalDomain).To(BeIdenticalTo(oldDomain))

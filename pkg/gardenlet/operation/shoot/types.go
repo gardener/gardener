@@ -99,6 +99,8 @@ type Shoot struct {
 	// PriorInternalClusterDomain is the internal domain which is replaced during a running domain migration.
 	// It is nil if no domain migration is running.
 	PriorInternalClusterDomain *string
+	// DesiredInternalClusterDomain is the internal domain which the seed gives to new shoots.
+	DesiredInternalClusterDomain *string
 	// InternalDomain holds the domain information of InternalClusterDomain. It is nil if InternalClusterDomain is nil.
 	InternalDomain *gardenerutils.Domain
 	// PriorInternalDomain holds the domain information of PriorInternalClusterDomain, which can differ from

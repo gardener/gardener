@@ -2287,6 +2287,9 @@ const (
 	ShootUsesUnifiedHTTPProxyPort ConditionType = "UsesUnifiedHTTPProxyPort"
 	// ShootPreservedFailedMachinesAbsent is a constant for a condition type indicating that the Shoot cluster no preserved failed machines.
 	ShootPreservedFailedMachinesAbsent ConditionType = "PreservedFailedMachinesAbsent"
+	// ShootInternalDomainUpToDate is a constant for a condition type indicating whether the Shoot uses the internal
+	// domain that the Seed gives to new Shoots.
+	ShootInternalDomainUpToDate ConditionType = "InternalDomainUpToDate"
 
 	// ShootLiveMigrationSourceEtcdPreparedForPeerJoin indicates that the source etcd cluster
 	// is prepared for destination peers to join.
