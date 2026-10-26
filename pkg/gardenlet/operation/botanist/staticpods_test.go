@@ -25,6 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
 
@@ -176,6 +177,117 @@ var _ = Describe("StaticPods", func() {
 					"Token":     BeEmpty(),
 					"TokenFile": Equal("/etc/kubernetes/admin-token"),
 				}))))
+			})
+		})
+	})
+
+	Describe("#MergeFilesIntoOSC", func() {
+		var (
+			fileWithContent func(path, content string) extensionsv1alpha1.File
+
+			staticPodFile func(name, hash string) extensionsv1alpha1.File
+			podFromFile   func(file extensionsv1alpha1.File) *corev1.Pod
+		)
+
+		BeforeEach(func() {
+			fileWithContent = func(path, content string) extensionsv1alpha1.File {
+				return extensionsv1alpha1.File{
+					Path:    path,
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(content))}},
+				}
+			}
+
+			staticPodFile = func(name, hash string) extensionsv1alpha1.File {
+				pod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        name,
+						Namespace:   "kube-system",
+						Annotations: map[string]string{"gardener.cloud/config.mirror": hash},
+					},
+					Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "main", Image: "foo:" + name}}},
+				}
+				manifest, err := kubernetesutils.Serialize(pod, kubernetes.ShootScheme)
+				Expect(err).NotTo(HaveOccurred())
+
+				return extensionsv1alpha1.File{
+					Path:    "/etc/kubernetes/manifests/" + name + ".yaml",
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(manifest))}},
+				}
+			}
+
+			podFromFile = func(file extensionsv1alpha1.File) *corev1.Pod {
+				data, err := utils.DecodeBase64(file.Content.Inline.Data)
+				Expect(err).NotTo(HaveOccurred())
+
+				pod := &corev1.Pod{}
+				_, _, err = kubernetes.ShootCodec.UniversalDeserializer().Decode(data, nil, pod)
+				Expect(err).NotTo(HaveOccurred())
+				return pod
+			}
+		})
+
+		When("the file does not exist yet in the OperatingSystemConfig", func() {
+			It("should append regular files", func() {
+				osc := &extensionsv1alpha1.OperatingSystemConfig{Spec: extensionsv1alpha1.OperatingSystemConfigSpec{Files: []extensionsv1alpha1.File{
+					fileWithContent("/existing/file", "keep-me"),
+				}}}
+
+				Expect(MergeFilesIntoOSC(osc, []extensionsv1alpha1.File{fileWithContent("/var/lib/etcd/ca/current/ca.crt", "new-ca")})).To(Succeed())
+
+				Expect(osc.Spec.Files).To(ConsistOf(
+					fileWithContent("/existing/file", "keep-me"),
+					fileWithContent("/var/lib/etcd/ca/current/ca.crt", "new-ca"),
+				))
+			})
+
+			It("should not add static pod manifests that are not already present", func() {
+				osc := &extensionsv1alpha1.OperatingSystemConfig{}
+
+				Expect(MergeFilesIntoOSC(osc, []extensionsv1alpha1.File{staticPodFile("etcd-main", "new-hash")})).To(Succeed())
+
+				Expect(osc.Spec.Files).To(BeEmpty())
+			})
+		})
+
+		When("the file already exists in the OperatingSystemConfig", func() {
+			It("should overwrite the content of regular files", func() {
+				osc := &extensionsv1alpha1.OperatingSystemConfig{Spec: extensionsv1alpha1.OperatingSystemConfigSpec{Files: []extensionsv1alpha1.File{
+					fileWithContent("/var/lib/etcd/ca/current/ca.crt", "old-ca"),
+				}}}
+
+				Expect(MergeFilesIntoOSC(osc, []extensionsv1alpha1.File{fileWithContent("/var/lib/etcd/ca/current/ca.crt", "rotated-ca")})).To(Succeed())
+
+				Expect(osc.Spec.Files).To(ConsistOf(fileWithContent("/var/lib/etcd/ca/current/ca.crt", "rotated-ca")))
+			})
+
+			It("should only carry over the hash annotation for static pod manifests, keeping the old pod spec", func() {
+				oldFile := staticPodFile("etcd-main", "old-hash")
+				osc := &extensionsv1alpha1.OperatingSystemConfig{Spec: extensionsv1alpha1.OperatingSystemConfigSpec{Files: []extensionsv1alpha1.File{oldFile}}}
+
+				newFile := staticPodFile("etcd-main", "new-hash")
+				// Simulate a differing current-generation pod spec that must NOT leak into the old OperatingSystemConfig.
+				newPod := podFromFile(newFile)
+				newPod.Spec.Containers[0].Image = "foo:current-generation"
+				newManifest, err := kubernetesutils.Serialize(newPod, kubernetes.ShootScheme)
+				Expect(err).NotTo(HaveOccurred())
+				newFile.Content.Inline.Data = utils.EncodeBase64([]byte(newManifest))
+
+				Expect(MergeFilesIntoOSC(osc, []extensionsv1alpha1.File{newFile})).To(Succeed())
+
+				Expect(osc.Spec.Files).To(HaveLen(1))
+				mergedPod := podFromFile(osc.Spec.Files[0])
+				Expect(mergedPod.Annotations).To(HaveKeyWithValue("gardener.cloud/config.mirror", "new-hash"))
+				Expect(mergedPod.Spec.Containers[0].Image).To(Equal("foo:etcd-main"))
+			})
+		})
+
+		When("a static pod manifest cannot be decoded", func() {
+			It("should return an error", func() {
+				osc := &extensionsv1alpha1.OperatingSystemConfig{Spec: extensionsv1alpha1.OperatingSystemConfigSpec{Files: []extensionsv1alpha1.File{
+					fileWithContent("/etc/kubernetes/manifests/etcd-main.yaml", "not-a-pod"),
+				}}}
+
+				Expect(MergeFilesIntoOSC(osc, []extensionsv1alpha1.File{staticPodFile("etcd-main", "new-hash")})).To(MatchError(ContainSubstring("failed merging hash annotation")))
 			})
 		})
 	})
