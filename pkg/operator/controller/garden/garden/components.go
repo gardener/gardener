@@ -1698,9 +1698,8 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 	}
 
 	var (
-		// See function 'gardenerDashboard.ingress(ctx)' in pkg/component/gardener/dashboard/ingress.go
-		isDashboardCertificateIssuedByGardener = wildcardCertSecretName == nil
-		// If externally configured or wildcard certificate is used, the CA bundle might be missing.
+		// When externally configured or wildcard certificate is used, the CA bundle is most probably not provided.
+		isDashboardCertificateIssuedByGardener       = ptr.Deref(dashboardTLSSecretName(garden, wildcardCertSecretName), "") == ""
 		isDiscoveryServerCertificateIssuedByGardener = ptr.Deref(discoveryServerTLSSecretName(garden, wildcardCertSecretName), "") == ""
 	)
 
