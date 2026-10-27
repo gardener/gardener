@@ -326,10 +326,16 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			operations,
 		)
 
+		var lastUpdateTime *metav1.Time
+		if shoot.Status.LastMaintenance != nil {
+			lastUpdateTime = shoot.Status.LastMaintenance.LastUpdateTime
+		}
+
 		shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{
-			Description:   description,
-			TriggeredTime: now,
-			State:         gardencorev1beta1.LastOperationStateProcessing,
+			Description:    description,
+			TriggeredTime:  now,
+			LastUpdateTime: lastUpdateTime,
+			State:          gardencorev1beta1.LastOperationStateProcessing,
 		}
 
 		// if any maintenance operation failed, set the status to 'Failed' and retry in the next maintenance cycle

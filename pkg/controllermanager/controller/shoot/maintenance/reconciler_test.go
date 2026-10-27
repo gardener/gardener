@@ -2669,6 +2669,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should mark maintenance as failed and return nil when dry-run update encounters non-conflict error", func() {
+			previousUpdateTime := metav1.Time{Time: time.Now().Add(-24 * time.Hour).Truncate(time.Second)}
+			shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{LastUpdateTime: &previousUpdateTime}
+
 			forbiddenErr := apierrors.NewForbidden(schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoots"}, shoot.Name, errors.New("validation failed"))
 
 			fakeClient := fakeclient.NewClientBuilder().
@@ -2698,7 +2701,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
 			Expect(shoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
 			Expect(*shoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
-			Expect(shoot.Status.LastMaintenance.LastUpdateTime).To(BeNil())
+			Expect(shoot.Status.LastMaintenance.LastUpdateTime.Time).To(Equal(previousUpdateTime.Time))
 
 			fetchedShoot := &gardencorev1beta1.Shoot{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
@@ -2706,7 +2709,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(fetchedShoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
 			Expect(fetchedShoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
 			Expect(*fetchedShoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
-			Expect(fetchedShoot.Status.LastMaintenance.LastUpdateTime).To(BeNil())
+			Expect(fetchedShoot.Status.LastMaintenance.LastUpdateTime.Time).To(Equal(previousUpdateTime.Time))
 		})
 
 		It("should record TriggeredTime in a newly created LastMaintenance even when no changes are performed", func() {
