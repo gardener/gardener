@@ -123,14 +123,14 @@ var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 			Skip("PVC autoscaler is not enabled for this seed — skipping PVC autoscaler logging test")
 		}
 
-		fluentBitPresent, err := isFluentBitPresent(ctx, shootFramework.SeedClient)
-		if err != nil || !fluentBitPresent {
-			Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		_, err := getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
+		if err != nil {
+			Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
 		}
 
-		valiPresent, err := isValiPresent(ctx, shootFramework.SeedClient.Client())
-		if err != nil || !valiPresent {
-			Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		err = shootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, &appsv1.StatefulSet{})
+		if err != nil {
+			Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
 		}
 
 		By("Verify pvc-autoscaler is running in the seed garden namespace")

@@ -44,30 +44,6 @@ func getFluentBitDaemonSet(ctx context.Context, k8sSeedClient kubernetes.Interfa
 	return daemonSetList.Items[0].DeepCopy(), nil
 }
 
-func isFluentBitPresent(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
-	_, err := getFluentBitDaemonSet(ctx, k8sSeedClient)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func isValiPresent(ctx context.Context, seedClient client.Client) (bool, error) {
-	vali := &appsv1.StatefulSet{}
-	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func isOtelCollectorPresent(ctx context.Context, seedClient client.Client) (bool, error) {
-	otelDeploy := &appsv1.Deployment{}
-	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: garden, Name: otelCollectorDeploymentName}, otelDeploy); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
 func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shootFramework *framework.ShootFramework, valiLabels map[string]string, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
 	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {

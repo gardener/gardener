@@ -82,11 +82,13 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		shootValiPriorityClass = &schedulingv1.PriorityClass{}
 		shootValiConfMap       = &corev1.ConfigMap{}
 
-		otelCollectorDeployment     = &appsv1.Deployment{}
-		otelCollectorService        = &corev1.Service{}
-		otelCollectorServiceAccount = &corev1.ServiceAccount{}
-		otelCollectorPriorityClass  = &schedulingv1.PriorityClass{}
-		otelCollectorConfMap        = &corev1.ConfigMap{}
+		otelCollectorDeployment         = &appsv1.Deployment{}
+		otelCollectorService            = &corev1.Service{}
+		otelCollectorServiceAccount     = &corev1.ServiceAccount{}
+		otelCollectorPriorityClass      = &schedulingv1.PriorityClass{}
+		otelCollectorConfMap            = &corev1.ConfigMap{}
+
+		otelPresent bool
 
 		// This shoot is used as seed for this test only
 		shootClient     kubernetes.Interface
@@ -108,28 +110,36 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		// It is used to fetch the resource definitions deployed later in the test cluster
 		seedClient := shootFramework.SeedClient.Client()
 
-		fluentBitPresent, err := isFluentBitPresent(ctx, shootFramework.SeedClient)
-		if err != nil || !fluentBitPresent {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		// Fetch Vali StatefulSet
+		err = seedClient.Get(ctx,
+			client.ObjectKey{
+				Namespace: v1beta1constants.GardenNamespace,
+				Name:      valiName},
+			gardenValiSts,
+		)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
 		}
 
-		valiPresent, err := isValiPresent(ctx, seedClient)
-		if err != nil || !valiPresent {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		// Fetch the daemon set in the garden namespace
+		fluentBit, err = getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
 		}
 
-		otelPresent, err := isOtelCollectorPresent(ctx, seedClient)
-		if err != nil && !apierrors.IsNotFound(err) {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for OpenTelemetry Collector in the seed %s namespace: %v", garden, err))
+		// Fetch otelcol deployment
+		err = seedClient.Get(ctx,
+			client.ObjectKey{
+				Namespace: v1beta1constants.GardenNamespace,
+				Name:      otelCollectorDeploymentName},
+			otelCollectorDeployment,
+		)
+		if client.IgnoreNotFound(err) != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for OpenTelemetry Collector in the seed %s namespace: %s", garden, err.Error()))
 		}
+
+		otelPresent = !apierrors.IsNotFound(err)
 		if otelPresent {
-			// OpenTelemetry feature gate is enabled, deploy the collector into the test environment
-			framework.ExpectNoError(
-				seedClient.Get(ctx,
-					types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: otelCollectorDeploymentName},
-					otelCollectorDeployment),
-			)
-
 			framework.ExpectNoError(
 				seedClient.Get(ctx,
 					types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: otelCollectorDeploymentName},
@@ -142,14 +152,11 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					otelCollectorServiceAccount),
 			)
 
-			otelPriorityClassName := otelCollectorDeployment.Spec.Template.Spec.PriorityClassName
-			if otelPriorityClassName != "" {
-				framework.ExpectNoError(
-					seedClient.Get(ctx,
-						types.NamespacedName{Name: otelPriorityClassName},
-						otelCollectorPriorityClass),
-				)
-			}
+			framework.ExpectNoError(
+				seedClient.Get(ctx,
+					types.NamespacedName{Name: otelCollectorDeployment.Spec.Template.Spec.PriorityClassName},
+					otelCollectorPriorityClass),
+			)
 
 			otelConfMapName := getConfigMapName(otelCollectorDeployment.Spec.Template.Spec.Volumes, "otc-internal")
 			framework.ExpectNoError(
@@ -169,10 +176,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					Scheme: kubernetes.SeedScheme,
 				}),
 		)
-		framework.ExpectNoError(err)
-
-		// Fetch the daemon set in the garden namespace
-		fluentBit, err = getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
 		framework.ExpectNoError(err)
 
 		// Fetch the fluent-bit configuration
@@ -238,15 +241,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					Namespace: "",
 					Name:      "clusters.extensions.gardener.cloud"},
 				clusterCRD),
-		)
-
-		// Fetch Vali StatefulSet
-		framework.ExpectNoError(
-			seedClient.Get(ctx,
-				types.NamespacedName{
-					Namespace: v1beta1constants.GardenNamespace,
-					Name:      valiName},
-				gardenValiSts),
 		)
 
 		// Fetch Logging service
@@ -383,16 +377,14 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			create(ctx, shootClient.Client(), prepareClusterCRD(clusterCRD)),
 		)
 
-		if otelCollectorDeployment.Name != "" {
+		if otelPresent {
 			ginkgo.By("Deploy the OpenTelemetry Collector")
 			framework.ExpectNoError(
 				create(ctx, client, otelCollectorServiceAccount),
 			)
-			if otelCollectorPriorityClass.Name != "" {
-				framework.ExpectNoError(
-					create(ctx, client, otelCollectorPriorityClass),
-				)
-			}
+			framework.ExpectNoError(
+				create(ctx, client, otelCollectorPriorityClass),
+			)
 			framework.ExpectNoError(
 				create(ctx, client, prepareOtelCollectorService(otelCollectorService)),
 			)
@@ -464,7 +456,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				create(ctx, client, loggingShootService),
 			)
 
-			if otelCollectorDeployment.Name != "" {
+			if otelPresent {
 				ginkgo.By(fmt.Sprintf("Deploy the OpenTelemetry Collector in shoot namespace %s", shootNamespace.Name))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorServiceAccount(otelCollectorServiceAccount, shootNamespace.Name)))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorService(otelCollectorService, shootNamespace.Name)))
@@ -515,7 +507,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 		// The loki exporter may receive HTTP 400 "entry out of order" which is non-retryable.
 		// This seems to not affect the per-shoot OTel Collectors. This is a known limitation
-		// that will disappear once VictoriaLogs replaces Vali.
+		// that will disappear once VictoriaLogs replaces Vali. Currently we want at least 75%
+		// of the logs to have arrived. During testing the average was about 90-95%.
 		ginkgo.By("Verify vali received logger application logs for garden namespace")
 		framework.ExpectNoError(
 			WaitUntilValiReceivesLogs(ctx, 30*time.Second,
@@ -554,7 +547,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), loggingShootService),
 			)
 
-			if otelCollectorDeployment.Name != "" {
+			if otelPresent {
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorDeployment(otelCollectorDeployment, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorService(otelCollectorService, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorServiceAccount(otelCollectorServiceAccount, shootNamespace.Name)))
@@ -586,16 +579,14 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			shootValiPriorityClass,
 			shootValiConfMap,
 		}
-		if otelCollectorDeployment.Name != "" {
+		if otelPresent {
 			objectsToDelete = append(objectsToDelete,
 				otelCollectorDeployment,
 				otelCollectorService,
 				otelCollectorServiceAccount,
 				otelCollectorConfMap,
+				otelCollectorPriorityClass,
 			)
-			if otelCollectorPriorityClass.Name != "" {
-				objectsToDelete = append(objectsToDelete, otelCollectorPriorityClass)
-			}
 		}
 		objectsToDelete = append(objectsToDelete, newGardenNamespace(v1beta1constants.GardenNamespace))
 		for _, object := range objectsToDelete {
@@ -605,9 +596,10 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 })
 
 func prepareOtelCollectorService(service *corev1.Service) *corev1.Service {
-	service.Spec.ClusterIP = ""
-	service.Spec.ClusterIPs = nil
-	return service
+	obj := service.DeepCopy()
+	obj.Spec.ClusterIP = ""
+	obj.Spec.ClusterIPs = nil
+	return obj
 }
 
 func prepareShootOtelCollectorServiceAccount(sa *corev1.ServiceAccount, namespace string) *corev1.ServiceAccount {
@@ -631,6 +623,13 @@ func prepareShootOtelCollectorConfigMap(confMap *corev1.ConfigMap, namespace str
 	return obj
 }
 
+// prepareShootOtelCollectorDeployment copies the garden-namespace OTel Collector Deployment into a
+// simulated shoot namespace. We intentionally copy from the garden collector rather than from a real
+// shoot control-plane collector because the shoot collector has two kube-rbac-proxy sidecars injected
+// that require a logging-tls secret and a shoot-access kubeconfig — neither of which exist in the
+// simulated namespaces (we would need to copy them as well). The seed-type collector is a plain Deployment
+// with no sidecars and no TLS, which is correct here: fluent-bit reaches the collector directly on port
+// 4317 via the per-namespace "logging" ExternalName service, bypassing the proxy entirely.
 func prepareShootOtelCollectorDeployment(deployment *appsv1.Deployment, namespace string) *appsv1.Deployment {
 	obj := deployment.DeepCopy()
 	obj.Namespace = namespace

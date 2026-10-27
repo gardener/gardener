@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -56,14 +57,14 @@ var _ = ginkgo.Describe("Shoot logging testing", func() {
 
 	framework.CBeforeEach(func(ctx context.Context) {
 
-		fluentBitPresent, err := isFluentBitPresent(ctx, shootFramework.SeedClient)
-		if err != nil || !fluentBitPresent {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		_, err := getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
 		}
 
-		valiPresent, err := isValiPresent(ctx, shootFramework.SeedClient.Client())
-		if err != nil || !valiPresent {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %v", garden, err))
+		err = shootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, &appsv1.StatefulSet{})
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
 		}
 
 		// Get shoot namespace name
