@@ -16,6 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	criclient "k8s.io/cri-client/pkg"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
@@ -81,6 +82,14 @@ The node has been successfully cleaned from gardener-node-agent artifacts!
 	return nil
 }
 
+// SandboxStopBackoff is the backoff used when stopping and removing pod sandboxes. Exposed for testing.
+var SandboxStopBackoff = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   2,
+	Steps:    5,
+	Cap:      10 * time.Second,
+}
+
 func stopContainers(ctx context.Context, log logr.Logger, dbus dbus.DBus) error {
 	log.Info("Stopping gardener-node-agent systemd unit")
 	if err := dbus.Stop(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName); err != nil {
@@ -93,7 +102,7 @@ func stopContainers(ctx context.Context, log logr.Logger, dbus dbus.DBus) error 
 	}
 
 	log.Info("Stopping containers")
-	runtimeService, err := NewRemoteRuntimeService(ctx, "unix:///var/run/containerd/containerd.sock", 2*time.Second, nil, false)
+	runtimeService, err := NewRemoteRuntimeService(ctx, "unix:///var/run/containerd/containerd.sock", 10*time.Second, nil, false)
 	if err != nil {
 		return fmt.Errorf("failed creating CRI client: %w", err)
 	}
@@ -104,37 +113,43 @@ func stopContainers(ctx context.Context, log logr.Logger, dbus dbus.DBus) error 
 		return fmt.Errorf("failed listing pod sandboxes: %w", err)
 	}
 
-	var errs []error
+	stopTaskFns := make([]flow.TaskFn, 0, len(pods))
 	for _, pod := range pods {
-		log.Info("Stopping pod sandbox", "podID", pod.GetId())
-		var lastErr error
-		for range 5 { // Retry up to 5 times
-			if err := runtimeService.StopPodSandbox(ctx, pod.GetId()); err != nil {
-				lastErr = err
-				log.Error(err, "Failed stopping pod sandbox", "podID", pod.Id)
-				continue
+		stopTaskFns = append(stopTaskFns, func(ctx context.Context) error {
+			log.Info("Stopping pod sandbox", "podID", pod.GetId())
+			if err := wait.ExponentialBackoffWithContext(ctx, SandboxStopBackoff, func(ctx context.Context) (bool, error) {
+				if err := runtimeService.StopPodSandbox(ctx, pod.GetId()); err != nil {
+					log.Error(err, "Failed stopping pod sandbox, retrying", "podID", pod.GetId())
+					return false, nil
+				}
+				return true, nil
+			}); err != nil {
+				log.Error(err, "Failed stopping pod sandbox, continuing", "podID", pod.GetId())
 			}
-
-			if err := runtimeService.RemovePodSandbox(ctx, pod.GetId()); err != nil {
-				lastErr = err
-				log.Error(err, "Failed removing pod sandbox", "podID", pod.Id)
-				continue
-			}
-
-			lastErr = nil
-			break
-		}
-
-		if lastErr != nil {
-			errs = append(errs, lastErr)
-		}
+			return nil
+		})
+	}
+	if err := flow.Parallel(stopTaskFns...)(ctx); err != nil {
+		return err
 	}
 
-	if len(errs) > 0 {
-		return fmt.Errorf("failed stopping some pods: %w", errors.Join(errs...))
+	removeTaskFns := make([]flow.TaskFn, 0, len(pods))
+	for _, pod := range pods {
+		removeTaskFns = append(removeTaskFns, func(ctx context.Context) error {
+			log.Info("Removing pod sandbox", "podID", pod.GetId())
+			if err := wait.ExponentialBackoffWithContext(ctx, SandboxStopBackoff, func(ctx context.Context) (bool, error) {
+				if err := runtimeService.RemovePodSandbox(ctx, pod.GetId()); err != nil {
+					log.Error(err, "Failed removing pod sandbox, retrying", "podID", pod.GetId())
+					return false, nil
+				}
+				return true, nil
+			}); err != nil {
+				return fmt.Errorf("failed removing pod sandbox %s: %w", pod.GetId(), err)
+			}
+			return nil
+		})
 	}
-
-	return nil
+	return flow.Parallel(removeTaskFns...)(ctx)
 }
 
 func cleanUpOperatingSystemConfig(ctx context.Context, log logr.Logger, fs afero.Afero, dbus dbus.DBus) error {

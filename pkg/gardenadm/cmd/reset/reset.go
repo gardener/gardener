@@ -7,12 +7,16 @@ package reset
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/drain"
+	"github.com/go-logr/logr"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -20,6 +24,7 @@ import (
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -70,6 +75,13 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed initializing gardenadm botanist with temporary client set: %w", err)
 	}
 
+	b.Logger.Info("Fetching Shoot manifest from Cluster object")
+	cluster, err := gardenerextensions.GetCluster(ctx, b.ShootClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to read Cluster resource %s: %w", b.Shoot.ControlPlaneNamespace, err)
+	}
+	b.Shoot.SetInfo(cluster.Shoot)
+
 	node, err := nodeagent.FetchNodeByHostName(ctx, b.ShootClientSet.Client(), b.HostName)
 	if err != nil {
 		return fmt.Errorf("failed retrieving node for hostname %s: %w", b.HostName, err)
@@ -96,17 +108,7 @@ func run(ctx context.Context, opts *Options) error {
 		// TODO(scheererj): If node is a control plane node, remove its machine IP from the Etcd's
 		// .spec.externallyManagedMemberAddresses[], decrease .spec.replicas, and wait for reconciliation
 
-		deletedNode = g.Add(flow.Task{
-			Name: "Deleting node from cluster",
-			Fn: func(ctx context.Context) error {
-				if err := b.ShootClientSet.Client().Delete(ctx, node); client.IgnoreNotFound(err) != nil {
-					return fmt.Errorf("failed deleting node %s: %w", node.Name, err)
-				}
-				return nil
-			},
-			Dependencies: flow.NewTaskIDs(cordonAndDrainNodeComplete),
-		})
-		_ = g.Add(flow.Task{
+		resetGardenerNodeAgent = g.Add(flow.Task{
 			Name: "Executing 'gardener-node-agent reset'",
 			Fn: func(ctx context.Context) error {
 				out, err := exec.CommandContext(ctx, nodeagentconfigv1alpha1.BinaryDir+"/gardener-node-agent", "reset", "--config-dir", nodeagentconfigv1alpha1.BaseDir).CombinedOutput() // #nosec: G204 -- Static command and arguments.
@@ -114,7 +116,24 @@ func run(ctx context.Context, opts *Options) error {
 				fmt.Fprintln(opts.ErrOut, string(out))
 				return err
 			},
-			Dependencies: flow.NewTaskIDs(deletedNode),
+			Dependencies: flow.NewTaskIDs(cordonAndDrainNodeComplete),
+		})
+		cleanupRemainingArtifacts = g.Add(flow.Task{
+			Name: "Cleaning up remaining artifacts on node",
+			Fn: func(_ context.Context) error {
+				return cleanupRemainingArtifactsOnNode(b.Logger, b.FS)
+			},
+			Dependencies: flow.NewTaskIDs(resetGardenerNodeAgent),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting node object from cluster",
+			Fn: func(ctx context.Context) error {
+				if err := b.ShootClientSet.Client().Delete(ctx, node); client.IgnoreNotFound(err) != nil {
+					return fmt.Errorf("failed deleting node %s: %w", node.Name, err)
+				}
+				return nil
+			},
+			Dependencies: flow.NewTaskIDs(resetGardenerNodeAgent, cleanupRemainingArtifacts),
 		})
 	)
 
@@ -207,4 +226,61 @@ func cordonAndDrainNode(ctx context.Context, b *botanist.GardenadmBotanist, node
 	}
 
 	return nil
+}
+
+func cleanupRemainingArtifactsOnNode(log logr.Logger, fs afero.Afero) error {
+	mountPoints, err := readMountPoints(fs)
+	if err != nil {
+		return fmt.Errorf("failed reading mount points: %w", err)
+	}
+
+	var errs []error
+
+	// These directories created by Gardener components on a node which are not already cleaned up by
+	// `gardener-node-agent reset` and must be removed to allow the node to re-join the cluster from a clean state.
+	for _, dir := range []string{
+		"/var/lib/etcd",
+		"/var/lib/etcd-main",
+		"/var/lib/etcd-events",
+		"/var/lib/gardener-node-agent",
+		"/var/lib/gardener-user",
+		"/var/lib/kube-proxy",
+		"/var/lib/kubelet",
+		"/var/lib/node-exporter",
+		"/var/lib/sshd-ensurer",
+		"/var/lib/static-pods",
+	} {
+		if mountPoints[dir] {
+			log.Info("Skipping removal of externally bind-mounted directory", "path", dir)
+			continue
+		}
+		log.Info("Removing directory", "path", dir)
+		if err := fs.RemoveAll(dir); err != nil {
+			errs = append(errs, fmt.Errorf("failed removing directory %s: %w", dir, err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("failed cleaning up remaining artifacts: %w", errors.Join(errs...))
+	}
+
+	return nil
+}
+
+// readMountPoints returns a set of paths that are currently active mount points according to /proc/mounts.
+func readMountPoints(fs afero.Afero) (map[string]bool, error) {
+	data, err := fs.ReadFile("/proc/mounts")
+	if err != nil {
+		return nil, fmt.Errorf("failed reading /proc/mounts: %w", err)
+	}
+
+	mountPoints := make(map[string]bool)
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			mountPoints[fields[1]] = true
+		}
+	}
+
+	return mountPoints, nil
 }
