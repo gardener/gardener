@@ -210,7 +210,9 @@ Additionally, the annotation `resources.gardener.cloud/deletion-propagation-on-i
 
 When a `ManagedResource` is deleted, the controller deletes all managed resources from the target cluster.
 In case the resources still have entries in their `.metadata.finalizers[]` list, they will remain stuck in the system until another entity removes the finalizers.
-If you want the controller to forcefully finalize the deletion after some grace period (i.e., setting `.metadata.finalizers=null`), you can annotate the managed resources with `resources.gardener.cloud/finalize-deletion-after=<duration>`, e.g., `resources.gardener.cloud/finalize-deletion-after=1h`.
+If you want the controller to forcefully finalize the deletion after some grace period (i.e., setting `.metadata.finalizers=null`), you can annotate the individual managed objects with `resources.gardener.cloud/finalize-deletion-after=<duration>`, e.g., `resources.gardener.cloud/finalize-deletion-after=1h`.
+
+Alternatively, the `ManagedResource` itself can be annotated with `resources.gardener.cloud/force-deletion=true`. In this case, the controller forcefully deletes all underlying resources with `GracePeriodSeconds=0` and removes their finalizers. During shoot deletion, gardenlet automatically sets this annotation on `ManagedResource`s that are stuck in deletion after a configurable grace period (default 5m).
 
 #### Preserving `replicas` or `resources` in Workload Resources
 
