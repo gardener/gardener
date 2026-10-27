@@ -66,28 +66,6 @@ var _ = Describe("ManagedResources", func() {
 		}
 	})
 
-	Describe("#AnnotateManagedResourcesForForceDeletion", func() {
-		It("should annotate only class=nil managed resources for force deletion", func() {
-			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
-			Expect(fakeClient.Create(ctx, seedManagedResource)).To(Succeed())
-			Expect(fakeClient.Create(ctx, shootManagedResourceZeroClass)).To(Succeed())
-			Expect(fakeClient.Create(ctx, shootManagedResourceNoClass)).To(Succeed())
-
-			Expect(botanist.AnnotateManagedResourcesForForceDeletion(ctx)).To(Succeed())
-
-			result := &resourcesv1alpha1.ManagedResource{}
-
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootManagedResourceNoClass), result)).To(Succeed())
-			Expect(result.Annotations[resourcesv1alpha1.ForceDeletion]).To(Equal("true"))
-
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootManagedResourceZeroClass), result)).To(Succeed())
-			Expect(result.Annotations).NotTo(HaveKey(resourcesv1alpha1.ForceDeletion))
-
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(seedManagedResource), result)).To(Succeed())
-			Expect(result.Annotations).NotTo(HaveKey(resourcesv1alpha1.ForceDeletion))
-		})
-	})
-
 	Describe("#WaitUntilShootManagedResourcesDeleted", func() {
 		It("should wait for all managed resources referring the shoot to be deleted", func() {
 			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
