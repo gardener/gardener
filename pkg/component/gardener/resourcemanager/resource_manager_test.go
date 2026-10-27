@@ -325,20 +325,19 @@ var _ = Describe("ResourceManager", func() {
 				{Key: "c"},
 				{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists},
 			},
-			ResponsibilityMode:                        ForShootOrVirtualGarden,
-			TargetDisableCache:                        &targetDisableCache,
-			WatchedNamespace:                          &watchedNamespace,
-			SchedulingProfile:                         &binPackingSchedulingProfile,
-			DefaultSeccompProfileEnabled:              false,
-			PodTopologySpreadConstraintsEnabled:       true,
-			VPAInPlaceUpdatesEnabled:                  true,
-			LogLevel:                                  "info",
-			LogFormat:                                 "json",
-			Zones:                                     []string{"a", "b"},
-			ManagedResourceLabels:                     map[string]string{"foo": "bar"},
-			NodeAgentAuthorizerEnabled:                true,
+			ResponsibilityMode:                  ForShootOrVirtualGarden,
+			TargetDisableCache:                  &targetDisableCache,
+			WatchedNamespace:                    &watchedNamespace,
+			SchedulingProfile:                   &binPackingSchedulingProfile,
+			DefaultSeccompProfileEnabled:        false,
+			PodTopologySpreadConstraintsEnabled: true,
+			LogLevel:                            "info",
+			LogFormat:                           "json",
+			Zones:                               []string{"a", "b"},
+			ManagedResourceLabels:               map[string]string{"foo": "bar"},
+			NodeAgentAuthorizerEnabled:          true,
 			NodeAgentAuthorizerAuthorizeWithSelectors: new(true),
-			MachineNamespace:                          new(watchedNamespace),
+			MachineNamespace: new(watchedNamespace),
 			PodKubeAPIServerLoadBalancingWebhook: PodKubeAPIServerLoadBalancingWebhook{
 				Enabled: false,
 				Configs: []PodKubeAPIServerLoadBalancingWebhookConfig{
@@ -462,9 +461,6 @@ var _ = Describe("ResourceManager", func() {
 						AuthorizeWithSelectors: new(true),
 						MachineNamespace:       cfg.MachineNamespace,
 					},
-					VPAInPlaceUpdates: resourcemanagerconfigv1alpha1.VPAInPlaceUpdatesConfig{
-						Enabled: !isWorkerless,
-					},
 				},
 			}
 
@@ -505,7 +501,6 @@ var _ = Describe("ResourceManager", func() {
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.ExtensionValidation.Enabled = true
 				config.Webhooks.SeccompProfile.Enabled = true
-				config.Webhooks.VPAInPlaceUpdates.Enabled = true
 			}
 
 			if responsibilityMode == ForRuntime {
@@ -1235,41 +1230,7 @@ var _ = Describe("ResourceManager", func() {
 				MatchPolicy:             &matchPolicyExact,
 				SideEffects:             &sideEffect,
 				TimeoutSeconds:          new(int32(10)),
-			},
-				admissionregistrationv1.MutatingWebhook{
-					Name: "vpa-in-place-updates.resources.gardener.cloud",
-					Rules: []admissionregistrationv1.RuleWithOperations{{
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{"autoscaling.k8s.io"},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"verticalpodautoscalers"},
-						},
-						Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
-					}},
-					NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
-					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      resourcesv1alpha1.VPAInPlaceUpdatesSkip,
-								Operator: metav1.LabelSelectorOpDoesNotExist,
-							},
-						},
-					},
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "gardener-resource-manager",
-							Namespace: deployNamespace,
-							Path:      new("/webhooks/vpa-in-place-updates"),
-						},
-					},
-					AdmissionReviewVersions: []string{"v1beta1", "v1"},
-					ReinvocationPolicy:      &reinvocationPolicyNever,
-					FailurePolicy:           &failurePolicyFail,
-					MatchPolicy:             &matchPolicyEquivalent,
-					SideEffects:             &sideEffect,
-					TimeoutSeconds:          new(int32(10)),
-				},
-			)
+			})
 
 			return obj
 		}
@@ -1581,42 +1542,6 @@ webhooks:
     - pods
   sideEffects: None
   timeoutSeconds: 10`
-			}
-			if !cfg.IsWorkerless {
-				out += `
-- admissionReviewVersions:
-  - v1beta1
-  - v1
-  clientConfig:
-    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/vpa-in-place-updates
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: vpa-in-place-updates.resources.gardener.cloud
-  namespaceSelector:
-    matchExpressions:
-    - key: kubernetes.io/metadata.name
-      operator: In
-      values:
-      - kube-system
-      - kubernetes-dashboard
-  objectSelector:
-    matchExpressions:
-    - key: vpa-in-place-updates.resources.gardener.cloud/skip
-      operator: DoesNotExist
-  reinvocationPolicy: Never
-  rules:
-  - apiGroups:
-    - autoscaling.k8s.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - verticalpodautoscalers
-  sideEffects: None
-  timeoutSeconds: 10
-`
 			}
 			return out
 		}
@@ -2666,10 +2591,26 @@ subjects:
 				cfg.SchedulingProfile = nil
 				cfg.ResponsibilityMode = ForRuntime
 				cfg.PodKubeAPIServerLoadBalancingWebhook.Enabled = true
-				cfg.VPAInPlaceUpdatesEnabled = true
 				cfg.SystemComponentsConfigWebhookEnabled = false
 				resourceManager = New(fakeClient, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
+			})
+
+			It("should remove the legacy VPA webhook without replacing the shared webhook configuration", func() {
+				expected := mutatingWebhookConfigurationFor(ForRuntime, false)
+				existing := expected.DeepCopy()
+				existing.UID = "existing-webhook-configuration"
+				existing.Webhooks = append(existing.Webhooks, admissionregistrationv1.MutatingWebhook{
+					Name: "vpa-in-place-updates.resources.gardener.cloud",
+				})
+				Expect(fakeClient.Create(ctx, existing)).To(Succeed())
+
+				Expect(resourceManager.Deploy(ctx)).To(Succeed())
+
+				actual := &admissionregistrationv1.MutatingWebhookConfiguration{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(existing), actual)).To(Succeed())
+				Expect(actual.UID).To(Equal(existing.UID))
+				Expect(actual.Webhooks).To(DeepEqual(expected.Webhooks))
 			})
 
 			It("should deploy a cluster role allowing all access", func() {
@@ -3265,10 +3206,6 @@ func validateWebhookConfiguration(
 	if actualConfig.Webhooks.SeccompProfile.Enabled {
 		expectedNumEnabledMutatingWebhooks++
 		Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "seccomp-profile.resources.gardener.cloud")))
-	}
-	if actualConfig.Webhooks.VPAInPlaceUpdates.Enabled {
-		expectedNumEnabledMutatingWebhooks++
-		Expect(actualMutatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "vpa-in-place-updates.resources.gardener.cloud")))
 	}
 	Expect(actualMutatingWebhookConfiguration.Webhooks).To(HaveLen(expectedNumEnabledMutatingWebhooks))
 

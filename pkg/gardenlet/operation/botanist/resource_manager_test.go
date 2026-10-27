@@ -72,7 +72,6 @@ var _ = Describe("ResourceManager", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(resourceManager.GetValues().PodTopologySpreadConstraintsEnabled).To(BeFalse())
-			Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeTrue())
 			Expect(resourceManager.GetValues().MachineNamespace).To(HaveValue(Equal("shoot--foo--bar")))
 		})
 
@@ -156,7 +155,6 @@ var _ = Describe("ResourceManager", func() {
 
 					Expect(resourceManager.GetValues().MachineNamespace).To(HaveValue(Equal("kube-system")))
 					Expect(resourceManager.GetValues().IsSelfHostedShoot).To(BeTrue())
-					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeFalse())
 					Expect(resourceManager.GetValues().SystemComponentTolerations).To(ContainElement(HaveField("Key", "node-role.kubernetes.io/control-plane")))
 				})
 
@@ -189,7 +187,6 @@ var _ = Describe("ResourceManager", func() {
 
 					Expect(resourceManager.GetValues().MachineNamespace).To(BeNil())
 					Expect(resourceManager.GetValues().IsSelfHostedShoot).To(BeTrue())
-					Expect(resourceManager.GetValues().VPAInPlaceUpdatesEnabled).To(BeFalse())
 				})
 			})
 		})
