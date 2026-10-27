@@ -1122,7 +1122,7 @@
       "id": 35,
       "panels": [],
       "repeat": "service_kind",
-      "title": "CoreDNS DNS Programming Latency",
+      "title": "CoreDNS Kubernetes DNS Programming Latency",
       "type": "row"
     },
     {
@@ -1185,7 +1185,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DNS Programming Events",
+      "title": "Kubernetes DNS Programming Events",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1284,7 +1284,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DNS Programming Cores",
+      "title": "Kubernetes DNS Programming Cores",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1368,7 +1368,7 @@
           "refId": "A"
         }
       ],
-      "title": "DNS Programming Heatmap",
+      "title": "Kubernetes DNS Programming Heatmap",
       "tooltip": {
         "show": true,
         "showHistogram": true
