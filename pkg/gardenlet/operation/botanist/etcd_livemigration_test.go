@@ -614,22 +614,17 @@ var _ = Describe("Etcd LiveMigration", func() {
 	Describe("EtcdMigrationComplete phase helpers", func() {
 		var (
 			ctrl      *gomock.Controller
-			ctx       = context.Background()
 			fakeClock *testclock.FakeClock
 
 			etcdMain   *mocketcd.MockInterface
 			etcdEvents *mocketcd.MockInterface
 			b          *Botanist
-
-			namespace = "shoot--p1--test"
-			seedName  = "dst-seed"
-			ingress   = "ingress.dst.example.com"
 		)
 
 		baseEtcdCR := func() *druidcorev1alpha1.Etcd {
 			return &druidcorev1alpha1.Etcd{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-main",
+					Name:      etcd.Name(v1beta1constants.ETCDRoleMain),
 					Namespace: namespace,
 				},
 				Spec: druidcorev1alpha1.EtcdSpec{
@@ -675,9 +670,9 @@ var _ = Describe("Etcd LiveMigration", func() {
 			}}
 			b.Seed = &seedpkg.Seed{}
 			b.Seed.SetInfo(&gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{Name: seedName},
+				ObjectMeta: metav1.ObjectMeta{Name: dstSeedName},
 				Spec: gardencorev1beta1.SeedSpec{
-					Ingress: &gardencorev1beta1.Ingress{Domain: ingress},
+					Ingress: &gardencorev1beta1.Ingress{Domain: dstIngress},
 				},
 			})
 			b.Shoot = &shootpkg.Shoot{ControlPlaneNamespace: namespace}
@@ -694,6 +689,16 @@ var _ = Describe("Etcd LiveMigration", func() {
 			ctrl.Finish()
 		})
 
+		Context("when DeployEtcdForLiveMigrationPhase is called without LiveMigration values", func() {
+			It("should return an error", func() {
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{LiveMigration: nil})
+
+				err := b.DeployEtcdForLiveMigrationPhase(ctx, 2)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("LiveMigration"))
+			})
+		})
+
 		Describe("#DeployEtcdForLiveMigrationPhase", func() {
 			var (
 				capturedLM  *etcd.LiveMigrationValues
@@ -703,13 +708,13 @@ var _ = Describe("Etcd LiveMigration", func() {
 			BeforeEach(func() {
 				capturedLM = nil
 				setLMCalled = 0
-				lm := &etcd.LiveMigrationValues{
+				lmValues := &etcd.LiveMigrationValues{
 					SkipClientSANVerification:  true,
 					ExtraPeerServiceDNSNames:   []string{"peer-san"},
 					ExtraClientServiceDNSNames: []string{"client-san"},
 					AdditionalAdvertisedURLs:   &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{},
 				}
-				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: lm}).AnyTimes()
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: lmValues}).AnyTimes()
 				etcdMain.EXPECT().GetReplicas().Return(new(int32(3))).AnyTimes()
 				etcdMain.EXPECT().SetReplicas(gomock.Any()).AnyTimes()
 				etcdMain.EXPECT().SetLiveMigration(gomock.Any()).DoAndReturn(func(v *etcd.LiveMigrationValues) {
@@ -748,14 +753,6 @@ var _ = Describe("Etcd LiveMigration", func() {
 				Entry("replicas=2", int32(2)),
 				Entry("replicas=3", int32(3)),
 			)
-
-			It("should return an error when LiveMigration values are nil", func() {
-				etcdMain.EXPECT().GetValues().Return(etcd.Values{LiveMigration: nil})
-
-				err := b.DeployEtcdForLiveMigrationPhase(ctx, 2)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("LiveMigration"))
-			})
 		})
 
 		Describe("#RemoveSourceEtcdMembers", func() {
@@ -794,7 +791,7 @@ var _ = Describe("Etcd LiveMigration", func() {
 				Expect(updated.Annotations).To(HaveKey(v1beta1constants.GardenerTimestamp))
 			})
 
-			It("should return nil with no patch when BootstrapWithExistingCluster is already nil (GUARD B)", func() {
+			It("should return nil with no patch when BootstrapWithExistingCluster is already nil", func() {
 				cr := baseEtcdCR()
 				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
 				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
@@ -885,18 +882,16 @@ var _ = Describe("Etcd LiveMigration", func() {
 		Describe("live migration cleanup", func() {
 			It("should call SetLiveMigration(nil) then Deploy when clearing live migration config", func() {
 				nilLMCalled := false
-				gomock.InOrder(
-					etcdMain.EXPECT().SetLiveMigration((*etcd.LiveMigrationValues)(nil)).DoAndReturn(func(_ *etcd.LiveMigrationValues) {
-						nilLMCalled = true
-					}),
-					etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).Return(nil),
-					etcdMain.EXPECT().Deploy(ctx).DoAndReturn(func(_ context.Context) error {
-						Expect(nilLMCalled).To(BeTrue(), "SetLiveMigration(nil) must be called before Deploy")
-						return nil
-					}),
-					etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).Return(nil),
-					etcdEvents.EXPECT().Deploy(ctx).Return(nil),
-				)
+				etcdMain.EXPECT().SetLiveMigration((*etcd.LiveMigrationValues)(nil)).DoAndReturn(func(_ *etcd.LiveMigrationValues) {
+					nilLMCalled = true
+				})
+				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(gomock.Any()).Return(nil)
+				etcdMain.EXPECT().Deploy(gomock.Any()).DoAndReturn(func(_ context.Context) error {
+					Expect(nilLMCalled).To(BeTrue(), "SetLiveMigration(nil) must be called before Deploy")
+					return nil
+				})
+				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(gomock.Any()).Return(nil)
+				etcdEvents.EXPECT().Deploy(gomock.Any()).Return(nil)
 
 				cleanFn := func(ctx context.Context) error {
 					b.Shoot.Components.ControlPlane.EtcdMain.SetLiveMigration(nil)

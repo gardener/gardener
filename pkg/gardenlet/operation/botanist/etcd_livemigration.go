@@ -29,6 +29,7 @@ const (
 	// liveMigrationHostLabelHashLength is the number of hex characters of the SHA256 hash used in the left-most DNS label
 	// of the cross-seed etcd hostnames.
 	liveMigrationHostLabelHashLength = 6
+	sourceMemberRemovalTimeout       = 10 * time.Minute
 )
 
 // NewMemberExposure is the constructor for the member exposure component. Exposed for testing.
@@ -46,6 +47,8 @@ var CrossSeedClientMemberHosts = crossSeedClientMemberHosts
 var SetLiveMigrationEtcdValues = func(b *Botanist, ctx context.Context, values *etcd.Values, role string) error {
 	return b.setLiveMigrationEtcdValues(ctx, values, role)
 }
+
+var sourceMemberRemovalInterval = 10 * time.Second
 
 // LiveMigrationEtcdPeerHost returns the SNI host under which the peer endpoint of the etcd member with the given role
 // and ordinal on the given seed is reachable from other seeds. It is derived from the seed's ingress domain so that it
@@ -301,18 +304,14 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 	return nil
 }
 
-var sourceMemberRemovalInterval = 10 * time.Second
-
-const sourceMemberRemovalTimeout = 10 * time.Minute
-
 // DeployEtcdForLiveMigrationPhase deploys etcd-main with the given replica count and matching
 // AdditionalAdvertisedURLs for the destination seed. All other live migration values (Bootstrap,
 // Extra*ServiceDNSNames, SkipClientSANVerification) are preserved unchanged so cert hashes stay
 // stable across phase transitions and no unintended cert rotation occurs.
 func (b *Botanist) DeployEtcdForLiveMigrationPhase(ctx context.Context, phaseReplicas int32) error {
-	c := b.Shoot.Components.ControlPlane.EtcdMain
-	lm := c.GetValues().LiveMigration
-	if lm == nil {
+	etcdMain := b.Shoot.Components.ControlPlane.EtcdMain
+	lmValues := etcdMain.GetValues().LiveMigration
+	if lmValues == nil {
 		return fmt.Errorf("DeployEtcdForLiveMigrationPhase called without LiveMigration values — this function is only valid on the destination gardenlet")
 	}
 
@@ -323,19 +322,18 @@ func (b *Botanist) DeployEtcdForLiveMigrationPhase(ctx context.Context, phaseRep
 		role               = v1beta1constants.ETCDRoleMain
 	)
 
-	originalReplicas := c.GetReplicas()
+	originalReplicas := etcdMain.GetReplicas()
 	defer func() {
-		c.SetReplicas(originalReplicas)
-		c.SetLiveMigration(lm)
+		etcdMain.SetReplicas(originalReplicas)
+		etcdMain.SetLiveMigration(lmValues)
 	}()
 
-	replicas := phaseReplicas
-	c.SetReplicas(&replicas)
-	c.SetLiveMigration(&etcd.LiveMigrationValues{
-		SkipClientSANVerification:    lm.SkipClientSANVerification,
-		BootstrapWithExistingCluster: lm.BootstrapWithExistingCluster,
-		ExtraPeerServiceDNSNames:     lm.ExtraPeerServiceDNSNames,
-		ExtraClientServiceDNSNames:   lm.ExtraClientServiceDNSNames,
+	etcdMain.SetReplicas(new(phaseReplicas))
+	etcdMain.SetLiveMigration(&etcd.LiveMigrationValues{
+		SkipClientSANVerification:    lmValues.SkipClientSANVerification,
+		BootstrapWithExistingCluster: lmValues.BootstrapWithExistingCluster,
+		ExtraPeerServiceDNSNames:     lmValues.ExtraPeerServiceDNSNames,
+		ExtraClientServiceDNSNames:   lmValues.ExtraClientServiceDNSNames,
 		AdditionalAdvertisedURLs: &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
 			PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
 				OverrideDefaultURL: new(true),

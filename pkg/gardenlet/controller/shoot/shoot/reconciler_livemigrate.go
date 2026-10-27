@@ -291,43 +291,43 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 const taskGroupEtcdMigrationComplete flow.TaskID = "TaskGroupEtcdMigrationComplete"
 
 // etcdMigrationCompleteTaskGroup returns the flow.TaskGroup for completing the etcd migration:
-// scaling up the destination etcd to full replicas, removing source members, cleaning up
+// scaling up the destination etcd to 3 replicas, removing source members, cleaning up
 // the live migration configuration, and taking a full snapshot.
 func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(taskGroupEtcdMigrationComplete)
 
-		scaleUp = g.Add(flow.Task{
-			Name: "Scaling out destination etcd to full replicas before removing source members",
+		deployEtcd = g.Add(flow.Task{
+			Name: "Scaling out destination etcd to 3 replicas",
 			Fn:   b.DeployEtcd,
 		})
-		waitScaledUp = g.Add(flow.Task{
-			Name:         "Waiting until etcds are scaled out and ready",
+		waitUntilEtcdReady = g.Add(flow.Task{
+			Name:         "Waiting until etcd is scaled out and ready",
 			Fn:           b.WaitUntilEtcdsReady,
-			Dependencies: flow.NewTaskIDs(scaleUp),
+			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
-		removeSource = g.Add(flow.Task{
+		removeSourceMembers = g.Add(flow.Task{
 			Name:         "Removing source etcd members from the joined cluster",
 			Fn:           b.RemoveSourceEtcdMembers,
-			Dependencies: flow.NewTaskIDs(waitScaledUp),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
 		})
-		waitRemoved = g.Add(flow.Task{
+		waitUntilSourceMembersRemoved = g.Add(flow.Task{
 			Name:         "Waiting until source etcd members are removed",
 			Fn:           b.WaitUntilSourceEtcdMembersRemoved,
-			Dependencies: flow.NewTaskIDs(removeSource),
+			Dependencies: flow.NewTaskIDs(removeSourceMembers),
 		})
-		deployClean = g.Add(flow.Task{
+		deployEtcdWithoutLiveMigration = g.Add(flow.Task{
 			Name: "Removing live migration configuration from etcd",
 			Fn: func(ctx context.Context) error {
 				b.Shoot.Components.ControlPlane.EtcdMain.SetLiveMigration(nil)
 				return b.DeployEtcd(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(waitRemoved),
+			Dependencies: flow.NewTaskIDs(waitUntilSourceMembersRemoved),
 		})
-		waitClean = g.Add(flow.Task{
+		waitUntilEtcdReadyAfterCleanup = g.Add(flow.Task{
 			Name:         "Waiting until etcds are ready after cleanup",
 			Fn:           b.WaitUntilEtcdsReady,
-			Dependencies: flow.NewTaskIDs(deployClean),
+			Dependencies: flow.NewTaskIDs(deployEtcdWithoutLiveMigration),
 		})
 	)
 
@@ -335,7 +335,7 @@ func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Name:         "Taking full etcd snapshot",
 		Fn:           b.SnapshotEtcd,
 		SkipIf:       v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), b.GetSeed()) == nil,
-		Dependencies: flow.NewTaskIDs(waitClean),
+		Dependencies: flow.NewTaskIDs(waitUntilEtcdReadyAfterCleanup),
 	})
 
 	return g
