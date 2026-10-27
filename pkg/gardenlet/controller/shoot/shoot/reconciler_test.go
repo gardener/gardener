@@ -23,9 +23,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -257,6 +260,154 @@ var _ = Describe("Reconciler", func() {
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationFinishedTime.UTC()).To(Equal(fakeClock.Now()))
 			Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
 			Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.UTC()).To(Equal(fakeClock.Now()))
+		})
+	})
+
+	Describe("#updateShootStatusOperationStart", func() {
+		var (
+			seed *gardencorev1beta1.Seed
+
+			address = func(name, domain string) gardencorev1beta1.ShootAdvertisedAddress {
+				return gardencorev1beta1.ShootAdvertisedAddress{Name: name, URL: "https://api." + domain}
+			}
+			externalAddress = address(v1beta1constants.AdvertisedAddressExternal, "shoot.example.com")
+
+			startOperation = func(operationType gardencorev1beta1.LastOperationType) {
+				GinkgoHelper()
+				Expect(reconciler.updateShootStatusOperationStart(ctx, shoot, seed, "project", shoot.Status.TechnicalID, operationType)).To(Succeed())
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			}
+		)
+
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+			gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).Build()
+			reconciler = &Reconciler{
+				GardenClient: gardenClient,
+				Clock:        testclock.NewFakeClock(time.Now()),
+				Identity:     &gardencorev1beta1.Gardener{},
+			}
+
+			seed = &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{
+				InternalDomains: []gardencorev1beta1.SeedDNSProviderConfig{{Domain: "internal.new.example.com"}, {Domain: "internal.old.example.com"}},
+			}}}
+
+			shoot.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation:                           v1beta1constants.OperationRotateCAStart,
+				v1beta1constants.AnnotationConfirmationMigrateInternalDomain: "true",
+			}
+			shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+				externalAddress,
+				address(v1beta1constants.AdvertisedAddressInternal, "shoot.project.internal.old.example.com"),
+			}
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
+		})
+
+		It("should migrate the internal domain if a CA rotation starts with the confirmation", func() {
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				externalAddress,
+				address(v1beta1constants.AdvertisedAddressInternal, "shoot.project.internal.new.example.com"),
+				address(v1beta1constants.AdvertisedAddressPriorInternal, "shoot.project.internal.old.example.com"),
+			}))
+			Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationConfirmationMigrateInternalDomain))
+		})
+
+		It("should migrate the internal domain if a CA rotation without workers rollout starts with the confirmation", func() {
+			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.OperationRotateCAStartWithoutWorkersRollout
+			Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(ContainElement(address(v1beta1constants.AdvertisedAddressPriorInternal, "shoot.project.internal.old.example.com")))
+		})
+
+		It("should migrate the internal domain if a credentials rotation starts with the confirmation", func() {
+			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.OperationRotateCredentialsStart
+			Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(ContainElement(address(v1beta1constants.AdvertisedAddressPriorInternal, "shoot.project.internal.old.example.com")))
+		})
+
+		It("should remove the internal domain if the seed disables it", func() {
+			seed.Spec.DNS.InternalDomainEnabled = new(false)
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				externalAddress,
+				address(v1beta1constants.AdvertisedAddressPriorInternal, "shoot.project.internal.old.example.com"),
+			}))
+		})
+
+		It("should add the internal domain without a prior internal domain if the shoot has no internal domain", func() {
+			shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{externalAddress}
+			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				externalAddress,
+				address(v1beta1constants.AdvertisedAddressInternal, "shoot.project.internal.new.example.com"),
+			}))
+		})
+
+		It("should keep the internal domain if the CA rotation starts without the confirmation", func() {
+			delete(shoot.Annotations, v1beta1constants.AnnotationConfirmationMigrateInternalDomain)
+			Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+			addresses := shoot.Status.AdvertisedAddresses
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal(addresses))
+		})
+
+		It("should keep the internal domain and the confirmation if no CA rotation starts", func() {
+			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+			Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+			addresses := shoot.Status.AdvertisedAddresses
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal(addresses))
+			Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.AnnotationConfirmationMigrateInternalDomain, "true"))
+		})
+
+		It("should change nothing but remove the confirmation if the shoot already uses the internal domain of the seed", func() {
+			shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+				externalAddress,
+				address(v1beta1constants.AdvertisedAddressInternal, "shoot.project.internal.new.example.com"),
+			}
+			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+			addresses := shoot.Status.AdvertisedAddresses
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal(addresses))
+			Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.AnnotationConfirmationMigrateInternalDomain))
+		})
+
+		It("should change nothing for a new shoot without advertised addresses", func() {
+			shoot.Status.AdvertisedAddresses = nil
+			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+
+			startOperation(gardencorev1beta1.LastOperationTypeCreate)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(BeEmpty())
+		})
+
+		It("should keep the internal domain if the feature gate is disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+			addresses := shoot.Status.AdvertisedAddresses
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal(addresses))
 		})
 	})
 

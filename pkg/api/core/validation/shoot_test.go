@@ -2491,6 +2491,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			Context("migrate-internal-domain confirmation", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+				})
+
+				It("should allow the value true", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "confirmation.gardener.cloud/migrate-internal-domain", "true")
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should forbid another value", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "confirmation.gardener.cloud/migrate-internal-domain", "yes")
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("metadata.annotations[confirmation.gardener.cloud/migrate-internal-domain]"),
+					}))))
+				})
+
+				It("should allow another value if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "confirmation.gardener.cloud/migrate-internal-domain", "yes")
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+			})
+
 			Context("changing the domain", func() {
 				var newShoot *core.Shoot
 

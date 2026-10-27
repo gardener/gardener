@@ -776,6 +776,9 @@ const (
 	// AnnotationConfirmationForceDeletion is a constant for an annotation on a Shoot resource whose value must be set to "true" in order to
 	// trigger force-deletion of the cluster. It can only be set if the Shoot has a deletion timestamp and contains an ErrorCode in the Shoot Status.
 	AnnotationConfirmationForceDeletion = "confirmation.gardener.cloud/force-deletion"
+	// AnnotationConfirmationMigrateInternalDomain is a constant for an annotation on a Shoot resource whose value must be
+	// set to "true" in order to migrate the internal domain with the next start of a CA rotation.
+	AnnotationConfirmationMigrateInternalDomain = "confirmation.gardener.cloud/migrate-internal-domain"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
 	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"

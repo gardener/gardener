@@ -232,6 +232,7 @@ func ValidateShootWithOpts(shoot *core.Shoot, opts shootValidationOptions) field
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
+	allErrs = append(allErrs, validateMigrateInternalDomainConfirmation(shoot.Annotations, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot, opts, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
@@ -3696,6 +3697,15 @@ func validatePendingWorkerUpdates(shoot *core.Shoot, fldPath *field.Path, operat
 	}
 
 	return allErrs
+}
+
+func validateMigrateInternalDomainConfirmation(annotations map[string]string, fldPath *field.Path) field.ErrorList {
+	value, ok := annotations[v1beta1constants.AnnotationConfirmationMigrateInternalDomain]
+	if !ok || value == "true" || !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return nil
+	}
+
+	return field.ErrorList{field.NotSupported(fldPath.Key(v1beta1constants.AnnotationConfirmationMigrateInternalDomain), value, []string{"true"})}
 }
 
 // ValidateForceDeletion validates the addition of force-deletion annotation on the Shoot.
