@@ -7,7 +7,7 @@ package apiserver
 import (
 	"context"
 	"fmt"
-	"net"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,12 +96,8 @@ func (k *kubeAPIServer) reconcileConfigMapEnvoyConfig(ctx context.Context, confi
 		return nil
 	}
 
-	// Restrict the CONNECT proxy to the shoot's own node, pod, and service networks. Note that the
-	// service CIDRs live on the top-level Values, while node/pod CIDRs are on the VPN config.
-	allowedDestinationCIDRs := append(append(append([]net.IPNet{},
-		k.values.VPN.NodeNetworkCIDRs...),
-		k.values.VPN.PodNetworkCIDRs...),
-		k.values.ServiceNetworkCIDRs...)
+	// Restrict the CONNECT proxy to the shoot's own node, pod, and service networks.
+	allowedDestinationCIDRs := slices.Concat(k.values.VPN.NodeNetworkCIDRs, k.values.VPN.PodNetworkCIDRs, k.values.ServiceNetworkCIDRs)
 
 	envoyConfig, err := envoy.GetEnvoyConfig(allowedDestinationCIDRs)
 	if err != nil {

@@ -56,13 +56,11 @@ type cidrPrefix struct {
 	PrefixLen int
 }
 
-// GetEnvoyConfig returns the Envoy configuration for the VPN proxy. The same configuration is used
-// both in HA or non-HA mode.
-//
-// allowedDestinationCIDRs are the shoot's own node, pod, and service networks. The CONNECT proxy is
-// restricted to these destinations via the dynamic forward proxy's resolved_address_filter
-// (allow-list on the resolved upstream IP), preventing it from being abused as a pivot into
-// seed-adjacent networks. An empty slice results in a fail-closed config that denies all connections.
+// GetEnvoyConfig returns the Envoy configuration for the VPN proxy, shared by HA and non-HA mode.
+// allowedDestinationCIDRs restrict the CONNECT proxy to the shoot's own networks via the dynamic
+// forward proxy's resolved_address_filter. An empty slice renders a fail-closed config that denies
+// all destinations (e.g. an IPv6 single-stack shoot whose CIDRs are not yet reported into the shoot
+// status), rather than failing the deployment.
 func GetEnvoyConfig(allowedDestinationCIDRs []net.IPNet) (string, error) {
 	prefixes := make([]cidrPrefix, 0, len(allowedDestinationCIDRs))
 	for _, cidr := range allowedDestinationCIDRs {
