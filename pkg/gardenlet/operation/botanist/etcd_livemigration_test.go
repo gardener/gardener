@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -17,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -27,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
+	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
 	"github.com/gardener/gardener/pkg/component/etcd/memberexposure"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -605,6 +608,302 @@ var _ = Describe("Etcd LiveMigration", func() {
 
 		It("should return an empty slice for zero replicas", func() {
 			Expect(CrossSeedClientMemberHosts("src-seed", "ingress.src.example.com", "dst-seed", "ingress.dst.example.com", "shoot--p1--foo", "main", 0)).To(BeEmpty())
+		})
+	})
+
+	Describe("EtcdMigrationComplete phase helpers", func() {
+		var (
+			ctrl      *gomock.Controller
+			ctx       = context.Background()
+			fakeClock *testclock.FakeClock
+
+			etcdMain   *mocketcd.MockInterface
+			etcdEvents *mocketcd.MockInterface
+			b          *Botanist
+
+			namespace = "shoot--p1--test"
+			seedName  = "dst-seed"
+			ingress   = "ingress.dst.example.com"
+		)
+
+		baseEtcdCR := func() *druidcorev1alpha1.Etcd {
+			return &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "etcd-main",
+					Namespace: namespace,
+				},
+				Spec: druidcorev1alpha1.EtcdSpec{
+					Replicas: 3,
+					Etcd: druidcorev1alpha1.EtcdConfig{
+						BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{
+							Members: []druidcorev1alpha1.BootstrapExistingMember{
+								{Name: "src-seed-etcd-main-0"},
+							},
+						},
+					},
+				},
+				Status: druidcorev1alpha1.EtcdStatus{
+					Conditions: []druidcorev1alpha1.Condition{
+						{
+							Type:   druidcorev1alpha1.ConditionTypeScaleOperationComplete,
+							Status: druidcorev1alpha1.ConditionTrue,
+						},
+						{
+							Type:   druidcorev1alpha1.ConditionTypeBootstrappedWithExistingCluster,
+							Status: druidcorev1alpha1.ConditionTrue,
+						},
+					},
+				},
+			}
+		}
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			fakeClock = testclock.NewFakeClock(time.Now())
+
+			etcdMain = mocketcd.NewMockInterface(ctrl)
+			etcdEvents = mocketcd.NewMockInterface(ctrl)
+
+			s := runtime.NewScheme()
+			Expect(druidcorev1alpha1.AddToScheme(s)).To(Succeed())
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(s).Build()
+			kubernetesClient := fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+
+			b = &Botanist{Operation: &operation.Operation{
+				SeedClientSet: kubernetesClient,
+				Clock:         fakeClock,
+			}}
+			b.Seed = &seedpkg.Seed{}
+			b.Seed.SetInfo(&gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{Name: seedName},
+				Spec: gardencorev1beta1.SeedSpec{
+					Ingress: &gardencorev1beta1.Ingress{Domain: ingress},
+				},
+			})
+			b.Shoot = &shootpkg.Shoot{ControlPlaneNamespace: namespace}
+			b.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+			b.Shoot.Components = &shootpkg.Components{
+				ControlPlane: &shootpkg.ControlPlane{
+					EtcdMain:   etcdMain,
+					EtcdEvents: etcdEvents,
+				},
+			}
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		Describe("#DeployEtcdForLiveMigrationPhase", func() {
+			var (
+				capturedLM  *etcd.LiveMigrationValues
+				setLMCalled int
+			)
+
+			BeforeEach(func() {
+				capturedLM = nil
+				setLMCalled = 0
+				lm := &etcd.LiveMigrationValues{
+					SkipClientSANVerification:  true,
+					ExtraPeerServiceDNSNames:   []string{"peer-san"},
+					ExtraClientServiceDNSNames: []string{"client-san"},
+					AdditionalAdvertisedURLs:   &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{},
+				}
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: lm}).AnyTimes()
+				etcdMain.EXPECT().GetReplicas().Return(new(int32(3))).AnyTimes()
+				etcdMain.EXPECT().SetReplicas(gomock.Any()).AnyTimes()
+				etcdMain.EXPECT().SetLiveMigration(gomock.Any()).DoAndReturn(func(v *etcd.LiveMigrationValues) {
+					setLMCalled++
+					if setLMCalled == 1 {
+						capturedLM = v
+					}
+				}).AnyTimes()
+				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).AnyTimes()
+				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).AnyTimes()
+				etcdMain.EXPECT().Deploy(ctx).Return(nil).AnyTimes()
+				etcdEvents.EXPECT().Deploy(ctx).Return(nil).AnyTimes()
+			})
+
+			It("should write 2 advertised members when called with phaseReplicas=2", func() {
+				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(Succeed())
+				Expect(capturedLM).NotTo(BeNil())
+				Expect(capturedLM.AdditionalAdvertisedURLs.PeerURLs.Members).To(HaveLen(2))
+				Expect(capturedLM.AdditionalAdvertisedURLs.ClientURLs.Members).To(HaveLen(2))
+			})
+
+			It("should write 3 advertised members when called with phaseReplicas=3", func() {
+				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 3)).To(Succeed())
+				Expect(capturedLM).NotTo(BeNil())
+				Expect(capturedLM.AdditionalAdvertisedURLs.PeerURLs.Members).To(HaveLen(3))
+				Expect(capturedLM.AdditionalAdvertisedURLs.ClientURLs.Members).To(HaveLen(3))
+			})
+
+			DescribeTable("advertised member count always equals replica count",
+				func(replicas int32) {
+					Expect(b.DeployEtcdForLiveMigrationPhase(ctx, replicas)).To(Succeed())
+					Expect(capturedLM).NotTo(BeNil())
+					Expect(capturedLM.AdditionalAdvertisedURLs.PeerURLs.Members).To(HaveLen(int(replicas)))
+				},
+				Entry("replicas=1", int32(1)),
+				Entry("replicas=2", int32(2)),
+				Entry("replicas=3", int32(3)),
+			)
+
+			It("should return an error when LiveMigration values are nil", func() {
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{LiveMigration: nil})
+
+				err := b.DeployEtcdForLiveMigrationPhase(ctx, 2)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("LiveMigration"))
+			})
+		})
+
+		Describe("#RemoveSourceEtcdMembers", func() {
+			It("should return an error (no patch) when BootstrappedWithExistingCluster condition is not True", func() {
+				cr := baseEtcdCR()
+				for i := range cr.Status.Conditions {
+					if cr.Status.Conditions[i].Type == druidcorev1alpha1.ConditionTypeBootstrappedWithExistingCluster {
+						cr.Status.Conditions[i].Status = druidcorev1alpha1.ConditionFalse
+					}
+				}
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+
+				Expect(b.SeedClientSet.Client().Create(ctx, cr)).To(Succeed())
+
+				err := b.RemoveSourceEtcdMembers(ctx)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("bootstrapped"))
+
+				updated := &druidcorev1alpha1.Etcd{}
+				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(cr), updated)).To(Succeed())
+				Expect(updated.Spec.Etcd.BootstrapWithExistingCluster).NotTo(BeNil())
+			})
+
+			It("should clear BootstrapWithExistingCluster and set operation+timestamp in one patch", func() {
+				cr := baseEtcdCR()
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+				Expect(b.SeedClientSet.Client().Create(ctx, cr)).To(Succeed())
+
+				Expect(b.RemoveSourceEtcdMembers(ctx)).To(Succeed())
+
+				updated := &druidcorev1alpha1.Etcd{}
+				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(cr), updated)).To(Succeed())
+				Expect(updated.Spec.Etcd.BootstrapWithExistingCluster).To(BeNil())
+				Expect(updated.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+				Expect(updated.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationReconcile))
+				Expect(updated.Annotations).To(HaveKey(v1beta1constants.GardenerTimestamp))
+			})
+
+			It("should return nil with no patch when BootstrapWithExistingCluster is already nil (GUARD B)", func() {
+				cr := baseEtcdCR()
+				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+
+				Expect(b.RemoveSourceEtcdMembers(ctx)).To(Succeed())
+			})
+
+			It("should return a retriable error when ScaleOperationComplete is False (GUARD A)", func() {
+				cr := baseEtcdCR()
+				for i := range cr.Status.Conditions {
+					if cr.Status.Conditions[i].Type == druidcorev1alpha1.ConditionTypeScaleOperationComplete {
+						cr.Status.Conditions[i].Status = druidcorev1alpha1.ConditionFalse
+						cr.Status.Conditions[i].Reason = druidcorev1alpha1.ScaleOperationReasonScalingOut
+					}
+				}
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+				Expect(b.SeedClientSet.Client().Create(ctx, cr)).To(Succeed())
+
+				err := b.RemoveSourceEtcdMembers(ctx)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("scale-out"))
+
+				updated := &druidcorev1alpha1.Etcd{}
+				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(cr), updated)).To(Succeed())
+				Expect(updated.Spec.Etcd.BootstrapWithExistingCluster).NotTo(BeNil())
+			})
+
+			It("should not panic and should set annotations when the Etcd CR has no annotations map", func() {
+				cr := baseEtcdCR()
+				cr.Annotations = nil
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+				Expect(b.SeedClientSet.Client().Create(ctx, cr)).To(Succeed())
+
+				Expect(b.RemoveSourceEtcdMembers(ctx)).To(Succeed())
+
+				updated := &druidcorev1alpha1.Etcd{}
+				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(cr), updated)).To(Succeed())
+				Expect(updated.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+			})
+		})
+
+		Describe("#WaitUntilSourceEtcdMembersRemoved", func() {
+			BeforeEach(func() {
+				DeferCleanup(SetSourceMemberRemovalIntervalForTest(10 * time.Millisecond))
+			})
+
+			It("should keep polling when ScaleOperationComplete=False/ScalingOut (stale status after patch)", func() {
+				cr := baseEtcdCR()
+				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
+				for i := range cr.Status.Conditions {
+					if cr.Status.Conditions[i].Type == druidcorev1alpha1.ConditionTypeScaleOperationComplete {
+						cr.Status.Conditions[i].Status = druidcorev1alpha1.ConditionFalse
+						cr.Status.Conditions[i].Reason = druidcorev1alpha1.ScaleOperationReasonScalingOut
+					}
+				}
+				gomock.InOrder(
+					etcdMain.EXPECT().Get(gomock.Any()).Return(cr, nil),
+					etcdMain.EXPECT().Get(gomock.Any()).Return(func() *druidcorev1alpha1.Etcd {
+						done := baseEtcdCR()
+						done.Spec.Etcd.BootstrapWithExistingCluster = nil
+						return done
+					}(), nil),
+				)
+
+				Expect(b.WaitUntilSourceEtcdMembersRemoved(ctx)).To(Succeed())
+			})
+
+			It("should return an error when EtcdMain.Get fails and context times out", func() {
+				etcdMain.EXPECT().Get(gomock.Any()).Return(nil, errors.New("get-failed")).AnyTimes()
+
+				cancelCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+				defer cancel()
+
+				err := b.WaitUntilSourceEtcdMembersRemoved(cancelCtx)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("get-failed"))
+			})
+
+			It("should return nil when scale operation is complete and no bootstrap members remain", func() {
+				cr := baseEtcdCR()
+				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
+				etcdMain.EXPECT().Get(gomock.Any()).Return(cr, nil)
+
+				Expect(b.WaitUntilSourceEtcdMembersRemoved(ctx)).To(Succeed())
+			})
+		})
+
+		Describe("live migration cleanup", func() {
+			It("should call SetLiveMigration(nil) then Deploy when clearing live migration config", func() {
+				nilLMCalled := false
+				gomock.InOrder(
+					etcdMain.EXPECT().SetLiveMigration((*etcd.LiveMigrationValues)(nil)).DoAndReturn(func(_ *etcd.LiveMigrationValues) {
+						nilLMCalled = true
+					}),
+					etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).Return(nil),
+					etcdMain.EXPECT().Deploy(ctx).DoAndReturn(func(_ context.Context) error {
+						Expect(nilLMCalled).To(BeTrue(), "SetLiveMigration(nil) must be called before Deploy")
+						return nil
+					}),
+					etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).Return(nil),
+					etcdEvents.EXPECT().Deploy(ctx).Return(nil),
+				)
+
+				cleanFn := func(ctx context.Context) error {
+					b.Shoot.Components.ControlPlane.EtcdMain.SetLiveMigration(nil)
+					return b.DeployEtcd(ctx)
+				}
+				Expect(cleanFn(ctx)).To(Succeed())
+			})
 		})
 	})
 })

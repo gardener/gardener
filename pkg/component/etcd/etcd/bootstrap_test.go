@@ -389,6 +389,8 @@ webhooks:
 								"networking.gardener.cloud/to-dns":                                            "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver":                              "allowed",
 								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
+								"networking.gardener.cloud/to-private-networks":                               "allowed",
+								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-2379": "allowed",
 							},
 							Annotations: map[string]string{
 								references.AnnotationKey(references.KindConfigMap, operatorConfigConfigMapName): operatorConfigConfigMapName,
@@ -489,7 +491,9 @@ webhooks:
 								"gardener.cloud/role":                                                         "etcd-druid",
 								"networking.gardener.cloud/to-dns":                                            "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver":                              "allowed",
+								"networking.gardener.cloud/to-private-networks":                               "allowed",
 								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
+								"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-2379": "allowed",
 							},
 							Annotations: map[string]string{
 								references.AnnotationKey(references.KindConfigMap, imageVectorConfigMapName):    imageVectorConfigMapName,

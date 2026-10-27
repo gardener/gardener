@@ -184,6 +184,18 @@ func (mr *MockInterfaceMockRecorder) SetBackupConfig(config any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBackupConfig", reflect.TypeOf((*MockInterface)(nil).SetBackupConfig), config)
 }
 
+// SetLiveMigration mocks base method.
+func (m *MockInterface) SetLiveMigration(arg0 *etcd.LiveMigrationValues) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLiveMigration", arg0)
+}
+
+// SetLiveMigration indicates an expected call of SetLiveMigration.
+func (mr *MockInterfaceMockRecorder) SetLiveMigration(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLiveMigration", reflect.TypeOf((*MockInterface)(nil).SetLiveMigration), arg0)
+}
+
 // SetReplicas mocks base method.
 func (m *MockInterface) SetReplicas(arg0 *int32) {
 	m.ctrl.T.Helper()

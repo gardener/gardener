@@ -108,6 +108,8 @@ type Interface interface {
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
 	SetReplicas(*int32)
+	// SetLiveMigration sets the LiveMigration field in the Values.
+	SetLiveMigration(*LiveMigrationValues)
 	// SetStaticPodControlPlaneNodesIPAddresses sets the IP addresses of all control plane nodes when etcd is run as
 	// static pod.
 	SetStaticPodControlPlaneNodesIPAddresses(...net.IP)
@@ -1075,6 +1077,8 @@ func (e *etcd) GetValues() Values { return e.values }
 func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
+
+func (e *etcd) SetLiveMigration(lm *LiveMigrationValues) { e.values.LiveMigration = lm }
 
 func (e *etcd) SetStaticPodControlPlaneNodesIPAddresses(ips ...net.IP) {
 	if e.values.StaticPodConfig != nil {
