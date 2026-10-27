@@ -81,7 +81,7 @@ func NodeInPlaceUpdateStatePredicate() predicate.Predicate {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return (!nodeNeedsDrain(e.ObjectOld) && nodeNeedsDrain(e.ObjectNew)) ||
-				nodeUpdateResult(e.ObjectOld) != nodeUpdateResult(e.ObjectNew) ||
+				(nodeUpdateResult(e.ObjectOld) == "" && nodeUpdateResult(e.ObjectNew) != "") ||
 				(!nodeDrainStarted(e.ObjectOld) && nodeDrainStarted(e.ObjectNew)) ||
 				(nodeHasActiveInPlaceUpdateConditionFromObject(e.ObjectOld) && !nodeHasActiveInPlaceUpdateConditionFromObject(e.ObjectNew))
 		},

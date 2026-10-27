@@ -552,7 +552,7 @@ For worker pools with an in-place update strategy, the `gardenlet` therefore tak
 
 The reconciler watches the `Node` objects of the shoot's worker pools and drives their in-place update in lockstep with `gardener-node-agent` (GNA):
 
-- When GNA detects that the `OperatingSystemConfig` of a node changed (e.g. a Kubernetes minor version bump) it sets the `in-place-update.node-agent.gardener.cloud/needs-drain=true` annotation on the `Node` and waits, instead of draining itself.
+- When GNA detects that the `OperatingSystemConfig` of a node contains changes that qualify as an in-place update (see [In-Place Update Triggers](../usage/shoot-operations/shoot_updates.md#in-place-update-triggers), e.g. an OS or Kubernetes minor version bump, a kubelet configuration change, a credential rotation) it sets the `in-place-update.node-agent.gardener.cloud/needs-drain=true` annotation on the `Node` and waits, instead of draining itself.
 - The reconciler enforces the pool's `maxUnavailable` and, for eligible nodes, cordons them and evicts their pods. It honors `PodDisruptionBudget`s, skips pods that must not be evicted (`DaemonSet` pods, mirror pods, `gardenlet`, `gardener-resource-manager`, pods tolerating the unschedulable taint, and already-terminated pods) and force-deletes remaining pods once a drain times out.
 - Once a node is drained it sets the `NodeInPlaceUpdate` condition to `ReadyForUpdate`, which is GNA's signal to perform the actual update.
 - After GNA has finished, it reports the outcome via the `machine.sapcloud.io/node-update-result=successful|failed` label. The reconciler records the result in the `NodeInPlaceUpdate` condition; on success it also removes the update-result label and uncordons the node.

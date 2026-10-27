@@ -10,7 +10,7 @@ resources:
 patches:
 - path: patch-shoot.yaml
 # TODO(acumino): Remove once the garden cluster runs with HA etcd, which
-# allows the update to proceed  on worker nodes even when one virtual etcd replica is temporarily unavailable.
+# allows the update to proceed on worker nodes even when one virtual etcd replica is temporarily unavailable.
 - target:
     group: core.gardener.cloud
     version: v1beta1

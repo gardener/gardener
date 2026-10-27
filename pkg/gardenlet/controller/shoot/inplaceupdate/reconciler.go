@@ -77,9 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// Re-list the nodes to fetch the updates made by the previous loop, as it mutates node state (removes update-result labels,
 	// updates conditions, uncordons completed nodes), and the logic below counts in-progress updates and decides which nodes to cordon
 	// next based on that state.
-	if err := r.ShootClient.List(ctx, nodeList, client.MatchingLabels{
-		v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: poolSecretName,
-	}); err != nil {
+	if err := r.ShootClient.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: poolSecretName}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to re-list nodes for pool %s: %w", poolSecretName, err)
 	}
 
@@ -245,9 +243,7 @@ func NodeInPlaceUpdateOngoingOrFailed(node *corev1.Node) bool {
 // drainPendingNodes drains all cordoned nodes that are awaiting eviction in parallel.
 func (r *Reconciler) drainPendingNodes(ctx context.Context, log logr.Logger, poolSecretName string) (bool, error) {
 	nodeList := &corev1.NodeList{}
-	if err := r.ShootClient.List(ctx, nodeList, client.MatchingLabels{
-		v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: poolSecretName,
-	}); err != nil {
+	if err := r.ShootClient.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName: poolSecretName}); err != nil {
 		return false, fmt.Errorf("failed to list nodes for pool %s: %w", poolSecretName, err)
 	}
 
