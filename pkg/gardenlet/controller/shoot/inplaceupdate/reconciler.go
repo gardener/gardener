@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"slices"
 	"sync"
 	"time"
@@ -18,13 +19,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	kubeinformers "k8s.io/client-go/informers"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/api/indexer"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -312,26 +313,34 @@ func (r *Reconciler) drainAndMarkReady(ctx context.Context, log logr.Logger, nod
 	return nil
 }
 
-// drainNode drains the node using the machine-controller-manager drain library's RunDrain. It gracefully evicts
-// pods honoring PodDisruptionBudgets, retrying for up to DrainTimeout, and then force-deletes any pods still
-// remaining.
+// drainNode performs a forceful node drain using the machine-controller-manager drain library.
 //
-// Volume attach/detach/reattach handling is skipped via SkipVolumeDetach: self-hosted shoots with
-// unmanaged infrastructure run their own CSI drivers, so gardener cannot generically track volumes.
+// TODO(acumino): Once a new MCM release supports proper PDB-aware drain with pod filters and
+// SkipVolumeDetach, delete this implementation and uncomment the one below.
 func (r *Reconciler) drainNode(ctx context.Context, node *corev1.Node) error {
-	forceDeletePods := r.drainTimedOut(node)
-	maxEvictRetries := int32(r.Config.DrainTimeout.Duration / r.Config.PodEvictionRetryInterval.Duration) // #nosec: G115
+	var (
+		informerFactory = kubeinformers.NewSharedInformerFactory(r.ShootClientSet, time.Minute)
+		pdbLister       = informerFactory.Policy().V1().PodDisruptionBudgets().Lister()
+		podLister       = informerFactory.Core().V1().Pods().Lister()
+		podsHaveSynced  = informerFactory.Core().V1().Pods().Informer().HasSynced
+	)
 
-	drainOptions := drain.NewDrainOptions(
+	informerFactory.StartWithContext(ctx)
+	synced := informerFactory.WaitForCacheSyncWithContext(ctx)
+	if err := synced.AsError(); err != nil {
+		return fmt.Errorf("failed waiting for informer cache to sync: %w", err)
+	}
+
+	return drain.NewDrainOptions(
 		r.ShootClientSet,
 		nil,
 		r.Config.DrainTimeout.Duration,
-		maxEvictRetries,
-		r.Config.DrainTimeout.Duration,
-		r.Config.DrainTimeout.Duration,
+		math.MaxInt32,
+		0,
+		0,
 		node.Name,
-		-1,
-		forceDeletePods,
+		0,
+		true,
 		true,
 		true,
 		true,
@@ -340,45 +349,83 @@ func (r *Reconciler) drainNode(ctx context.Context, node *corev1.Node) error {
 		nil,
 		nil,
 		nil,
+		pdbLister,
 		nil,
+		podLister,
 		nil,
-		nil,
-		nil,
-		nil,
-	)
-	drainOptions.SkipVolumeDetach = true
-	drainOptions.AdditionalPodFilters = []drain.AdditionalPodFilter{ShouldEvictPod}
-	drainOptions.SetPodProvider(&podProvider{client: r.ShootClient})
-
-	return drainOptions.RunDrain(ctx)
+		podsHaveSynced,
+	).RunDrain(ctx)
 }
 
-func (r *Reconciler) drainTimedOut(node *corev1.Node) bool {
-	startStr := node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime]
-	if startStr == "" {
-		return false
-	}
+// TODO(acumino): Uncomment when a new MCM release is available that exposes AdditionalPodFilters,
+// SetPodProvider, and SkipVolumeDetach. Delete the forceful drain implementation above.
+// // drainNode drains the node using the machine-controller-manager drain library's RunDrain. It gracefully evicts
+// // pods honoring PodDisruptionBudgets, retrying for up to DrainTimeout, and then force-deletes any pods still
+// // remaining.
+// //
+// // Volume attach/detach/reattach handling is skipped via SkipVolumeDetach: self-hosted shoots with
+// // unmanaged infrastructure run their own CSI drivers, so gardener cannot generically track volumes.
+// func (r *Reconciler) drainNode(ctx context.Context, node *corev1.Node) error {
+// 	forceDeletePods := r.drainTimedOut(node)
+// 	maxEvictRetries := int32(r.Config.DrainTimeout.Duration / r.Config.PodEvictionRetryInterval.Duration) // #nosec: G115
+//
+// 	drainOptions := drain.NewDrainOptions(
+// 		r.ShootClientSet,
+// 		nil,
+// 		r.Config.DrainTimeout.Duration,
+// 		maxEvictRetries,
+// 		r.Config.DrainTimeout.Duration,
+// 		r.Config.DrainTimeout.Duration,
+// 		node.Name,
+// 		-1,
+// 		forceDeletePods,
+// 		true,
+// 		true,
+// 		true,
+// 		io.Discard,
+// 		io.Discard,
+// 		nil,
+// 		nil,
+// 		nil,
+// 		nil,
+// 		nil,
+// 		nil,
+// 		nil,
+// 		nil,
+// 	)
+// 	drainOptions.SkipVolumeDetach = true
+// 	drainOptions.AdditionalPodFilters = []drain.AdditionalPodFilter{ShouldEvictPod}
+// 	drainOptions.SetPodProvider(&podProvider{client: r.ShootClient})
+//
+// 	return drainOptions.RunDrain(ctx)
+// }
+//
+// func (r *Reconciler) drainTimedOut(node *corev1.Node) bool {
+// 	startStr := node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime]
+// 	if startStr == "" {
+// 		return false
+// 	}
+//
+// 	startTime, err := time.Parse(time.RFC3339, startStr)
+// 	if err != nil {
+// 		return false
+// 	}
+//
+// 	return r.Clock.Since(startTime) > r.Config.DrainTimeout.Duration
+// }
+//
+// type podProvider struct {
+// 	client client.Client
+// }
 
-	startTime, err := time.Parse(time.RFC3339, startStr)
-	if err != nil {
-		return false
-	}
-
-	return r.Clock.Since(startTime) > r.Config.DrainTimeout.Duration
-}
-
-type podProvider struct {
-	client client.Client
-}
-
-// PodsForNode returns all pods scheduled on the given node.
-func (p *podProvider) PodsForNode(ctx context.Context, nodeName string) ([]corev1.Pod, error) {
-	podList := &corev1.PodList{}
-	if err := p.client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: nodeName}); err != nil {
-		return nil, fmt.Errorf("failed to list pods on node %s: %w", nodeName, err)
-	}
-	return podList.Items, nil
-}
+// // PodsForNode returns all pods scheduled on the given node.
+// func (p *podProvider) PodsForNode(ctx context.Context, nodeName string) ([]corev1.Pod, error) {
+// 	podList := &corev1.PodList{}
+// 	if err := p.client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: nodeName}); err != nil {
+// 		return nil, fmt.Errorf("failed to list pods on node %s: %w", nodeName, err)
+// 	}
+// 	return podList.Items, nil
+// }
 
 // ShouldEvictPod returns true if the pod should be evicted during a node drain.
 func ShouldEvictPod(pod corev1.Pod) bool {

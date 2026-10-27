@@ -62,7 +62,8 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			}).Should(Succeed())
 		})
 
-		It("should hold the drain in progress while pods are still terminating, and complete once they go away", func() {
+		// TODO(acumino): Unskip once a new MCM release is available with proper drain support.
+		It("should hold the drain in progress while pods are still terminating, and complete once they go away", Pending, func() {
 			node := newNode(uniqueName("hold"), poolDefault, poolDefaultSecretName)
 			Expect(testClient.Create(ctx, node)).To(Succeed())
 
@@ -120,7 +121,8 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			}).Should(Succeed())
 		})
 
-		It("should force-delete remaining pods and complete the drain once the drain timeout is exceeded", func() {
+		// TODO(acumino): Unskip once a new MCM release is available with proper drain support.
+		It("should force-delete remaining pods and complete the drain once the drain timeout is exceeded", Pending, func() {
 			node := newNode(uniqueName("timeout"), poolDefault, poolDefaultSecretName)
 			Expect(testClient.Create(ctx, node)).To(Succeed())
 
@@ -273,7 +275,8 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			Expect(pod.DeletionTimestamp).To(BeNil())
 		})
 
-		It("should skip the gardenlet pod (it must not evict itself)", func() {
+		// TODO(acumino): Unskip once a new MCM release is available with proper drain support.
+		It("should skip the gardenlet pod (it must not evict itself)", Pending, func() {
 			node := newNode(uniqueName("gnl"), poolDefault, poolDefaultSecretName)
 			Expect(testClient.Create(ctx, node)).To(Succeed())
 
@@ -288,7 +291,8 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			Expect(pod.DeletionTimestamp).To(BeNil())
 		})
 
-		It("should skip the gardener-resource-manager pod (its webhook validates GNA's calls)", func() {
+		// TODO(acumino): Unskip once a new MCM release is available with proper drain support.
+		It("should skip the gardener-resource-manager pod (its webhook validates GNA's calls)", Pending, func() {
 			node := newNode(uniqueName("grm"), poolDefault, poolDefaultSecretName)
 			Expect(testClient.Create(ctx, node)).To(Succeed())
 
@@ -303,7 +307,8 @@ var _ = Describe("InPlaceUpdate controller tests", func() {
 			Expect(pod.DeletionTimestamp).To(BeNil())
 		})
 
-		It("should skip pods that tolerate the unschedulable taint (they would just reschedule)", func() {
+		// TODO(acumino): Unskip once a new MCM release is available with proper drain support.
+		It("should skip pods that tolerate the unschedulable taint (they would just reschedule)", Pending, func() {
 			node := newNode(uniqueName("toler"), poolDefault, poolDefaultSecretName)
 			Expect(testClient.Create(ctx, node)).To(Succeed())
 
@@ -531,7 +536,14 @@ func countDrainStarted(g Gomega, nodes []*corev1.Node) int {
 	for _, n := range nodes {
 		fresh := &corev1.Node{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(n), fresh)).To(Succeed())
-		if fresh.Spec.Unschedulable && fresh.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" {
+		// TODO(acumino): Skip checking condition when new MCM release is available with proper drain support.
+		cond := findCondition(fresh)
+		// Count nodes that are either actively draining (annotation present) or already
+		// drained and waiting for GNA (ReadyForUpdate condition set). With force drain the
+		// annotation window is too short to observe reliably, so both states are equivalent
+		// evidence that the drain was started for this node.
+		if fresh.Spec.Unschedulable && (fresh.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateDrainStartTime] != "" ||
+			(cond != nil && cond.Reason != machinev1alpha1.UpdateSuccessful)) {
 			count++
 		}
 	}
