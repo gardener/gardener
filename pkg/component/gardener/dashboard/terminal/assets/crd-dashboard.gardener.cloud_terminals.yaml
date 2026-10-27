@@ -448,15 +448,15 @@ spec:
                                 it can only reference a ClusterRole.
                               properties:
                                 apiGroup:
-                                  description: APIGroup is the group for the resource
+                                  description: apiGroup is the group for the resource
                                     being referenced
                                   type: string
                                 kind:
-                                  description: Kind is the type of resource being
+                                  description: kind is the type of resource being
                                     referenced
                                   type: string
                                 name:
-                                  description: Name is the name of resource being
+                                  description: name is the name of resource being
                                     referenced
                                   type: string
                               required:
