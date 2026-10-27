@@ -87,6 +87,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		otelCollectorServiceAccount     = &corev1.ServiceAccount{}
 		otelCollectorPriorityClass      = &schedulingv1.PriorityClass{}
 		otelCollectorConfMap            = &corev1.ConfigMap{}
+		otelCollectorCABundleSecret     = &corev1.Secret{}
+		otelCollectorCASeedBundleSecret = &corev1.Secret{}
 
 		otelPresent bool
 
@@ -164,6 +166,21 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: otelConfMapName},
 					otelCollectorConfMap),
 			)
+
+			caBundleSecretName := getSecretNameFromVolume(otelCollectorDeployment.Spec.Template.Spec.Volumes, "ca-bundle")
+			framework.ExpectNoError(
+				seedClient.Get(ctx,
+					types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: caBundleSecretName},
+					otelCollectorCABundleSecret),
+			)
+
+			caSeedBundleSecretList := &corev1.SecretList{}
+			framework.ExpectNoError(
+				seedClient.List(ctx, caSeedBundleSecretList,
+					client.InNamespace(v1beta1constants.GardenNamespace),
+					client.MatchingLabels{"name": "ca-seed-bundle", "managed-by": "secrets-manager"}),
+			)
+			*otelCollectorCASeedBundleSecret = caSeedBundleSecretList.Items[0]
 		}
 
 		// Create seedClient.Client for the shoots
@@ -389,6 +406,9 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				create(ctx, client, prepareOtelCollectorService(otelCollectorService)),
 			)
 			framework.ExpectNoError(
+				create(ctx, client, otelCollectorCABundleSecret),
+			)
+			framework.ExpectNoError(
 				create(ctx, client, otelCollectorConfMap),
 			)
 			framework.ExpectNoError(
@@ -460,6 +480,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				ginkgo.By(fmt.Sprintf("Deploy the OpenTelemetry Collector in shoot namespace %s", shootNamespace.Name))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorServiceAccount(otelCollectorServiceAccount, shootNamespace.Name)))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorService(otelCollectorService, shootNamespace.Name)))
+				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorCASeedBundleSecret(otelCollectorCASeedBundleSecret, shootNamespace.Name)))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorConfigMap(otelCollectorConfMap, shootNamespace.Name)))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorDeployment(otelCollectorDeployment, shootNamespace.Name)))
 			}
@@ -551,6 +572,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorDeployment(otelCollectorDeployment, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorService(otelCollectorService, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorServiceAccount(otelCollectorServiceAccount, shootNamespace.Name)))
+				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorCASeedBundleSecret(otelCollectorCASeedBundleSecret, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorConfigMap(otelCollectorConfMap, shootNamespace.Name)))
 			}
 
@@ -585,6 +607,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				otelCollectorService,
 				otelCollectorServiceAccount,
 				otelCollectorConfMap,
+				otelCollectorCABundleSecret,
 				otelCollectorPriorityClass,
 			)
 		}
@@ -604,6 +627,12 @@ func prepareOtelCollectorService(service *corev1.Service) *corev1.Service {
 
 func prepareShootOtelCollectorServiceAccount(sa *corev1.ServiceAccount, namespace string) *corev1.ServiceAccount {
 	obj := sa.DeepCopy()
+	obj.Namespace = namespace
+	return obj
+}
+
+func prepareShootOtelCollectorCASeedBundleSecret(secret *corev1.Secret, namespace string) *corev1.Secret {
+	obj := secret.DeepCopy()
 	obj.Namespace = namespace
 	return obj
 }
