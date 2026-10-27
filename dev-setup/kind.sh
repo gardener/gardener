@@ -198,15 +198,24 @@ EOF
     for path_kubeconfig in "${KUBECONFIG_SEED_CLUSTER:-}" "${KUBECONFIG_SEED2_CLUSTER:-}" "${KUBECONFIG_SEED_SECRET_PATH:-}"; do
       [[ -z "$path_kubeconfig" ]] && continue
 
-      # Copy only when:
-      # - source and dest are different files (avoid cp file onto itself)
-      # - dest is seed/kubeconfig only if source is runtime/kubeconfig (owned by kind-up)
-      # - dest is seed2/kubeconfig only if source is seed2/kubeconfig (owned by kind2-up)
-      if [[ "$(realpath "$KUBECONFIG")" != "$(realpath "$path_kubeconfig")" ]] && \
-         ! { [[ -n "${KUBECONFIG_SEED_CLUSTER:-}"  && "$(realpath "$path_kubeconfig")" == "$(realpath "$KUBECONFIG_SEED_CLUSTER")"  && ( -z "${KUBECONFIG_RUNTIME_CLUSTER:-}" || "$(realpath "$KUBECONFIG")" != "$(realpath "$KUBECONFIG_RUNTIME_CLUSTER")" ) ]]; } && \
-         ! { [[ -n "${KUBECONFIG_SEED2_CLUSTER:-}" && "$(realpath "$path_kubeconfig")" == "$(realpath "$KUBECONFIG_SEED2_CLUSTER")" && "$(realpath "$KUBECONFIG")" != "$(realpath "$KUBECONFIG_SEED2_CLUSTER")" ]]; }; then
-        cp "$KUBECONFIG" "$path_kubeconfig"
+      src="$(realpath "$KUBECONFIG")"
+      dst="$(realpath "$path_kubeconfig")"
+
+      # Skip self-copies.
+      [[ "$src" == "$dst" ]] && continue
+
+      # KUBECONFIG_SEED_CLUSTER is owned by kind-up (via KUBECONFIG_RUNTIME_CLUSTER).
+      # Don't let kind2-up or other invocations overwrite it.
+      if [[ -n "${KUBECONFIG_SEED_CLUSTER:-}" && "$dst" == "$(realpath "$KUBECONFIG_SEED_CLUSTER")" ]]; then
+        [[ -z "${KUBECONFIG_RUNTIME_CLUSTER:-}" || "$src" != "$(realpath "$KUBECONFIG_RUNTIME_CLUSTER")" ]] && continue
       fi
+
+      # KUBECONFIG_SEED2_CLUSTER is owned by kind2-up; skip if we're not that invocation.
+      if [[ -n "${KUBECONFIG_SEED2_CLUSTER:-}" && "$dst" == "$(realpath "$KUBECONFIG_SEED2_CLUSTER")" ]]; then
+        [[ "$src" != "$(realpath "$KUBECONFIG_SEED2_CLUSTER")" ]] && continue
+      fi
+
+      cp "$KUBECONFIG" "$path_kubeconfig"
       # Replace 127.0.0.1 in the kind cluster kubeconfig with  the container name of the Docker container for the second
       # kind cluster. This will be referenced in the `Gardenlet` resource (which is meant to register the second kind
       # cluster as Seed). `gardener-operator` will read this kubeconfig when attempting to deploy `gardenlet` into it.
