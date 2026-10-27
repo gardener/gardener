@@ -33,9 +33,9 @@ trap "
 yq -i '(.spec.provider.workers[] | select(.name == "worker").systemComponents.allow) = false' \
   dev-setup/gardenadm/resources/base/shoot.yaml
 
-make gind-up GARDENADM_INIT_FLAGS="--log-level=debug" SCENARIO=join
-
 make kind-up
 make gardenadm-up SCENARIO=connect-kind
+
+make gind-up GARDENADM_INIT_FLAGS="--log-level=debug" SCENARIO=join
 
 make test-e2e-local-gardenadm-unmanaged-infra-restore

@@ -254,6 +254,8 @@ Find all information about it [here](getting_started_locally.md).
 > `make kind-up`
 > `make gardenadm-up SCENARIO=connect-kind`
 >
+> This does not require a self-hosted shoot cluster to exist yet, i.e., you can set up the KinD cluster and the Gardener control plane before running `make gind-up`.
+>
 > The following steps from above are the same.
 
 In all cases, the kubeconfig for the garden cluster gets exported to `/dev-setup/kubeconfigs/virtual-garden/kubeconfig`.
