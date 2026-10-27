@@ -412,7 +412,7 @@ type ShootStatusControllerConfiguration struct {
 type ShootInPlaceUpdateControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	ConcurrentSyncs *int32 `json:"concurrentSyncs,omitempty"`
 	// DrainTimeout is the overall maximum duration for a node drain before remaining pods are force-deleted.
 	// +optional
 	DrainTimeout *metav1.Duration `json:"drainTimeout,omitempty"`

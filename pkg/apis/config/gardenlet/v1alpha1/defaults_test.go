@@ -483,14 +483,14 @@ var _ = Describe("Defaults", func() {
 		It("should default the in-place update controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.ShootInPlaceUpdate.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.ShootInPlaceUpdate.ConcurrentSyncs).To(PointTo(Equal(int32(5))))
 			Expect(obj.Controllers.ShootInPlaceUpdate.DrainTimeout).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
 			Expect(obj.Controllers.ShootInPlaceUpdate.UpdateTimeout).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
 			Expect(obj.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Second})))
 		})
 
 		It("should not overwrite already set values for the in-place update controller configuration", func() {
-			concurrentSyncs := 10
+			concurrentSyncs := int32(10)
 			drainTimeout := metav1.Duration{Duration: 5 * time.Minute}
 			updateTimeout := metav1.Duration{Duration: 10 * time.Minute}
 			podEvictionRetryInterval := metav1.Duration{Duration: 30 * time.Second}

@@ -1294,7 +1294,7 @@ func (in *ShootInPlaceUpdateControllerConfiguration) DeepCopyInto(out *ShootInPl
 	*out = *in
 	if in.ConcurrentSyncs != nil {
 		in, out := &in.ConcurrentSyncs, &out.ConcurrentSyncs
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.DrainTimeout != nil {

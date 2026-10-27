@@ -334,7 +334,7 @@ func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConf
 // SetDefaults_ShootInPlaceUpdateControllerConfiguration sets defaults for the in-place update controller.
 func SetDefaults_ShootInPlaceUpdateControllerConfiguration(obj *ShootInPlaceUpdateControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = new(5)
+		obj.ConcurrentSyncs = new(int32(5))
 	}
 	if obj.DrainTimeout == nil {
 		obj.DrainTimeout = &metav1.Duration{Duration: 2 * time.Hour}
