@@ -396,6 +396,20 @@ func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string
 	return nil
 }
 
+// ForceDeletionFinalizer implements utilclient.Finalizer for ManagedResources.
+// Instead of removing metadata.finalizers as it is done by defaultFinalizer,
+// it annotates the ManagedResource for force deletion.
+// Therefore gardener-resource-manager handles forceful deletion.
+type ForceDeletionFinalizer struct{}
+
+func (f *ForceDeletionFinalizer) HasFinalizers(obj client.Object) (bool, error) {
+	return len(obj.GetFinalizers()) > 0, nil
+}
+
+func (f *ForceDeletionFinalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
+	return SetForceDeletion(ctx, c, obj.GetNamespace(), obj.GetName())
+}
+
 // SetForceDeletion annotates the managed resource with the given name in the given namespace.
 func SetForceDeletion(ctx context.Context, c client.Writer, namespace, name string) error {
 	resource := &resourcesv1alpha1.ManagedResource{
