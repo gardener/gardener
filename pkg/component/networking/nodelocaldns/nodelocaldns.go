@@ -173,11 +173,7 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 			"coredns_dns_request_duration_seconds_bucket",
 			"coredns_dns_requests_total",
 			"coredns_dns_responses_total",
-			"coredns_forward_requests_total",
-			"coredns_forward_responses_total",
-			"coredns_kubernetes_dns_programming_duration_seconds_bucket",
-			"coredns_kubernetes_dns_programming_duration_seconds_count",
-			"coredns_kubernetes_dns_programming_duration_seconds_sum",
+			"coredns_proxy_request_duration_seconds_count",
 			"process_max_fds",
 			"process_open_fds",
 		)
