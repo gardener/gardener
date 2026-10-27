@@ -626,14 +626,6 @@ var _ = Describe("VictoriaLogs", func() {
 						{
 							DirectResponse: &istionetworkingv1alpha3.HTTPDirectResponse{Status: 403},
 						},
-						{
-							Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
-								Destination: &istionetworkingv1alpha3.Destination{
-									Host: destinationFQDN,
-									Port: &istionetworkingv1alpha3.PortSelector{Number: 9429},
-								},
-							}},
-						},
 					},
 				},
 			}

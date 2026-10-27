@@ -504,7 +504,6 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 
 	tlsSecretName := ptr.Deref(v.values.ExternalExposure.WildcardCertSecretName, "")
 	if tlsSecretName == "" {
-		// On purpose creating a separate server certificate dedicated to the ingress
 		ingressTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        constants.VLSingleResourceName + "-ingress-tls",
 			CommonName:                  constants.VLSingleResourceName,
@@ -585,32 +584,29 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 	}
 
 	// Allowlist: only /select/logsql/query is accessible; everything else returns 403.
-	virtualService.Spec.Http = append(
-		[]*istioapinetworkingv1beta1.HTTPRoute{
-			{
-				Name: "query",
-				Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
-					Uri: &istioapinetworkingv1beta1.StringMatch{
-						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
-							Prefix: "/select/logsql/query",
-						},
+	virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+		{
+			Name: "query",
+			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/select/logsql/query",
 					},
-				}},
-				Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
-					Destination: &istioapinetworkingv1beta1.Destination{
-						Host: destinationHost,
-						Port: &istioapinetworkingv1beta1.PortSelector{Number: constants.VictoriaLogsPort},
-					},
-				}},
-			},
-			{
-				DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
-					Status: 403,
 				},
+			}},
+			Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
+				Destination: &istioapinetworkingv1beta1.Destination{
+					Host: destinationHost,
+					Port: &istioapinetworkingv1beta1.PortSelector{Number: constants.VictoriaLogsPort},
+				},
+			}},
+		},
+		{
+			DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
+				Status: 403,
 			},
 		},
-		virtualService.Spec.Http...,
-	)
+	}
 
 	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
 	if err := istio.DestinationRuleWithLocalityPreferenceAndTLS(
