@@ -52,6 +52,25 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 	)(ctx)
 }
 
+// DeleteManagedResourcesAndWait deletes all managed resources labeled with `origin=gardener`
+// from the Shoot namespace in the Seed without applying force deletion.
+func (b *Botanist) DeleteManagedResourcesAndWait(ctx context.Context) error {
+	return b.SeedClientSet.Client().DeleteAllOf(
+		ctx,
+		&resourcesv1alpha1.ManagedResource{},
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
+		client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
+	)
+}
+
+// WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
+func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
+	return managedresources.WaitUntilListDeleted(ctx, b.SeedClientSet.Client(), &resourcesv1alpha1.ManagedResourceList{},
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
+		client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
+	)
+}
+
 // WaitUntilShootManagedResourcesDeleted waits until all managed resources that are describing shoot resources are deleted or the context is cancelled.
 func (b *Botanist) WaitUntilShootManagedResourcesDeleted(ctx context.Context) error {
 	return retry.Until(ctx, time.Second*5, func(ctx context.Context) (done bool, err error) {
