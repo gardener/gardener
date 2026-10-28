@@ -33,6 +33,9 @@ Resource Types:
 <a href="#exposureclass">ExposureClass</a>
 </li>
 <li>
+<a href="#extensionprofile">ExtensionProfile</a>
+</li>
+<li>
 <a href="#internalsecret">InternalSecret</a>
 </li>
 <li>
@@ -4334,7 +4337,7 @@ string
 
 
 <p>
-(<em>Appears on:</em><a href="#kubernetesstatus">KubernetesStatus</a>, <a href="#machineimagestatus">MachineImageStatus</a>)
+(<em>Appears on:</em><a href="#extensionprofilecomponentstatus">ExtensionProfileComponentStatus</a>, <a href="#kubernetesstatus">KubernetesStatus</a>, <a href="#machineimagestatus">MachineImageStatus</a>)
 </p>
 
 <p>
@@ -4589,6 +4592,166 @@ boolean
 <p>Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>autoUpdate</code></br>
+<em>
+<a href="#extensionautoupdate">ExtensionAutoUpdate</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoUpdate is the default auto-update policy for the components of this extension. It applies to<br />every component that does not define its own autoUpdate. Only relevant for extension types that<br />publish an ExtensionProfile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>components</code></br>
+<em>
+<a href="#shootextensioncomponent">ShootExtensionComponent</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Components pins the versions of the components managed by this extension and optionally overrides<br />the auto-update policy per component. A pinned version is validated against the matching<br />ExtensionProfile. Only relevant for extension types that publish an ExtensionProfile.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensionautoupdate">ExtensionAutoUpdate
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extension">Extension</a>, <a href="#shootextensioncomponent">ShootExtensionComponent</a>)
+</p>
+
+<p>
+ExtensionAutoUpdate defines the auto-update policy for the components of an extension.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<p>Enabled indicates whether components are automatically upgraded within the configured update strategy.<br />When disabled, a component only moves off its pinned version once that version expires (force-upgrade).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensioncompatibility">ExtensionCompatibility
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionversion">ExtensionVersion</a>)
+</p>
+
+<p>
+ExtensionCompatibility is a compatibility envelope for an offered version.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>validations</code></br>
+<em>
+<a href="#extensioncompatibilityvalidation">ExtensionCompatibilityValidation</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Validations is a list of CEL rules, all of which must evaluate to true against the shoot. The CEL<br />environment binds the variable `shoot` to the Shoot being admitted.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensioncompatibilityvalidation">ExtensionCompatibilityValidation
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensioncompatibility">ExtensionCompatibility</a>)
+</p>
+
+<p>
+ExtensionCompatibilityValidation is a single CEL compatibility rule.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>rule</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Rule is a CEL expression evaluated against the shoot, bound to the variable `shoot`. It must return a boolean.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>message</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Message is the message surfaced when the rule evaluates to false.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
@@ -4606,6 +4769,262 @@ boolean
 <p>
 ExtensionExposure holds the type and provider config of the exposure extension.
 </p>
+
+
+<h3 id="extensionprofile">ExtensionProfile
+</h3>
+
+
+<p>
+ExtensionProfile describes the offered component versions and their lifecycle for an
+extension-managed component. One ExtensionProfile exists per participating extension type;
+the binding to the extension type is the object's name (metadata.name equals the extension type).
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta">ObjectMeta</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the <code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensionprofilespec">ExtensionProfileSpec</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Spec defines the offered component versions and the update policy.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensionprofilestatus">ExtensionProfileStatus</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status contains the computed classification of the offered versions.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensionprofilecomponent">ExtensionProfileComponent
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionprofilespec">ExtensionProfileSpec</a>)
+</p>
+
+<p>
+ExtensionProfileComponent is a named component of an extension with an independently versioned lifecycle.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="#extensionupdatestrategy">ExtensionUpdateStrategy</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy overrides the profile-level update strategy for this component. Optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>versions</code></br>
+<em>
+<a href="#extensionversion">ExtensionVersion</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Versions is the list of offered versions of this component.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensionprofilecomponentstatus">ExtensionProfileComponentStatus
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionprofilestatus">ExtensionProfileStatus</a>)
+</p>
+
+<p>
+ExtensionProfileComponentStatus is the computed status for a single component.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>versions</code></br>
+<em>
+<a href="#expirableversionstatus">ExpirableVersionStatus</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Versions is the list of offered versions with their currently computed classification.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensionprofilespec">ExtensionProfileSpec
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionprofile">ExtensionProfile</a>)
+</p>
+
+<p>
+ExtensionProfileSpec is the specification of an ExtensionProfile.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="#extensionupdatestrategy">ExtensionUpdateStrategy</a>
+</em>
+</td>
+<td>
+<p>UpdateStrategy is the default auto-update policy for this extension type. It is applied to a<br />component that does not define its own updateStrategy.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>components</code></br>
+<em>
+<a href="#extensionprofilecomponent">ExtensionProfileComponent</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Components is the list of named components offered by this extension, each versioned independently.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensionprofilestatus">ExtensionProfileStatus
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionprofile">ExtensionProfile</a>)
+</p>
+
+<p>
+ExtensionProfileStatus is the computed status of an ExtensionProfile.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>components</code></br>
+<em>
+<a href="#extensionprofilecomponentstatus">ExtensionProfileComponentStatus</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Components mirrors spec.components and carries the computed classification of each offered version.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
 
 
 <h3 id="extensionresourcestate">ExtensionResourceState
@@ -4687,6 +5106,128 @@ string
 <td>
 <em>(Optional)</em>
 <p>Resources holds a list of named resource references that can be referred to in the state by their names.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensionupdatestrategy">ExtensionUpdateStrategy
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionprofilecomponent">ExtensionProfileComponent</a>, <a href="#extensionprofilespec">ExtensionProfileSpec</a>)
+</p>
+
+<p>
+ExtensionUpdateStrategy defines the auto-update policy for an extension or one of its components.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>default</code></br>
+<em>
+<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a>
+</em>
+</td>
+<td>
+<p>Default is the update strategy applied when a shoot does not request an explicit strategy.<br />Possible values are: patch, minor, major.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>supported</code></br>
+<em>
+<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Supported is the allow-list of update strategies this extension implements. Admission rejects any<br />shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="extensionversion">ExtensionVersion
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionprofilecomponent">ExtensionProfileComponent</a>)
+</p>
+
+<p>
+ExtensionVersion is a single offered version of a component with its lifecycle and compatibility envelope.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Version is the version identifier. Must be a valid semantic version.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lifecycle</code></br>
+<em>
+<a href="#lifecyclestage">LifecycleStage</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of<br />CloudProfile versions, see GEP-0032).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>compatibility</code></br>
+<em>
+<a href="#extensioncompatibility">ExtensionCompatibility</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Compatibility is an optional compatibility envelope evaluated against the shoot on admission.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is optional, opaque, extension-owned per-version metadata. It is not written to the<br />Shoot spec; gardenlet carries it into the seed Extension resource when the version is resolved.</p>
 </td>
 </tr>
 
@@ -7211,7 +7752,7 @@ LastOperationType is a string alias.
 
 
 <p>
-(<em>Appears on:</em><a href="#expirableversion">ExpirableVersion</a>, <a href="#machineimageversion">MachineImageVersion</a>)
+(<em>Appears on:</em><a href="#expirableversion">ExpirableVersion</a>, <a href="#extensionversion">ExtensionVersion</a>, <a href="#machineimageversion">MachineImageVersion</a>)
 </p>
 
 <p>
@@ -7695,7 +8236,7 @@ string
 
 
 <p>
-(<em>Appears on:</em><a href="#machineimage">MachineImage</a>)
+(<em>Appears on:</em><a href="#extensionautoupdate">ExtensionAutoUpdate</a>, <a href="#extensionupdatestrategy">ExtensionUpdateStrategy</a>, <a href="#machineimage">MachineImage</a>, <a href="#shootextensioncomponent">ShootExtensionComponent</a>)
 </p>
 
 <p>
@@ -12423,6 +12964,79 @@ ShootCredentialsRotation contains information about the rotation of credentials.
 <td>
 <em>(Optional)</em>
 <p>ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="shootextensioncomponent">ShootExtensionComponent
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extension">Extension</a>)
+</p>
+
+<p>
+ShootExtensionComponent pins the version of a single component managed by an extension.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the component as listed in the ExtensionProfile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Version pins the component version. A partial version is resolved to the highest matching supported<br />version at admission. When omitted, the extension behaves as before this field existed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoUpdate</code></br>
+<em>
+<a href="#extensionautoupdate">ExtensionAutoUpdate</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoUpdate overrides the extension-level auto-update policy for this component. Optional.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy overrides the resolved update strategy for this component. Possible values are:<br />patch, minor, major.</p>
 </td>
 </tr>
 

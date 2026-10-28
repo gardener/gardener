@@ -121,8 +121,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.ExposureClassList{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
 		v1beta1.ExposureClassScheduling{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ExposureClassScheduling(ref),
 		v1beta1.Extension{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_Extension(ref),
+		v1beta1.ExtensionAutoUpdate{}.OpenAPIModelName():                          schema_pkg_apis_core_v1beta1_ExtensionAutoUpdate(ref),
+		v1beta1.ExtensionCompatibility{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_ExtensionCompatibility(ref),
+		v1beta1.ExtensionCompatibilityValidation{}.OpenAPIModelName():             schema_pkg_apis_core_v1beta1_ExtensionCompatibilityValidation(ref),
 		v1beta1.ExtensionExposure{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_ExtensionExposure(ref),
+		v1beta1.ExtensionProfile{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_ExtensionProfile(ref),
+		v1beta1.ExtensionProfileComponent{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_ExtensionProfileComponent(ref),
+		v1beta1.ExtensionProfileComponentStatus{}.OpenAPIModelName():              schema_pkg_apis_core_v1beta1_ExtensionProfileComponentStatus(ref),
+		v1beta1.ExtensionProfileList{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_ExtensionProfileList(ref),
+		v1beta1.ExtensionProfileSpec{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_ExtensionProfileSpec(ref),
+		v1beta1.ExtensionProfileStatus{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_ExtensionProfileStatus(ref),
 		v1beta1.ExtensionResourceState{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref),
+		v1beta1.ExtensionUpdateStrategy{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ExtensionUpdateStrategy(ref),
+		v1beta1.ExtensionVersion{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_ExtensionVersion(ref),
 		v1beta1.FailureTolerance{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_FailureTolerance(ref),
 		v1beta1.Gardener{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_Gardener(ref),
 		v1beta1.GardenerResourceData{}.OpenAPIModelName():                         schema_pkg_apis_core_v1beta1_GardenerResourceData(ref),
@@ -239,6 +250,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.ShootAdvertisedAddress{}.OpenAPIModelName():                       schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
 		v1beta1.ShootCredentials{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_ShootCredentials(ref),
 		v1beta1.ShootCredentialsRotation{}.OpenAPIModelName():                     schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref),
+		v1beta1.ShootExtensionComponent{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ShootExtensionComponent(ref),
 		v1beta1.ShootKubeconfigRotation{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_ShootKubeconfigRotation(ref),
 		v1beta1.ShootList{}.OpenAPIModelName():                                    schema_pkg_apis_core_v1beta1_ShootList(ref),
 		v1beta1.ShootMachineImage{}.OpenAPIModelName():                            schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
@@ -4385,12 +4397,123 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 							Format:      "",
 						},
 					},
+					"autoUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoUpdate is the default auto-update policy for the components of this extension. It applies to every component that does not define its own autoUpdate. Only relevant for extension types that publish an ExtensionProfile.",
+							Ref:         ref(v1beta1.ExtensionAutoUpdate{}.OpenAPIModelName()),
+						},
+					},
+					"components": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Components pins the versions of the components managed by this extension and optionally overrides the auto-update policy per component. A pinned version is validated against the matching ExtensionProfile. Only relevant for extension types that publish an ExtensionProfile.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.ShootExtensionComponent{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
-			runtime.RawExtension{}.OpenAPIModelName()},
+			v1beta1.ExtensionAutoUpdate{}.OpenAPIModelName(), v1beta1.ShootExtensionComponent{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionAutoUpdate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionAutoUpdate defines the auto-update policy for the components of an extension.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether components are automatically upgraded within the configured update strategy. When disabled, a component only moves off its pinned version once that version expires (force-upgrade).",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionCompatibility(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionCompatibility is a compatibility envelope for an offered version.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"validations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Validations is a list of CEL rules, all of which must evaluate to true against the shoot. The CEL environment binds the variable `shoot` to the Shoot being admitted.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.ExtensionCompatibilityValidation{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionCompatibilityValidation{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionCompatibilityValidation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionCompatibilityValidation is a single CEL compatibility rule.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"rule": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Rule is a CEL expression evaluated against the shoot, bound to the variable `shoot`. It must return a boolean.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"message": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Message is the message surfaced when the rule evaluates to false.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"rule"},
+			},
+		},
 	}
 }
 
@@ -4419,6 +4542,262 @@ func schema_pkg_apis_core_v1beta1_ExtensionExposure(ref common.ReferenceCallback
 		},
 		Dependencies: []string{
 			runtime.RawExtension{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionProfile describes the offered component versions and their lifecycle for an extension-managed component. One ExtensionProfile exists per participating extension type; the binding to the extension type is the object's name (metadata.name equals the extension type).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref(metav1.ObjectMeta{}.OpenAPIModelName()),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec defines the offered component versions and the update policy.",
+							Default:     map[string]interface{}{},
+							Ref:         ref(v1beta1.ExtensionProfileSpec{}.OpenAPIModelName()),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status contains the computed classification of the offered versions.",
+							Default:     map[string]interface{}{},
+							Ref:         ref(v1beta1.ExtensionProfileStatus{}.OpenAPIModelName()),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionProfileSpec{}.OpenAPIModelName(), v1beta1.ExtensionProfileStatus{}.OpenAPIModelName(), metav1.ObjectMeta{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionProfileComponent(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionProfileComponent is a named component of an extension with an independently versioned lifecycle.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the component.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateStrategy overrides the profile-level update strategy for this component. Optional.",
+							Ref:         ref(v1beta1.ExtensionUpdateStrategy{}.OpenAPIModelName()),
+						},
+					},
+					"versions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "version",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions is the list of offered versions of this component.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.ExtensionVersion{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionUpdateStrategy{}.OpenAPIModelName(), v1beta1.ExtensionVersion{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionProfileComponentStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionProfileComponentStatus is the computed status for a single component.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the component.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions is the list of offered versions with their currently computed classification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.ExpirableVersionStatus{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExpirableVersionStatus{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionProfileList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionProfileList is a collection of ExtensionProfiles.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref(metav1.ListMeta{}.OpenAPIModelName()),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of ExtensionProfiles.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.ExtensionProfile{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionProfile{}.OpenAPIModelName(), metav1.ListMeta{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionProfileSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionProfileSpec is the specification of an ExtensionProfile.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateStrategy is the default auto-update policy for this extension type. It is applied to a component that does not define its own updateStrategy.",
+							Default:     map[string]interface{}{},
+							Ref:         ref(v1beta1.ExtensionUpdateStrategy{}.OpenAPIModelName()),
+						},
+					},
+					"components": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Components is the list of named components offered by this extension, each versioned independently.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.ExtensionProfileComponent{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"updateStrategy"},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionProfileComponent{}.OpenAPIModelName(), v1beta1.ExtensionUpdateStrategy{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionProfileStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionProfileStatus is the computed status of an ExtensionProfile.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"components": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Components mirrors spec.components and carries the computed classification of each offered version.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.ExtensionProfileComponentStatus{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionProfileComponentStatus{}.OpenAPIModelName()},
 	}
 }
 
@@ -4476,6 +4855,91 @@ func schema_pkg_apis_core_v1beta1_ExtensionResourceState(ref common.ReferenceCal
 		},
 		Dependencies: []string{
 			v1beta1.NamedResourceReference{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionUpdateStrategy(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionUpdateStrategy defines the auto-update policy for an extension or one of its components.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"default": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Default is the update strategy applied when a shoot does not request an explicit strategy. Possible values are: patch, minor, major.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"supported": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Supported is the allow-list of update strategies this extension implements. Admission rejects any shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"default"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExtensionVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExtensionVersion is a single offered version of a component with its lifecycle and compatibility envelope.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version identifier. Must be a valid semantic version.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lifecycle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of CloudProfile versions, see GEP-0032).",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref(v1beta1.LifecycleStage{}.OpenAPIModelName()),
+									},
+								},
+							},
+						},
+					},
+					"compatibility": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Compatibility is an optional compatibility envelope evaluated against the shoot on admission.",
+							Ref:         ref(v1beta1.ExtensionCompatibility{}.OpenAPIModelName()),
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is optional, opaque, extension-owned per-version metadata. It is not written to the Shoot spec; gardenlet carries it into the seed Extension resource when the version is resolved.",
+							Ref:         ref(runtime.RawExtension{}.OpenAPIModelName()),
+						},
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionCompatibility{}.OpenAPIModelName(), v1beta1.LifecycleStage{}.OpenAPIModelName(), runtime.RawExtension{}.OpenAPIModelName()},
 	}
 }
 
@@ -9938,6 +10402,50 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 		},
 		Dependencies: []string{
 			v1beta1.CARotation{}.OpenAPIModelName(), v1beta1.ETCDEncryptionKeyRotation{}.OpenAPIModelName(), v1beta1.ObservabilityRotation{}.OpenAPIModelName(), v1beta1.ServiceAccountKeyRotation{}.OpenAPIModelName(), v1beta1.ShootSSHKeypairRotation{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootExtensionComponent(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootExtensionComponent pins the version of a single component managed by an extension.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the component as listed in the ExtensionProfile.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version pins the component version. A partial version is resolved to the highest matching supported version at admission. When omitted, the extension behaves as before this field existed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"autoUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoUpdate overrides the extension-level auto-update policy for this component. Optional.",
+							Ref:         ref(v1beta1.ExtensionAutoUpdate{}.OpenAPIModelName()),
+						},
+					},
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateStrategy overrides the resolved update strategy for this component. Possible values are: patch, minor, major.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ExtensionAutoUpdate{}.OpenAPIModelName()},
 	}
 }
 

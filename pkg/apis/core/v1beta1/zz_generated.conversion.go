@@ -801,6 +801,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionAutoUpdate)(nil), (*core.ExtensionAutoUpdate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionAutoUpdate_To_core_ExtensionAutoUpdate(a.(*ExtensionAutoUpdate), b.(*core.ExtensionAutoUpdate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionAutoUpdate)(nil), (*ExtensionAutoUpdate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionAutoUpdate_To_v1beta1_ExtensionAutoUpdate(a.(*core.ExtensionAutoUpdate), b.(*ExtensionAutoUpdate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionCompatibility)(nil), (*core.ExtensionCompatibility)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionCompatibility_To_core_ExtensionCompatibility(a.(*ExtensionCompatibility), b.(*core.ExtensionCompatibility), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionCompatibility)(nil), (*ExtensionCompatibility)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionCompatibility_To_v1beta1_ExtensionCompatibility(a.(*core.ExtensionCompatibility), b.(*ExtensionCompatibility), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionCompatibilityValidation)(nil), (*core.ExtensionCompatibilityValidation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionCompatibilityValidation_To_core_ExtensionCompatibilityValidation(a.(*ExtensionCompatibilityValidation), b.(*core.ExtensionCompatibilityValidation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionCompatibilityValidation)(nil), (*ExtensionCompatibilityValidation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionCompatibilityValidation_To_v1beta1_ExtensionCompatibilityValidation(a.(*core.ExtensionCompatibilityValidation), b.(*ExtensionCompatibilityValidation), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ExtensionExposure)(nil), (*core.ExtensionExposure)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ExtensionExposure_To_core_ExtensionExposure(a.(*ExtensionExposure), b.(*core.ExtensionExposure), scope)
 	}); err != nil {
@@ -811,6 +841,66 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionProfile)(nil), (*core.ExtensionProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionProfile_To_core_ExtensionProfile(a.(*ExtensionProfile), b.(*core.ExtensionProfile), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionProfile)(nil), (*ExtensionProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionProfile_To_v1beta1_ExtensionProfile(a.(*core.ExtensionProfile), b.(*ExtensionProfile), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionProfileComponent)(nil), (*core.ExtensionProfileComponent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionProfileComponent_To_core_ExtensionProfileComponent(a.(*ExtensionProfileComponent), b.(*core.ExtensionProfileComponent), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionProfileComponent)(nil), (*ExtensionProfileComponent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionProfileComponent_To_v1beta1_ExtensionProfileComponent(a.(*core.ExtensionProfileComponent), b.(*ExtensionProfileComponent), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionProfileComponentStatus)(nil), (*core.ExtensionProfileComponentStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionProfileComponentStatus_To_core_ExtensionProfileComponentStatus(a.(*ExtensionProfileComponentStatus), b.(*core.ExtensionProfileComponentStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionProfileComponentStatus)(nil), (*ExtensionProfileComponentStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionProfileComponentStatus_To_v1beta1_ExtensionProfileComponentStatus(a.(*core.ExtensionProfileComponentStatus), b.(*ExtensionProfileComponentStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionProfileList)(nil), (*core.ExtensionProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionProfileList_To_core_ExtensionProfileList(a.(*ExtensionProfileList), b.(*core.ExtensionProfileList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionProfileList)(nil), (*ExtensionProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionProfileList_To_v1beta1_ExtensionProfileList(a.(*core.ExtensionProfileList), b.(*ExtensionProfileList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionProfileSpec)(nil), (*core.ExtensionProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionProfileSpec_To_core_ExtensionProfileSpec(a.(*ExtensionProfileSpec), b.(*core.ExtensionProfileSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionProfileSpec)(nil), (*ExtensionProfileSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionProfileSpec_To_v1beta1_ExtensionProfileSpec(a.(*core.ExtensionProfileSpec), b.(*ExtensionProfileSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionProfileStatus)(nil), (*core.ExtensionProfileStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionProfileStatus_To_core_ExtensionProfileStatus(a.(*ExtensionProfileStatus), b.(*core.ExtensionProfileStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionProfileStatus)(nil), (*ExtensionProfileStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionProfileStatus_To_v1beta1_ExtensionProfileStatus(a.(*core.ExtensionProfileStatus), b.(*ExtensionProfileStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ExtensionResourceState)(nil), (*core.ExtensionResourceState)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ExtensionResourceState_To_core_ExtensionResourceState(a.(*ExtensionResourceState), b.(*core.ExtensionResourceState), scope)
 	}); err != nil {
@@ -818,6 +908,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.ExtensionResourceState)(nil), (*ExtensionResourceState)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_ExtensionResourceState_To_v1beta1_ExtensionResourceState(a.(*core.ExtensionResourceState), b.(*ExtensionResourceState), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionUpdateStrategy)(nil), (*core.ExtensionUpdateStrategy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionUpdateStrategy_To_core_ExtensionUpdateStrategy(a.(*ExtensionUpdateStrategy), b.(*core.ExtensionUpdateStrategy), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionUpdateStrategy)(nil), (*ExtensionUpdateStrategy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionUpdateStrategy_To_v1beta1_ExtensionUpdateStrategy(a.(*core.ExtensionUpdateStrategy), b.(*ExtensionUpdateStrategy), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionVersion)(nil), (*core.ExtensionVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ExtensionVersion_To_core_ExtensionVersion(a.(*ExtensionVersion), b.(*core.ExtensionVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ExtensionVersion)(nil), (*ExtensionVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ExtensionVersion_To_v1beta1_ExtensionVersion(a.(*core.ExtensionVersion), b.(*ExtensionVersion), scope)
 	}); err != nil {
 		return err
 	}
@@ -1953,6 +2063,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.ShootCredentialsRotation)(nil), (*ShootCredentialsRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation(a.(*core.ShootCredentialsRotation), b.(*ShootCredentialsRotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootExtensionComponent)(nil), (*core.ShootExtensionComponent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootExtensionComponent_To_core_ShootExtensionComponent(a.(*ShootExtensionComponent), b.(*core.ShootExtensionComponent), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ShootExtensionComponent)(nil), (*ShootExtensionComponent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootExtensionComponent_To_v1beta1_ShootExtensionComponent(a.(*core.ShootExtensionComponent), b.(*ShootExtensionComponent), scope)
 	}); err != nil {
 		return err
 	}
@@ -3938,6 +4058,66 @@ func Convert_core_Extension_To_v1beta1_Extension(in *core.Extension, out *Extens
 	return autoConvert_core_Extension_To_v1beta1_Extension(in, out, s)
 }
 
+func autoConvert_v1beta1_ExtensionAutoUpdate_To_core_ExtensionAutoUpdate(in *ExtensionAutoUpdate, out *core.ExtensionAutoUpdate, s conversion.Scope) error {
+	*out = *(*core.ExtensionAutoUpdate)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionAutoUpdate_To_core_ExtensionAutoUpdate is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionAutoUpdate_To_core_ExtensionAutoUpdate(in *ExtensionAutoUpdate, out *core.ExtensionAutoUpdate, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionAutoUpdate_To_core_ExtensionAutoUpdate(in, out, s)
+}
+
+func autoConvert_core_ExtensionAutoUpdate_To_v1beta1_ExtensionAutoUpdate(in *core.ExtensionAutoUpdate, out *ExtensionAutoUpdate, s conversion.Scope) error {
+	*out = *(*ExtensionAutoUpdate)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionAutoUpdate_To_v1beta1_ExtensionAutoUpdate is an autogenerated conversion function.
+func Convert_core_ExtensionAutoUpdate_To_v1beta1_ExtensionAutoUpdate(in *core.ExtensionAutoUpdate, out *ExtensionAutoUpdate, s conversion.Scope) error {
+	return autoConvert_core_ExtensionAutoUpdate_To_v1beta1_ExtensionAutoUpdate(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionCompatibility_To_core_ExtensionCompatibility(in *ExtensionCompatibility, out *core.ExtensionCompatibility, s conversion.Scope) error {
+	*out = *(*core.ExtensionCompatibility)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionCompatibility_To_core_ExtensionCompatibility is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionCompatibility_To_core_ExtensionCompatibility(in *ExtensionCompatibility, out *core.ExtensionCompatibility, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionCompatibility_To_core_ExtensionCompatibility(in, out, s)
+}
+
+func autoConvert_core_ExtensionCompatibility_To_v1beta1_ExtensionCompatibility(in *core.ExtensionCompatibility, out *ExtensionCompatibility, s conversion.Scope) error {
+	*out = *(*ExtensionCompatibility)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionCompatibility_To_v1beta1_ExtensionCompatibility is an autogenerated conversion function.
+func Convert_core_ExtensionCompatibility_To_v1beta1_ExtensionCompatibility(in *core.ExtensionCompatibility, out *ExtensionCompatibility, s conversion.Scope) error {
+	return autoConvert_core_ExtensionCompatibility_To_v1beta1_ExtensionCompatibility(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionCompatibilityValidation_To_core_ExtensionCompatibilityValidation(in *ExtensionCompatibilityValidation, out *core.ExtensionCompatibilityValidation, s conversion.Scope) error {
+	*out = *(*core.ExtensionCompatibilityValidation)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionCompatibilityValidation_To_core_ExtensionCompatibilityValidation is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionCompatibilityValidation_To_core_ExtensionCompatibilityValidation(in *ExtensionCompatibilityValidation, out *core.ExtensionCompatibilityValidation, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionCompatibilityValidation_To_core_ExtensionCompatibilityValidation(in, out, s)
+}
+
+func autoConvert_core_ExtensionCompatibilityValidation_To_v1beta1_ExtensionCompatibilityValidation(in *core.ExtensionCompatibilityValidation, out *ExtensionCompatibilityValidation, s conversion.Scope) error {
+	*out = *(*ExtensionCompatibilityValidation)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionCompatibilityValidation_To_v1beta1_ExtensionCompatibilityValidation is an autogenerated conversion function.
+func Convert_core_ExtensionCompatibilityValidation_To_v1beta1_ExtensionCompatibilityValidation(in *core.ExtensionCompatibilityValidation, out *ExtensionCompatibilityValidation, s conversion.Scope) error {
+	return autoConvert_core_ExtensionCompatibilityValidation_To_v1beta1_ExtensionCompatibilityValidation(in, out, s)
+}
+
 func autoConvert_v1beta1_ExtensionExposure_To_core_ExtensionExposure(in *ExtensionExposure, out *core.ExtensionExposure, s conversion.Scope) error {
 	*out = *(*core.ExtensionExposure)(unsafe.Pointer(in))
 	return nil
@@ -3958,6 +4138,140 @@ func Convert_core_ExtensionExposure_To_v1beta1_ExtensionExposure(in *core.Extens
 	return autoConvert_core_ExtensionExposure_To_v1beta1_ExtensionExposure(in, out, s)
 }
 
+func autoConvert_v1beta1_ExtensionProfile_To_core_ExtensionProfile(in *ExtensionProfile, out *core.ExtensionProfile, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1beta1_ExtensionProfileSpec_To_core_ExtensionProfileSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1beta1_ExtensionProfileStatus_To_core_ExtensionProfileStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1beta1_ExtensionProfile_To_core_ExtensionProfile is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionProfile_To_core_ExtensionProfile(in *ExtensionProfile, out *core.ExtensionProfile, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionProfile_To_core_ExtensionProfile(in, out, s)
+}
+
+func autoConvert_core_ExtensionProfile_To_v1beta1_ExtensionProfile(in *core.ExtensionProfile, out *ExtensionProfile, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_core_ExtensionProfileSpec_To_v1beta1_ExtensionProfileSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_core_ExtensionProfileStatus_To_v1beta1_ExtensionProfileStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_core_ExtensionProfile_To_v1beta1_ExtensionProfile is an autogenerated conversion function.
+func Convert_core_ExtensionProfile_To_v1beta1_ExtensionProfile(in *core.ExtensionProfile, out *ExtensionProfile, s conversion.Scope) error {
+	return autoConvert_core_ExtensionProfile_To_v1beta1_ExtensionProfile(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionProfileComponent_To_core_ExtensionProfileComponent(in *ExtensionProfileComponent, out *core.ExtensionProfileComponent, s conversion.Scope) error {
+	*out = *(*core.ExtensionProfileComponent)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionProfileComponent_To_core_ExtensionProfileComponent is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionProfileComponent_To_core_ExtensionProfileComponent(in *ExtensionProfileComponent, out *core.ExtensionProfileComponent, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionProfileComponent_To_core_ExtensionProfileComponent(in, out, s)
+}
+
+func autoConvert_core_ExtensionProfileComponent_To_v1beta1_ExtensionProfileComponent(in *core.ExtensionProfileComponent, out *ExtensionProfileComponent, s conversion.Scope) error {
+	*out = *(*ExtensionProfileComponent)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionProfileComponent_To_v1beta1_ExtensionProfileComponent is an autogenerated conversion function.
+func Convert_core_ExtensionProfileComponent_To_v1beta1_ExtensionProfileComponent(in *core.ExtensionProfileComponent, out *ExtensionProfileComponent, s conversion.Scope) error {
+	return autoConvert_core_ExtensionProfileComponent_To_v1beta1_ExtensionProfileComponent(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionProfileComponentStatus_To_core_ExtensionProfileComponentStatus(in *ExtensionProfileComponentStatus, out *core.ExtensionProfileComponentStatus, s conversion.Scope) error {
+	*out = *(*core.ExtensionProfileComponentStatus)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionProfileComponentStatus_To_core_ExtensionProfileComponentStatus is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionProfileComponentStatus_To_core_ExtensionProfileComponentStatus(in *ExtensionProfileComponentStatus, out *core.ExtensionProfileComponentStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionProfileComponentStatus_To_core_ExtensionProfileComponentStatus(in, out, s)
+}
+
+func autoConvert_core_ExtensionProfileComponentStatus_To_v1beta1_ExtensionProfileComponentStatus(in *core.ExtensionProfileComponentStatus, out *ExtensionProfileComponentStatus, s conversion.Scope) error {
+	*out = *(*ExtensionProfileComponentStatus)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionProfileComponentStatus_To_v1beta1_ExtensionProfileComponentStatus is an autogenerated conversion function.
+func Convert_core_ExtensionProfileComponentStatus_To_v1beta1_ExtensionProfileComponentStatus(in *core.ExtensionProfileComponentStatus, out *ExtensionProfileComponentStatus, s conversion.Scope) error {
+	return autoConvert_core_ExtensionProfileComponentStatus_To_v1beta1_ExtensionProfileComponentStatus(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionProfileList_To_core_ExtensionProfileList(in *ExtensionProfileList, out *core.ExtensionProfileList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]core.ExtensionProfile)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionProfileList_To_core_ExtensionProfileList is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionProfileList_To_core_ExtensionProfileList(in *ExtensionProfileList, out *core.ExtensionProfileList, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionProfileList_To_core_ExtensionProfileList(in, out, s)
+}
+
+func autoConvert_core_ExtensionProfileList_To_v1beta1_ExtensionProfileList(in *core.ExtensionProfileList, out *ExtensionProfileList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]ExtensionProfile)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_core_ExtensionProfileList_To_v1beta1_ExtensionProfileList is an autogenerated conversion function.
+func Convert_core_ExtensionProfileList_To_v1beta1_ExtensionProfileList(in *core.ExtensionProfileList, out *ExtensionProfileList, s conversion.Scope) error {
+	return autoConvert_core_ExtensionProfileList_To_v1beta1_ExtensionProfileList(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionProfileSpec_To_core_ExtensionProfileSpec(in *ExtensionProfileSpec, out *core.ExtensionProfileSpec, s conversion.Scope) error {
+	*out = *(*core.ExtensionProfileSpec)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionProfileSpec_To_core_ExtensionProfileSpec is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionProfileSpec_To_core_ExtensionProfileSpec(in *ExtensionProfileSpec, out *core.ExtensionProfileSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionProfileSpec_To_core_ExtensionProfileSpec(in, out, s)
+}
+
+func autoConvert_core_ExtensionProfileSpec_To_v1beta1_ExtensionProfileSpec(in *core.ExtensionProfileSpec, out *ExtensionProfileSpec, s conversion.Scope) error {
+	*out = *(*ExtensionProfileSpec)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionProfileSpec_To_v1beta1_ExtensionProfileSpec is an autogenerated conversion function.
+func Convert_core_ExtensionProfileSpec_To_v1beta1_ExtensionProfileSpec(in *core.ExtensionProfileSpec, out *ExtensionProfileSpec, s conversion.Scope) error {
+	return autoConvert_core_ExtensionProfileSpec_To_v1beta1_ExtensionProfileSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionProfileStatus_To_core_ExtensionProfileStatus(in *ExtensionProfileStatus, out *core.ExtensionProfileStatus, s conversion.Scope) error {
+	*out = *(*core.ExtensionProfileStatus)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionProfileStatus_To_core_ExtensionProfileStatus is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionProfileStatus_To_core_ExtensionProfileStatus(in *ExtensionProfileStatus, out *core.ExtensionProfileStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionProfileStatus_To_core_ExtensionProfileStatus(in, out, s)
+}
+
+func autoConvert_core_ExtensionProfileStatus_To_v1beta1_ExtensionProfileStatus(in *core.ExtensionProfileStatus, out *ExtensionProfileStatus, s conversion.Scope) error {
+	*out = *(*ExtensionProfileStatus)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionProfileStatus_To_v1beta1_ExtensionProfileStatus is an autogenerated conversion function.
+func Convert_core_ExtensionProfileStatus_To_v1beta1_ExtensionProfileStatus(in *core.ExtensionProfileStatus, out *ExtensionProfileStatus, s conversion.Scope) error {
+	return autoConvert_core_ExtensionProfileStatus_To_v1beta1_ExtensionProfileStatus(in, out, s)
+}
+
 func autoConvert_v1beta1_ExtensionResourceState_To_core_ExtensionResourceState(in *ExtensionResourceState, out *core.ExtensionResourceState, s conversion.Scope) error {
 	*out = *(*core.ExtensionResourceState)(unsafe.Pointer(in))
 	return nil
@@ -3976,6 +4290,46 @@ func autoConvert_core_ExtensionResourceState_To_v1beta1_ExtensionResourceState(i
 // Convert_core_ExtensionResourceState_To_v1beta1_ExtensionResourceState is an autogenerated conversion function.
 func Convert_core_ExtensionResourceState_To_v1beta1_ExtensionResourceState(in *core.ExtensionResourceState, out *ExtensionResourceState, s conversion.Scope) error {
 	return autoConvert_core_ExtensionResourceState_To_v1beta1_ExtensionResourceState(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionUpdateStrategy_To_core_ExtensionUpdateStrategy(in *ExtensionUpdateStrategy, out *core.ExtensionUpdateStrategy, s conversion.Scope) error {
+	*out = *(*core.ExtensionUpdateStrategy)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionUpdateStrategy_To_core_ExtensionUpdateStrategy is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionUpdateStrategy_To_core_ExtensionUpdateStrategy(in *ExtensionUpdateStrategy, out *core.ExtensionUpdateStrategy, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionUpdateStrategy_To_core_ExtensionUpdateStrategy(in, out, s)
+}
+
+func autoConvert_core_ExtensionUpdateStrategy_To_v1beta1_ExtensionUpdateStrategy(in *core.ExtensionUpdateStrategy, out *ExtensionUpdateStrategy, s conversion.Scope) error {
+	*out = *(*ExtensionUpdateStrategy)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionUpdateStrategy_To_v1beta1_ExtensionUpdateStrategy is an autogenerated conversion function.
+func Convert_core_ExtensionUpdateStrategy_To_v1beta1_ExtensionUpdateStrategy(in *core.ExtensionUpdateStrategy, out *ExtensionUpdateStrategy, s conversion.Scope) error {
+	return autoConvert_core_ExtensionUpdateStrategy_To_v1beta1_ExtensionUpdateStrategy(in, out, s)
+}
+
+func autoConvert_v1beta1_ExtensionVersion_To_core_ExtensionVersion(in *ExtensionVersion, out *core.ExtensionVersion, s conversion.Scope) error {
+	*out = *(*core.ExtensionVersion)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ExtensionVersion_To_core_ExtensionVersion is an autogenerated conversion function.
+func Convert_v1beta1_ExtensionVersion_To_core_ExtensionVersion(in *ExtensionVersion, out *core.ExtensionVersion, s conversion.Scope) error {
+	return autoConvert_v1beta1_ExtensionVersion_To_core_ExtensionVersion(in, out, s)
+}
+
+func autoConvert_core_ExtensionVersion_To_v1beta1_ExtensionVersion(in *core.ExtensionVersion, out *ExtensionVersion, s conversion.Scope) error {
+	*out = *(*ExtensionVersion)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ExtensionVersion_To_v1beta1_ExtensionVersion is an autogenerated conversion function.
+func Convert_core_ExtensionVersion_To_v1beta1_ExtensionVersion(in *core.ExtensionVersion, out *ExtensionVersion, s conversion.Scope) error {
+	return autoConvert_core_ExtensionVersion_To_v1beta1_ExtensionVersion(in, out, s)
 }
 
 func autoConvert_v1beta1_FailureTolerance_To_core_FailureTolerance(in *FailureTolerance, out *core.FailureTolerance, s conversion.Scope) error {
@@ -6779,6 +7133,26 @@ func autoConvert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotati
 // Convert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation is an autogenerated conversion function.
 func Convert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation(in *core.ShootCredentialsRotation, out *ShootCredentialsRotation, s conversion.Scope) error {
 	return autoConvert_core_ShootCredentialsRotation_To_v1beta1_ShootCredentialsRotation(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootExtensionComponent_To_core_ShootExtensionComponent(in *ShootExtensionComponent, out *core.ShootExtensionComponent, s conversion.Scope) error {
+	*out = *(*core.ShootExtensionComponent)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_v1beta1_ShootExtensionComponent_To_core_ShootExtensionComponent is an autogenerated conversion function.
+func Convert_v1beta1_ShootExtensionComponent_To_core_ShootExtensionComponent(in *ShootExtensionComponent, out *core.ShootExtensionComponent, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootExtensionComponent_To_core_ShootExtensionComponent(in, out, s)
+}
+
+func autoConvert_core_ShootExtensionComponent_To_v1beta1_ShootExtensionComponent(in *core.ShootExtensionComponent, out *ShootExtensionComponent, s conversion.Scope) error {
+	*out = *(*ShootExtensionComponent)(unsafe.Pointer(in))
+	return nil
+}
+
+// Convert_core_ShootExtensionComponent_To_v1beta1_ShootExtensionComponent is an autogenerated conversion function.
+func Convert_core_ShootExtensionComponent_To_v1beta1_ShootExtensionComponent(in *core.ShootExtensionComponent, out *ShootExtensionComponent, s conversion.Scope) error {
+	return autoConvert_core_ShootExtensionComponent_To_v1beta1_ShootExtensionComponent(in, out, s)
 }
 
 func autoConvert_v1beta1_ShootKubeconfigRotation_To_core_ShootKubeconfigRotation(in *ShootKubeconfigRotation, out *core.ShootKubeconfigRotation, s conversion.Scope) error {
