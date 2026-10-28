@@ -13,43 +13,44 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
-		test := func(s *ShootContext) {
-			BeforeTestSetup(func() {
-				s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-					Enabled: new(true),
-				}
+		test := func(tc *ShootContext) {
+			tc.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				Enabled: new(true),
+			}
+
+			BeforeAll(func() {
+				tc.Init()
 			})
 
-			ItShouldCreateShoot(s)
-			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldGetResponsibleSeed(s)
-			seed.ItShouldInitializeSeedClient(&s.SeedContext)
+			ItShouldCreateShoot(tc)
+			ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+			ItShouldGetResponsibleSeed(tc)
+			seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
 			It("should not have any control plane pods", func(ctx SpecContext) {
 				Eventually(ctx,
-					s.SeedKomega.ObjectList(&corev1.PodList{}, client.InNamespace(s.Shoot.Status.TechnicalID)),
+					tc.SeedKomega.ObjectList(&corev1.PodList{}, client.InNamespace(tc.Shoot.Status.TechnicalID)),
 				).Should(
 					HaveField("Items", BeEmpty()),
 				)
 			}, SpecTimeout(time.Minute))
 
-			ItShouldDeleteShoot(s)
-			ItShouldWaitForShootToBeDeleted(s)
+			ItShouldDeleteShoot(tc)
+			ItShouldWaitForShootToBeDeleted(tc)
 		}
 
 		Context("Shoot with workers", Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-hib")))
+			test(NewShootContext(DefaultShoot("e2e-hib")))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-hib")))
+			test(NewShootContext(DefaultWorkerlessShoot("e2e-hib")))
 		})
 	})
 })

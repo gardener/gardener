@@ -30,12 +30,12 @@ var (
 // Function is exposed so that it can be called from the context of another
 // e2e test. This is done so that we can minimize the number of shoot clusters
 // that we create.
-func ShootLogging(s *ShootContext) {
-	ItShouldWaitForShootToBeReconciledAndHealthy(s)
-	ItShouldInitializeShootClient(s)
-	ItShouldGetResponsibleSeed(s)
-	seed.ItShouldInitializeSeedClient(&s.SeedContext)
-	ItShouldComputeControlPlaneNamespace(s)
+func ShootLogging(tc *ShootContext) {
+	ItShouldWaitForShootToBeReconciledAndHealthy(tc)
+	ItShouldInitializeShootClient(tc)
+	ItShouldGetResponsibleSeed(tc)
+	seed.ItShouldInitializeSeedClient(tc.SeedContext)
+	ItShouldComputeControlPlaneNamespace(tc)
 
 	gardenerLoggerAppLabel := "gardener-logger"
 	gardenerLoggerName := "gardener-logger" + "-" + utilrand.String(randomLength)
@@ -54,7 +54,7 @@ func ShootLogging(s *ShootContext) {
 			"resources.gardener.cloud/managed-by": "gardener",
 		},
 	}
-	ItShouldRenderAndDeployTemplateToShoot(s, loggerAppName, loggerParams)
+	ItShouldRenderAndDeployTemplateToShoot(tc, loggerAppName, loggerParams)
 
 	loggerParams = map[string]any{
 		"LoggerName":          nonGardenerLoggerName,
@@ -63,21 +63,21 @@ func ShootLogging(s *ShootContext) {
 		"LogsCount":           shootLogsCount,
 		"LogsDuration":        "20s",
 	}
-	ItShouldRenderAndDeployTemplateToShoot(s, loggerAppName, loggerParams)
+	ItShouldRenderAndDeployTemplateToShoot(tc, loggerAppName, loggerParams)
 
 	gardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
 		"app": gardenerLoggerAppLabel,
 	})
-	ItShouldWaitForPodsInShootToBeReady(s, "kube-system", gardenerLoggerLabels)
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", gardenerLoggerLabels)
 
 	nonGardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
 		"app": nonGardenerLoggerAppLabel,
 	})
-	ItShouldWaitForPodsInShootToBeReady(s, "kube-system", nonGardenerLoggerLabels)
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", nonGardenerLoggerLabels)
 
-	ItShouldWaitForLogsCountWithLabelToBeInVali(s, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", shootLogsCount)
-	ItShouldWaitForLogsWithLabelToNotBeInVali(s, valiLabels, "pod_name", nonGardenerLoggerAppLabel+".*")
+	ItShouldWaitForLogsCountWithLabelToBeInVali(tc, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", shootLogsCount)
+	ItShouldWaitForLogsWithLabelToNotBeInVali(tc, valiLabels, "pod_name", nonGardenerLoggerAppLabel+".*")
 
-	ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "containerd.service")
-	ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "kubelet.service")
+	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "containerd.service")
+	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "kubelet.service")
 }
