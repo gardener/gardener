@@ -221,11 +221,14 @@ const (
 type ManagedResource struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec contains the specification of this managed resource.
+	// +optional
 	Spec ManagedResourceSpec `json:"spec,omitempty"`
 	// Status contains the status of this managed resource.
+	// +optional
 	Status ManagedResourceStatus `json:"status,omitempty"`
 }
 
@@ -247,6 +250,7 @@ type ManagedResourceSpec struct {
 	// +optional
 	Class *string `json:"class,omitempty"`
 	// SecretRefs is a list of secret references.
+	// +required
 	SecretRefs []corev1.LocalObjectReference `json:"secretRefs"`
 	// InjectLabels injects the provided labels into every resource that is part of the referenced secrets.
 	// +optional
@@ -272,8 +276,10 @@ type ManagedResourceSpec struct {
 
 // ManagedResourceStatus is the status of a managed resource.
 type ManagedResourceStatus struct {
+	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
+	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Resources is a list of objects that have been created.
 	// +optional
@@ -288,8 +294,10 @@ type ObjectReference struct {
 	corev1.ObjectReference `json:",inline"`
 
 	// Labels is a map of labels that were used during last update of the resource.
+	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
 	// Annotations is a map of annotations that were used during last update of the resource.
+	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
