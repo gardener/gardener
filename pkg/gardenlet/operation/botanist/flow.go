@@ -1534,7 +1534,10 @@ func (b *Botanist) MigrateDNSRecordsTaskGroup() flow.TaskGroup {
 		Name: "Migrating prior internal domain DNS record",
 		Fn:   b.MigratePriorInternalDNSRecord,
 	})
-
+	g.Add(flow.Task{
+		Name: "Migrating prior external domain DNS record",
+		Fn:   b.MigratePriorExternalDNSRecord,
+	})
 	return g
 }
 
