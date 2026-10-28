@@ -18,11 +18,14 @@ import (
 type BackupBucket struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +required
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Specification of the Backup Bucket.
+	// +required
 	Spec BackupBucketSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the Backup Bucket.
+	// +required
 	Status BackupBucketStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -42,6 +45,7 @@ type BackupBucketList struct {
 // BackupBucketSpec is the specification of a Backup Bucket.
 type BackupBucketSpec struct {
 	// Provider holds the details of cloud provider of the object store. This field is immutable.
+	// +required
 	Provider BackupBucketProvider `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	// +optional
@@ -90,7 +94,9 @@ type BackupBucketStatus struct {
 // BackupBucketProvider holds the details of cloud provider of the object store.
 type BackupBucketProvider struct {
 	// Type is the type of provider.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// Region is the region of the bucket.
+	// +required
 	Region string `json:"region" protobuf:"bytes,2,opt,name=region"`
 }

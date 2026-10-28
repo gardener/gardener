@@ -46,6 +46,7 @@ const (
 // LastError indicates the last occurred error for an operation on a resource.
 type LastError struct {
 	// A human readable message indicating details about the last error.
+	// +required
 	Description string `json:"description" protobuf:"bytes,1,opt,name=description"`
 	// ID of the task which caused this last error
 	// +optional
@@ -98,24 +99,32 @@ const (
 // message and a progress indicator.
 type LastOperation struct {
 	// A human readable message indicating details about the last operation.
+	// +required
 	Description string `json:"description" protobuf:"bytes,1,opt,name=description"`
 	// Last time the operation state transitioned from one to another.
+	// +required
 	LastUpdateTime metav1.Time `json:"lastUpdateTime" protobuf:"bytes,2,opt,name=lastUpdateTime"`
 	// The progress in percentage (0-100) of the last operation.
+	// +required
 	Progress int32 `json:"progress" protobuf:"varint,3,opt,name=progress"`
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
+	// +required
 	State LastOperationState `json:"state" protobuf:"bytes,4,opt,name=state,casttype=LastOperationState"`
 	// Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
+	// +required
 	Type LastOperationType `json:"type" protobuf:"bytes,5,opt,name=type,casttype=LastOperationType"`
 }
 
 // Gardener holds the information about the Gardener version that operated a resource.
 type Gardener struct {
 	// ID is the container id of the Gardener which last acted on a resource.
+	// +required
 	ID string `json:"id" protobuf:"bytes,1,opt,name=id"`
 	// Name is the hostname (pod name) of the Gardener which last acted on a resource.
+	// +required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 	// Version is the version of the Gardener which last acted on a resource.
+	// +required
 	Version string `json:"version" protobuf:"bytes,3,opt,name=version"`
 }
 
@@ -162,12 +171,14 @@ const (
 // usages could be to configure HA for shoot control plane or for seed system components.
 type HighAvailability struct {
 	// FailureTolerance holds information about failure tolerance level of a highly available resource.
+	// +required
 	FailureTolerance FailureTolerance `json:"failureTolerance" protobuf:"bytes,1,name=failureTolerance"`
 }
 
 // FailureTolerance describes information about failure tolerance level of a highly available resource.
 type FailureTolerance struct {
 	// Type specifies the type of failure that the highly available resource can tolerate
+	// +required
 	Type FailureToleranceType `json:"type" protobuf:"bytes,1,name=type"`
 }
 

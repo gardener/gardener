@@ -24,16 +24,22 @@ type ConditionType string
 // Condition holds the information about the state of a resource based on health checks.
 type Condition struct {
 	// Type of the condition.
+	// +required
 	Type ConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=ConditionType"`
 	// Status of the condition, one of True, False, Unknown.
+	// +required
 	Status ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=ConditionStatus"`
 	// Last time the condition transitioned from one status to another.
+	// +required
 	LastTransitionTime metav1.Time `json:"lastTransitionTime" protobuf:"bytes,3,opt,name=lastTransitionTime"`
 	// Last time the condition was updated.
+	// +required
 	LastUpdateTime metav1.Time `json:"lastUpdateTime" protobuf:"bytes,4,opt,name=lastUpdateTime"`
 	// The reason for the condition's last transition.
+	// +required
 	Reason string `json:"reason" protobuf:"bytes,5,opt,name=reason"`
 	// A human readable message indicating details about the transition.
+	// +required
 	Message string `json:"message" protobuf:"bytes,6,opt,name=message"`
 	// Well-defined error codes in case the condition reports a problem.
 	// +optional
