@@ -29,7 +29,15 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,EncryptionConfig,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExpirableVersion,Lifecycle
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExposureClassScheduling,Tolerations
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Extension,Components
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionCompatibility,Validations
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionProfileComponent,Versions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionProfileComponentStatus,Versions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionProfileSpec,Components
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionProfileStatus,Components
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionResourceState,Resources
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionUpdateStrategy,Supported
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ExtensionVersion,Lifecycle
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Hibernation,Schedules
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,APIAudiences
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeAPIServerConfig,AdmissionPlugins
