@@ -82,7 +82,7 @@ images:
   - name: etcd-backup-restore
     sourceRepository: github.com/gardener/etcd-backup-restore
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl
-    tag: "v0.45.1"
+    tag: "v0.45.2"
     resourceId:
       name: etcdbrctl
   - name: dependency-watchdog
