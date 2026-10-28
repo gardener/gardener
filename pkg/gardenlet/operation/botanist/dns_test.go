@@ -158,6 +158,34 @@ var _ = Describe("dns", func() {
 		})
 	})
 
+	Context("NeedsPriorInternalDNS", func() {
+		It("should be false when there is no prior internal domain", func() {
+			b.Shoot.PriorInternalClusterDomain = nil
+			b.Shoot.PriorInternalDomain = nil
+			Expect(b.NeedsPriorInternalDNS()).To(BeFalse())
+		})
+
+		It("should be false when the prior internal domain provider is unmanaged", func() {
+			b.Shoot.PriorInternalClusterDomain = new("bar")
+			b.Shoot.PriorInternalDomain = &gardenerutils.Domain{Provider: "unmanaged"}
+			Expect(b.NeedsPriorInternalDNS()).To(BeFalse())
+		})
+
+		It("should be true when the prior internal domain provider is not unmanaged", func() {
+			b.Shoot.PriorInternalClusterDomain = new("bar")
+			b.Shoot.PriorInternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			Expect(b.NeedsPriorInternalDNS()).To(BeTrue())
+		})
+
+		It("should be true when the internal domain is disabled during the migration", func() {
+			b.Shoot.InternalClusterDomain = nil
+			b.Shoot.InternalDomain = nil
+			b.Shoot.PriorInternalClusterDomain = new("bar")
+			b.Shoot.PriorInternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			Expect(b.NeedsPriorInternalDNS()).To(BeTrue())
+		})
+	})
+
 	Context("ShootUsesDNS", func() {
 		BeforeEach(func() {
 			gardenletfeatures.RegisterFeatureGates()

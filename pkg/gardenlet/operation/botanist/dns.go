@@ -37,10 +37,22 @@ func (b *Botanist) NeedsInternalDNS() bool {
 		b.Shoot.InternalDomain.Provider != "unmanaged"
 }
 
+// NeedsPriorInternalDNS returns true if the Shoot cluster needs the prior internal DNS.
+func (b *Botanist) NeedsPriorInternalDNS() bool {
+	return b.Shoot.PriorInternalClusterDomain != nil &&
+		b.Shoot.PriorInternalDomain != nil &&
+		b.Shoot.PriorInternalDomain.Provider != "unmanaged"
+}
+
 func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 	if b.NeedsInternalDNS() {
 		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(b.APIServerAddress))
 		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{b.APIServerAddress})
+	}
+
+	if b.NeedsPriorInternalDNS() {
+		b.Shoot.Components.Extensions.PriorInternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(b.APIServerAddress))
+		b.Shoot.Components.Extensions.PriorInternalDNSRecord.SetValues([]string{b.APIServerAddress})
 	}
 
 	if b.NeedsExternalDNS() {
