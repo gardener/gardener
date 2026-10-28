@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ Object = (*Extension)(nil)
@@ -59,6 +60,26 @@ type ExtensionList struct {
 type ExtensionSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
+
+	// Components is the list of extension-managed components and their resolved versions. It is populated
+	// by gardenlet from the shoot's pinned component versions and the matching ExtensionProfile.
+	// +optional
+	Components []ExtensionComponent `json:"components,omitempty"`
+}
+
+// ExtensionComponent carries the resolved version and optional provider configuration of a single
+// extension-managed component.
+type ExtensionComponent struct {
+	// Name is the name of the component.
+	Name string `json:"name"`
+	// Version is the resolved concrete version of the component.
+	Version string `json:"version"`
+	// ProviderConfig is optional, opaque, extension-owned per-version configuration copied verbatim from
+	// the matching ExtensionProfile version entry.
+	// +kubebuilder:validation:XPreserveUnknownFields
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 
 // ExtensionStatus is the status for a Extension resource.

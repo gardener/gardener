@@ -88,6 +88,32 @@ type Extension struct {
 	ProviderConfig *runtime.RawExtension
 	// Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.
 	Disabled *bool
+	// AutoUpdate is the default auto-update policy for the components of this extension.
+	AutoUpdate *ExtensionAutoUpdate
+	// Components pins the versions of the components managed by this extension and optionally overrides
+	// the auto-update policy per component.
+	Components []ShootExtensionComponent
+}
+
+// ExtensionAutoUpdate defines the auto-update policy for the components of an extension.
+type ExtensionAutoUpdate struct {
+	// Enabled indicates whether components are automatically upgraded within the configured update strategy.
+	Enabled bool
+	// UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.
+	UpdateStrategy *MachineImageUpdateStrategy
+}
+
+// ShootExtensionComponent pins the version of a single component managed by an extension.
+type ShootExtensionComponent struct {
+	// Name is the name of the component as listed in the ExtensionProfile.
+	Name string
+	// Version pins the component version. A partial version is resolved at admission.
+	Version *string
+	// AutoUpdate overrides the extension-level auto-update policy for this component.
+	AutoUpdate *ExtensionAutoUpdate
+	// UpdateStrategy overrides the resolved update strategy for this component. Possible values are:
+	// patch, minor, major.
+	UpdateStrategy *MachineImageUpdateStrategy
 }
 
 // NamedResourceReference is a named reference to a resource.
