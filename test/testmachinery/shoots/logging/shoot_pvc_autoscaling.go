@@ -49,9 +49,9 @@ import (
 )
 
 const (
-	pvcAutoscalerTestTimeout           = 60 * time.Minute
-	pvcAutoscalerCleanupTimeout        = 5 * time.Minute
-	pvcAutoscalerInitializationTimeout = 5 * time.Minute
+	pvcAutoscalerTestTimeout           = 30 * time.Minute
+	pvcAutoscalerCleanupTimeout        = 2 * time.Minute
+	pvcAutoscalerInitializationTimeout = 2 * time.Minute
 	pvcGrowthWaitInterval              = 30 * time.Second
 	pvcGrowthWaitTimeout               = 10 * time.Minute
 
