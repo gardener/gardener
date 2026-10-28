@@ -390,17 +390,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// The Shoot spec was successfully updated, so stamp LastUpdateTime and persist it.
-	// Only on a run that required a patch was the spec actually changed; on an idle run
-	// LastUpdateTime must stay frozen at the previous run.
-	if requirePatch && shoot.Status.LastMaintenance != nil {
-		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.LastMaintenance.LastUpdateTime = &now
-		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
-			return err
-		}
-	}
-
 	// On an idle maintenance run (no patch required), no LastMaintenance struct was constructed above.
 	// Still record that maintenance ran by stamping TriggeredTime, creating the struct if necessary, and
 	// resolving any lingering Failed/Processing state from a previous run. LastUpdateTime is left untouched
@@ -429,9 +418,16 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	if shoot.Status.LastMaintenance != nil && shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing {
+	// The Shoot spec was successfully updated, so mark a processing maintenance as succeeded and, if a patch was
+	// required, stamp LastUpdateTime in the same status patch. On an idle run LastUpdateTime stays frozen.
+	if shoot.Status.LastMaintenance != nil && (requirePatch || shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing) {
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
+		if requirePatch {
+			shoot.Status.LastMaintenance.LastUpdateTime = &now
+		}
+		if shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing {
+			shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
+		}
 
 		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 			return err
