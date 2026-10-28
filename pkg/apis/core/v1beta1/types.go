@@ -61,6 +61,7 @@ func IsDualStack(ipFamilies []IPFamily) bool {
 // AccessRestriction describes an access restriction for a Kubernetes cluster (e.g., EU access-only).
 type AccessRestriction struct {
 	// Name is the name of the restriction.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
@@ -77,6 +78,7 @@ type AccessRestrictionWithOptions struct {
 // Extension contains type and provider information for extensions.
 type Extension struct {
 	// Type is the type of the extension resource.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
@@ -89,8 +91,10 @@ type Extension struct {
 // NamedResourceReference is a named reference to a resource.
 type NamedResourceReference struct {
 	// Name of the resource reference.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// ResourceRef is a reference to a resource.
+	// +required
 	ResourceRef autoscalingv1.CrossVersionObjectReference `json:"resourceRef" protobuf:"bytes,2,opt,name=resourceRef"`
 }
 

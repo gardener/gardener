@@ -31,6 +31,7 @@ type CloudProfile struct {
 	// +optional
 	Spec CloudProfileSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status contains the current status of the cloud profile.
+	// +optional
 	Status CloudProfileStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -54,14 +55,17 @@ type CloudProfileSpec struct {
 	// +optional
 	CABundle *string `json:"caBundle,omitempty" protobuf:"bytes,1,opt,name=caBundle"`
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+	// +required
 	Kubernetes KubernetesSettings `json:"kubernetes" protobuf:"bytes,2,opt,name=kubernetes"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
+	// +required
 	MachineImages []MachineImage `json:"machineImages" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,3,rep,name=machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
+	// +required
 	MachineTypes []MachineType `json:"machineTypes" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,4,rep,name=machineTypes"`
 	// ProviderConfig contains provider-specific configuration for the profile.
 	// +optional
@@ -69,6 +73,7 @@ type CloudProfileSpec struct {
 	// Regions contains constraints regarding allowed values for regions and zones.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
+	// +required
 	Regions []Region `json:"regions" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,6,rep,name=regions"`
 	// SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile.
 	// An empty list means that all seeds of the same provider type are supported.
@@ -78,6 +83,7 @@ type CloudProfileSpec struct {
 	// +optional
 	SeedSelector *SeedSelector `json:"seedSelector,omitempty" protobuf:"bytes,7,opt,name=seedSelector"`
 	// Type is the name of the provider.
+	// +required
 	Type string `json:"type" protobuf:"bytes,8,opt,name=type"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
@@ -108,6 +114,7 @@ type CloudProfileControlPlane struct {
 	// AllowZonePinning enables shoots to set spec.controlPlane.zones to explicitly pin
 	// their control plane to specific seed zones. Only set to true for providers where
 	// zone names are globally consistent across all users of the provider.
+	// +optional
 	AllowZonePinning bool `json:"allowZonePinning,omitempty" protobuf:"varint,1,opt,name=allowZonePinning"`
 }
 
@@ -134,10 +141,12 @@ type KubernetesSettings struct {
 // MachineImage defines the name and multiple versions of the machine image in any environment.
 type MachineImage struct {
 	// Name is the name of the image.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Versions contains versions, expiration dates and container runtimes of the machine image
 	// +patchMergeKey=version
 	// +patchStrategy=merge
+	// +required
 	Versions []MachineImageVersion `json:"versions" patchMergeKey:"version" patchStrategy:"merge" protobuf:"bytes,2,rep,name=versions"`
 	// UpdateStrategy is the update strategy to use for the machine image. Possible values are:
 	//  - patch: update to the latest patch version of the current minor version.
@@ -176,6 +185,7 @@ type MachineImageVersion struct {
 // ExpirableVersion contains a version with associated lifecycle information.
 type ExpirableVersion struct {
 	// Version is the version identifier.
+	// +required
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// ExpirationDate defines the time at which this version expires.
 	//
@@ -199,6 +209,7 @@ type ExpirableVersion struct {
 // and the time at which this classification becomes effective.
 type LifecycleStage struct {
 	// Classification is the category of this lifecycle stage (unavailable, preview, supported, deprecated, expired).
+	// +required
 	Classification VersionClassification `json:"classification" protobuf:"bytes,1,opt,name=classification,casttype=VersionClassification"`
 	// StartTime defines when this lifecycle stage becomes active.
 	// StartTime can be omitted for the first lifecycle stage, implying a start time in the past.
@@ -216,12 +227,16 @@ type CloudProfileMachineControllerManagerSettings struct {
 // MachineType contains certain properties of a machine type.
 type MachineType struct {
 	// CPU is the number of CPUs for this machine type.
+	// +required
 	CPU resource.Quantity `json:"cpu" protobuf:"bytes,1,opt,name=cpu"`
 	// GPU is the number of GPUs for this machine type.
+	// +required
 	GPU resource.Quantity `json:"gpu" protobuf:"bytes,2,opt,name=gpu"`
 	// Memory is the amount of memory for this machine type.
+	// +required
 	Memory resource.Quantity `json:"memory" protobuf:"bytes,3,opt,name=memory"`
 	// Name is the name of the machine type.
+	// +required
 	Name string `json:"name" protobuf:"bytes,4,opt,name=name"`
 	// Storage is the amount of storage associated with the root volume of this machine type.
 	// +optional
@@ -243,11 +258,13 @@ type MachineType struct {
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
 type MachineTypeStorage struct {
 	// Class is the class of the storage type.
+	// +required
 	Class string `json:"class" protobuf:"bytes,1,opt,name=class"`
 	// StorageSize is the storage size.
 	// +optional
 	StorageSize *resource.Quantity `json:"size,omitempty" protobuf:"bytes,2,opt,name=size"`
 	// Type is the type of the storage.
+	// +required
 	Type string `json:"type" protobuf:"bytes,3,opt,name=type"`
 	// MinSize is the minimal supported storage size.
 	// This overrides any other common minimum size configuration from `spec.volumeTypes[*].minSize`.
@@ -258,6 +275,7 @@ type MachineTypeStorage struct {
 // Region contains certain properties of a region.
 type Region struct {
 	// Name is a region name.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Zones is a list of availability zones in this region.
 	// +patchMergeKey=name
@@ -277,6 +295,7 @@ type Region struct {
 // AvailabilityZone is an availability zone.
 type AvailabilityZone struct {
 	// Name is an availability zone name.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// UnavailableMachineTypes is a list of machine type names that are not availability in this zone.
 	// +optional
@@ -289,8 +308,10 @@ type AvailabilityZone struct {
 // VolumeType contains certain properties of a volume type.
 type VolumeType struct {
 	// Class is the class of the volume type.
+	// +required
 	Class string `json:"class" protobuf:"bytes,1,opt,name=class"`
 	// Name is the name of the volume type.
+	// +required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 	// Usable defines if the volume type can be used for shoot clusters.
 	// +optional
@@ -313,6 +334,7 @@ type Bastion struct {
 // BastionMachineImage contains the bastions machine image properties
 type BastionMachineImage struct {
 	// Name of the machine image
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
 	// Version of the machine image
 	// +optional
@@ -322,6 +344,7 @@ type BastionMachineImage struct {
 // BastionMachineType contains the bastions machine type properties
 type BastionMachineType struct {
 	// Name of the machine type
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
 }
 
@@ -353,6 +376,7 @@ type KubernetesStatus struct {
 // MachineImageStatus contains the status of a machine image and its version classifications.
 type MachineImageStatus struct {
 	// Name matches the name of the MachineImage the status is represented of.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
 	// Versions contains the statuses of the machine image versions.
 	// +optional
@@ -362,8 +386,10 @@ type MachineImageStatus struct {
 // ExpirableVersionStatus defines the current status of an expirable version.
 type ExpirableVersionStatus struct {
 	// Version is the version identifier.
+	// +required
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// Classification reflects the current state in the classification lifecycle.
+	// +required
 	Classification VersionClassification `json:"classification" protobuf:"bytes,2,opt,name=classification,casttype=VersionClassification"`
 }
 
@@ -417,6 +443,7 @@ const (
 // InPlaceUpdates contains the configuration for in-place updates for a machine image version.
 type InPlaceUpdates struct {
 	// Supported indicates whether in-place updates are supported for this machine image version.
+	// +required
 	Supported bool `json:"supported" protobuf:"varint,1,opt,name=supported"`
 	// MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
 	// +optional
@@ -425,7 +452,9 @@ type InPlaceUpdates struct {
 
 // CapabilityDefinition contains the Name and Values of a capability.
 type CapabilityDefinition struct {
-	Name   string           `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// +required
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// +required
 	Values CapabilityValues `json:"values" protobuf:"bytes,2,rep,name=values"`
 }
 

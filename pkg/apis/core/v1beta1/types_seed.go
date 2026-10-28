@@ -19,11 +19,14 @@ import (
 type Seed struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec contains the specification of this installation.
+	// +optional
 	Spec SeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status contains the status of this installation.
+	// +optional
 	Status SeedStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -60,10 +63,13 @@ type SeedSpec struct {
 	// +optional
 	Backup *Backup `json:"backup,omitempty" protobuf:"bytes,1,opt,name=backup"`
 	// DNS contains DNS-relevant information about this seed cluster.
+	// +required
 	DNS SeedDNS `json:"dns" protobuf:"bytes,2,opt,name=dns"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
+	// +required
 	Networks SeedNetworks `json:"networks" protobuf:"bytes,3,opt,name=networks"`
 	// Provider defines the provider type and region for this Seed cluster.
+	// +required
 	Provider SeedProvider `json:"provider" protobuf:"bytes,4,opt,name=provider"`
 
 	// SecretRef is tombstoned to show why 5 is reserved protobuf tag.
@@ -135,6 +141,7 @@ type SeedStatus struct {
 // Backup contains the object store configuration for backups for shoot (currently only etcd).
 type Backup struct {
 	// Provider is a provider name. This field is immutable.
+	// +required
 	Provider string `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	// +optional
@@ -174,8 +181,10 @@ type SeedDNS struct {
 // SeedDNSProviderConfig configures a DNS provider.
 type SeedDNSProviderConfig struct {
 	// Type is the type of the DNS provider.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// Domain is the domain name to be used by the DNS provider.
+	// +required
 	Domain string `json:"domain" protobuf:"bytes,2,opt,name=domain"`
 	// Zone is the zone where the DNS records are managed.
 	// +optional
@@ -184,12 +193,14 @@ type SeedDNSProviderConfig struct {
 	// authentication with the DNS provider.
 	// Supported referenced resources are v1.Secrets and
 	// security.gardener.cloud/v1alpha1.WorkloadIdentity
+	// +required
 	CredentialsRef corev1.ObjectReference `json:"credentialsRef" protobuf:"bytes,4,opt,name=credentialsRef"`
 }
 
 // SeedDNSProvider configures a DNSProvider for Seeds
 type SeedDNSProvider struct {
 	// Type describes the type of the dns-provider, for example `aws-route53`
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 
 	// SecretRef is tombstoned to show why 2 is reserved protobuf tag.
@@ -216,8 +227,10 @@ type Ingress struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+	// +required
 	Domain string `json:"domain" protobuf:"bytes,1,name=domain"`
 	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
+	// +required
 	Controller IngressController `json:"controller" protobuf:"bytes,2,name=controller"`
 }
 
@@ -225,6 +238,7 @@ type Ingress struct {
 type IngressController struct {
 	// Kind defines which kind of IngressController to use. At the moment only `nginx` is supported
 	// +kubebuilder:validation:Enum="nginx"
+	// +required
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// ProviderConfig specifies infrastructure specific configuration for the ingressController
 	// +optional
@@ -237,8 +251,10 @@ type SeedNetworks struct {
 	// +optional
 	Nodes *string `json:"nodes,omitempty" protobuf:"bytes,1,opt,name=nodes"`
 	// Pods is the CIDR of the pod network. This field is immutable.
+	// +required
 	Pods string `json:"pods" protobuf:"bytes,2,opt,name=pods"`
 	// Services is the CIDR of the service network. This field is immutable.
+	// +required
 	Services string `json:"services" protobuf:"bytes,3,opt,name=services"`
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	// +optional
@@ -267,11 +283,13 @@ type ShootNetworks struct {
 // SeedProvider defines the provider-specific information of this Seed cluster.
 type SeedProvider struct {
 	// Type is the name of the provider.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to Seed resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Region is a name of a region.
+	// +required
 	Region string `json:"region" protobuf:"bytes,3,opt,name=region"`
 	// Zones is the list of availability zones the seed cluster is deployed to.
 	// +optional
@@ -324,6 +342,7 @@ type SeedSettingZoneSelection struct {
 	// Mode controls the zone selection behavior.
 	// "Prefer" tries to match worker pool zones to seed zones, falling back to random selection on mismatch.
 	// "Enforce" requires worker pool zones to be present in the seed's zone list; scheduling fails otherwise.
+	// +required
 	Mode ZoneSelectionMode `json:"mode" protobuf:"bytes,1,opt,name=mode,casttype=ZoneSelectionMode"`
 }
 
@@ -351,6 +370,7 @@ type SeedSettingExcessCapacityReservation struct {
 // SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservationConfig struct {
 	// Resources specify the resource requests and limits of the excess-capacity-reservation pod.
+	// +required
 	Resources corev1.ResourceList `json:"resources" protobuf:"bytes,1,rep,name=resources,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
 	// +optional
@@ -364,6 +384,7 @@ type SeedSettingExcessCapacityReservationConfig struct {
 type SeedSettingScheduling struct {
 	// Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
 	// are not considered by the scheduler.
+	// +required
 	Visible bool `json:"visible" protobuf:"bytes,1,opt,name=visible"`
 }
 
@@ -400,6 +421,7 @@ type SeedSettingLoadBalancerServices struct {
 // multi-zonal setup.
 type SeedSettingLoadBalancerServicesZones struct {
 	// Name is the name of the zone as specified in seed.spec.provider.zones.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Annotations is a map of annotations that will be injected/merged into the zone-specific load balancer service object.
 	// +optional
@@ -422,6 +444,7 @@ type LoadBalancerServicesProxyProtocol struct {
 	// Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.
 	// The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
 	// Defaults to false.
+	// +required
 	Allowed bool `json:"allowed" protobuf:"bytes,1,opt,name=allowed"`
 }
 
@@ -441,6 +464,7 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 	// FeatureGates contains information about enabled feature gates.
 	// +optional
@@ -458,6 +482,7 @@ type SeedSettingVerticalPodAutoscaler struct {
 // seed.
 type SeedSettingPersistentVolumeClaimAutoscaler struct {
 	// Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the seed cluster.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 }
 
@@ -481,6 +506,7 @@ type SeedSettingDependencyWatchdogWeeder struct {
 	// Enabled controls whether the endpoint controller(weeder) of the dependency-watchdog should be enabled. This controller
 	// helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
 	// CrashLoopBackoff status and restarting them once their dependants become ready and available again.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
@@ -489,6 +515,7 @@ type SeedSettingDependencyWatchdogProber struct {
 	// Enabled controls whether the probe controller(prober) of the dependency-watchdog should be enabled. This controller
 	// scales down the kube-controller-manager, machine-controller-manager and cluster-autoscaler of shoot clusters in case their respective kube-apiserver is not
 	// reachable via its external ingress in order to avoid melt-down situations.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
@@ -497,12 +524,14 @@ type SeedSettingDependencyWatchdogProber struct {
 type SeedSettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
 	// These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
 // SeedTaint describes a taint on a seed.
 type SeedTaint struct {
 	// Key is the taint key to be applied to a seed.
+	// +required
 	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
 	// Value is the taint value corresponding to the taint key.
 	// +optional
@@ -530,8 +559,10 @@ type SeedVolume struct {
 // SeedVolumeProvider is a storage class provisioner type.
 type SeedVolumeProvider struct {
 	// Purpose is the purpose of this provider.
+	// +required
 	Purpose string `json:"purpose" protobuf:"bytes,1,opt,name=purpose"`
 	// Name is the name of the storage class provisioner type.
+	// +required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 }
 

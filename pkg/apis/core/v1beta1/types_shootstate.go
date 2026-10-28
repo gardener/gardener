@@ -56,10 +56,13 @@ type ShootStateSpec struct {
 // GardenerResourceData holds the data which is used to generate resources, deployed in the Shoot's control plane.
 type GardenerResourceData struct {
 	// Name of the object required to generate resources
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Type of the object
+	// +required
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// Data contains the payload required to generate resources
+	// +required
 	Data runtime.RawExtension `json:"data" protobuf:"bytes,3,opt,name=data"`
 	// Labels are labels of the object
 	// +optional
@@ -70,6 +73,7 @@ type GardenerResourceData struct {
 // namespace on the Seed cluster.
 type ExtensionResourceState struct {
 	// Kind (type) of the extension custom resource
+	// +required
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Name of the extension custom resource
 	// +optional
@@ -90,5 +94,6 @@ type ResourceData struct {
 	autoscalingv1.CrossVersionObjectReference `json:",inline" protobuf:"bytes,1,opt,name=ref"`
 
 	// Data of the resource
+	// +required
 	Data runtime.RawExtension `json:"data" protobuf:"bytes,2,opt,name=data"`
 }

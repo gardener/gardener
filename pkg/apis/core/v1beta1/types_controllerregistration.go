@@ -16,10 +16,12 @@ import (
 type ControllerRegistration struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec contains the specification of this registration.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +optional
 	Spec ControllerRegistrationSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
@@ -61,8 +63,10 @@ const (
 // kind (aws-route53, gcp, auditlog, ...).
 type ControllerResource struct {
 	// Kind is the resource kind, for example "OperatingSystemConfig".
+	// +required
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Type is the resource type, for example "coreos" or "ubuntu".
+	// +required
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 
 	// GloballyEnabled is tombstoned to show why 3 is reserved protobuf tag.
@@ -106,6 +110,7 @@ type ControllerResource struct {
 // DeploymentRef contains information about `ControllerDeployment` references.
 type DeploymentRef struct {
 	// Name is the name of the `ControllerDeployment` that is being referred to.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
