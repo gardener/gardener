@@ -345,6 +345,36 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
+				Entry("internal domain migration in progress",
+					func() {
+						botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: apiServerNetwork,
+						ExtraDNSNames: []string{
+							controlPlaneNamespace,
+							"api." + internalClusterDomain,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+							"api.prior-internal.foo.bar.com",
+						},
+					},
+				),
+				Entry("internal domain disabled during the migration",
+					func() {
+						botanist.Shoot.InternalClusterDomain = nil
+						botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: apiServerNetwork,
+						ExtraDNSNames: []string{
+							controlPlaneNamespace,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+							"api.prior-internal.foo.bar.com",
+						},
+					},
+				),
 			)
 		})
 

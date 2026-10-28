@@ -146,6 +146,10 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 		dnsNames = append(dnsNames, *b.Shoot.PriorExternalClusterDomain, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorExternalClusterDomain))
 	}
 
+	if b.Shoot.PriorInternalClusterDomain != nil {
+		dnsNames = append(dnsNames, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorInternalClusterDomain))
+	}
+
 	return kubeapiserver.ServerCertificateConfig{
 		ExtraIPAddresses: ipAddresses,
 		ExtraDNSNames:    dnsNames,

@@ -143,6 +143,24 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Expect(configMap.Data).To(HaveKeyWithValue(resourcemanagerconfigv1alpha1.HostsConfigMapKey, "api.external.foo.bar"))
 		})
 
+		It("should also use the prior internal domain while a domain migration is running", func() {
+			botanist.Shoot.InternalClusterDomain = new("internal.foo.bar")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar")
+
+			Expect(botanist.ReconcileIstioInternalLoadBalancingConfigMap(context.TODO())).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+			Expect(configMap.Data).To(HaveKeyWithValue(resourcemanagerconfigv1alpha1.HostsConfigMapKey, "api.internal.foo.bar,api.prior-internal.foo.bar"))
+		})
+
+		It("should use the external and the prior internal domain if the internal domain is disabled during the migration", func() {
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar")
+
+			Expect(botanist.ReconcileIstioInternalLoadBalancingConfigMap(context.TODO())).To(Succeed())
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+			Expect(configMap.Data).To(HaveKeyWithValue(resourcemanagerconfigv1alpha1.HostsConfigMapKey, "api.external.foo.bar,api.prior-internal.foo.bar"))
+		})
+
 		It("should delete the config map if the shoot has no domain", func() {
 			Expect(botanist.SeedClientSet.Client().Create(context.TODO(), configMap)).To(Succeed())
 
@@ -209,6 +227,33 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKey{Namespace: botanist.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, gateway)).To(Succeed())
 			Expect(gateway.Spec.Servers).NotTo(BeEmpty())
 			Expect(gateway.Spec.Servers[0].Hosts).To(ConsistOf("api.internal.foo.bar", "api.external.foo.bar", "api.prior.foo.bar"))
+		})
+
+		It("should route the prior internal domain while a domain migration is running", func() {
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar")
+
+			Expect(botanist.DefaultKubeAPIServerService().Deploy(context.TODO())).To(Succeed())
+			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(context.TODO())).To(Succeed())
+
+			gateway := &istionetworkingv1beta1.Gateway{}
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKey{Namespace: botanist.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, gateway)).To(Succeed())
+			Expect(gateway.Spec.Servers).NotTo(BeEmpty())
+			Expect(gateway.Spec.Servers[0].Hosts).To(ConsistOf("api.internal.foo.bar", "api.external.foo.bar", "api.prior-internal.foo.bar"))
+		})
+
+		It("should route the prior internal domain if the internal domain is disabled during the migration", func() {
+			botanist.Shoot.InternalClusterDomain = nil
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar")
+
+			Expect(botanist.DefaultKubeAPIServerService().Deploy(context.TODO())).To(Succeed())
+			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(context.TODO())).To(Succeed())
+
+			gateway := &istionetworkingv1beta1.Gateway{}
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKey{Namespace: botanist.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, gateway)).To(Succeed())
+			Expect(gateway.Spec.Servers).NotTo(BeEmpty())
+			Expect(gateway.Spec.Servers[0].Hosts).To(ConsistOf("api.external.foo.bar", "api.prior-internal.foo.bar"))
 		})
 
 		It("should only route the external domain if the shoot has no internal domain", func() {

@@ -225,6 +225,10 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				values.Hosts = append(values.Hosts, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorExternalClusterDomain))
 			}
 
+			if b.Shoot.PriorInternalClusterDomain != nil {
+				values.Hosts = append(values.Hosts, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorInternalClusterDomain))
+			}
+
 			return values
 		},
 	)
@@ -251,6 +255,9 @@ func (b *Botanist) ReconcileIstioInternalLoadBalancingConfigMap(ctx context.Cont
 	var hosts []string
 	if b.Shoot.InternalClusterDomain != nil || b.Shoot.ExternalClusterDomain != nil {
 		hosts = append(hosts, b.Shoot.ComputeOutOfClusterAPIServerAddress(true))
+	}
+	if b.Shoot.PriorInternalClusterDomain != nil {
+		hosts = append(hosts, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorInternalClusterDomain))
 	}
 
 	return kubeapiserverexposure.ReconcileIstioInternalLoadBalancingConfigMap(
