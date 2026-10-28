@@ -63,6 +63,33 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              components:
+                description: |-
+                  Components is the list of extension-managed components and their resolved versions. It is populated
+                  by gardenlet from the shoot's pinned component versions and the matching ExtensionProfile.
+                items:
+                  description: |-
+                    ExtensionComponent carries the resolved version and optional provider configuration of a single
+                    extension-managed component.
+                  properties:
+                    name:
+                      description: Name is the name of the component.
+                      type: string
+                    providerConfig:
+                      description: |-
+                        ProviderConfig is optional, opaque, extension-owned per-version configuration copied verbatim from
+                        the matching ExtensionProfile version entry.
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    version:
+                      description: Version is the resolved concrete version of the
+                        component.
+                      type: string
+                  required:
+                  - name
+                  - version
+                  type: object
+                type: array
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object

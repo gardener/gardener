@@ -21,6 +21,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&CloudProfileList{}, func(obj interface{}) { SetObjectDefaults_CloudProfileList(obj.(*CloudProfileList)) })
 	scheme.AddTypeDefaultingFunc(&ControllerRegistration{}, func(obj interface{}) { SetObjectDefaults_ControllerRegistration(obj.(*ControllerRegistration)) })
 	scheme.AddTypeDefaultingFunc(&ControllerRegistrationList{}, func(obj interface{}) { SetObjectDefaults_ControllerRegistrationList(obj.(*ControllerRegistrationList)) })
+	scheme.AddTypeDefaultingFunc(&ExtensionProfile{}, func(obj interface{}) { SetObjectDefaults_ExtensionProfile(obj.(*ExtensionProfile)) })
+	scheme.AddTypeDefaultingFunc(&ExtensionProfileList{}, func(obj interface{}) { SetObjectDefaults_ExtensionProfileList(obj.(*ExtensionProfileList)) })
 	scheme.AddTypeDefaultingFunc(&NamespacedCloudProfile{}, func(obj interface{}) { SetObjectDefaults_NamespacedCloudProfile(obj.(*NamespacedCloudProfile)) })
 	scheme.AddTypeDefaultingFunc(&NamespacedCloudProfileList{}, func(obj interface{}) { SetObjectDefaults_NamespacedCloudProfileList(obj.(*NamespacedCloudProfileList)) })
 	scheme.AddTypeDefaultingFunc(&Project{}, func(obj interface{}) { SetObjectDefaults_Project(obj.(*Project)) })
@@ -78,6 +80,17 @@ func SetObjectDefaults_ControllerRegistrationList(in *ControllerRegistrationList
 	for i := range in.Items {
 		a := &in.Items[i]
 		SetObjectDefaults_ControllerRegistration(a)
+	}
+}
+
+func SetObjectDefaults_ExtensionProfile(in *ExtensionProfile) {
+	SetDefaults_ExtensionProfile(in)
+}
+
+func SetObjectDefaults_ExtensionProfileList(in *ExtensionProfileList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_ExtensionProfile(a)
 	}
 }
 

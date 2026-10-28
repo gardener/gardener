@@ -44,6 +44,10 @@ func (c *FakeCoreV1beta1) ExposureClasses() v1beta1.ExposureClassInterface {
 	return newFakeExposureClasses(c)
 }
 
+func (c *FakeCoreV1beta1) ExtensionProfiles() v1beta1.ExtensionProfileInterface {
+	return newFakeExtensionProfiles(c)
+}
+
 func (c *FakeCoreV1beta1) InternalSecrets(namespace string) v1beta1.InternalSecretInterface {
 	return newFakeInternalSecrets(c, namespace)
 }
