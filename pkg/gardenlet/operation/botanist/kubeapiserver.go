@@ -5,10 +5,12 @@
 package botanist
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -282,7 +284,23 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname str
 	)
 	serviceAccountConfig.JWKSURI = jwksURI
 
+	// Tokens issued before a domain migration carry the default issuer of the prior domain. Without a domain migration,
+	// this is the current default issuer, which is already the issuer or an accepted issuer.
+	if priorIssuer := b.priorDefaultServiceAccountIssuer(); priorIssuer != "" &&
+		priorIssuer != serviceAccountConfig.Issuer &&
+		!slices.Contains(serviceAccountConfig.AcceptedIssuers, priorIssuer) {
+		serviceAccountConfig.AcceptedIssuers = append(serviceAccountConfig.AcceptedIssuers, priorIssuer)
+	}
+
 	return serviceAccountConfig, nil
+}
+
+func (b *Botanist) priorDefaultServiceAccountIssuer() string {
+	priorDomain := cmp.Or(b.Shoot.PriorInternalClusterDomain, b.Shoot.InternalClusterDomain, b.Shoot.PriorExternalClusterDomain, b.Shoot.ExternalClusterDomain)
+	if priorDomain == nil {
+		return ""
+	}
+	return "https://" + v1beta1helper.GetAPIServerDomain(*priorDomain)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
