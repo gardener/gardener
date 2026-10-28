@@ -12,6 +12,7 @@ import (
 	bastionmutator "github.com/gardener/gardener/plugin/pkg/bastion/mutator"
 	bastionvalidator "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
+	extensionprofilevalidator "github.com/gardener/gardener/plugin/pkg/extensionprofile/validator"
 	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/extensionlabels"
@@ -68,4 +69,5 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootvpa.Register(plugins)
 	shootresourcereservation.Register(plugins)
 	backupbucketvalidator.Register(plugins)
+	extensionprofilevalidator.Register(plugins)
 }
