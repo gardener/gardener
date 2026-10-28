@@ -108,25 +108,39 @@ Afterwards, the Gardener resources will be deployed into the cluster.
 
 ## Developing Gardener
 
-```bash
-make gardener-dev
-```
+The command `make gardener-up` from the previous section is an alias for `make operator-up garden-up seed-up`.
+These build targets use [Skaffold](https://skaffold.dev/) to build images, push them to the local registry, insert their references into Helm values or Kubernetes manifests, and apply the resulting configuration to the cluster through Helm or kubectl.
 
-This is similar to `make gardener-up` but additionally starts a [skaffold dev loop](https://skaffold.dev/docs/workflows/dev/).
-After the initial deployment, skaffold starts watching source files.
-Once it has detected changes, press any key to trigger a new build and deployment of the changed components.
+However, the `make` targets that build the images of the components are not necessarily the same as the ones that deploy them.
+For example, `make operator-up` uses Skaffold to build and deploy the `gardener-operator` through Helm.
+Images for other components such as the `gardener-controller-manager` are also built at this stage, but those components are not deployed yet. Their image references are passed into the operator’s image vector.
+`make garden-up` then creates the Garden resource. The `gardener-operator` reconciles it and deploys the Gardener components using those previously defined image references.
 
-Tip: you can set the `SKAFFOLD_MODULE` environment variable to select specific modules of the skaffold configuration (see [`skaffold.yaml`](../../skaffold.yaml)) that skaffold should watch, build, and deploy.
-This significantly reduces turnaround times during development.
+Therefore, to update a component during a local development cycle, one has to use the `make` target that rebuilds the image of the component, which sometimes is not the same `make` target as the one that does the initial deployment.
+Refer to the following table to see which `make` targets build the images of which components, and when the initial deployments of these components happen.
 
-For example, if you want to develop changes to gardenlet:
+| Target | Builds | Deploys |
+|---|---|---|
+| `make kind-up` | Local cloud-controller-manager, provider-local loadbalancer image (configured for the runtime cloud-controller-manager) | Kubernetes runtime cluster, `cloud-controller-manager`, `calico-node`, `calico-kube-controllers`, `metrics-server`, local DNS and registry containers |
+| `make operator-up` | `gardener-operator`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, `gardener-resource-manager`, `gardener-extension-provider-local`, `gardener-extension-admission-local`, `cloud-controller-manager-local`, `machine-controller-manager-provider-local` | `gardener-operator` |
+| `make garden-up` | Nothing | Via gardener-operator: `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, `gardener-resource-manager`, `gardener-dashboard`, `gardener-discovery-server`, `virtual-garden-etcd-main`, `virtual-garden-etcd-events`, `virtual-garden-kube-apiserver`, `virtual-garden-kube-controller-manager` |
+| `make seed-up` | `gardenlet`, `gardener-resource-manager`, `gardener-node-agent`, provider-local node/loadbalancer images | `gardenlet` (bootstrapped by gardener-operator) and garden configuration (projects, credentials, cloud profiles). Gardenlet also deploys `gardener-resource-manager` if the Seed cluster differs from the garden runtime cluster. |
 
-```bash
-# initial deployment of all components
-make gardener-up
-# start iterating on gardenlet without deploying other components
-make gardener-dev SKAFFOLD_MODULE=gardenlet
-```
+### Build Details
+
+[Skaffold](https://skaffold.dev/) orchestrates image builds, registry pushes, and deployment, inserting the built image references into the deployment configuration.
+It uses [ko](https://ko.build/) to compile Go binaries and package them as container images.
+[Helm](https://helm.sh/) renders parameterized charts and applies the resulting Kubernetes resources.
+[Kustomize](https://kustomize.io/) assembles Kubernetes manifests from bases, patches, and scenario-specific overlays; kubectl applies those manifests to the cluster.
+The Makefile invokes shell scripts that select the scenario and run these tools along the following paths:
+
+| Target | Build/deployment path |
+|---|---|
+| `make operator-up` | [`Makefile`](../../Makefile) → [`dev-setup/operator.sh`](../../dev-setup/operator.sh) → Skaffold ([`dev-setup/skaffold-operator.yaml`](../../dev-setup/skaffold-operator.yaml)) → Helm for gardener-operator; Kustomize rendering + kubectl apply for Extension resources |
+| `make garden-up` | [`Makefile`](../../Makefile) → [`dev-setup/garden.sh`](../../dev-setup/garden.sh) → `kubectl apply -k` ([`dev-setup/garden/overlays`](../../dev-setup/garden/overlays)) → `Garden` resource → wait for gardener-operator reconciliation |
+| `make seed-up` | [`Makefile`](../../Makefile) → [`dev-setup/seed.sh`](../../dev-setup/seed.sh) → Skaffold ([`dev-setup/skaffold-seed.yaml`](../../dev-setup/skaffold-seed.yaml)) → Kustomize rendering + kubectl apply → garden configuration and `Gardenlet` resource → gardener-operator applies the gardenlet Helm chart on initial deployment → wait for Seed readiness |
+
+Gardener-operator reconciles the `Gardenlet` resource to perform the initial deployment. Once the Seed is registered, gardenlet reconciles subsequent changes to its own deployment.
 
 ## Debugging Gardener
 
