@@ -1820,7 +1820,8 @@ type Worker struct {
 	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
 	// +optional
 	MachineControllerManagerSettings *MachineControllerManagerSettings `json:"machineControllerManager,omitempty" protobuf:"bytes,19,opt,name=machineControllerManager"`
-	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
+	// Sysctls is a map of kernel settings to apply on all machines in this worker pool. If set, it fully
+	// overrides the global `.spec.provider.workersSettings.sysctls` for this pool; the two maps are not merged.
 	// +optional
 	Sysctls map[string]string `json:"sysctls,omitempty" protobuf:"bytes,20,rep,name=sysctls"`
 	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
@@ -2078,6 +2079,10 @@ type WorkersSettings struct {
 	// SSHAccess contains settings regarding ssh access to the worker nodes.
 	// +optional
 	SSHAccess *SSHAccess `json:"sshAccess,omitempty" protobuf:"bytes,1,opt,name=sshAccess"`
+	// Sysctls is a map of kernel settings to apply on all worker pools. It can be overridden per worker pool via
+	// `.spec.provider.workers[].sysctls` (the per-pool value fully replaces this global value, there is no merge).
+	// +optional
+	Sysctls map[string]string `json:"sysctls,omitempty" protobuf:"bytes,2,rep,name=sysctls"`
 }
 
 // SSHAccess contains settings regarding ssh access to the worker nodes.

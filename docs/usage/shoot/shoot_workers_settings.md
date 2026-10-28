@@ -1,6 +1,6 @@
 ---
 title: Shoot Worker Nodes Settings
-description: Configuring SSH Access through '.spec.provider.workersSettings`
+description: Configuring SSH Access and sysctls through '.spec.provider.workersSettings`
 ---
 
 # Shoot Worker Nodes Settings
@@ -21,4 +21,28 @@ spec:
     workersSettings:
       sshAccess:
         enabled: false
+```
+
+## Sysctls
+
+`sysctls` is a map of kernel settings that is applied to all worker pools, so the same settings do not have to be repeated in every `.spec.provider.workers[].sysctls` entry.
+
+A worker pool can still define its own `.spec.provider.workers[].sysctls`. If it does, the per-pool value **fully overrides** the global one for that pool — the two maps are **not merged** (this follows the same pattern as the kubelet configuration, where `.spec.provider.workers[].kubernetes.kubelet` overrides `.spec.kubernetes.kubelet`). Worker pools that do not set their own `sysctls` inherit the global value.
+
+### Example Usage in a `Shoot`
+
+```yaml
+spec:
+  provider:
+    workersSettings:
+      sysctls:
+        net.ipv4.tcp_wmem: "4096 131072 16777216"
+        net.ipv4.tcp_rmem: "4096 131072 16777216"
+    workers:
+    - name: pool-with-override
+      # This pool ignores the global sysctls above and uses only these.
+      sysctls:
+        vm.swappiness: "10"
+    - name: pool-inheriting-global
+      # This pool has no sysctls of its own and inherits the global settings.
 ```
