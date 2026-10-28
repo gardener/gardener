@@ -25,11 +25,13 @@ const ControlPlaneResource = "ControlPlane"
 
 // ControlPlane is a specification for a ControlPlane resource.
 type ControlPlane struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Specification of the ControlPlane.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec ControlPlaneSpec `json:"spec"`
 	// +optional
 	Status ControlPlaneStatus `json:"status,omitempty"`
@@ -69,8 +71,10 @@ type ControlPlaneSpec struct {
 	// +optional
 	InfrastructureProviderStatus *runtime.RawExtension `json:"infrastructureProviderStatus,omitempty"`
 	// Region is the region of this control plane. This field is immutable.
+	// +required
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
+	// +required
 	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 
