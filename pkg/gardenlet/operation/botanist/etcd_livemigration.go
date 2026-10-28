@@ -311,7 +311,7 @@ func (b *Botanist) DeployEtcdForLiveMigrationPhase(ctx context.Context, phaseRep
 	etcdMain := b.Shoot.Components.ControlPlane.EtcdMain
 	lmValues := etcdMain.GetValues().LiveMigration
 	if lmValues == nil {
-		return fmt.Errorf("DeployEtcdForLiveMigrationPhase called without LiveMigration values — this function is only valid on the destination gardenlet")
+		return fmt.Errorf("etcd-main has no LiveMigration values set")
 	}
 
 	var (
