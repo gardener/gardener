@@ -48,12 +48,15 @@ type ManagedSeedSetSpec struct {
 	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
 	// Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
 	// It must match the ManagedSeeds and Shoots template's labels. This field is immutable.
+	// +required
 	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 	// Template describes the ManagedSeed that will be created if insufficient replicas are detected.
 	// Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
+	// +required
 	Template ManagedSeedTemplate `json:"template" protobuf:"bytes,3,opt,name=template"`
 	// ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed.
 	// Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
+	// +required
 	ShootTemplate gardencorev1beta1.ShootTemplate `json:"shootTemplate" protobuf:"bytes,4,rep,name=shootTemplate"`
 	// UpdateStrategy specifies the UpdateStrategy that will be
 	// employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
@@ -100,24 +103,32 @@ type RollingUpdateStrategy struct {
 type ManagedSeedSetStatus struct {
 	// ObservedGeneration is the most recent generation observed for this ManagedSeedSet. It corresponds to the
 	// ManagedSeedSet's generation, which is updated on mutation by the API Server.
+	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 	// Replicas is the number of replicas (ManagedSeeds and their corresponding Shoots) created by the ManagedSeedSet controller.
+	// +required
 	Replicas int32 `json:"replicas" protobuf:"varint,2,opt,name=replicas"`
 	// ReadyReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller that have a Ready Condition.
+	// +optional
 	ReadyReplicas int32 `json:"readyReplicas,omitempty" protobuf:"varint,3,opt,name=readyReplicas"`
 	// NextReplicaNumber is the ordinal number that will be assigned to the next replica of the ManagedSeedSet.
+	// +optional
 	NextReplicaNumber int32 `json:"nextReplicaNumber,omitempty" protobuf:"bytes,4,opt,name=nextReplicaNumber"`
 	// CurrentReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
 	// indicated by CurrentRevision.
+	// +optional
 	CurrentReplicas int32 `json:"currentReplicas,omitempty" protobuf:"varint,5,opt,name=currentReplicas"`
 	// UpdatedReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
 	// indicated by UpdateRevision.
+	// +optional
 	UpdatedReplicas int32 `json:"updatedReplicas,omitempty" protobuf:"varint,6,opt,name=updatedReplicas"`
 	// CurrentRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with smaller
 	// ordinal numbers during updates.
+	// +optional
 	CurrentRevision string `json:"currentRevision,omitempty" protobuf:"bytes,7,opt,name=currentRevision"`
 	// UpdateRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with larger
 	// ordinal numbers during updates
+	// +optional
 	UpdateRevision string `json:"updateRevision,omitempty" protobuf:"bytes,8,opt,name=updateRevision"`
 	// CollisionCount is the count of hash collisions for the ManagedSeedSet. The ManagedSeedSet controller
 	// uses this field as a collision avoidance mechanism when it needs to create the name for the
@@ -160,10 +171,13 @@ const (
 // PendingReplica contains information about a replica that is currently pending creation, update, or deletion.
 type PendingReplica struct {
 	// Name is the replica name.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Reason is the reason for the replica to be pending.
+	// +required
 	Reason PendingReplicaReason `json:"reason" protobuf:"bytes,2,opt,name=reason,casttype=PendingReplicaReason"`
 	// Since is the moment in time since the replica is pending with the specified reason.
+	// +required
 	Since metav1.Time `json:"since" protobuf:"bytes,3,opt,name=since"`
 	// Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
 	// Only applicable if Reason is ShootReconciling or ShootDeleting.

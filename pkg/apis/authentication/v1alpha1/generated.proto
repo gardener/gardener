@@ -19,12 +19,15 @@ option go_package = "github.com/gardener/gardener/pkg/apis/authentication/v1alph
 // for a Shoot cluster.
 message AdminKubeconfigRequest {
   // Standard object metadata.
+  // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec is the specification of the AdminKubeconfigRequest.
+  // +required
   optional AdminKubeconfigRequestSpec spec = 2;
 
   // Status is the status of the AdminKubeconfigRequest.
+  // +required
   optional AdminKubeconfigRequestStatus status = 3;
 }
 
@@ -42,9 +45,11 @@ message AdminKubeconfigRequestSpec {
 // the kubeconfig and expiration of the credential.
 message AdminKubeconfigRequestStatus {
   // Kubeconfig contains the kubeconfig with cluster-admin privileges for the shoot cluster.
+  // +required
   optional bytes kubeconfig = 1;
 
   // ExpirationTimestamp is the expiration timestamp of the returned credential.
+  // +required
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 
@@ -52,12 +57,15 @@ message AdminKubeconfigRequestStatus {
 // for a Shoot cluster.
 message ViewerKubeconfigRequest {
   // Standard object metadata.
+  // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec is the specification of the ViewerKubeconfigRequest.
+  // +required
   optional ViewerKubeconfigRequestSpec spec = 2;
 
   // Status is the status of the ViewerKubeconfigRequest.
+  // +required
   optional ViewerKubeconfigRequestStatus status = 3;
 }
 
@@ -75,9 +83,11 @@ message ViewerKubeconfigRequestSpec {
 // the kubeconfig and expiration of the credential.
 message ViewerKubeconfigRequestStatus {
   // Kubeconfig contains the kubeconfig with viewer privileges (excluding Secrets) for the shoot cluster.
+  // +required
   optional bytes kubeconfig = 1;
 
   // ExpirationTimestamp is the expiration timestamp of the returned credential.
+  // +required
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 

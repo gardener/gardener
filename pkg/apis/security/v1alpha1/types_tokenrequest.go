@@ -15,11 +15,14 @@ import (
 type TokenRequest struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec holds configuration settings for the requested token.
+	// +required
 	Spec TokenRequestSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status bears the issued token with additional information back to the client.
+	// +required
 	Status TokenRequestStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -36,22 +39,28 @@ type TokenRequestSpec struct {
 // ContextObject identifies the object the token is requested for.
 type ContextObject struct {
 	// Kind of the object the token is requested for. Valid kinds are 'Shoot', 'Seed', etc.
+	// +required
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// API version of the object the token is requested for.
+	// +required
 	APIVersion string `json:"apiVersion" protobuf:"bytes,2,opt,name=apiVersion"`
 	// Name of the object the token is requested for.
+	// +required
 	Name string `json:"name" protobuf:"bytes,3,opt,name=name"`
 	// Namespace of the object the token is requested for.
 	// +optional
 	Namespace *string `json:"namespace,omitempty" protobuf:"bytes,4,opt,name=namespace"`
 	// UID of the object the token is requested for.
+	// +required
 	UID types.UID `json:"uid" protobuf:"bytes,5,opt,name=uid,casttype=k8s.io/apimachinery/pkg/types.UID"`
 }
 
 // TokenRequestStatus bears the issued token with additional information back to the client.
 type TokenRequestStatus struct {
 	// Token is the issued token.
+	// +required
 	Token string `json:"token" protobuf:"bytes,1,opt,name=token"`
 	// ExpirationTimestamp is the time of expiration of the returned token.
+	// +required
 	ExpirationTimestamp metav1.Time `json:"expirationTimestamp" protobuf:"bytes,2,opt,name=expirationTimestamp"`
 }

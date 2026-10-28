@@ -66,12 +66,14 @@ type ManagedSeedSpec struct {
 
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
+	// +required
 	Gardenlet GardenletConfig `json:"gardenlet" protobuf:"bytes,3,opt,name=gardenlet"`
 }
 
 // Shoot identifies the Shoot that should be registered as Seed.
 type Shoot struct {
 	// Name is the name of the Shoot that will be registered as Seed.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
@@ -178,6 +180,7 @@ type ManagedSeedStatus struct {
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 	// ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
 	// ManagedSeed's generation, which is updated on mutation by the API Server.
+	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
 }
 
