@@ -58,11 +58,20 @@ var _ = Describe("PodMonitors", func() {
 									SourceLabels: []monitoringv1.LabelName{
 										"__tmp_kubernetes_pod_ip_ipv4",
 										"__tmp_kubernetes_pod_ip_ipv6_with_brackets",
+									},
+									Regex:       `(.*);(.*)`,
+									Action:      "replace",
+									Replacement: new(`$1$2`),
+									TargetLabel: "__tmp_kubernetes_pod_ip",
+								},
+								{
+									SourceLabels: []monitoringv1.LabelName{
+										"__tmp_kubernetes_pod_ip",
 										"__meta_kubernetes_pod_annotation_prometheus_io_port",
 									},
-									Regex:       `(.*);(.*);(.+)`,
+									Regex:       `(.+);(.+)`,
 									Action:      "replace",
-									Replacement: new(`$1$2:$3`),
+									Replacement: new(`$1:$2`),
 									TargetLabel: "__address__",
 								},
 								{
