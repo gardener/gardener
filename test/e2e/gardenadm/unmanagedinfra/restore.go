@@ -78,12 +78,11 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 
 			By("Wait until the Shoot is reconciled")
-			// TODO: Wait for the ControlPlaneHealthy, ObservabilityComponentsHealthy and SystemComponentsHealthy conditions as well when they are healthy.
-			// - ControlPlaneHealthy fails with: 'Missing required deployments: [vpa-admission-controller vpa-recommender vpa-updater]'
 			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
 			requiredConditions := []gardencorev1beta1.ConditionType{
 				gardencorev1beta1.GardenletReady,
 				gardencorev1beta1.ShootAPIServerAvailable,
+				gardencorev1beta1.ShootControlPlaneHealthy,
 				gardencorev1beta1.ShootObservabilityComponentsHealthy,
 				gardencorev1beta1.ShootEveryNodeReady,
 				gardencorev1beta1.ShootSystemComponentsHealthy,
