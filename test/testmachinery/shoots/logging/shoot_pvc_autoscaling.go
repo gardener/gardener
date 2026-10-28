@@ -183,6 +183,10 @@ func ensureDebugContainer(ctx context.Context, f *framework.ShootFramework, back
 		return "", fmt.Errorf("failed to find running pod for backend %q in namespace %q: %w", backend.name, shootNamespace, err)
 	}
 
+	if hasEphemeralContainer(pod, debugContainerName) {
+		return pod.Name, ephemeralContainerRunning(pod, debugContainerName)
+	}
+
 	dataVolumeName, err := findDataVolumeName(pod, backend)
 	if err != nil {
 		return "", err
@@ -207,9 +211,7 @@ func ensureDebugContainer(ctx context.Context, f *framework.ShootFramework, back
 		return "", fmt.Errorf("failed to add ephemeral debug container to pod %s/%s: %w", shootNamespace, pod.Name, err)
 	}
 
-	waitUntilEphemeralContainerRunning(ctx, f, shootNamespace, pod.Name, debugContainerName)
-
-	return pod.Name, nil
+	return pod.Name, ephemeralContainerRunning(pod, debugContainerName)
 }
 
 // findDataVolumeName returns the name of the pod volume that the backend container mounts at backend.dataDir, i.e. the
@@ -228,20 +230,25 @@ func findDataVolumeName(pod *corev1.Pod, backend logBackend) (string, error) {
 	return "", fmt.Errorf("could not find a volume mounted at %q in container %q of pod %s/%s", backend.dataDir, backend.containerName, pod.Namespace, pod.Name)
 }
 
-// waitUntilEphemeralContainerRunning waits until the ephemeral container with the given name reports a running state.
-func waitUntilEphemeralContainerRunning(ctx context.Context, f *framework.ShootFramework, namespace, podName, containerName string) {
-	Eventually(ctx, func() error {
-		pod := &corev1.Pod{}
-		if err := f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: namespace, Name: podName}, pod); err != nil {
-			return err
+// hasEphemeralContainer reports whether the pod spec already contains an ephemeral container with the given name.
+func hasEphemeralContainer(pod *corev1.Pod, containerName string) bool {
+	for _, ephemeralContainer := range pod.Spec.EphemeralContainers {
+		if ephemeralContainer.Name == containerName {
+			return true
 		}
-		for _, status := range pod.Status.EphemeralContainerStatuses {
-			if status.Name == containerName && status.State.Running != nil {
-				return nil
-			}
+	}
+	return false
+}
+
+// ephemeralContainerRunning returns nil if the ephemeral container with the given name reports a running state, or an
+// error otherwise so that the caller's Eventually can retry.
+func ephemeralContainerRunning(pod *corev1.Pod, containerName string) error {
+	for _, status := range pod.Status.EphemeralContainerStatuses {
+		if status.Name == containerName && status.State.Running != nil {
+			return nil
 		}
-		return fmt.Errorf("ephemeral container %q in pod %s/%s is not running yet", containerName, namespace, podName)
-	}).WithPolling(2 * time.Second).WithTimeout(pvcAutoscalerInitializationTimeout).Should(Succeed())
+	}
+	return fmt.Errorf("ephemeral container %q in pod %s/%s is not running yet", containerName, pod.Namespace, pod.Name)
 }
 
 func valiBackend() logBackend {
