@@ -268,6 +268,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -551,6 +552,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -837,6 +839,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -1452,6 +1455,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -1869,6 +1873,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -2225,6 +2230,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -2493,6 +2499,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -2781,6 +2788,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -3492,6 +3500,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -3983,6 +3992,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -4366,6 +4376,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -4583,6 +4594,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Hosts are the registry hosts.<br />It corresponds to the host fields in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#host-fields-in-the-toml-table-format for more information.</p>
 </td>
 </tr>
@@ -4904,6 +4916,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -5094,6 +5107,7 @@ string array
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be<br />triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.</p>
 </td>
 </tr>
@@ -5354,6 +5368,7 @@ object (keys:string, values:string)
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MachineImage contains logical information about the name and the version of the machie image that<br />should be used. The logical information must be mapped to the provider-specific information (e.g.,<br />AMIs, ...) by the provider itself.</p>
 </td>
 </tr>
@@ -5758,6 +5773,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -5793,6 +5809,7 @@ NamedResourceReference array
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MachineDeployments is a list of created machine deployments. It will be used to e.g. configure<br />the cluster-autoscaler properly.</p>
 </td>
 </tr>
