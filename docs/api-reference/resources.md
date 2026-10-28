@@ -52,6 +52,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Spec contains the specification of this managed resource.</p>
 </td>
 </tr>
@@ -63,6 +64,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Status contains the status of this managed resource.</p>
 </td>
 </tr>
@@ -221,6 +223,7 @@ Condition array
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p></p>
 </td>
 </tr>
@@ -232,6 +235,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -377,6 +381,7 @@ object (keys:string, values:string)
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Labels is a map of labels that were used during last update of the resource.</p>
 </td>
 </tr>
@@ -388,6 +393,7 @@ object (keys:string, values:string)
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Annotations is a map of annotations that were used during last update of the resource.</p>
 </td>
 </tr>

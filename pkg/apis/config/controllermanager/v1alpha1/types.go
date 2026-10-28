@@ -18,17 +18,22 @@ type ControllerManagerConfiguration struct {
 
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
 	// for the proxy server to use when communicating with the garden apiserver.
+	// +required
 	GardenClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"gardenClientConnection"`
 	// Controllers defines the configuration of the controllers.
+	// +required
 	Controllers ControllerManagerControllerConfiguration `json:"controllers"`
 	// LeaderElection defines the configuration of leader election client.
 	// +optional
 	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// +required
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
+	// +required
 	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
+	// +required
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
@@ -98,11 +103,13 @@ type ControllerManagerControllerConfiguration struct {
 	// +optional
 	SeedReferenceAllowlist *SeedReferenceAllowlistControllerConfiguration `json:"seedReferenceAllowlist,omitempty"`
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
+	// +required
 	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
 	// ShootQuota defines the configuration of the ShootQuota controller.
 	// +optional
 	ShootQuota *ShootQuotaControllerConfiguration `json:"shootQuota,omitempty"`
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
+	// +required
 	ShootHibernation ShootHibernationControllerConfiguration `json:"shootHibernation"`
 	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	// +optional
@@ -246,6 +253,7 @@ type ProjectControllerConfiguration struct {
 // QuotaConfiguration defines quota configurations.
 type QuotaConfiguration struct {
 	// Config is the corev1.ResourceQuota specification used for the project set-up.
+	// +required
 	Config corev1.ResourceQuota `json:"config"`
 	// ProjectSelector is an optional setting to select the projects considered for quotas.
 	// Defaults to empty LabelSelector, which matches all projects.
@@ -456,6 +464,7 @@ type ManagedSeedSetControllerConfiguration struct {
 	// +optional
 	MaxShootRetries *int32 `json:"maxShootRetries,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// +required
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
@@ -471,8 +480,10 @@ type ShootStateControllerConfiguration struct {
 // ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
 type ConditionThreshold struct {
 	// Type is the type of the condition to define the threshold for.
+	// +required
 	Type string `json:"type"`
 	// Duration is the duration how long the condition can stay in the progressing state.
+	// +required
 	Duration metav1.Duration `json:"duration"`
 }
 
@@ -489,8 +500,10 @@ type ServerConfiguration struct {
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
+	// +required
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
+	// +required
 	Port int32 `json:"port"`
 }
 

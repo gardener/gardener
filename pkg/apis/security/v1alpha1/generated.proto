@@ -19,12 +19,15 @@ option go_package = "github.com/gardener/gardener/pkg/apis/security/v1alpha1";
 // ContextObject identifies the object the token is requested for.
 message ContextObject {
   // Kind of the object the token is requested for. Valid kinds are 'Shoot', 'Seed', etc.
+  // +required
   optional string kind = 1;
 
   // API version of the object the token is requested for.
+  // +required
   optional string apiVersion = 2;
 
   // Name of the object the token is requested for.
+  // +required
   optional string name = 3;
 
   // Namespace of the object the token is requested for.
@@ -32,6 +35,7 @@ message ContextObject {
   optional string namespace = 4;
 
   // UID of the object the token is requested for.
+  // +required
   optional string uid = 5;
 }
 
@@ -43,12 +47,14 @@ message CredentialsBinding {
 
   // Provider defines the provider type of the CredentialsBinding.
   // This field is immutable.
+  // +required
   optional CredentialsBindingProvider provider = 2;
 
   // CredentialsRef is a reference to a resource holding the credentials.
   // Accepted resources are core/v1.Secret, core.gardener.cloud/v1beta1.InternalSecret, and
   // security.gardener.cloud/v1alpha1.WorkloadIdentity.
   // This field is immutable.
+  // +required
   optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 3;
 
   // Quotas is a list of references to Quota objects in the same or another namespace.
@@ -70,12 +76,14 @@ message CredentialsBindingList {
 // CredentialsBindingProvider defines the provider type of the CredentialsBinding.
 message CredentialsBindingProvider {
   // Type is the type of the provider.
+  // +required
   optional string type = 1;
 }
 
 // TargetSystem represents specific configurations for the system that will accept the JWTs.
 message TargetSystem {
   // Type is the type of the target system.
+  // +required
   optional string type = 1;
 
   // ProviderConfig is the configuration passed to extension resource.
@@ -86,12 +94,15 @@ message TargetSystem {
 // TokenRequest is a resource that is used to request WorkloadIdentity tokens.
 message TokenRequest {
   // Standard object metadata.
+  // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec holds configuration settings for the requested token.
+  // +required
   optional TokenRequestSpec spec = 2;
 
   // Status bears the issued token with additional information back to the client.
+  // +required
   optional TokenRequestStatus status = 3;
 }
 
@@ -109,9 +120,11 @@ message TokenRequestSpec {
 // TokenRequestStatus bears the issued token with additional information back to the client.
 message TokenRequestStatus {
   // Token is the issued token.
+  // +required
   optional string token = 1;
 
   // ExpirationTimestamp is the time of expiration of the returned token.
+  // +required
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 
@@ -126,9 +139,11 @@ message WorkloadIdentity {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec configures the JSON Web Token issued by the Gardener API server.
+  // +required
   optional WorkloadIdentitySpec spec = 2;
 
   // Status contain the latest observed status of the WorkloadIdentity.
+  // +required
   optional WorkloadIdentityStatus status = 3;
 }
 
@@ -146,15 +161,18 @@ message WorkloadIdentityList {
 message WorkloadIdentitySpec {
   // Audiences specify the list of recipients that the JWT is intended for.
   // The values of this field will be set in the 'aud' claim.
+  // +required
   repeated string audiences = 1;
 
   // TargetSystem represents specific configurations for the system that will accept the JWTs.
+  // +required
   optional TargetSystem targetSystem = 2;
 }
 
 // WorkloadIdentityStatus contain the latest observed status of the WorkloadIdentity.
 message WorkloadIdentityStatus {
   // Sub contains the computed value of the subject that is going to be set in JWTs 'sub' claim.
+  // +required
   optional string sub = 1;
 }
 
