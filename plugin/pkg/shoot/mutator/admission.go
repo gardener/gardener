@@ -36,6 +36,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -54,6 +55,7 @@ type MutateShoot struct {
 	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
 	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
 	seedLister                   gardencorev1beta1listers.SeedLister
+	extensionProfileLister       gardencorev1beta1listers.ExtensionProfileLister
 	readyFunc                    admission.ReadyFunc
 }
 
@@ -87,11 +89,15 @@ func (m *MutateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInforme
 	seedInformer := f.Core().V1beta1().Seeds()
 	m.seedLister = seedInformer.Lister()
 
+	extensionProfileInformer := f.Core().V1beta1().ExtensionProfiles()
+	m.extensionProfileLister = extensionProfileInformer.Lister()
+
 	readyFuncs = append(
 		readyFuncs,
 		cloudProfileInformer.Informer().HasSynced,
 		namespacedCloudProfileInformer.Informer().HasSynced,
 		seedInformer.Informer().HasSynced,
+		extensionProfileInformer.Informer().HasSynced,
 	)
 }
 
@@ -105,6 +111,9 @@ func (m *MutateShoot) ValidateInitialization() error {
 	}
 	if m.seedLister == nil {
 		return errors.New("missing seed lister")
+	}
+	if m.extensionProfileLister == nil {
+		return errors.New("missing extensionProfile lister")
 	}
 	return nil
 }
@@ -198,6 +207,10 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	allErrs = append(allErrs, mutationContext.defaultKubernetesVersionForWorkers()...)
 	mutationContext.defaultWorkerArchitectures()
 	allErrs = append(allErrs, mutationContext.ensureMachineImages()...)
+
+	if features.DefaultFeatureGate.Enabled(features.ExtensionComponentVersions) {
+		allErrs = append(allErrs, m.resolveExtensionComponentVersions(shoot)...)
+	}
 
 	if len(allErrs) > 0 {
 		return admission.NewForbidden(a, allErrs.ToAggregate())
@@ -704,4 +717,94 @@ func parseSemanticVersionPart(part string) (*uint64, error) {
 		return nil, fmt.Errorf("%s must be a semantic version: %w", part, err)
 	}
 	return new(v), nil
+}
+
+// resolveExtensionComponentVersions resolves each pinned, partial extension component version to the
+// highest matching supported version offered by the component's ExtensionProfile, and persists it on
+// the shoot spec. A pin that is already a concrete offered version is left unchanged; a pin for an
+// extension type without a matching profile, or without a resolvable version, is reported as an error.
+func (m *MutateShoot) resolveExtensionComponentVersions(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+	extensionsPath := field.NewPath("spec", "extensions")
+
+	for i := range shoot.Spec.Extensions {
+		extension := &shoot.Spec.Extensions[i]
+		for j := range extension.Components {
+			component := &extension.Components[j]
+			if component.Version == nil || *component.Version == "" {
+				continue
+			}
+
+			componentPath := extensionsPath.Index(i).Child("components").Index(j).Child("version")
+
+			profile, err := m.extensionProfileLister.Get(extension.Type)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					allErrs = append(allErrs, field.Invalid(componentPath, *component.Version, fmt.Sprintf("no ExtensionProfile found for extension type %q", extension.Type)))
+				} else {
+					allErrs = append(allErrs, field.InternalError(componentPath, fmt.Errorf("could not get ExtensionProfile %q: %w", extension.Type, err)))
+				}
+				continue
+			}
+
+			resolved, err := resolveComponentVersion(profile, component.Name, *component.Version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(componentPath, *component.Version, err.Error()))
+				continue
+			}
+			component.Version = &resolved
+		}
+	}
+
+	return allErrs
+}
+
+// resolveComponentVersion returns the highest supported version of the given component in the profile
+// that matches the (possibly partial) requested version. An exact match that is offered is returned
+// as-is; otherwise the requested value is treated as a prefix constraint.
+func resolveComponentVersion(profile *gardencorev1beta1.ExtensionProfile, componentName, requested string) (string, error) {
+	var versions []gardencorev1beta1.ExtensionVersion
+	for _, component := range profile.Spec.Components {
+		if component.Name == componentName {
+			versions = component.Versions
+			break
+		}
+	}
+	if versions == nil {
+		return "", fmt.Errorf("ExtensionProfile %q does not offer a component %q", profile.Name, componentName)
+	}
+
+	// Exact match that is offered: keep it (classification is checked by the ExtensionProfileValidator).
+	for _, version := range versions {
+		if version.Version == requested {
+			return requested, nil
+		}
+	}
+
+	// Otherwise resolve the highest supported version matching the requested prefix.
+	var (
+		best    *semver.Version
+		bestRaw string
+	)
+	for _, version := range versions {
+		if !strings.HasPrefix(version.Version, requested) {
+			continue
+		}
+		if v1beta1helper.CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{Lifecycle: version.Lifecycle}) != gardencorev1beta1.ClassificationSupported {
+			continue
+		}
+		parsed, err := semver.NewVersion(version.Version)
+		if err != nil {
+			continue
+		}
+		if best == nil || parsed.GreaterThan(best) {
+			best = parsed
+			bestRaw = version.Version
+		}
+	}
+
+	if best == nil {
+		return "", fmt.Errorf("no supported version of component %q matches %q", componentName, requested)
+	}
+	return bestRaw, nil
 }

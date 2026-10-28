@@ -277,6 +277,7 @@ build:
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
@@ -607,6 +608,7 @@ build:
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
@@ -882,6 +884,7 @@ build:
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
