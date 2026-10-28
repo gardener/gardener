@@ -113,6 +113,48 @@ var _ = Describe("AdvertisedAddresses", func() {
 			}))
 		})
 
+		It("returns the prior internal address directly after the internal address", func() {
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior.baz.foo")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "external",
+					URL:  "https://api.foo.bar",
+				},
+				{
+					Name: "internal",
+					URL:  "https://api.baz.foo",
+				},
+				{
+					Name: "prior-internal",
+					URL:  "https://api.prior.baz.foo",
+				},
+				{
+					Name: "service-account-issuer",
+					URL:  "https://api.baz.foo",
+				},
+			}))
+		})
+
+		It("returns the prior internal address without an internal address if the internal domain is disabled during the migration", func() {
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior.baz.foo")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(ContainElement(gardencorev1beta1.ShootAdvertisedAddress{
+				Name: "prior-internal",
+				URL:  "https://api.prior.baz.foo",
+			}))
+			Expect(addresses).NotTo(ContainElement(HaveField("Name", "internal")))
+		})
+
 		It("returns internal and service-account-issuer addresses", func() {
 			botanist.Shoot.InternalClusterDomain = new("baz.foo")
 

@@ -68,6 +68,13 @@ func (b *Botanist) ToAdvertisedAddresses(ctx context.Context) ([]gardencorev1bet
 		})
 	}
 
+	if b.Shoot.PriorInternalClusterDomain != nil {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: v1beta1constants.AdvertisedAddressPriorInternal,
+			URL:  "https://" + v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorInternalClusterDomain),
+		})
+	}
+
 	if len(b.APIServerAddress) > 0 && len(addresses) == 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: v1beta1constants.AdvertisedAddressUnmanaged,
