@@ -20,7 +20,7 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/fluent/fluent-operator/v3 v3.7.0
 	github.com/gardener/cert-management/pkg/apis v0.28.0
-	github.com/gardener/dependency-watchdog v1.8.0
+	github.com/gardener/dependency-watchdog v1.8.1
 	github.com/gardener/etcd-druid/api v0.39.0
 	github.com/gardener/gardener/pkg/apis v1.149.0
 	github.com/gardener/machine-controller-manager v0.63.0
