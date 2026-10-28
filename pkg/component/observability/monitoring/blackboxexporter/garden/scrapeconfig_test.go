@@ -17,14 +17,20 @@ import (
 var _ = Describe("ScrapeConfig", func() {
 	Describe("#ScrapeConfig", func() {
 		var (
-			namespace                   = "namespace"
-			kubeAPIServerTargets        = []monitoringv1alpha1.Target{"target1", "target2"}
-			gardenerDashboardTarget     = monitoringv1alpha1.Target("target3")
-			discoveryServerPublicTarget = monitoringv1alpha1.Target("https://discovery.local.gardener.cloud/garden/workload-identity/issuer/.well-known/openid-configuration")
+			namespace = "namespace"
+			params    Params
 		)
 
+		BeforeEach(func() {
+			params = Params{
+				KubeAPIServerTargets:        []monitoringv1alpha1.Target{"target1", "target2"},
+				DashboardTarget:             monitoringv1alpha1.Target("target3"),
+				DiscoveryServerPublicTarget: monitoringv1alpha1.Target("target4"),
+			}
+		})
+
 		It("should compute the scrape configs when discovery server is disabled", func() {
-			Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget, false, discoveryServerPublicTarget)).To(ConsistOf(
+			Expect(ScrapeConfig(namespace, params)).To(ConsistOf(
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "garden-blackbox-gardener-apiserver",
@@ -85,7 +91,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_kube_apiserver"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: kubeAPIServerTargets,
+							Targets: []monitoringv1alpha1.Target{"target1", "target2"},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -143,7 +149,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_gardener_dashboard"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: []monitoringv1alpha1.Target{gardenerDashboardTarget},
+							Targets: []monitoringv1alpha1.Target{monitoringv1alpha1.Target("target3")},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -187,7 +193,8 @@ var _ = Describe("ScrapeConfig", func() {
 		})
 
 		It("should compute the scrape configs when discovery server is enabled", func() {
-			scrapeConfigs := ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget, true, discoveryServerPublicTarget)
+			params.DiscoveryServerEnabled = true
+			scrapeConfigs := ScrapeConfig(namespace, params)
 			Expect(scrapeConfigs).To(HaveLen(4))
 			Expect(scrapeConfigs).To(ContainElements(
 				&monitoringv1alpha1.ScrapeConfig{
@@ -250,7 +257,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_kube_apiserver"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: kubeAPIServerTargets,
+							Targets: []monitoringv1alpha1.Target{"target1", "target2"},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -308,7 +315,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_gardener_dashboard"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: []monitoringv1alpha1.Target{gardenerDashboardTarget},
+							Targets: []monitoringv1alpha1.Target{monitoringv1alpha1.Target("target3")},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -360,7 +367,7 @@ var _ = Describe("ScrapeConfig", func() {
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{
 								"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz",
-								discoveryServerPublicTarget,
+								monitoringv1alpha1.Target("target4"),
 							},
 							Labels: map[string]string{"purpose": "availability"},
 						}},
