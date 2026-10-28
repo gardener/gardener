@@ -32,6 +32,7 @@ type OperatingSystemConfig struct {
 
 	// Specification of the OperatingSystemConfig.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec OperatingSystemConfigSpec `json:"spec"`
 	// +optional
 	Status OperatingSystemConfigStatus `json:"status,omitempty"`
@@ -76,6 +77,7 @@ type OperatingSystemConfigSpec struct {
 	// gets sent to the `Worker` extension controller to bootstrap a VM, or it is downloaded by the
 	// gardener-node-agent already running on a bootstrapped VM.
 	// This field is immutable.
+	// +required
 	Purpose OperatingSystemConfigPurpose `json:"purpose"`
 	// Units is a list of unit for the operating system configuration (usually, a systemd unit).
 	// +patchMergeKey=name
@@ -95,6 +97,7 @@ type OperatingSystemConfigSpec struct {
 // Unit is a unit for the operating system configuration (usually, a systemd unit).
 type Unit struct {
 	// Name is the name of a unit.
+	// +required
 	Name string `json:"name"`
 	// Command is the unit's command.
 	// +optional
@@ -112,6 +115,7 @@ type Unit struct {
 	DropIns []DropIn `json:"dropIns,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
 	// FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be
 	// triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.
+	// +optional
 	FilePaths []string `json:"filePaths,omitempty"`
 }
 
@@ -130,8 +134,10 @@ const (
 // DropIn is a drop-in configuration for a systemd unit.
 type DropIn struct {
 	// Name is the name of the drop-in.
+	// +required
 	Name string `json:"name"`
 	// Content is the content of the drop-in.
+	// +required
 	Content string `json:"content"`
 }
 
@@ -139,6 +145,7 @@ type DropIn struct {
 // referenced from a secret in the same namespace.
 type File struct {
 	// Path is the path of the file system where the file should get written to.
+	// +required
 	Path string `json:"path"`
 	// Permissions describes with which permissions the file should get written to the file system.
 	// If no permissions are set, the operating system's defaults are used.
@@ -146,6 +153,7 @@ type File struct {
 	// +optional
 	Permissions *int32 `json:"permissions,omitempty"`
 	// Content describe the file's content.
+	// +required
 	Content FileContent `json:"content"`
 	// HostName contains the name of the host for host-specific configurations.
 	// If HostName is not empty the corresponding file will only be rolled out to the host with the specified name.
@@ -174,24 +182,30 @@ type FileContent struct {
 // FileContentSecretRef contains keys for referencing a file content's data from a secret in the same namespace.
 type FileContentSecretRef struct {
 	// Name is the name of the secret.
+	// +required
 	Name string `json:"name"`
 	// DataKey is the key in the secret's `.data` field that should be read.
+	// +required
 	DataKey string `json:"dataKey"`
 }
 
 // FileContentInline contains keys for inlining a file content's data and encoding.
 type FileContentInline struct {
 	// Encoding is the file's encoding (e.g. base64).
+	// +required
 	Encoding string `json:"encoding"`
 	// Data is the file's data.
+	// +required
 	Data string `json:"data"`
 }
 
 // FileContentImageRef describes a container image which contains a file
 type FileContentImageRef struct {
 	// Image contains the container image repository with tag.
+	// +required
 	Image string `json:"image"`
 	// FilePathInImage contains the path in the image to the file that should be extracted.
+	// +required
 	FilePathInImage string `json:"filePathInImage"`
 }
 
@@ -224,6 +238,7 @@ type OperatingSystemConfigStatus struct {
 // config spec. It contains a reference to a secret as the result may contain confidential data.
 type CloudConfig struct {
 	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
+	// +required
 	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 
@@ -258,6 +273,7 @@ type CRIConfig struct {
 	// Name is a mandatory string containing the name of the CRI library. Supported values are `containerd`.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum="containerd"
+	// +required
 	Name CRIName `json:"name"`
 	// CgroupDriver configures the CRI's cgroup driver. Supported values are `cgroupfs` or `systemd`.
 	// +optional
@@ -274,6 +290,7 @@ type ContainerdConfig struct {
 	// +optional
 	Registries []RegistryConfig `json:"registries,omitempty"`
 	// SandboxImage configures the sandbox image for containerd.
+	// +required
 	SandboxImage string `json:"sandboxImage"`
 	// Plugins configures the plugins section in containerd's config.toml.
 	// +optional
@@ -296,6 +313,7 @@ type PluginConfig struct {
 	// +optional
 	Op *PluginPathOperation `json:"op,omitempty"`
 	// Path is a list of elements that construct the path in the plugins section.
+	// +required
 	Path []string `json:"path"`
 	// Values are the values configured at the given path. If defined, it is expected as json format:
 	// - A given json object will be put to the given path.
@@ -307,6 +325,7 @@ type PluginConfig struct {
 // RegistryConfig contains registry configuration options.
 type RegistryConfig struct {
 	// Upstream is the upstream name of the registry.
+	// +required
 	Upstream string `json:"upstream"`
 	// Server is the URL to registry server of this upstream.
 	// It corresponds to the server field in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#server-field for more information.
@@ -314,6 +333,7 @@ type RegistryConfig struct {
 	Server *string `json:"server,omitempty"`
 	// Hosts are the registry hosts.
 	// It corresponds to the host fields in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#host-fields-in-the-toml-table-format for more information.
+	// +optional
 	Hosts []RegistryHost `json:"hosts,omitempty"`
 	// ReadinessProbe determines if host registry endpoints should be probed before they are added to the containerd config.
 	// +optional
@@ -335,6 +355,7 @@ const (
 // RegistryHost contains configuration values for a registry host.
 type RegistryHost struct {
 	// URL is the endpoint address of the registry mirror.
+	// +required
 	URL string `json:"url"`
 	// Capabilities determine what operations a host is
 	// capable of performing. Defaults to
@@ -375,8 +396,10 @@ const (
 // InPlaceUpdates is a structure containing configuration for in-place updates.
 type InPlaceUpdates struct {
 	// OperatingSystemVersion is the version of the operating system.
+	// +required
 	OperatingSystemVersion string `json:"operatingSystemVersion"`
 	// KubeletVersion is the version of the kubelet.
+	// +required
 	KubeletVersion string `json:"kubelet"`
 	// CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.
 	// +optional
@@ -393,6 +416,7 @@ type InPlaceUpdatesStatus struct {
 // OSUpdate contains the configuration for the operating system update.
 type OSUpdate struct {
 	// Command defines the command responsible for performing machine image updates.
+	// +required
 	Command string `json:"command"`
 	// Args provides a mechanism to pass additional arguments or flags to the Command.
 	// +optional

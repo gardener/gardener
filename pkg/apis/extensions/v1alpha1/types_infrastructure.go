@@ -31,6 +31,7 @@ type Infrastructure struct {
 
 	// Specification of the Infrastructure.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec InfrastructureSpec `json:"spec"`
 	// +optional
 	Status InfrastructureStatus `json:"status,omitempty"`
@@ -64,8 +65,10 @@ type InfrastructureSpec struct {
 	DefaultSpec `json:",inline"`
 
 	// Region is the region of this infrastructure. This field is immutable.
+	// +required
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the cloud provider credentials.
+	// +required
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// SSHPublicKey is the public SSH key that should be used with this infrastructure.
 	// +optional

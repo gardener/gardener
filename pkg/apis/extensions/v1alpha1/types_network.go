@@ -31,6 +31,7 @@ type Network struct {
 
 	// Specification of the Network.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec NetworkSpec `json:"spec"`
 	// +optional
 	Status NetworkStatus `json:"status,omitempty"`
@@ -64,8 +65,10 @@ type NetworkSpec struct {
 	DefaultSpec `json:",inline"`
 
 	// PodCIDR defines the CIDR that will be used for pods. This field is immutable.
+	// +required
 	PodCIDR string `json:"podCIDR"`
 	// ServiceCIDR defines the CIDR that will be used for services. This field is immutable.
+	// +required
 	ServiceCIDR string `json:"serviceCIDR"`
 	// IPFamilies specifies the IP protocol versions to use for shoot networking.
 	// See https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md

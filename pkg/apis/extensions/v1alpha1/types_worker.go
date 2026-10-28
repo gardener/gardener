@@ -48,6 +48,7 @@ type Worker struct {
 
 	// Specification of the Worker.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec WorkerSpec `json:"spec"`
 	// +optional
 	Status WorkerStatus `json:"status,omitempty"`
@@ -87,8 +88,10 @@ type WorkerSpec struct {
 	// +optional
 	InfrastructureProviderStatus *runtime.RawExtension `json:"infrastructureProviderStatus,omitempty"`
 	// Region is the name of the region where the worker pool should be deployed to. This field is immutable.
+	// +required
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
+	// +required
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// SSHPublicKey is the public SSH key that should be used with these workers.
 	// +optional
@@ -96,18 +99,23 @@ type WorkerSpec struct {
 	// Pools is a list of worker pools.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
+	// +required
 	Pools []WorkerPool `json:"pools" patchMergeKey:"name" patchStrategy:"merge"`
 }
 
 // WorkerPool is the definition of a specific worker pool.
 type WorkerPool struct {
 	// MachineType contains information about the machine type that should be used for this worker pool.
+	// +required
 	MachineType string `json:"machineType"`
 	// Maximum is the maximum size of the worker pool.
+	// +required
 	Maximum int32 `json:"maximum"`
 	// MaxSurge is maximum number of VMs that are created during an update.
+	// +required
 	MaxSurge intstr.IntOrString `json:"maxSurge"`
 	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+	// +required
 	MaxUnavailable intstr.IntOrString `json:"maxUnavailable"`
 	// Annotations is a map of key/value pairs for annotations for all the `Node` objects in this worker pool.
 	// +optional
@@ -121,10 +129,13 @@ type WorkerPool struct {
 	// MachineImage contains logical information about the name and the version of the machie image that
 	// should be used. The logical information must be mapped to the provider-specific information (e.g.,
 	// AMIs, ...) by the provider itself.
+	// +optional
 	MachineImage MachineImage `json:"machineImage,omitempty"`
 	// Minimum is the minimum size of the worker pool.
+	// +required
 	Minimum int32 `json:"minimum"`
 	// Name is the name of this worker pool.
+	// +required
 	Name string `json:"name"`
 	// NodeAgentSecretName is uniquely identifying selected aspects of the OperatingSystemConfig. If it changes, then the
 	// worker pool must be rolled.
@@ -137,6 +148,7 @@ type WorkerPool struct {
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 	// UserDataSecretRef references a Secret and a data key containing the data that is sent to the provider's APIs when
 	// a new machine/VM that is part of this worker pool shall be spawned.
+	// +required
 	UserDataSecretRef corev1.SecretKeySelector `json:"userDataSecretRef"`
 	// Volume contains information about the root disks that should be used for this worker pool.
 	// +optional
@@ -198,6 +210,7 @@ type ClusterAutoscalerOptions struct {
 // NodeTemplate contains information about the expected node properties.
 type NodeTemplate struct {
 	// Capacity represents the expected Node capacity.
+	// +required
 	Capacity corev1.ResourceList `json:"capacity"`
 	// VirtualCapacity represents the expected Node 'virtual' capacity ie comprising virtual extended resources.
 	// +optional
@@ -209,8 +222,10 @@ type NodeTemplate struct {
 // AMIs, ...) by the provider itself.
 type MachineImage struct {
 	// Name is the logical name of the machine image.
+	// +required
 	Name string `json:"name"`
 	// Version is the version of the machine image.
+	// +required
 	Version string `json:"version"`
 }
 
@@ -223,6 +238,7 @@ type Volume struct {
 	// +optional
 	Type *string `json:"type,omitempty"`
 	// Size is the of the root volume.
+	// +required
 	Size string `json:"size"`
 	// Encrypted determines if the volume should be encrypted.
 	// +optional
@@ -232,11 +248,13 @@ type Volume struct {
 // DataVolume contains information about a data volume.
 type DataVolume struct {
 	// Name of the volume to make it referenceable.
+	// +required
 	Name string `json:"name"`
 	// Type is the type of the volume.
 	// +optional
 	Type *string `json:"type,omitempty"`
 	// Size is the of the root volume.
+	// +required
 	Size string `json:"size"`
 	// Encrypted determines if the volume should be encrypted.
 	// +optional
@@ -252,6 +270,7 @@ type WorkerStatus struct {
 	// the cluster-autoscaler properly.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
+	// +optional
 	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
 	// MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.
 	// +optional
@@ -271,10 +290,13 @@ type InPlaceUpdatesWorkerStatus struct {
 // MachineDeployment is a created machine deployment.
 type MachineDeployment struct {
 	// Name is the name of the `MachineDeployment` resource.
+	// +required
 	Name string `json:"name"`
 	// Minimum is the minimum number for this machine deployment.
+	// +required
 	Minimum int32 `json:"minimum"`
 	// Maximum is the maximum number for this machine deployment.
+	// +required
 	Maximum int32 `json:"maximum"`
 	// Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.
 	// +optional
