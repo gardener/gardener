@@ -16,10 +16,29 @@ spec:
     port: tcp
     relabelings:
     - action: replace
+      regex: ([^:]+)
+      replacement: $1
+      sourceLabels:
+      - __meta_kubernetes_pod_ip
+      targetLabel: __tmp_kubernetes_pod_ip_ipv4
+    - action: replace
+      regex: (.+:.+)
+      replacement: '[$1]'
+      sourceLabels:
+      - __meta_kubernetes_pod_ip
+      targetLabel: __tmp_kubernetes_pod_ip_ipv6_with_brackets
+    - action: replace
+      regex: (.*);(.*)
+      replacement: $1$2
+      sourceLabels:
+      - __tmp_kubernetes_pod_ip_ipv4
+      - __tmp_kubernetes_pod_ip_ipv6_with_brackets
+      targetLabel: __tmp_kubernetes_pod_ip
+    - action: replace
       regex: (.+)
       replacement: ${1}:15090
       sourceLabels:
-      - __meta_kubernetes_pod_ip
+      - __tmp_kubernetes_pod_ip
       targetLabel: __address__
   namespaceSelector: {}
   selector:
