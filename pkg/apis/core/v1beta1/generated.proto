@@ -4087,7 +4087,8 @@ message Worker {
   // +optional
   optional MachineControllerManagerSettings machineControllerManager = 19;
 
-  // Sysctls is a map of kernel settings to apply on all machines in this worker pool.
+  // Sysctls is a map of kernel settings to apply on all machines in this worker pool. If set, it fully
+  // overrides the global `.spec.provider.workersSettings.sysctls` for this pool; the two maps are not merged.
   // +optional
   map<string, string> sysctls = 20;
 
@@ -4151,5 +4152,10 @@ message WorkersSettings {
   // SSHAccess contains settings regarding ssh access to the worker nodes.
   // +optional
   optional SSHAccess sshAccess = 1;
+
+  // Sysctls is a map of kernel settings to apply on all worker pools. It can be overridden per worker pool via
+  // `.spec.provider.workers[].sysctls` (the per-pool value fully replaces this global value, there is no merge).
+  // +optional
+  map<string, string> sysctls = 2;
 }
 
