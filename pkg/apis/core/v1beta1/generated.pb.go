@@ -969,6 +969,13 @@ func (m *Backup) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.BucketName != nil {
+		i -= len(*m.BucketName)
+		copy(dAtA[i:], *m.BucketName)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.BucketName)))
+		i--
+		dAtA[i] = 0x32
+	}
 	if m.CredentialsRef != nil {
 		{
 			size, err := m.CredentialsRef.MarshalToSizedBuffer(dAtA[:i])
@@ -13964,6 +13971,10 @@ func (m *Backup) Size() (n int) {
 		l = m.CredentialsRef.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.BucketName != nil {
+		l = len(*m.BucketName)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -18866,6 +18877,7 @@ func (this *Backup) String() string {
 		`ProviderConfig:` + strings.Replace(fmt.Sprintf("%v", this.ProviderConfig), "RawExtension", "runtime.RawExtension", 1) + `,`,
 		`Region:` + valueToStringGenerated(this.Region) + `,`,
 		`CredentialsRef:` + strings.Replace(fmt.Sprintf("%v", this.CredentialsRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
+		`BucketName:` + valueToStringGenerated(this.BucketName) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -23677,6 +23689,39 @@ func (m *Backup) Unmarshal(dAtA []byte) error {
 			if err := m.CredentialsRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BucketName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := string(dAtA[iNdEx:postIndex])
+			m.BucketName = &s
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
