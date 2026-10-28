@@ -101,9 +101,9 @@ var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 			shootFramework.Logger.Info("Initial PVC size", "backend", backend.name, "pvc", pvcName, "size", initialPVCSize.String())
 
 			By(fmt.Sprintf("Fill %s PVC to %d%% utilization to trigger pvc-autoscaler", backend.name, pvcFillUtilizationPercent))
-			Eventually(func() error {
+			Eventually(ctx, func() error {
 				return fillFunc(ctx, shootFramework, backend, shootNamespace, debugContainerName, initialPVCSize)
-			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).Should(Succeed())
 
 			By(fmt.Sprintf("Wait for pvc-autoscaler to grow the %s PVC", backend.name))
 			waitUntilPVCGrows(ctx, seedClient, shootNamespace, backend.pvcLabels, initialPVCSize)
@@ -112,16 +112,16 @@ var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 			waitUntilFilesystemExpands(ctx, shootFramework, backend, shootNamespace, debugContainerName, initialPVCSize)
 
 			By("Clean up fill files")
-			Eventually(func() error {
+			Eventually(ctx, func() error {
 				return cleanupFillFiles(ctx, shootFramework, backend, shootNamespace, debugContainerName)
-			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).Should(Succeed())
 		}, pvcAutoscalerTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 			if debugContainerName == "" {
 				return
 			}
-			Eventually(func() error {
+			Eventually(ctx, func() error {
 				return cleanupFillFiles(ctx, shootFramework, backend, shootFramework.ShootSeedNamespace(), debugContainerName)
-			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).Should(Succeed())
 		}, pvcAutoscalerCleanupTimeout))
 	}
 
@@ -308,7 +308,7 @@ func getSizeOfFirstPVC(ctx context.Context, c client.Client, namespace string, m
 }
 
 func waitUntilFilesystemExpands(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace, debugContainerName string, initialPVCSize resource.Quantity) {
-	Eventually(func(g Gomega) {
+	Eventually(ctx, func(g Gomega) {
 		// Ensure the debug container as vpa can restart the backend pod.
 		podName, err := ensureDebugContainer(ctx, f, backend, shootNamespace, debugContainerName)
 		g.Expect(err).NotTo(HaveOccurred(), "ensuring debug container failed")
@@ -335,13 +335,13 @@ func waitUntilFilesystemExpands(ctx context.Context, f *framework.ShootFramework
 		initialBytes := initialPVCSize.Value()
 		f.Logger.Info("Filesystem size observed in pod", "backend", backend.name, "fsBytes", fsBytes, "initialBytes", initialBytes)
 		g.Expect(fsBytes).To(BeNumerically(">", initialBytes), "filesystem not yet expanded (observed: %d B, initial: %d B)", fsBytes, initialBytes)
-	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).WithContext(ctx).Should(Succeed())
+	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).Should(Succeed())
 }
 
 func waitUntilPVCGrows(ctx context.Context, c client.Client, namespace string, matchLabels map[string]string, initialSize resource.Quantity) {
-	Eventually(func(g Gomega) {
+	Eventually(ctx, func(g Gomega) {
 		currentSize, _, err := getSizeOfFirstPVC(ctx, c, namespace, matchLabels)
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(currentSize.Value()).To(BeNumerically(">", initialSize.Value()), "PVC has not grown yet (current: %s, initial: %s)", currentSize.String(), initialSize.String())
-	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).WithContext(ctx).Should(Succeed())
+	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).Should(Succeed())
 }
