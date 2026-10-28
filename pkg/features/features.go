@@ -146,6 +146,13 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.155.0
 	AllowlistSeedReferences featuregate.Feature = "AllowlistSeedReferences"
+
+	// ExtensionComponentVersions enables the homogeneous version profile for extension-managed components
+	// introduced by GEP-0078: the ExtensionProfile resource, the shoot-side pin/auto-update surface, and
+	// the resolution of component versions to the seed Extension resource.
+	// owner: @docktofuture
+	// alpha: v1.138.0
+	ExtensionComponentVersions featuregate.Feature = "ExtensionComponentVersions"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -192,6 +199,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	RemoveHTTPProxyLegacyPort:      {Default: true, PreRelease: featuregate.Beta},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
 	AllowlistSeedReferences:        {Default: false, PreRelease: featuregate.Alpha},
+	ExtensionComponentVersions:     {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

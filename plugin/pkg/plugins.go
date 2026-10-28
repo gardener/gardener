@@ -67,6 +67,8 @@ const (
 	PluginNameShootResourceReservation = "ShootResourceReservation"
 	// PluginNameBackupBucketValidator is the name of the BackupBucketValidator admission plugin.
 	PluginNameBackupBucketValidator = "BackupBucketValidator"
+	// PluginNameExtensionProfileValidator is the name of the ExtensionProfileValidator admission plugin.
+	PluginNameExtensionProfileValidator = "ExtensionProfileValidator"
 )
 
 // AllOrderedPluginNames returns the names of all plugins in order.
@@ -99,6 +101,7 @@ func AllOrderedPluginNames() []string {
 		PluginNameManagedSeedShoot,                  // ManagedSeedShoot
 		PluginNameBastion,                           // Bastion
 		PluginNameBackupBucketValidator,             // BackupBucketValidator
+		PluginNameExtensionProfileValidator,         // ExtensionProfileValidator
 
 		// new admission plugins should generally be inserted above here
 		// webhook, and resourcequota plugins must go at the end
@@ -142,6 +145,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameManagedSeedShoot,                // ManagedSeedShoot
 		PluginNameBastion,                         // Bastion
 		PluginNameBackupBucketValidator,           // BackupBucketValidator
+		PluginNameExtensionProfileValidator,       // ExtensionProfileValidator
 		// TODO(vpnachev): Enable the MutatingAdmissionPolicy admission plugin by default
 		// once the minimum supported virtual-garden-kube-apiserver version is 1.36,
 		// where the admissionregistration.k8s.io/v1 MutatingAdmissionPolicy(Binding) APIs are GA.

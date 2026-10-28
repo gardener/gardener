@@ -39,6 +39,7 @@
 ### Shoot
 
 * [Accessing Shoot Clusters](usage/shoot/shoot_access.md)
+* [Extension Component Version Profiles](usage/shoot/extension-profiles.md)
 * [Hibernate a Cluster](usage/shoot/shoot_hibernate.md)
 * [Shoot Info `ConfigMap`](usage/shoot/shoot_info_configmap.md)
 * [Shoot Kubernetes Minor Version Upgrades](usage/shoot/shoot_kubernetes_versions.md)

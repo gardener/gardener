@@ -1,0 +1,56 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ExtensionProfile
+metadata:
+  # The name equals the extension type (Shoot.spec.extensions[].type). This binding is how admission
+  # resolves a pinned component version against this profile. No separate spec.type field exists.
+  name: shoot-traefik
+spec:
+  # The default auto-update policy for this extension type. `default` is applied to shoots that do not
+  # set an explicit autoUpdate; `supported` is the allow-list of strategies this extension implements.
+  updateStrategy:
+    default: patch # patch | minor | major
+    supported:
+    - patch
+    - minor
+    - major
+  # Each extension offers one or more named components, versioned independently.
+  components:
+  - name: traefik
+    # Optional per-component override of the profile-level updateStrategy.
+    updateStrategy:
+      default: patch
+      supported:
+      - patch
+      - minor
+    versions:
+    - version: 3.1.4
+      # Optional compatibility envelope: CEL rules (ANDed) evaluated against the shoot on admission.
+      # The CEL environment binds `shoot` to the Shoot being admitted.
+      compatibility:
+        validations:
+        - message: Requires Kubernetes 1.32 or newer
+          rule: shoot.spec.kubernetes.version.matches('^1\\.(3[2-9]|[4-9][0-9])')
+      # Same lifecycle shape as CloudProfile versions (GEP-0032).
+      lifecycle:
+      - classification: preview
+      - classification: supported
+        startTime: "2026-07-15T00:00:00Z"
+      - classification: deprecated
+        startTime: "2026-11-01T00:00:00Z"
+      - classification: expired
+        startTime: "2026-12-15T00:00:00Z"
+    - version: 3.2.0
+      # Optional, opaque, extension-owned per-version configuration. Not written to the Shoot spec;
+      # gardenlet carries it into the seed Extension resource when this version is resolved.
+      providerConfig:
+        apiVersion: traefik.extensions.gardener.cloud/v1alpha1
+        kind: TraefikComponentConfig
+      lifecycle:
+      - classification: preview
+        startTime: "2026-08-01T00:00:00Z"
+  - name: proxy
+    versions:
+    - version: 1.0.0
+      lifecycle:
+      - classification: supported
+        startTime: "2026-07-15T00:00:00Z"

@@ -213,6 +213,7 @@ build:
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/resourcemanager/webhook/vpainplaceupdates
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
@@ -349,6 +350,7 @@ build:
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/resourcemanager/webhook/vpainplaceupdates
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
@@ -458,6 +460,8 @@ build:
             - pkg/apiserver/registry/core/controllerregistration/storage
             - pkg/apiserver/registry/core/exposureclass
             - pkg/apiserver/registry/core/exposureclass/storage
+            - pkg/apiserver/registry/core/extensionprofile
+            - pkg/apiserver/registry/core/extensionprofile/storage
             - pkg/apiserver/registry/core/internalsecret
             - pkg/apiserver/registry/core/internalsecret/storage
             - pkg/apiserver/registry/core/namespacedcloudprofile
@@ -529,6 +533,7 @@ build:
             - pkg/logger
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/context
             - pkg/utils/errors
             - pkg/utils/flow
@@ -553,6 +558,7 @@ build:
             - plugin/pkg/backupbucket/validator
             - plugin/pkg/bastion/validator
             - plugin/pkg/controllerregistration/resources
+            - plugin/pkg/extensionprofile/validator
             - plugin/pkg/global/customverbauthorizer
             - plugin/pkg/global/deletionconfirmation
             - plugin/pkg/global/extensionlabels
