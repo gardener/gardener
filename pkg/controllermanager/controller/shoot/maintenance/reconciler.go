@@ -326,15 +326,16 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			operations,
 		)
 
-		var lastUpdateTime *metav1.Time
+		var previousLastUpdateTime *metav1.Time
 		if shoot.Status.LastMaintenance != nil {
-			lastUpdateTime = shoot.Status.LastMaintenance.LastUpdateTime
+			previousLastUpdateTime = shoot.Status.LastMaintenance.LastUpdateTime
 		}
 
+		// LastUpdateTime is stamped already here, so that it is recorded even if the subsequent Shoot spec update fails.
 		shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{
 			Description:    description,
 			TriggeredTime:  now,
-			LastUpdateTime: lastUpdateTime,
+			LastUpdateTime: &now,
 			State:          gardencorev1beta1.LastOperationStateProcessing,
 		}
 
@@ -362,6 +363,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			if hasMaintainNowAnnotation(shoot) {
 				delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 			}
+			// The dry run failed, so the Shoot spec is not updated.
+			shoot.Status.LastMaintenance.LastUpdateTime = previousLastUpdateTime
 			shoot.Status.LastMaintenance.Description = "Maintenance failed"
 			shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateFailed
 			shoot.Status.LastMaintenance.FailureReason = new(fmt.Sprintf("Updates to the Shoot failed to be applied: %s", err.Error()))
@@ -418,16 +421,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	// The Shoot spec was successfully updated, so mark a processing maintenance as succeeded and, if a patch was
-	// required, stamp LastUpdateTime in the same status patch. On an idle run LastUpdateTime stays frozen.
-	if shoot.Status.LastMaintenance != nil && (requirePatch || shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing) {
+	if shoot.Status.LastMaintenance != nil && shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing {
 		patch := client.MergeFrom(shoot.DeepCopy())
-		if requirePatch {
-			shoot.Status.LastMaintenance.LastUpdateTime = &now
-		}
-		if shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing {
-			shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
-		}
+		shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
 
 		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 			return err
