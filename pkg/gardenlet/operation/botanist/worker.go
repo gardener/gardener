@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -18,6 +19,7 @@ import (
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -39,12 +41,64 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 // WorkerWithAllPools creates a deployer for the Worker custom resource that contains all worker pools of the shoot,
 // also when the self-hosted shoot is bootstrapped. `gardenadm destroy` uses it to restore and delete the machines of
 // all worker pools, not only the one machine created by `gardenadm bootstrap`.
-func (b *Botanist) WorkerWithAllPools() worker.Interface {
+// When the self-hosted shoot is bootstrapped, there is only an OperatingSystemConfig for the control plane worker pool.
+// The worker pools without an OperatingSystemConfig use the user data of the control plane worker pool, as their
+// machines are only restored to delete them. However, they use their own gardener-node-agent secret name, as it
+// determines the names of their MachineClasses. Otherwise, the restored MachineDeployments would be rolled.
+func (b *Botanist) WorkerWithAllPools() (worker.Interface, error) {
 	if b.Shoot.IsWorkerless {
-		return nil
+		return nil, nil
 	}
 
-	return b.newWorker(b.Shoot.GetInfo().Spec.Provider.Workers)
+	values, err := b.OperatingSystemConfigValues()
+	if err != nil {
+		return nil, fmt.Errorf("failed computing operating system config values: %w", err)
+	}
+
+	workers := b.Shoot.GetInfo().Spec.Provider.Workers
+	w := &workerWithAllPools{
+		Interface:                  b.newWorker(workers),
+		workerPoolNameToSecretName: make(map[string]string, len(workers)),
+	}
+
+	for _, pool := range workers {
+		secretName, err := operatingsystemconfig.KeyForWorker(values, &pool)
+		if err != nil {
+			return nil, fmt.Errorf("failed computing gardener-node-agent secret name for worker pool %s: %w", pool.Name, err)
+		}
+		w.workerPoolNameToSecretName[pool.Name] = secretName
+	}
+
+	if controlPlaneWorkerPool := v1beta1helper.ControlPlaneWorkerPoolForShoot(workers); controlPlaneWorkerPool != nil {
+		w.controlPlaneWorkerPoolName = controlPlaneWorkerPool.Name
+	}
+
+	return w, nil
+}
+
+type workerWithAllPools struct {
+	worker.Interface
+
+	workerPoolNameToSecretName map[string]string
+	controlPlaneWorkerPoolName string
+}
+
+func (w *workerWithAllPools) SetWorkerPoolNameToOperatingSystemConfigsMap(oscs map[string]*operatingsystemconfig.OperatingSystemConfigs) {
+	if controlPlaneOSCs, ok := oscs[w.controlPlaneWorkerPoolName]; ok {
+		oscs = maps.Clone(oscs)
+		for poolName, secretName := range w.workerPoolNameToSecretName {
+			if _, ok := oscs[poolName]; ok {
+				continue
+			}
+
+			poolOSCs := *controlPlaneOSCs
+			poolOSCs.Init.GardenerNodeAgentSecretName = secretName
+			poolOSCs.Original.GardenerNodeAgentSecretName = secretName
+			oscs[poolName] = &poolOSCs
+		}
+	}
+
+	w.Interface.SetWorkerPoolNameToOperatingSystemConfigsMap(oscs)
 }
 
 func (b *Botanist) newWorker(workers []gardencorev1beta1.Worker) worker.Interface {
