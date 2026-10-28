@@ -10,6 +10,7 @@ import (
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -345,6 +346,20 @@ func (b *Botanist) DeployEtcdForLiveMigrationPhase(ctx context.Context, phaseRep
 		},
 	})
 	return b.DeployEtcd(ctx)
+}
+
+// IsSourceMembersAlreadyRemoved reports whether the source etcd members have already been
+// removed from the destination cluster. Returns true if the etcd CR has no bootstrap members
+// left to decommission, meaning a prior reconcile already completed this step.
+func (b *Botanist) IsSourceMembersAlreadyRemoved(ctx context.Context) (bool, error) {
+	etcdCR, err := b.Shoot.Components.ControlPlane.EtcdMain.Get(ctx)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return !druidcorev1alpha1.HasBootstrapMembersToDecommission(etcdCR), nil
 }
 
 // RemoveSourceEtcdMembers clears bootstrapWithExistingCluster on the etcd-main CR and triggers

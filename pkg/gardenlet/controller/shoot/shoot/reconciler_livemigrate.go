@@ -54,6 +54,8 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 
 	errorContext := errorsutils.NewErrorContext("Shoot control plane live migration", tasksWithErrors)
 
+	var sourceMembersAlreadyRemoved bool
+
 	if err = errorsutils.HandleErrors(errorContext,
 		func(errorID string) error {
 			o.CleanShootTaskError(ctx, errorID)
@@ -68,6 +70,11 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 				}
 				return retryutils.Ok()
 			})
+		}),
+		errorsutils.ToExecute("Check if source etcd members are already removed", func() error {
+			var err error
+			sourceMembersAlreadyRemoved, err = botanist.IsSourceMembersAlreadyRemoved(ctx)
+			return err
 		}),
 	); err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
@@ -89,7 +96,7 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 
 		_ = g.Add(flow.Task{
 			Name:         "Migrating etcd cluster to destination seed",
-			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup(botanist)),
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup(botanist, sourceMembersAlreadyRemoved)),
 			Dependencies: flow.NewTaskIDs(destinationEtcdPeersJoined),
 		})
 
@@ -291,29 +298,33 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 const taskGroupEtcdMigrationComplete flow.TaskID = "TaskGroupEtcdMigrationComplete"
 
 // etcdMigrationCompleteTaskGroup returns the flow.TaskGroup for completing the etcd migration:
-// scaling up the destination etcd to 3 replicas, removing source members, cleaning up
+// scaling out the destination etcd to 3 replicas, removing source members, cleaning up
 // the live migration configuration, and taking a full snapshot.
-func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist, sourceMembersAlreadyRemoved bool) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(taskGroupEtcdMigrationComplete)
 
 		deployEtcd = g.Add(flow.Task{
-			Name: "Scaling out destination etcd to 3 replicas",
-			Fn:   b.DeployEtcd,
+			Name:   "Scaling out destination etcd to 3 replicas",
+			Fn:     b.DeployEtcd,
+			SkipIf: sourceMembersAlreadyRemoved,
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until etcd is scaled out and ready",
 			Fn:           b.WaitUntilEtcdsReady,
+			SkipIf:       sourceMembersAlreadyRemoved,
 			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
 		removeSourceMembers = g.Add(flow.Task{
 			Name:         "Removing source etcd members from the joined cluster",
 			Fn:           b.RemoveSourceEtcdMembers,
+			SkipIf:       sourceMembersAlreadyRemoved,
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
 		})
 		waitUntilSourceMembersRemoved = g.Add(flow.Task{
 			Name:         "Waiting until source etcd members are removed",
 			Fn:           b.WaitUntilSourceEtcdMembersRemoved,
+			SkipIf:       sourceMembersAlreadyRemoved,
 			Dependencies: flow.NewTaskIDs(removeSourceMembers),
 		})
 		deployEtcdWithoutLiveMigration = g.Add(flow.Task{
