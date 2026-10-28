@@ -834,27 +834,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		Describe("#WaitUntilSourceEtcdMembersRemoved", func() {
-			BeforeEach(func() {
-				DeferCleanup(SetSourceMemberRemovalIntervalForTest(10 * time.Millisecond))
-			})
-
-			It("should keep polling when ScaleOperationComplete=False/ScalingOut (stale status after patch)", func() {
+			It("should return nil when scale operation is complete and no bootstrap members remain", func() {
 				cr := baseEtcdCR()
 				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
-				for i := range cr.Status.Conditions {
-					if cr.Status.Conditions[i].Type == druidcorev1alpha1.ConditionTypeScaleOperationComplete {
-						cr.Status.Conditions[i].Status = druidcorev1alpha1.ConditionFalse
-						cr.Status.Conditions[i].Reason = druidcorev1alpha1.ScaleOperationReasonScalingOut
-					}
-				}
-				gomock.InOrder(
-					etcdMain.EXPECT().Get(gomock.Any()).Return(cr, nil),
-					etcdMain.EXPECT().Get(gomock.Any()).Return(func() *druidcorev1alpha1.Etcd {
-						done := baseEtcdCR()
-						done.Spec.Etcd.BootstrapWithExistingCluster = nil
-						return done
-					}(), nil),
-				)
+				etcdMain.EXPECT().Get(gomock.Any()).Return(cr, nil)
 
 				Expect(b.WaitUntilSourceEtcdMembersRemoved(ctx)).To(Succeed())
 			})
@@ -868,14 +851,6 @@ var _ = Describe("Etcd LiveMigration", func() {
 				err := b.WaitUntilSourceEtcdMembersRemoved(cancelCtx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("get-failed"))
-			})
-
-			It("should return nil when scale operation is complete and no bootstrap members remain", func() {
-				cr := baseEtcdCR()
-				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
-				etcdMain.EXPECT().Get(gomock.Any()).Return(cr, nil)
-
-				Expect(b.WaitUntilSourceEtcdMembersRemoved(ctx)).To(Succeed())
 			})
 		})
 

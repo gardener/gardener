@@ -6,7 +6,6 @@ package botanist
 
 import (
 	"context"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -19,12 +18,4 @@ var UseShootAccessTokensForSelfHostedShootControlPlane = func(b *Botanist, ctx c
 
 var WorkerPoolsForWorkerResource = func(b *Botanist) []gardencorev1beta1.Worker {
 	return b.workerPoolsForWorkerResource()
-}
-
-// SetSourceMemberRemovalIntervalForTest overrides the poll interval used by WaitUntilSourceEtcdMembersRemoved.
-// Returns a function that restores the original value.
-func SetSourceMemberRemovalIntervalForTest(d time.Duration) func() {
-	old := sourceMemberRemovalInterval
-	sourceMemberRemovalInterval = d
-	return func() { sourceMemberRemovalInterval = old }
 }

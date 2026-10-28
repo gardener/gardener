@@ -30,6 +30,7 @@ const (
 	// of the cross-seed etcd hostnames.
 	liveMigrationHostLabelHashLength = 6
 	sourceMemberRemovalTimeout       = 10 * time.Minute
+	sourceMemberRemovalInterval      = 10 * time.Second
 )
 
 // NewMemberExposure is the constructor for the member exposure component. Exposed for testing.
@@ -47,8 +48,6 @@ var CrossSeedClientMemberHosts = crossSeedClientMemberHosts
 var SetLiveMigrationEtcdValues = func(b *Botanist, ctx context.Context, values *etcd.Values, role string) error {
 	return b.setLiveMigrationEtcdValues(ctx, values, role)
 }
-
-var sourceMemberRemovalInterval = 10 * time.Second
 
 // LiveMigrationEtcdPeerHost returns the SNI host under which the peer endpoint of the etcd member with the given role
 // and ordinal on the given seed is reachable from other seeds. It is derived from the seed's ingress domain so that it
