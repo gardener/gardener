@@ -210,7 +210,9 @@ func getIssuersFromShoot(shoot *gardencore.Shoot) []string {
 		switch addr.Name {
 		case v1beta1constants.AdvertisedAddressServiceAccountIssuer,
 			v1beta1constants.AdvertisedAddressInternal,
-			v1beta1constants.AdvertisedAddressExternal:
+			v1beta1constants.AdvertisedAddressPriorInternal,
+			v1beta1constants.AdvertisedAddressExternal,
+			v1beta1constants.AdvertisedAddressPriorExternal:
 			issuers = append(issuers, addr.URL)
 		}
 	}

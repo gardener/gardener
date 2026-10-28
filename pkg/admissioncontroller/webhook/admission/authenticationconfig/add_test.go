@@ -578,6 +578,38 @@ anonymous:
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://api.fake-shoot-name.test-project.external.example.com\": URL must not overlap with disallowed issuers:", "")
 			})
 
+			It("denies authentication configuration containing the issuer URL from the prior internal advertised address (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": defaultIssuerAuthenticationConfiguration},
+				})).To(Succeed())
+				shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+					AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+						{
+							Name: v1beta1constants.AdvertisedAddressPriorInternal,
+							URL:  "https://api.fake-shoot-name.test-project.internal.example.com",
+						},
+					},
+				}
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://api.fake-shoot-name.test-project.internal.example.com\": URL must not overlap with disallowed issuers:", "")
+			})
+
+			It("denies authentication configuration containing the issuer URL from the prior external advertised address (CREATE)", func() {
+				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
+					Data:       map[string]string{"config.yaml": externalIssuerAuthenticationConfiguration},
+				})).To(Succeed())
+				shootv1beta1.Status = gardencorev1beta1.ShootStatus{
+					AdvertisedAddresses: []gardencorev1beta1.ShootAdvertisedAddress{
+						{
+							Name: v1beta1constants.AdvertisedAddressPriorExternal,
+							URL:  "https://api.fake-shoot-name.test-project.external.example.com",
+						},
+					},
+				}
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://api.fake-shoot-name.test-project.external.example.com\": URL must not overlap with disallowed issuers:", "")
+			})
+
 			It("enables legacy anonymous authentication on the kube-apiserver when anonymous authentication configuration is already present", func() {
 				Expect(fakeClient.Create(ctx, &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: shootNamespace},
