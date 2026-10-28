@@ -25,11 +25,14 @@ import (
 type Extension struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec contains the specification of this extension.
+	// +optional
 	Spec ExtensionSpec `json:"spec,omitempty"`
 	// Status contains the status of this extension.
+	// +optional
 	Status ExtensionStatus `json:"status,omitempty"`
 }
 
@@ -120,6 +123,7 @@ type AdmissionDeploymentSpec struct {
 // DeploymentSpec is the specification for the deployment of a component.
 type DeploymentSpec struct {
 	// Helm contains the specification for a Helm deployment.
+	// +optional
 	Helm *ExtensionHelm `json:"helm,omitempty"`
 }
 

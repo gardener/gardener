@@ -21,6 +21,7 @@ option go_package = "github.com/gardener/gardener/pkg/apis/core/v1";
 // ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
   // Standard object metadata.
+  // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Helm configures that an extension controller is deployed using helm.
@@ -69,9 +70,11 @@ message HelmControllerDeployment {
 // NamedResourceReference is a named reference to a resource.
 message NamedResourceReference {
   // Name of the resource reference.
+  // +required
   optional string name = 1;
 
   // ResourceRef is a reference to a resource.
+  // +required
   optional .k8s.io.api.autoscaling.v1.CrossVersionObjectReference resourceRef = 2;
 }
 
