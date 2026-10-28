@@ -21,59 +21,7 @@ This section is intended for landscape operators who manage Gardener installatio
 
 ### Feature Gates
 
-Three feature gates control the nginx-ingress deployment across the different cluster types. All three are currently in **Alpha** state (introduced in `v1.142.0`), per default disabled and must be explicitly enabled.
-
-| Feature Gate | Component | Effect                                                                         |
-|---|---|--------------------------------------------------------------------------------|
-| `DisableNginxIngressInGarden` | `gardener-operator` | Disables and removes nginx-ingress in the Garden runtime cluster               |
-| `DisableNginxIngressInSeed` | `gardenlet` | Disables and removes nginx-ingress in Seed clusters                            |
-| `DisableNginxIngressInShoot` | `gardener-apiserver`, `gardener-controller-manager` | Disables and removes nginx-ingress addon in Shoot clusters (see details below) |
-
-The `DisableNginxIngressInShoot` feature gate has differentiated behavior depending on the component it is set for:
-
-- **`gardener-apiserver`**: Blocks creation of new Shoot clusters with the nginx-ingress addon enabled. Existing Shoot clusters can only disable the addon, not enable it again.
-- **`gardener-controller-manager`**: During the next scheduled maintenance window, automatically sets `.spec.addons.nginxIngress.enabled: false` on all Shoot clusters that still have the addon enabled. The shoot status will reflect the change with the message: `.spec.addons.nginxIngress was disabled. Reason: nginx ingress addon disallowed by landscape operator`. Existing `Ingress` resources remain in the cluster.
-
-### Enabling the Feature Gates
-
-**`gardener-operator` (Garden runtime cluster):**
-
-Set the feature gate in the [`gardener-operator` component configuration](../../example/operator/10-componentconfig.yaml):
-
-```yaml
-featureGates:
-  DisableNginxIngressInGarden: true
-```
-
-**`gardenlet` (Seed clusters):**
-
-In the [`Gardenlet` resource](../../example/55-gardenlet.yaml) or the [gardenlet component configuration](../../example/20-componentconfig-gardenlet.yaml):
-
-```yaml
-featureGates:
-  DisableNginxIngressInSeed: true
-```
-
-**`gardener-apiserver` and `gardener-controller-manager` (Shoot clusters):**
-
-In the respective component configurations in the [`Garden` resource](../../example/operator/20-garden.yaml):
-
-```yaml
-apiVersion: operator.gardener.cloud/v1alpha1
-kind: Garden
-metadata:
-   name: local
-spec:
-  ...
-  virtualCluster:
-    gardener:
-      gardenerAPIServer:
-        featureGates:
-          DisableNginxIngressInShoot: true
-      gardenerControllerManager:
-        featureGates:
-          DisableNginxIngressInShoot: true
-```
+The three feature gates to control the nginx-ingress deployment across the different cluster types have been graduated to GA and are enabled per default starting with `v1.155.0`. There is no action required for landscape operators to disable nginx-ingress because it is always disabled starting with `v1.155.0`.
 
 ### How to Check if Nginx Ingress Can Be Disabled
 
@@ -103,7 +51,7 @@ The following checklist helps identify remaining dependencies.
    kubectl get ingress --all-namespaces -o json | jq '.items[] | select(.metadata.annotations["kubernetes.io/ingress.class"] == "nginx-ingress-gardener") | "\(.metadata.namespace)/\(.metadata.name)"'
    ```
 
-4. After confirming no active Ingresses use `nginx-ingress-gardener`, enable `DisableNginxIngressInGarden` for the gardener-operator.
+4. After confirming no active Ingresses use `nginx-ingress-gardener`, enable `DisableNginxIngressInGarden` for the gardener-operator with `v1.154` and earlier or just update to `v1.155.0` or newer.
 
 #### Seed Clusters
 
@@ -116,7 +64,7 @@ The same checks apply to each Seed cluster. The nginx ingress class for Seeds is
    kubectl get ingress --all-namespaces -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}: {.spec.ingressClassName}{"\n"}{end}'
    ```
 
-2. After confirming no active Ingresses use `nginx-ingress-gardener`, enable `DisableNginxIngressInSeed` for the gardenlet on that Seed.
+2. After confirming no active Ingresses use `nginx-ingress-gardener`, enable `DisableNginxIngressInSeed` for the gardenlet on that Seed with `v1.154` and earlier or just update to `v1.155.0` or newer.
 
 #### Shoot Clusters (Addon)
 

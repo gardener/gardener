@@ -218,7 +218,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 			},
 		},
 		AddonsValidationOptions: addonsValidationOptions{
-			AllowNginxIngress: allowNginxIngressAddon(nil),
+			AllowNginxIngress: helper.NginxIngressEnabled(nil),
 		},
 	}
 
@@ -251,7 +251,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 			},
 		},
 		AddonsValidationOptions: addonsValidationOptions{
-			AllowNginxIngress: allowNginxIngressAddon(oldShoot.Spec.Addons),
+			AllowNginxIngress: helper.NginxIngressEnabled(oldShoot.Spec.Addons),
 		},
 	}
 
@@ -3999,12 +3999,4 @@ func validateCredentialAutoRotationPeriod(rotationPeriod *metav1.Duration, fldPa
 	}
 
 	return allErrs
-}
-
-func allowNginxIngressAddon(oldAddons *core.Addons) bool {
-	if !features.DefaultFeatureGate.Enabled(features.DisableNginxIngressInShoot) {
-		return true
-	}
-
-	return helper.NginxIngressEnabled(oldAddons)
 }
