@@ -226,7 +226,9 @@ machine-shoot--garden--root-control-plane-58ffc-2l6s7   Ready    <none>   4m11s 
 
 `gardenadm destroy` deletes the machines and the infrastructure of the self-hosted shoot cluster.
 Like `gardenadm bootstrap`, it uses the kind cluster as bootstrap cluster.
-With `--shoot-kubeconfig`, it stops `cluster-autoscaler` and `machine-controller-manager` in the self-hosted shoot and computes the current `ShootState` from it:
+With `--shoot-kubeconfig`, it stops `cluster-autoscaler` and `machine-controller-manager` in the self-hosted shoot and computes the current `ShootState` from it.
+Before deleting the machines, it also cleans up the self-hosted shoot on a best-effort basis, like the deletion of a Gardener-managed shoot (webhooks, CRDs, APIServices, and workload resources like `Service`s and `PersistentVolumeClaim`s).
+The control plane components in the `kube-system`, `garden`, and extension namespaces are skipped, so workloads that you deployed to `kube-system` are not cleaned up:
 
 ```shell
 KUBECONFIG=./dev-setup/kubeconfigs/runtime/kubeconfig \

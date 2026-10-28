@@ -18,6 +18,13 @@ The recommended way is to pass the kubeconfig of the running self-hosted shoot c
 command then stops cluster-autoscaler and machine-controller-manager in the shoot cluster, so that they don't recreate
 the machines, and computes the ShootState from the shoot cluster. A ShootState in the config directory is ignored in
 this case.
+Before deleting the machines, the command also cleans up the shoot cluster on a best-effort basis, like the deletion
+of a Gardener-managed shoot cluster: it deletes webhooks, CRDs, APIServices, and workload resources (e.g., Services,
+PersistentVolumeClaims, Deployments, and Pods), so that the cloud provider resources created for them (e.g., load
+balancers and volumes) are deleted. The control plane of the self-hosted shoot cluster runs in the kube-system,
+garden, and extension namespaces, hence these namespaces are skipped, as well as webhooks and APIServices served from
+them and protected CRDs (gardener.cloud/deletion-protected=true). If you deployed workloads to these namespaces,
+delete them yourself before running this command.
 
 Without --shoot-kubeconfig, the ShootState is read from the config directory. Note that the ShootState copied to the
 control plane machines by "gardenadm bootstrap" is outdated as soon as the shoot cluster has changed its machines
@@ -27,8 +34,8 @@ machines that are deleted by this command.
 
 Limitations:
 - Only the machines and the infrastructure are destroyed. Other resources are left behind, e.g., the DNS record of
-  the API server, the load balancer exposing the API server, and resources created by workloads in the cluster (load
-  balancers of Services, volumes of PersistentVolumeClaims, etc.).
+  the API server and the load balancer exposing the API server. Without --shoot-kubeconfig, also the resources created
+  by workloads in the cluster (load balancers of Services, volumes of PersistentVolumeClaims, etc.) are left behind.
 - Machines that are missing in the ShootState (e.g., because it is outdated) are not deleted.
 - Re-running the command after machines or parts of the infrastructure have been deleted might create them again,
   because they are restored from the ShootState before they are deleted.
@@ -53,7 +60,7 @@ gardenadm destroy --config-dir /path/to/manifests
   -d, --config-dir string         Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
   -h, --help                      help for destroy
   -k, --kubeconfig string         Path to the kubeconfig file pointing to the bootstrap cluster
-      --shoot-kubeconfig string   Path to the kubeconfig file pointing to the self-hosted shoot cluster (recommended). If set, cluster-autoscaler and machine-controller-manager are stopped in the shoot cluster, and the current ShootState is computed from the shoot cluster instead of being read from the config directory
+      --shoot-kubeconfig string   Path to the kubeconfig file pointing to the self-hosted shoot cluster (recommended). If set, cluster-autoscaler and machine-controller-manager are stopped in the shoot cluster, the current ShootState is computed from the shoot cluster instead of being read from the config directory
 ```
 
 ### Options inherited from parent commands
