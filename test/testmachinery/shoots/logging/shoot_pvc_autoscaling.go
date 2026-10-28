@@ -58,7 +58,9 @@ const (
 	pvcFillUtilizationPercent = 75
 
 	debugContainerNamePrefix = "pvc-autoscaler-test-debug"
-	debugContainerImage      = "registry.k8s.io/e2e-test-images/busybox:1.36.1-1"
+	// A custom agnhost image (europe-docker.pkg.dev/gardener-project/releases/3rd/agnhost) is used instead of the upstream one (registry.k8s.io/e2e-test-images/agnhost)
+	// because this Deployment is created in a Seed cluster and the image needs to be signed with particular keys.
+	debugContainerImage = "europe-docker.pkg.dev/gardener-project/releases/3rd/agnhost:2.40"
 )
 
 type logBackend struct {
