@@ -12,38 +12,18 @@ A `Quota` declares upper limits in `spec.metrics`, such as CPU, memory, storage,
 To use it, create the `Quota` and list it under `quotas` in the binding that a `Shoot` references.
 When such a `Shoot` is created or its workers are changed, Gardener adds up the requested resources of all `Shoot`s using that `Quota` and rejects the request if a limit would be exceeded.
 If a lifetime is set, Gardener deletes those `Shoot`s automatically after it expires.
-The sections below explain scopes, a complete example, how usage is calculated, and the lifetime behavior.
+The sections below walk through a complete example, then explain scopes, how usage is calculated, and the lifetime behavior.
 
 A Gardener `Quota` differs from the native Kubernetes `ResourceQuota` named `gardener` maintained by the [Project controller](../../concepts/controller-manager.md#project-controller).
 That resource limits object counts in the project namespace; see its [ResourceQuota reconciler](../../concepts/controller-manager.md#resourcequota-reconciler).
-Gardener Quotas instead constrain the infrastructure consumption described below.
+Gardener `Quota`s instead constrain the infrastructure consumption described below.
 
 ## Prerequisites
 
 - Access to the Garden API with `kubectl` and an existing project namespace, here `garden-dev`.
-- Authorization to create or manage Quotas, or an operator who provides them, and permission to create bindings and Shoots. Referencing a Quota requires read authorization for that Quota, including when it is in another namespace.
+- Authorization to create or manage `Quota`s, or an operator who provides them, and permission to create bindings and `Shoot`s. Referencing a `Quota` requires read authorization for that `Quota`, including when it is in another namespace.
 - Existing provider credentials. The examples use a `Secret` named `my-provider-account` in `garden-dev`; create it using your provider's required credential keys before creating the binding.
-- A valid provider-specific Shoot configuration, including an available `CloudProfile` or `NamespacedCloudProfile`, region, machine types, images, networking, and provider configuration. Use the [Shoot example manifest](../../../example/90-shoot.yaml) as a starting point and replace its placeholders for your environment.
-
-## Scopes and Aggregation
-
-`spec.scope` is an object reference with `apiVersion` and `kind`, not a string such as `project`.
-It is immutable after creation.
-
-| `spec.scope.apiVersion` | `spec.scope.kind` | Aggregation category |
-| --- | --- | --- |
-| `core.gardener.cloud/v1beta1` | `Project` | Project: Shoots in the requesting Shoot's namespace whose bindings reference this Quota. |
-| `v1` | `Secret` | Credentials: Shoots across namespaces whose bindings reference this Quota. |
-| `security.gardener.cloud/v1alpha1` | `WorkloadIdentity` | Credentials: Shoots across namespaces whose bindings reference this Quota. |
-
-In each case, Gardener finds applicable Shoots through both binding types referencing the same Quota **name and namespace**.
-The scope selects the aggregation category; it does not select a particular credential by name.
-To share a credentials quota across projects, reference that same Quota from the relevant bindings in each project.
-Other bindings using the same credential without referencing the Quota are not automatically included.
-
-A binding can reference at most one project-scope Quota and one credentials-scope Quota.
-`Secret` and `WorkloadIdentity` are the same credentials category, so a binding cannot reference one quota of each of those kinds alongside each other.
-Every referenced Quota must pass independently.
+- A valid provider-specific `Shoot` configuration, including an available `CloudProfile` or `NamespacedCloudProfile`, region, machine types, images, networking, and provider configuration. Use the [Shoot example manifest](../../../example/90-shoot.yaml) as a starting point and replace its placeholders for your environment.
 
 ## Create and Attach a Quota
 
@@ -76,7 +56,7 @@ Apply it before creating a binding that references it:
 kubectl apply -f quota.yaml
 ```
 
-To create a credentials-scope Quota instead, use one of the credentials scope pairs in the table and a distinct Quota name.
+To create a credentials-scope Quota instead, use one of the credentials scope pairs from the [scopes table](#scopes-and-aggregation) below and a distinct Quota name.
 See also the [Quota example manifest](../../../example/60-quota.yaml) and [Quota API reference](../../api-reference/core.md#quota).
 
 ### 2. Create a CredentialsBinding
@@ -162,6 +142,26 @@ spec:
 Keep the Shoot in `garden-dev` and remove `spec.credentialsBindingName`: the two Shoot reference fields are mutually exclusive.
 Then apply the completed Shoot manifest.
 See the [SecretBinding example](../../../example/80-secretbinding.yaml).
+
+## Scopes and Aggregation
+
+The `spec.scope` field of the `Quota` created above is an object reference with `apiVersion` and `kind`, not a string such as `project`.
+It is immutable after creation.
+
+| `spec.scope.apiVersion` | `spec.scope.kind` | Aggregation category |
+| --- | --- | --- |
+| `core.gardener.cloud/v1beta1` | `Project` | Project: Shoots in the requesting Shoot's namespace whose bindings reference this Quota. |
+| `v1` | `Secret` | Credentials: Shoots across namespaces whose bindings reference this Quota. |
+| `security.gardener.cloud/v1alpha1` | `WorkloadIdentity` | Credentials: Shoots across namespaces whose bindings reference this Quota. |
+
+In each case, Gardener finds applicable Shoots through both binding types referencing the same Quota **name and namespace**.
+The scope selects the aggregation category; it does not select a particular credential by name.
+To share a credentials quota across projects, reference that same Quota from the relevant bindings in each project.
+Other bindings using the same credential without referencing the Quota are not automatically included.
+
+A binding can reference at most one project-scope Quota and one credentials-scope Quota.
+`Secret` and `WorkloadIdentity` are the same credentials category, so a binding cannot reference one quota of each of those kinds alongside each other.
+Every referenced Quota must pass independently.
 
 ## Metrics and Enforcement
 
