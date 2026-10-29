@@ -876,9 +876,8 @@ var _ = Describe("Etcd LiveMigration", func() {
 		})
 
 		Describe("#IsSourceMembersAlreadyRemoved", func() {
-			It("should return false when bootstrap members still exist", func() {
+			It("should return false when spec.BootstrapWithExistingCluster is set (step not yet run)", func() {
 				cr := baseEtcdCR()
-				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
 				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
 
 				removed, err := b.IsSourceMembersAlreadyRemoved(ctx)
@@ -886,7 +885,18 @@ var _ = Describe("Etcd LiveMigration", func() {
 				Expect(removed).To(BeFalse())
 			})
 
-			It("should return true when no bootstrap members remain", func() {
+			It("should return false when spec.BootstrapWithExistingCluster is set with replicas=2 (DestinationEtcdPeersJoined state, status not yet populated)", func() {
+				cr := baseEtcdCR()
+				cr.Spec.Replicas = 2
+				cr.Status.BootstrapWithExistingCluster = nil
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+
+				removed, err := b.IsSourceMembersAlreadyRemoved(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(BeFalse())
+			})
+
+			It("should return true when spec is cleared and status has no members to decommission", func() {
 				cr := baseEtcdCR()
 				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
 				cr.Status.BootstrapWithExistingCluster = nil

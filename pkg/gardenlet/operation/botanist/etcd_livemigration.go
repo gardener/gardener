@@ -355,6 +355,9 @@ func (b *Botanist) IsSourceMembersAlreadyRemoved(ctx context.Context) (bool, err
 	if err != nil {
 		return false, err
 	}
+	if etcdCR.Spec.Etcd.BootstrapWithExistingCluster != nil {
+		return false, nil
+	}
 	return !druidcorev1alpha1.HasBootstrapMembersToDecommission(etcdCR), nil
 }
 
