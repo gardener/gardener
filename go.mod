@@ -26,7 +26,7 @@ require (
 	github.com/gardener/machine-controller-manager v0.63.1
 	github.com/gardener/pvc-autoscaler v0.3.1
 	github.com/gardener/terminal-controller-manager v0.40.0
-	github.com/go-jose/go-jose/v4 v4.1.5
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/go-logr/logr v1.4.4
 	github.com/go-test/deep v1.1.1
 	github.com/google/gnostic-models v0.7.1 // indirect
