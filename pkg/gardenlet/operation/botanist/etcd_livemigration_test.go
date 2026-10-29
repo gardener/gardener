@@ -727,18 +727,31 @@ var _ = Describe("Etcd LiveMigration", func() {
 				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(MatchError(ContainSubstring("LiveMigration")))
 			})
 
-			It("should restore original replicas and LiveMigration values after deploy (defer)", func() {
+			It("should restore original replicas and LiveMigration values after successful deploy", func() {
 				var lastSetReplicas *int32
 				etcdMain.EXPECT().SetReplicas(gomock.Any()).DoAndReturn(func(v *int32) {
 					lastSetReplicas = v
 				}).AnyTimes()
 
 				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(Succeed())
-				// defer must have restored original values
-				Expect(setLMCalled).To(Equal(2)) // call #1: mutated phase values; call #2: defer restore
-				Expect(capturedLM).NotTo(Equal(originalLM)) // call #1 was the mutated phase value
+				Expect(setLMCalled).To(Equal(2))
+				Expect(capturedLM).NotTo(Equal(originalLM))
 				Expect(lastSetReplicas).NotTo(BeNil())
-				Expect(*lastSetReplicas).To(Equal(int32(3))) // restored to original 3 replicas
+				Expect(*lastSetReplicas).To(Equal(int32(3)))
+			})
+
+			It("should restore original replicas and LiveMigration values even when deploy fails", func() {
+				var lastSetReplicas *int32
+				etcdMain.EXPECT().SetReplicas(gomock.Any()).DoAndReturn(func(v *int32) {
+					lastSetReplicas = v
+				}).AnyTimes()
+				etcdMain.EXPECT().Deploy(ctx).Return(errors.New("deploy-failed"))
+
+				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(MatchError(ContainSubstring("deploy-failed")))
+				Expect(setLMCalled).To(Equal(2))
+				Expect(capturedLM).NotTo(Equal(originalLM))
+				Expect(lastSetReplicas).NotTo(BeNil())
+				Expect(*lastSetReplicas).To(Equal(int32(3)))
 			})
 
 			DescribeTable("advertised member count always equals replica count",
