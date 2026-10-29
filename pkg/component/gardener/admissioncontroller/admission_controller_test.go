@@ -562,6 +562,13 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 					"role": "admission-controller",
 				},
 			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       new(intstr.FromString("100%")),
+					MaxUnavailable: new(intstr.FromInt32(0)),
+				},
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: gardenerutils.MergeStringMaps(GetLabels(), map[string]string{
