@@ -648,6 +648,11 @@ var _ = Describe("Etcd LiveMigration", func() {
 							Status: druidcorev1alpha1.ConditionTrue,
 						},
 					},
+					BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingClusterStatus{
+						Members: []druidcorev1alpha1.BootstrapJoinedMember{
+							{Name: "src-seed-etcd-main-0", PeerURLs: []string{"https://src-seed-etcd-main-0:2380"}},
+						},
+					},
 				},
 			}
 		}
@@ -706,9 +711,7 @@ var _ = Describe("Etcd LiveMigration", func() {
 					BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{Members: []druidcorev1alpha1.BootstrapExistingMember{{Name: "src-seed-etcd-main-0"}}},
 					AdditionalAdvertisedURLs:     &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{},
 				}
-				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: originalLM}).AnyTimes()
 				etcdMain.EXPECT().GetReplicas().Return(new(int32(3))).AnyTimes()
-				etcdMain.EXPECT().SetReplicas(gomock.Any()).AnyTimes()
 				etcdMain.EXPECT().SetLiveMigration(gomock.Any()).DoAndReturn(func(v *etcd.LiveMigrationValues) {
 					setLMCalled++
 					if setLMCalled == 1 {
@@ -717,7 +720,6 @@ var _ = Describe("Etcd LiveMigration", func() {
 				}).AnyTimes()
 				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).AnyTimes()
 				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx).AnyTimes()
-				etcdMain.EXPECT().Deploy(ctx).Return(nil).AnyTimes()
 				etcdEvents.EXPECT().Deploy(ctx).Return(nil).AnyTimes()
 			})
 
@@ -728,6 +730,9 @@ var _ = Describe("Etcd LiveMigration", func() {
 			})
 
 			It("should restore original replicas and LiveMigration values after successful deploy", func() {
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: originalLM}).AnyTimes()
+				etcdMain.EXPECT().Deploy(ctx).Return(nil).AnyTimes()
+
 				var lastSetReplicas *int32
 				etcdMain.EXPECT().SetReplicas(gomock.Any()).DoAndReturn(func(v *int32) {
 					lastSetReplicas = v
@@ -741,11 +746,13 @@ var _ = Describe("Etcd LiveMigration", func() {
 			})
 
 			It("should restore original replicas and LiveMigration values even when deploy fails", func() {
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: originalLM}).AnyTimes()
+				etcdMain.EXPECT().Deploy(ctx).Return(errors.New("deploy-failed"))
+
 				var lastSetReplicas *int32
 				etcdMain.EXPECT().SetReplicas(gomock.Any()).DoAndReturn(func(v *int32) {
 					lastSetReplicas = v
 				}).AnyTimes()
-				etcdMain.EXPECT().Deploy(ctx).Return(errors.New("deploy-failed"))
 
 				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(MatchError(ContainSubstring("deploy-failed")))
 				Expect(setLMCalled).To(Equal(2))
@@ -756,6 +763,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 
 			DescribeTable("advertised member count always equals replica count",
 				func(replicas int32) {
+					etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: originalLM}).AnyTimes()
+					etcdMain.EXPECT().Deploy(ctx).Return(nil).AnyTimes()
+					etcdMain.EXPECT().SetReplicas(gomock.Any()).AnyTimes()
+
 					Expect(b.DeployEtcdForLiveMigrationPhase(ctx, replicas)).To(Succeed())
 					Expect(capturedLM).NotTo(BeNil())
 					Expect(capturedLM.AdditionalAdvertisedURLs.PeerURLs.Members).To(HaveLen(int(replicas)))
@@ -867,6 +878,7 @@ var _ = Describe("Etcd LiveMigration", func() {
 		Describe("#IsSourceMembersAlreadyRemoved", func() {
 			It("should return false when bootstrap members still exist", func() {
 				cr := baseEtcdCR()
+				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
 				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
 
 				removed, err := b.IsSourceMembersAlreadyRemoved(ctx)
@@ -877,6 +889,7 @@ var _ = Describe("Etcd LiveMigration", func() {
 			It("should return true when no bootstrap members remain", func() {
 				cr := baseEtcdCR()
 				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
+				cr.Status.BootstrapWithExistingCluster = nil
 				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
 
 				removed, err := b.IsSourceMembersAlreadyRemoved(ctx)
@@ -897,6 +910,7 @@ var _ = Describe("Etcd LiveMigration", func() {
 			It("should return nil when scale operation is complete and no bootstrap members remain", func() {
 				cr := baseEtcdCR()
 				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
+				cr.Status.BootstrapWithExistingCluster = nil
 				etcdMain.EXPECT().Get(gomock.Any()).Return(cr, nil)
 
 				Expect(b.WaitUntilSourceEtcdMembersRemoved(ctx)).To(Succeed())
