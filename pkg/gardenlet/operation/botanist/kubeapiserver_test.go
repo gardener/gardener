@@ -290,6 +290,33 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 	})
 
+	Describe("#DefaultServiceAccountIssuerChanges", func() {
+		DescribeTable("should return whether a domain migration changes the default issuer",
+			func(prepTest func(), expected bool) {
+				prepTest()
+				Expect(botanist.DefaultServiceAccountIssuerChanges()).To(Equal(expected))
+			},
+			Entry("no domain migration", func() {}, false),
+			Entry("no domain migration without internal domain", func() {
+				botanist.Shoot.InternalClusterDomain = nil
+			}, false),
+			Entry("internal domain migration", func() {
+				botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+			}, true),
+			Entry("internal domain disabled during the migration", func() {
+				botanist.Shoot.InternalClusterDomain = nil
+				botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+			}, true),
+			Entry("external domain migration with internal domain", func() {
+				botanist.Shoot.PriorExternalClusterDomain = new("prior-external.foo.bar.com")
+			}, false),
+			Entry("external domain migration without internal domain", func() {
+				botanist.Shoot.InternalClusterDomain = nil
+				botanist.Shoot.PriorExternalClusterDomain = new("prior-external.foo.bar.com")
+			}, true),
+		)
+	})
+
 	Describe("#DeployKubeAPIServer", func() {
 		Describe("ServerCertificateConfig", func() {
 			priorExternalClusterDomain := "prior.foo.bar.com"

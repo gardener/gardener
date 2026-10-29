@@ -333,6 +333,20 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Dependencies: flow.NewTaskIDs(reconcileStaticControlPlanePods, waitUntilGardenerResourceManagerReady),
 		})
 		_ = g.Add(flow.Task{
+			Name: "Renewing shoot access secrets after change of the default ServiceAccount issuer",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return tokenrequest.RenewAccessSecrets(ctx, b.SeedClientSet.Client(),
+					client.InNamespace(b.Shoot.ControlPlaneNamespace),
+					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
+				)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf: !b.DefaultServiceAccountIssuerChanges() || !sets.New(
+				gardencorev1beta1.RotationPreparing,
+				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+			).Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials)),
+			Dependencies: flow.NewTaskIDs(reconcileStaticControlPlanePods, waitUntilGardenerResourceManagerReady),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets after creation of new ServiceAccount signing key in garden cluster",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := tokenrequest.RenewAccessSecrets(ctx, b.SeedClientSet.Client(), client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden}); err != nil {

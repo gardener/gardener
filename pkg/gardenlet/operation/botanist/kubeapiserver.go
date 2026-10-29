@@ -20,6 +20,7 @@ import (
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -295,12 +296,21 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname str
 	return serviceAccountConfig, nil
 }
 
+// DefaultServiceAccountIssuerChanges returns true while a domain migration changes the default ServiceAccount issuer.
+func (b *Botanist) DefaultServiceAccountIssuerChanges() bool {
+	return !ptr.Equal(cmp.Or(b.Shoot.InternalClusterDomain, b.Shoot.ExternalClusterDomain), b.priorDefaultIssuerDomain())
+}
+
 func (b *Botanist) priorDefaultServiceAccountIssuer() string {
-	priorDomain := cmp.Or(b.Shoot.PriorInternalClusterDomain, b.Shoot.InternalClusterDomain, b.Shoot.PriorExternalClusterDomain, b.Shoot.ExternalClusterDomain)
+	priorDomain := b.priorDefaultIssuerDomain()
 	if priorDomain == nil {
 		return ""
 	}
 	return "https://" + v1beta1helper.GetAPIServerDomain(*priorDomain)
+}
+
+func (b *Botanist) priorDefaultIssuerDomain() *string {
+	return cmp.Or(b.Shoot.PriorInternalClusterDomain, b.Shoot.InternalClusterDomain, b.Shoot.PriorExternalClusterDomain, b.Shoot.ExternalClusterDomain)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
