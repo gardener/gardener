@@ -47,7 +47,7 @@ const (
 	SecretNameCASeed = "ca-seed"
 	// SecretNameCAIstioBasicAuthServer is a constant for the name of a Kubernetes secret object that contains
 	// the CA certificate generated for the istio-basic-auth-server.
-	SecretNameCAIstioBasicAuthServer = "ca-istio-basic-auth-server"
+	SecretNameCAIstioBasicAuthServer = "ca-istio-basic-auth-server" // #nosec G101 -- No credential.
 	// SecretNameCAVirtualGardenIstioBasicAuthServer is a constant for the name of a Kubernetes secret object
 	// that contains the CA certificate generated for the istio-basic-auth-server of the virtual garden.
 	SecretNameCAVirtualGardenIstioBasicAuthServer = "ca-virtual-garden-istio-basic-auth-server"
