@@ -1307,9 +1307,17 @@ func startInternalDomainMigration(shoot *gardencorev1beta1.Shoot, desiredDomain 
 		return
 	}
 
-	var addresses []gardencorev1beta1.ShootAdvertisedAddress
+	var (
+		addresses     []gardencorev1beta1.ShootAdvertisedAddress
+		issuerAddress *gardencorev1beta1.ShootAdvertisedAddress
+	)
 	for _, address := range shoot.Status.AdvertisedAddresses {
-		if !isInternalAddress(address) && address.Name != v1beta1constants.AdvertisedAddressPriorInternal {
+		switch address.Name {
+		case v1beta1constants.AdvertisedAddressInternal, v1beta1constants.AdvertisedAddressPriorInternal, v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer:
+		case v1beta1constants.AdvertisedAddressServiceAccountIssuer:
+			issuerAddress = &address
+			addresses = append(addresses, address)
+		default:
 			addresses = append(addresses, address)
 		}
 	}
@@ -1321,6 +1329,9 @@ func startInternalDomainMigration(shoot *gardencorev1beta1.Shoot, desiredDomain 
 	}
 	if appliedAddress != nil {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressPriorInternal, URL: appliedAddress.URL})
+	} else if issuerAddress != nil {
+		// Without a prior internal domain, the domains do not contain the issuer that the new internal domain replaces.
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, URL: issuerAddress.URL})
 	}
 	shoot.Status.AdvertisedAddresses = addresses
 }

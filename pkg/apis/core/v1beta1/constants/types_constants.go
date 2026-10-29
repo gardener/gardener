@@ -1059,6 +1059,10 @@ const (
 	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address that is used as a
 	// service account issuer for the kube-apiserver.
 	AdvertisedAddressServiceAccountIssuer = "service-account-issuer"
+	// AdvertisedAddressPriorServiceAccountIssuer is a constant that represents the name of the address of the service
+	// account issuer which is replaced when a domain migration adds an internal domain to a shoot without one. It stays
+	// valid until the migration is completed.
+	AdvertisedAddressPriorServiceAccountIssuer = "prior-service-account-issuer"
 	// AdvertisedAddressWildcardTLSSeedBound is a constant that represents the name of the address that is
 	// seed-specific (i.e., changes when the Seed changes) and backed by a central wildcard TLS certificate.
 	AdvertisedAddressWildcardTLSSeedBound = "wildcard-tls-seed-bound"

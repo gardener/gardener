@@ -357,6 +357,37 @@ var _ = Describe("Reconciler", func() {
 			}))
 		})
 
+		It("should keep the issuer as prior issuer if the shoot gets an internal domain", func() {
+			issuerAddress := address(v1beta1constants.AdvertisedAddressServiceAccountIssuer, "shoot.example.com")
+			shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{externalAddress, issuerAddress}
+			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				externalAddress,
+				issuerAddress,
+				address(v1beta1constants.AdvertisedAddressInternal, "shoot.project.internal.new.example.com"),
+				address(v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, "shoot.example.com"),
+			}))
+		})
+
+		It("should not keep the issuer as prior issuer if the shoot changes its internal domain", func() {
+			issuerAddress := address(v1beta1constants.AdvertisedAddressServiceAccountIssuer, "shoot.project.internal.old.example.com")
+			shoot.Status.AdvertisedAddresses = append(shoot.Status.AdvertisedAddresses, issuerAddress,
+				address(v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, "shoot.example.com"))
+			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+
+			startOperation(gardencorev1beta1.LastOperationTypeReconcile)
+
+			Expect(shoot.Status.AdvertisedAddresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				externalAddress,
+				issuerAddress,
+				address(v1beta1constants.AdvertisedAddressInternal, "shoot.project.internal.new.example.com"),
+				address(v1beta1constants.AdvertisedAddressPriorInternal, "shoot.project.internal.old.example.com"),
+			}))
+		})
+
 		It("should keep the internal domain if the CA rotation starts without the confirmation", func() {
 			delete(shoot.Annotations, v1beta1constants.AnnotationConfirmationMigrateInternalDomain)
 			Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
