@@ -346,14 +346,16 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 func (c *Constraint) CheckIfInternalDomainUpToDate() (gardencorev1beta1.ConditionStatus, string, string) {
 	if ptr.Equal(c.shoot.InternalClusterDomain, c.shoot.DesiredInternalClusterDomain) {
 		return gardencorev1beta1.ConditionTrue,
-			"InternalDomainUpToDate",
+			"NoInternalDomainMigrationPending",
 			"The shoot uses the internal domain of the seed for new shoots."
 	}
 
 	return gardencorev1beta1.ConditionFalse,
-		"InternalDomainOutdated",
-		fmt.Sprintf("The shoot uses the internal domain %q, but the seed gives the internal domain %q to new shoots.",
-			ptr.Deref(c.shoot.InternalClusterDomain, "<none>"), ptr.Deref(c.shoot.DesiredInternalClusterDomain, "<none>"))
+		"InternalDomainMigrationPending",
+		fmt.Sprintf("The shoot uses the internal domain %q, but the seed gives the internal domain %q to new shoots. "+
+			"To migrate, set the annotation %s=true and start a CA rotation.",
+			ptr.Deref(c.shoot.InternalClusterDomain, "<none>"), ptr.Deref(c.shoot.DesiredInternalClusterDomain, "<none>"),
+			v1beta1constants.AnnotationConfirmationMigrateInternalDomain)
 }
 
 // checkPreservation checks whether the shoot has preserved failed machines and returns the corresponding condition.

@@ -756,8 +756,8 @@ var _ = Describe("Constraints", func() {
 					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).To(ContainCondition(
 						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
 						WithStatus(gardencorev1beta1.ConditionFalse),
-						WithReason("InternalDomainOutdated"),
-						WithMessage(`The shoot uses the internal domain "bar.foo.internal.old.example.com", but the seed gives the internal domain "bar.foo.internal.new.example.com" to new shoots.`),
+						WithReason("InternalDomainMigrationPending"),
+						WithMessage(`The shoot uses the internal domain "bar.foo.internal.old.example.com", but the seed gives the internal domain "bar.foo.internal.new.example.com" to new shoots. To migrate, set the annotation confirmation.gardener.cloud/migrate-internal-domain=true and start a CA rotation.`),
 					))
 				})
 
@@ -767,7 +767,7 @@ var _ = Describe("Constraints", func() {
 					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).To(ContainCondition(
 						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
 						WithStatus(gardencorev1beta1.ConditionFalse),
-						WithMessage(`The shoot uses the internal domain "<none>", but the seed gives the internal domain "bar.foo.internal.new.example.com" to new shoots.`),
+						WithMessage(`The shoot uses the internal domain "<none>", but the seed gives the internal domain "bar.foo.internal.new.example.com" to new shoots. To migrate, set the annotation confirmation.gardener.cloud/migrate-internal-domain=true and start a CA rotation.`),
 					))
 				})
 
@@ -777,7 +777,7 @@ var _ = Describe("Constraints", func() {
 					Expect(newConstraintWithAPIServerRunning(true).Check(ctx, constraints)).To(ContainCondition(
 						OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
 						WithStatus(gardencorev1beta1.ConditionFalse),
-						WithMessage(`The shoot uses the internal domain "bar.foo.internal.old.example.com", but the seed gives the internal domain "<none>" to new shoots.`),
+						WithMessage(`The shoot uses the internal domain "bar.foo.internal.old.example.com", but the seed gives the internal domain "<none>" to new shoots. To migrate, set the annotation confirmation.gardener.cloud/migrate-internal-domain=true and start a CA rotation.`),
 					))
 				})
 
