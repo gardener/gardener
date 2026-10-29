@@ -187,6 +187,9 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		if !apierrors.IsNotFound(err) {
 			return nil, err
 		}
+		// set dnsRecord to be "unpopulated", because it can still hold the object of an earlier Deploy or Destroy, and
+		// a create request must not have a resourceVersion
+		d.dnsRecord = newDNSRecord(d.values)
 		create = true
 	}
 

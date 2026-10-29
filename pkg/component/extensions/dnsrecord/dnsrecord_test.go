@@ -362,6 +362,18 @@ var _ = Describe("DNSRecord", func() {
 			Expect(deployedDNS.Spec.Values).To(ContainElement(addressIP6))
 		})
 
+		It("should create the DNSRecord again after it was destroyed", func(ctx context.Context) {
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout, credentialsDeployFunc)
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+			Expect(dnsRecord.Destroy(ctx)).To(Succeed())
+
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			deployedDNS := &extensionsv1alpha1.DNSRecord{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)).To(Succeed())
+			Expect(deployedDNS.Spec.Name).To(Equal(values.DNSName))
+		})
+
 		It("should deploy the DNSRecord without operation annotation if it exists with desired spec", func() {
 			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
