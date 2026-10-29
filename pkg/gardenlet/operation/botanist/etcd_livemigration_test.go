@@ -689,32 +689,24 @@ var _ = Describe("Etcd LiveMigration", func() {
 			ctrl.Finish()
 		})
 
-		Context("when DeployEtcdForLiveMigrationPhase is called without LiveMigration values", func() {
-			It("should return an error", func() {
-				etcdMain.EXPECT().GetValues().Return(etcd.Values{LiveMigration: nil})
-
-				err := b.DeployEtcdForLiveMigrationPhase(ctx, 2)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("LiveMigration"))
-			})
-		})
-
 		Describe("#DeployEtcdForLiveMigrationPhase", func() {
 			var (
 				capturedLM  *etcd.LiveMigrationValues
 				setLMCalled int
+				originalLM  *etcd.LiveMigrationValues
 			)
 
 			BeforeEach(func() {
 				capturedLM = nil
 				setLMCalled = 0
-				lmValues := &etcd.LiveMigrationValues{
-					SkipClientSANVerification:  true,
-					ExtraPeerServiceDNSNames:   []string{"peer-san"},
-					ExtraClientServiceDNSNames: []string{"client-san"},
-					AdditionalAdvertisedURLs:   &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{},
+				originalLM = &etcd.LiveMigrationValues{
+					SkipClientSANVerification:    true,
+					ExtraPeerServiceDNSNames:     []string{"peer-san"},
+					ExtraClientServiceDNSNames:   []string{"client-san"},
+					BootstrapWithExistingCluster: &druidcorev1alpha1.BootstrapWithExistingCluster{Members: []druidcorev1alpha1.BootstrapExistingMember{{Name: "src-seed-etcd-main-0"}}},
+					AdditionalAdvertisedURLs:     &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{},
 				}
-				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: lmValues}).AnyTimes()
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{Replicas: new(int32(3)), LiveMigration: originalLM}).AnyTimes()
 				etcdMain.EXPECT().GetReplicas().Return(new(int32(3))).AnyTimes()
 				etcdMain.EXPECT().SetReplicas(gomock.Any()).AnyTimes()
 				etcdMain.EXPECT().SetLiveMigration(gomock.Any()).DoAndReturn(func(v *etcd.LiveMigrationValues) {
@@ -729,18 +721,24 @@ var _ = Describe("Etcd LiveMigration", func() {
 				etcdEvents.EXPECT().Deploy(ctx).Return(nil).AnyTimes()
 			})
 
-			It("should write 2 advertised members when called with phaseReplicas=2", func() {
-				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(Succeed())
-				Expect(capturedLM).NotTo(BeNil())
-				Expect(capturedLM.AdditionalAdvertisedURLs.PeerURLs.Members).To(HaveLen(2))
-				Expect(capturedLM.AdditionalAdvertisedURLs.ClientURLs.Members).To(HaveLen(2))
+			It("should return an error when LiveMigration values are nil", func() {
+				etcdMain.EXPECT().GetValues().Return(etcd.Values{LiveMigration: nil})
+
+				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(MatchError(ContainSubstring("LiveMigration")))
 			})
 
-			It("should write 3 advertised members when called with phaseReplicas=3", func() {
-				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 3)).To(Succeed())
-				Expect(capturedLM).NotTo(BeNil())
-				Expect(capturedLM.AdditionalAdvertisedURLs.PeerURLs.Members).To(HaveLen(3))
-				Expect(capturedLM.AdditionalAdvertisedURLs.ClientURLs.Members).To(HaveLen(3))
+			It("should restore original replicas and LiveMigration values after deploy (defer)", func() {
+				var lastSetReplicas *int32
+				etcdMain.EXPECT().SetReplicas(gomock.Any()).DoAndReturn(func(v *int32) {
+					lastSetReplicas = v
+				}).AnyTimes()
+
+				Expect(b.DeployEtcdForLiveMigrationPhase(ctx, 2)).To(Succeed())
+				// defer must have restored original values
+				Expect(setLMCalled).To(Equal(2)) // call #1: mutated phase values; call #2: defer restore
+				Expect(capturedLM).NotTo(Equal(originalLM)) // call #1 was the mutated phase value
+				Expect(lastSetReplicas).NotTo(BeNil())
+				Expect(*lastSetReplicas).To(Equal(int32(3))) // restored to original 3 replicas
 			})
 
 			DescribeTable("advertised member count always equals replica count",
@@ -748,6 +746,11 @@ var _ = Describe("Etcd LiveMigration", func() {
 					Expect(b.DeployEtcdForLiveMigrationPhase(ctx, replicas)).To(Succeed())
 					Expect(capturedLM).NotTo(BeNil())
 					Expect(capturedLM.AdditionalAdvertisedURLs.PeerURLs.Members).To(HaveLen(int(replicas)))
+					Expect(capturedLM.AdditionalAdvertisedURLs.ClientURLs.Members).To(HaveLen(int(replicas)))
+					Expect(capturedLM.SkipClientSANVerification).To(Equal(originalLM.SkipClientSANVerification))
+					Expect(capturedLM.BootstrapWithExistingCluster).To(Equal(originalLM.BootstrapWithExistingCluster))
+					Expect(capturedLM.ExtraPeerServiceDNSNames).To(Equal(originalLM.ExtraPeerServiceDNSNames))
+					Expect(capturedLM.ExtraClientServiceDNSNames).To(Equal(originalLM.ExtraClientServiceDNSNames))
 				},
 				Entry("replicas=1", int32(1)),
 				Entry("replicas=2", int32(2)),
@@ -767,9 +770,26 @@ var _ = Describe("Etcd LiveMigration", func() {
 
 				Expect(b.SeedClientSet.Client().Create(ctx, cr)).To(Succeed())
 
-				err := b.RemoveSourceEtcdMembers(ctx)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("bootstrapped"))
+				Expect(b.RemoveSourceEtcdMembers(ctx)).To(MatchError(ContainSubstring("bootstrapped")))
+
+				updated := &druidcorev1alpha1.Etcd{}
+				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(cr), updated)).To(Succeed())
+				Expect(updated.Spec.Etcd.BootstrapWithExistingCluster).NotTo(BeNil())
+			})
+
+			It("should return an error (no patch) when BootstrappedWithExistingCluster condition is absent", func() {
+				cr := baseEtcdCR()
+				cr.Status.Conditions = []druidcorev1alpha1.Condition{
+					{
+						Type:   druidcorev1alpha1.ConditionTypeScaleOperationComplete,
+						Status: druidcorev1alpha1.ConditionTrue,
+					},
+				}
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+
+				Expect(b.SeedClientSet.Client().Create(ctx, cr)).To(Succeed())
+
+				Expect(b.RemoveSourceEtcdMembers(ctx)).To(MatchError(ContainSubstring("bootstrapped")))
 
 				updated := &druidcorev1alpha1.Etcd{}
 				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(cr), updated)).To(Succeed())
@@ -810,9 +830,7 @@ var _ = Describe("Etcd LiveMigration", func() {
 				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
 				Expect(b.SeedClientSet.Client().Create(ctx, cr)).To(Succeed())
 
-				err := b.RemoveSourceEtcdMembers(ctx)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("scale-out"))
+				Expect(b.RemoveSourceEtcdMembers(ctx)).To(MatchError(ContainSubstring("scale-out")))
 
 				updated := &druidcorev1alpha1.Etcd{}
 				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(cr), updated)).To(Succeed())
@@ -849,8 +867,7 @@ var _ = Describe("Etcd LiveMigration", func() {
 				defer cancel()
 
 				err := b.WaitUntilSourceEtcdMembersRemoved(cancelCtx)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("get-failed"))
+				Expect(err).To(MatchError(ContainSubstring("get-failed")))
 			})
 		})
 
