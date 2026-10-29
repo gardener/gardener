@@ -20,14 +20,16 @@ import (
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // KubeletBootstrapKubeconfig is a runnable for creating a bootstrap kubeconfig for kubelet.
 type KubeletBootstrapKubeconfig struct {
-	Log             logr.Logger
-	FS              afero.Afero
-	APIServerConfig nodeagentconfigv1alpha1.APIServer
+	Log                logr.Logger
+	FS                 afero.Afero
+	APIServerConfig    nodeagentconfigv1alpha1.APIServer
+	IsControlPlaneNode bool
 }
 
 // Start performs creation of the bootstrap kubeconfig.
@@ -63,9 +65,17 @@ func (k *KubeletBootstrapKubeconfig) Start(_ context.Context) error {
 		return fmt.Errorf("unable to create kubelet directory %q: %w", kubelet.PathKubeletDirectory, err)
 	}
 
+	server := k.APIServerConfig.Server
+	if k.IsControlPlaneNode {
+		// kubelet on control plane nodes in self-hosted shoot clusters should connect to the API server via localhost
+		// to avoid unnecessary network hops, i.e., they should not connect to the API server via the external exposure,
+		// which might not be available in a failure scenario.
+		server = fmt.Sprintf("https://localhost:%d", kubeapiserverconstants.Port)
+	}
+
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
 		"kubelet-bootstrap",
-		clientcmdv1.Cluster{Server: k.APIServerConfig.Server, CertificateAuthority: k.APIServerConfig.CAFile},
+		clientcmdv1.Cluster{Server: server, CertificateAuthority: k.APIServerConfig.CAFile},
 		clientcmdv1.AuthInfo{Token: strings.TrimSpace(string(bootstrapToken))},
 	))
 	if err != nil {
