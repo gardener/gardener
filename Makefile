@@ -405,6 +405,8 @@ test-e2e-local-gardenadm-managed-infra-connect: $(GINKGO)
 	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="managed-infra && connect" ./test/e2e/gardenadm/...
 test-e2e-local-gardenadm-managed-infra-seed: $(GINKGO)
 	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="managed-infra && (seed || hosted-shoot)" ./test/e2e/gardenadm/...
+test-e2e-local-gardenadm-managed-infra-destroy: $(GINKGO)
+	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="managed-infra && destroy" ./test/e2e/gardenadm/...
 test-e2e-local-gardenadm-unmanaged-infra-initjoin: $(GINKGO)
 	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="unmanaged-infra && initjoin" ./test/e2e/gardenadm/...
 test-e2e-local-gardenadm-unmanaged-infra-connect: $(GINKGO)
@@ -448,6 +450,8 @@ ci-e2e-kind-gardenadm-unmanaged-infra-restore: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-unmanaged-infra-restore.sh
 ci-e2e-kind-gardenadm-managed-infra: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-gardenadm-managed-infra.sh
+ci-e2e-kind-gardenadm-managed-infra-destroy: $(KIND) $(YQ)
+	./hack/ci-e2e-kind-gardenadm-managed-infra-destroy.sh
 ci-e2e-kind-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE= GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
 ci-e2e-kind-ha-multi-node-upgrade: $(KIND) $(YQ)
