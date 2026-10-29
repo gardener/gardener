@@ -35,6 +35,7 @@
 * [Projects](usage/project/projects.md)
 * [Service Account Manager](usage/project/service-account-manager.md)
 * [`NamespacedCloudProfile`s](usage/project/namespaced-cloud-profiles.md)
+* [`Quota`s](usage/project/quotas.md)
 
 ### Shoot
 

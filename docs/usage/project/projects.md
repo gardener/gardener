@@ -8,7 +8,7 @@ The Gardener API server supports a cluster-scoped `Project` resource which is us
 
 Each `Project` is backed by a Kubernetes `Namespace` that contains the actual related Kubernetes resources, like `Secret`s or `Shoot`s.
 
-See [Quotas](quotas.md) to limit Shoot infrastructure consumption or configure automatic deletion after a cluster lifetime.
+See [Quotas](quotas.md) to limit `Shoot` infrastructure consumption or configure automatic deletion after a cluster lifetime.
 
 **Example resource:**
 
