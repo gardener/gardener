@@ -4,11 +4,17 @@ description: Limit Shoot infrastructure consumption and cluster lifetime with Qu
 
 # Quotas
 
-Gardener `Quota` resources limit the infrastructure resources consumed by Shoot clusters and can optionally limit their lifetime.
-They are namespaced resources connected to Shoots through a `CredentialsBinding` or `SecretBinding`.
-Creating a Quota alone does not attach it to every Shoot in a project or automatically discover all use of a provider credential.
+Gardener `Quota` resources limit the infrastructure resources consumed by `Shoot` clusters and can optionally limit their lifetime.
+They are namespaced resources connected to `Shoot`s through a `CredentialsBinding` or `SecretBinding`.
+Creating a `Quota` alone does not attach it to every `Shoot` in a project or automatically discover all uses of a provider credential.
 
-This differs from the native Kubernetes `ResourceQuota` named `gardener` maintained by the [Project controller](../../concepts/controller-manager.md#project-controller).
+A `Quota` declares upper limits in `spec.metrics`, such as CPU, memory, storage, and load balancers, and an optional `spec.clusterLifetimeDays`.
+To use it, create the `Quota` and list it under `quotas` in the binding that a `Shoot` references.
+When such a `Shoot` is created or its workers are changed, Gardener adds up the requested resources of all `Shoot`s using that `Quota` and rejects the request if a limit would be exceeded.
+If a lifetime is set, Gardener deletes those `Shoot`s automatically after it expires.
+The sections below explain scopes, a complete example, how usage is calculated, and the lifetime behavior.
+
+A Gardener `Quota` differs from the native Kubernetes `ResourceQuota` named `gardener` maintained by the [Project controller](../../concepts/controller-manager.md#project-controller).
 That resource limits object counts in the project namespace; see its [ResourceQuota reconciler](../../concepts/controller-manager.md#resourcequota-reconciler).
 Gardener Quotas instead constrain the infrastructure consumption described below.
 
