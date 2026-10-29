@@ -13,6 +13,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -185,6 +186,11 @@ func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 				APIGroups: []string{coordinationv1.GroupName},
 				Resources: []string{"leases"},
 				Verbs:     []string{"create", "get", "list", "update"},
+			},
+			{
+				APIGroups: []string{discoveryv1.GroupName},
+				Resources: []string{"endpointslices"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
 				APIGroups: []string{"gateway.networking.k8s.io"},
