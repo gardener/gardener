@@ -864,6 +864,35 @@ var _ = Describe("Etcd LiveMigration", func() {
 			})
 		})
 
+		Describe("#IsSourceMembersAlreadyRemoved", func() {
+			It("should return false when bootstrap members still exist", func() {
+				cr := baseEtcdCR()
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+
+				removed, err := b.IsSourceMembersAlreadyRemoved(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(BeFalse())
+			})
+
+			It("should return true when no bootstrap members remain", func() {
+				cr := baseEtcdCR()
+				cr.Spec.Etcd.BootstrapWithExistingCluster = nil
+				etcdMain.EXPECT().Get(ctx).Return(cr, nil)
+
+				removed, err := b.IsSourceMembersAlreadyRemoved(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(removed).To(BeTrue())
+			})
+
+			It("should return an error when Get fails", func() {
+				etcdMain.EXPECT().Get(ctx).Return(nil, errors.New("get-failed"))
+
+				removed, err := b.IsSourceMembersAlreadyRemoved(ctx)
+				Expect(err).To(MatchError(ContainSubstring("get-failed")))
+				Expect(removed).To(BeFalse())
+			})
+		})
+
 		Describe("#WaitUntilSourceEtcdMembersRemoved", func() {
 			It("should return nil when scale operation is complete and no bootstrap members remain", func() {
 				cr := baseEtcdCR()
