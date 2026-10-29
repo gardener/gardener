@@ -286,13 +286,13 @@ func (i *istiod) Deploy(ctx context.Context) error {
 				Endpoints: []monitoringv1.Endpoint{{
 					Path: "/stats/prometheus",
 					Port: "tcp",
-					RelabelConfigs: []monitoringv1.RelabelConfig{{
-						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
+					RelabelConfigs: append(monitoringutils.NormalizedPodIPRelabelConfigs(), monitoringv1.RelabelConfig{
+						SourceLabels: []monitoringv1.LabelName{"__tmp_kubernetes_pod_ip"},
 						Action:       "replace",
 						TargetLabel:  "__address__",
 						Regex:        `(.+)`,
 						Replacement:  new("${1}:15090"),
-					}},
+					}),
 					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
 						"envoy_cluster_upstream_cx_active",
 						"envoy_cluster_upstream_cx_connect_fail",
