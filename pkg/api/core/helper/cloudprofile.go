@@ -126,14 +126,25 @@ func VersionIsDeprecated(version core.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == core.ClassificationDeprecated
 }
 
+// FindLifecycleStage returns the first lifecycle stage with the given classification.
+// It returns nil if no such stage exists.
+func FindLifecycleStage(version core.ExpirableVersion, classification core.VersionClassification) *core.LifecycleStage {
+	for _, stage := range ToLifecycleStages(version) {
+		if stage.Classification == classification {
+			return &stage
+		}
+	}
+
+	return nil
+}
+
 // SupportedLifecycleClassification returns the lifecycle stage in which the version is classified as supported.
 // It returns an empty LifecycleStage if no such stage exists.
 func SupportedLifecycleClassification(version core.ExpirableVersion) core.LifecycleStage {
-	for _, stage := range ToLifecycleStages(version) {
-		if stage.Classification == core.ClassificationSupported {
-			return stage
-		}
+	if stage := FindLifecycleStage(version, core.ClassificationSupported); stage != nil {
+		return *stage
 	}
+
 	return core.LifecycleStage{}
 }
 

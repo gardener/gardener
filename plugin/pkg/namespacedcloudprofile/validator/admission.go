@@ -34,18 +34,6 @@ import (
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
-// getExpiryStage extracts the expired LifecycleStage from a version's lifecycle stages.
-// For legacy classifications it converts it to LifecycleStages.
-// If the version does not have an Expired stage, it returns nil.
-func getExpiryStage(version gardencore.ExpirableVersion) *gardencore.LifecycleStage {
-	for _, stage := range gardencorehelper.ToLifecycleStages(version) {
-		if stage.Classification == gardencore.ClassificationExpired {
-			return &stage
-		}
-	}
-	return nil
-}
-
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameNamespacedCloudProfileValidator, func(_ io.Reader) (admission.Interface, error) {
@@ -220,17 +208,21 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 
 func (c *validationContext) validateMergeResultForReferencingShoots(newProfile, oldProfile *gardencorev1beta1.NamespacedCloudProfileStatus) error {
 	newlyUnavailableKubernetesVersions := sets.New[string]()
-	newlyUnavailableMachineImageVersions := sets.New[string]()
+	newlyUnavailableMachineImageVersions := map[string]sets.Set[string]{}
+
 	if oldProfile == nil {
 		for _, version := range newProfile.CloudProfileSpec.Kubernetes.Versions {
 			if v1beta1helper.VersionIsUnavailable(version) {
 				newlyUnavailableKubernetesVersions.Insert(version.Version)
 			}
 		}
+
 		for _, image := range newProfile.CloudProfileSpec.MachineImages {
+			newlyUnavailableMachineImageVersions[image.Name] = sets.New[string]()
+
 			for _, version := range image.Versions {
 				if v1beta1helper.VersionIsUnavailable(version.ExpirableVersion) {
-					newlyUnavailableMachineImageVersions.Insert(fmt.Sprintf("%s@%s", image.Name, version.Version))
+					newlyUnavailableMachineImageVersions[image.Name].Insert(version.Version)
 				}
 			}
 		}
@@ -239,18 +231,19 @@ func (c *validationContext) validateMergeResultForReferencingShoots(newProfile, 
 			newProfile.CloudProfileSpec.Kubernetes.Versions,
 			oldProfile.CloudProfileSpec.Kubernetes.Versions,
 		)
+
 		oldImages := gardenerutils.NewV1beta1ImagesContext(oldProfile.CloudProfileSpec.MachineImages)
+
 		for _, newImage := range newProfile.CloudProfileSpec.MachineImages {
 			oldImage, exists := oldImages.GetImage(newImage.Name)
 			if !exists {
 				continue
 			}
-			for version := range v1beta1helper.FindNewlyUnavailableExpirableVersions(
+
+			newlyUnavailableMachineImageVersions[newImage.Name] = v1beta1helper.FindNewlyUnavailableExpirableVersions(
 				v1beta1helper.ToExpirableVersions(newImage.Versions),
 				v1beta1helper.ToExpirableVersions(oldImage.Versions),
-			) {
-				newlyUnavailableMachineImageVersions.Insert(fmt.Sprintf("%s@%s", newImage.Name, version))
-			}
+			)
 		}
 	}
 
@@ -281,11 +274,10 @@ func (c *validationContext) validateMergeResultForReferencingShoots(newProfile, 
 				continue
 			}
 
-			imageIdentifier := fmt.Sprintf("%s@%s", image.Name, *image.Version)
-			if newlyUnavailableMachineImageVersions.Has(imageIdentifier) {
+			if newlyUnavailableMachineImageVersions[image.Name].Has(*image.Version) {
 				return fmt.Errorf(
 					"machine image %q currently used by worker-pool %q of shoot %q would become unavailable",
-					imageIdentifier,
+					fmt.Sprintf("%s@%s", image.Name, *image.Version),
 					worker.Name,
 					shoot.Name,
 				)
@@ -351,8 +343,8 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 		// validateSimulatedCloudProfileStatusMergeResult using the same rules as a normal CloudProfile.
 		if attr.GetOperation() == admission.Update && gardencorehelper.VersionIsExpired(newVersion) {
 			override, exists := currentVersionsMerged[newVersion.Version]
-			overrideStage := getExpiryStage(override)
-			newStage := getExpiryStage(newVersion)
+			overrideStage := gardencorehelper.FindLifecycleStage(override, gardencore.ClassificationExpired)
+			newStage := gardencorehelper.FindLifecycleStage(newVersion, gardencore.ClassificationExpired)
 			if !exists || overrideStage == nil || newStage == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 				return fmt.Errorf("expiration date for version %q is in the past", newVersion.Version)
 			}
@@ -445,8 +437,8 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 						if oldVersionsMerged != nil {
 							override, exists = oldVersionsMerged.GetImageVersion(image.Name, imageVersion.Version)
 						}
-						overrideStage := getExpiryStage(override.ExpirableVersion)
-						newStage := getExpiryStage(imageVersion.ExpirableVersion)
+						overrideStage := gardencorehelper.FindLifecycleStage(override.ExpirableVersion, gardencore.ClassificationExpired)
+						newStage := gardencorehelper.FindLifecycleStage(imageVersion.ExpirableVersion, gardencore.ClassificationExpired)
 						if !exists || overrideStage == nil || newStage == nil || !overrideStage.StartTime.Equal(newStage.StartTime) {
 							versionPath := imageVersionIndexPath.Child("expirationDate")
 							invalidValue := any(imageVersion.ExpirationDate)

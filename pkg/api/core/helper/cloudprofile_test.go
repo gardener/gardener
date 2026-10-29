@@ -337,6 +337,54 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
+	Describe("#FindLifecycleStage", func() {
+		It("returns matching stage from explicit lifecycle stages", func() {
+			expiry := new(metav1.NewTime(time.Now().Add(time.Hour)))
+			stage := FindLifecycleStage(core.ExpirableVersion{
+				Version: "1.28.0",
+				Lifecycle: []core.LifecycleStage{
+					{Classification: core.ClassificationSupported},
+					{Classification: core.ClassificationExpired, StartTime: expiry},
+				},
+			}, core.ClassificationExpired)
+			Expect(stage).To(Equal(&core.LifecycleStage{Classification: core.ClassificationExpired, StartTime: expiry}))
+		})
+
+		It("returns nil when no matching stage exists in lifecycle", func() {
+			stage := FindLifecycleStage(core.ExpirableVersion{
+				Version: "1.28.0",
+				Lifecycle: []core.LifecycleStage{
+					{Classification: core.ClassificationPreview},
+				},
+			}, core.ClassificationSupported)
+			Expect(stage).To(BeNil())
+		})
+
+		It("returns matching stage for legacy classification", func() {
+			stage := FindLifecycleStage(core.ExpirableVersion{
+				Version:        "1.28.0",
+				Classification: new(core.ClassificationDeprecated),
+			}, core.ClassificationDeprecated)
+			Expect(stage).To(Equal(&core.LifecycleStage{Classification: core.ClassificationDeprecated}))
+		})
+
+		It("returns expired stage for legacy expiration date", func() {
+			expiry := new(metav1.NewTime(time.Now().Add(time.Hour)))
+			stage := FindLifecycleStage(core.ExpirableVersion{
+				Version:        "1.28.0",
+				ExpirationDate: expiry,
+			}, core.ClassificationExpired)
+			Expect(stage).To(Equal(&core.LifecycleStage{Classification: core.ClassificationExpired, StartTime: expiry}))
+		})
+
+		It("returns default supported stage for unclassified version", func() {
+			stage := FindLifecycleStage(core.ExpirableVersion{
+				Version: "1.28.0",
+			}, core.ClassificationSupported)
+			Expect(stage).To(Equal(&core.LifecycleStage{Classification: core.ClassificationSupported}))
+		})
+	})
+
 	Describe("#SupportedLifecycleClassification", func() {
 		It("returns supported stage from explicit lifecycle stages", func() {
 			stage := SupportedLifecycleClassification(core.ExpirableVersion{
