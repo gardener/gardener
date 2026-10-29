@@ -95,24 +95,18 @@ func ValidateCloudProfileSpecUpdate(newSpec, oldSpec *core.CloudProfileSpec, fld
 	return allErrs
 }
 
-// ValidateCloudProfileExpirableVersionsUpdate validates the expirable versions update of a CloudProfile expirable version
+// ValidateCloudProfileExpirableVersionsUpdate validates the expirable versions update of a CloudProfile expirable version.
 func ValidateCloudProfileExpirableVersionsUpdate(newVersions, oldVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	oldVersionsMap := map[string]core.ExpirableVersion{}
-	for _, version := range oldVersions {
-		oldVersionsMap[version.Version] = version
-	}
+	newlyUnavailable := helper.FindNewlyUnavailableExpirableVersions(newVersions, oldVersions)
 
-	for i, newVersion := range newVersions {
-		oldVersion, ok := oldVersionsMap[newVersion.Version]
-		if !ok {
-			continue
-		}
-
-		if helper.CurrentLifecycleClassification(oldVersion) != core.ClassificationUnavailable &&
-			helper.CurrentLifecycleClassification(newVersion) == core.ClassificationUnavailable {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), "a version cannot be turned unavailable if it was already moved into a later lifecycle stage"))
+	for i, version := range newVersions {
+		if newlyUnavailable.Has(version.Version) {
+			allErrs = append(allErrs, field.Forbidden(
+				fldPath.Index(i),
+				"a version cannot be turned unavailable if it was already moved into a later lifecycle stage",
+			))
 		}
 	}
 

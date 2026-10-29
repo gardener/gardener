@@ -218,29 +218,6 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 	return nil
 }
 
-func collectNewUnavailableExpirableVersions(newVersions, oldVersions []gardencorev1beta1.ExpirableVersion) sets.Set[string] {
-	result := sets.New[string]()
-
-	oldVersionsMap := map[string]gardencorev1beta1.ExpirableVersion{}
-	for _, version := range oldVersions {
-		oldVersionsMap[version.Version] = version
-	}
-
-	for _, newVersion := range newVersions {
-		oldVersion, ok := oldVersionsMap[newVersion.Version]
-		if !ok {
-			continue
-		}
-
-		if !v1beta1helper.VersionIsUnavailable(oldVersion) &&
-			v1beta1helper.VersionIsUnavailable(newVersion) {
-			result.Insert(newVersion.Version)
-		}
-	}
-
-	return result
-}
-
 func (c *validationContext) validateMergeResultForReferencingShoots(newProfile, oldProfile *gardencorev1beta1.NamespacedCloudProfileStatus) error {
 	newlyUnavailableKubernetesVersions := sets.New[string]()
 	newlyUnavailableMachineImageVersions := sets.New[string]()
@@ -258,7 +235,7 @@ func (c *validationContext) validateMergeResultForReferencingShoots(newProfile, 
 			}
 		}
 	} else {
-		newlyUnavailableKubernetesVersions = collectNewUnavailableExpirableVersions(
+		newlyUnavailableKubernetesVersions = v1beta1helper.FindNewlyUnavailableExpirableVersions(
 			newProfile.CloudProfileSpec.Kubernetes.Versions,
 			oldProfile.CloudProfileSpec.Kubernetes.Versions,
 		)
@@ -268,7 +245,7 @@ func (c *validationContext) validateMergeResultForReferencingShoots(newProfile, 
 			if !exists {
 				continue
 			}
-			for version := range collectNewUnavailableExpirableVersions(
+			for version := range v1beta1helper.FindNewlyUnavailableExpirableVersions(
 				v1beta1helper.ToExpirableVersions(newImage.Versions),
 				v1beta1helper.ToExpirableVersions(oldImage.Versions),
 			) {

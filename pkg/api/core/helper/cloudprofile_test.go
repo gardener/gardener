@@ -223,6 +223,60 @@ var _ = Describe("CloudProfile Helper", func() {
 		})
 	})
 
+	Context("FindNewlyUnavailableExpirableVersions", func() {
+		It("should return only newly unavailable versions", func() {
+			oldVersions := []core.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []core.LifecycleStage{{
+						Classification: core.ClassificationSupported,
+					}},
+				},
+				{
+					Version: "2.0.0",
+					Lifecycle: []core.LifecycleStage{{
+						Classification: core.ClassificationExpired,
+					}},
+				},
+				{
+					Version: "3.0.0",
+					Lifecycle: []core.LifecycleStage{{
+						Classification: core.ClassificationUnavailable,
+					}},
+				},
+			}
+			newVersions := []core.ExpirableVersion{
+				{
+					Version: "1.0.0",
+					Lifecycle: []core.LifecycleStage{{
+						Classification: core.ClassificationUnavailable,
+					}},
+				},
+				{
+					Version: "2.0.0",
+					Lifecycle: []core.LifecycleStage{{
+						Classification: core.ClassificationUnavailable,
+					}},
+				},
+				{
+					Version: "3.0.0", // Already unavailable version is ignored
+					Lifecycle: []core.LifecycleStage{{
+						Classification: core.ClassificationUnavailable,
+					}},
+				},
+				{
+					Version: "4.0.0", // New added version is ignored
+					Lifecycle: []core.LifecycleStage{{
+						Classification: core.ClassificationUnavailable,
+					}},
+				},
+			}
+
+			result := FindNewlyUnavailableExpirableVersions(newVersions, oldVersions)
+			Expect(result.UnsortedList()).To(ConsistOf("1.0.0", "2.0.0"))
+		})
+	})
+
 	Context("ToLifecycleStages", func() {
 		var now = time.Now()
 

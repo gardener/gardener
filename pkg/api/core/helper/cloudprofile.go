@@ -70,6 +70,31 @@ func CurrentLifecycleClassification(version core.ExpirableVersion) core.VersionC
 	return currentClassification
 }
 
+// FindNewlyUnavailableExpirableVersions returns the versions that transition from any other classification
+// to unavailable. Versions not present in the old list are ignored.
+func FindNewlyUnavailableExpirableVersions(newVersions, oldVersions []core.ExpirableVersion) sets.Set[string] {
+	result := sets.New[string]()
+
+	oldVersionsMap := map[string]core.ExpirableVersion{}
+	for _, version := range oldVersions {
+		oldVersionsMap[version.Version] = version
+	}
+
+	for _, newVersion := range newVersions {
+		oldVersion, ok := oldVersionsMap[newVersion.Version]
+		if !ok {
+			continue
+		}
+
+		if !VersionIsUnavailable(oldVersion) &&
+			VersionIsUnavailable(newVersion) {
+			result.Insert(newVersion.Version)
+		}
+	}
+
+	return result
+}
+
 // VersionIsExpired reports whether the given version is expired.
 func VersionIsExpired(version core.ExpirableVersion) bool {
 	return CurrentLifecycleClassification(version) == core.ClassificationExpired
