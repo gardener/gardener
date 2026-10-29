@@ -39,6 +39,15 @@ In most cases, the `cloud-controller-manager` (responsible for managing these lo
 
 By setting the `.spec.runtimeCluster.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
 
+By setting the `.spec.runtimeCluster.settings.loadBalancerServices.loadBalancerSourceRanges` field the Gardener administrator can restrict the client IP ranges allowed to access the virtual garden load balancer service.
+This affects all endpoints exposed via this load balancer, i.e., not only the `virtual-garden-kube-apiserver`, but also the Gardener Dashboard, the Gardener Discovery Server, the observability components (Plutono, Prometheus, Alertmanager, etc.) and all other endpoints under the runtime cluster's ingress domains.
+The field is set as `spec.loadBalancerSourceRanges` on the `Service`, hence it is only effective if the `cloud-controller-manager` of the runtime cluster supports it.
+
+> [!IMPORTANT]
+> The source ranges must include the egress IP ranges of all seed clusters, since the gardenlets and other seed components connect to the `virtual-garden-kube-apiserver` via this load balancer.
+> Otherwise, the seeds lose their connection to the garden.
+> If the egress IP ranges of the seeds are dynamic, use the ACL extension (to be implemented) instead of this field.
+
 For detailed information on external traffic policy, proxy protocol, and migration guidance, refer to the [Seed Settings - Load Balancer Services](../operations/seed_settings.md#load-balancer-services) documentation. The settings work the same way for the Garden cluster, with the following difference:
 - The Garden cluster does not support per-zone load balancer settings (no `zones` field) — all settings apply globally via `.spec.runtimeCluster.settings.loadBalancerServices.*`
 

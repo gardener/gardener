@@ -3639,7 +3639,7 @@ string array
 </td>
 <td>
 <em>(Optional)</em>
-<p>LoadBalancerSourceRanges is a list of allowed IP sources for the virtual garden load balancer service</p>
+<p>LoadBalancerSourceRanges is a list of allowed IP sources for the virtual garden load balancer service.<br />The list must include the egress IP ranges of all seeds registered with this garden.</p>
 </td>
 </tr>
 
