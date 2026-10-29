@@ -16,6 +16,9 @@ import (
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/operator/v1beta1"
 	pvcautoscalerv1alpha1 "github.com/gardener/pvc-autoscaler/api/autoscaling/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	istioapiannotation "istio.io/api/annotation"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,11 +34,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/pvcautoscaler"
+	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	"github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -70,6 +77,27 @@ type Values struct {
 	PVCAutoscaling PVCAutoscalingConfig
 	// SecretNameServerCA is the name of the CA secret used to sign the server TLS cert.
 	SecretNameServerCA string
+	// ExternalExposure contains configuration for exposing this VictoriaLogs instance via a VirtualService resource.
+	ExternalExposure *ExposureValues
+}
+
+// ExposureValues contains configuration for exposing this VictoriaLogs instance via a VirtualService resource.
+type ExposureValues struct {
+	// AuthSecretName is the name of the auth secret.
+	AuthSecretName string
+	// AuthSecretManaged indicates whether the auth secret is managed by the secrets manager (referenced by its base
+	// name) or used verbatim.
+	AuthSecretManaged bool
+	// Host is the hostname under which the VictoriaLogs instance should be exposed.
+	Host string
+	// IstioIngressGatewayLabels are the labels identifying the corresponding istio ingress gateway.
+	IstioIngressGatewayLabels map[string]string
+	// IstioIngressGatewayNamespace is the namespace of the corresponding istio ingress gateway. The Gateway,
+	// VirtualService and DestinationRule are exported to this namespace only, and the TLS certificate is copied there.
+	IstioIngressGatewayNamespace string
+	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
+	// ingress domain. If not provided, a self-signed server certificate will be created.
+	WildcardCertSecretName *string
 }
 
 // PVCAutoscalingConfig configures whether and up to what capacity the VictoriaLogs PVC is autoscaled.
@@ -138,6 +166,12 @@ func (v *victoriaLogs) Deploy(ctx context.Context) error {
 		v.getServiceMonitor(),
 		v.getPrometheusRule(),
 	}
+
+	istioObjects, err := v.istioResources(ctx)
+	if err != nil {
+		return err
+	}
+	resources = append(resources, istioObjects...)
 
 	if v.values.PVCAutoscaling.Enabled {
 		resources = append(resources, v.getPVCA(v.values.PVCAutoscaling))
@@ -240,7 +274,8 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 			},
 			ServiceSpec: &victoriametricsv1beta1.AdditionalServiceSpec{
 				EmbeddedObjectMetadata: victoriametricsv1beta1.EmbeddedObjectMetadata{
-					Name: constants.ServiceName,
+					Name:        constants.ServiceName,
+					Annotations: v.serviceAnnotations(),
 				},
 				// Exposing both ports. The http port is left for extension compatibility reasons.
 				// For more information look up constants.VictoriaLogsHttpPort
@@ -294,6 +329,15 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelRole:                     v1beta1constants.LabelObservability,
 		v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleObservability,
 		v1beta1constants.LabelObservabilityApplication: constants.VLSingleResourceName,
+	}
+}
+
+func (v *victoriaLogs) serviceAnnotations() map[string]string {
+	if v.values.ExternalExposure == nil {
+		return nil
+	}
+	return map[string]string{
+		istioapiannotation.NetworkingExportTo.Name: v.values.ExternalExposure.IstioIngressGatewayNamespace,
 	}
 }
 
@@ -375,7 +419,7 @@ func (v *victoriaLogs) getAutoscalerName() string {
 
 func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", v.namespace, v.getPrometheusLabel()),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(constants.VLSingleResourceName, v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -391,7 +435,7 @@ func (v *victoriaLogs) getServiceMonitor() *monitoringv1.ServiceMonitor {
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
 						Action:      "replace",
-						Replacement: new("victoria-logs"),
+						Replacement: new(constants.VLSingleResourceName),
 						TargetLabel: "job",
 					},
 					{
@@ -417,7 +461,7 @@ func (v *victoriaLogs) getPrometheusRule() *monitoringv1.PrometheusRule {
 	}
 
 	return &monitoringv1.PrometheusRule{
-		ObjectMeta: monitoringutils.ConfigObjectMeta("victoria-logs", v.namespace, v.getPrometheusLabel()),
+		ObjectMeta: monitoringutils.ConfigObjectMeta(constants.VLSingleResourceName, v.namespace, v.getPrometheusLabel()),
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{{
 				Name: "victoria-logs.rules",
@@ -439,4 +483,145 @@ func (v *victoriaLogs) getPrometheusRule() *monitoringv1.PrometheusRule {
 			}},
 		},
 	}
+}
+
+func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, error) {
+	if v.values.ExternalExposure == nil {
+		return nil, nil
+	}
+
+	var (
+		ingressNamespace = v.values.ExternalExposure.IstioIngressGatewayNamespace
+		gatewayName      = constants.VLSingleResourceName
+	)
+
+	switch {
+	case v.values.IsGardenCluster:
+		gatewayName = constants.VLSingleResourceName + "-garden"
+	case v.values.ClusterType == component.ClusterTypeSeed:
+		gatewayName = constants.VLSingleResourceName + "-seed"
+	}
+
+	tlsSecretName := ptr.Deref(v.values.ExternalExposure.WildcardCertSecretName, "")
+	if tlsSecretName == "" {
+		ingressTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+			Name:                        constants.VLSingleResourceName + "-ingress-tls",
+			CommonName:                  constants.VLSingleResourceName,
+			Organization:                []string{"gardener.cloud:logging:ingress"},
+			DNSNames:                    []string{v.values.ExternalExposure.Host},
+			CertType:                    secrets.ServerCert,
+			Validity:                    new(v1beta1constants.IngressTLSCertificateValidity),
+			SkipPublishingCACertificate: true,
+		}, secretsmanager.SignedByCA(v.values.SecretNameServerCA))
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate ingress TLS secret: %w", err)
+		}
+		tlsSecretName = ingressTLSSecret.Name
+	}
+
+	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
+	tlsSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tlsSecretName,
+			Namespace: v.namespace,
+		},
+	}
+	if err := v.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret); err != nil {
+		return nil, fmt.Errorf("failed to get TLS secret %q: %w", tlsSecretName, err)
+	}
+
+	tlsSecretInIstioNamespace := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, constants.VLSingleResourceName, tlsSecretName),
+			Namespace: ingressNamespace,
+			Labels:    getLabels(),
+		},
+		Data: tlsSecret.Data,
+	}
+
+	// Fetch the CA bundle to allow Istio to verify the VictoriaLogs server cert
+	caBundle, found := v.secretsManager.Get(v.values.SecretNameServerCA)
+	if !found {
+		return nil, fmt.Errorf("the CA trust bundle for %q was not found", v.values.SecretNameServerCA)
+	}
+
+	caBundleInIstioNamespace := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s-%s", v.namespace, constants.VLSingleResourceName, caBundle.Name),
+			Namespace: v.values.ExternalExposure.IstioIngressGatewayNamespace,
+			Labels:    getLabels(),
+		},
+		Data: map[string][]byte{
+			"cacert": caBundle.Data[secrets.DataKeyCertificateBundle],
+		},
+	}
+
+	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
+	if err := istio.GatewayWithTLSTermination(
+		gateway,
+		getLabels(),
+		v.values.ExternalExposure.IstioIngressGatewayLabels,
+		[]string{v.values.ExternalExposure.Host},
+		tlsSecretInIstioNamespace.Name,
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create gateway resource: %w", err)
+	}
+
+	destinationHost := kubernetesutils.FQDNForService(constants.ServiceName, v.namespace)
+	virtualService := &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
+	if err := istio.VirtualServiceForTLSTermination(
+		virtualService,
+		utils.MergeStringMaps(getLabels(), istiobasicauthserver.BasicAuthLabels(v.values.IsGardenCluster, v.values.ExternalExposure.AuthSecretName, v.values.ExternalExposure.AuthSecretManaged)),
+		[]string{ingressNamespace},
+		[]string{v.values.ExternalExposure.Host},
+		gatewayName,
+		constants.VictoriaLogsPort,
+		destinationHost,
+		"",
+		"",
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create virtual service resource: %w", err)
+	}
+
+	// Allowlist: only /select/logsql/query is accessible; everything else returns 403.
+	virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+		{
+			Name: "query",
+			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
+				Uri: &istioapinetworkingv1beta1.StringMatch{
+					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+						Prefix: "/select/logsql/query",
+					},
+				},
+			}},
+			Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
+				Destination: &istioapinetworkingv1beta1.Destination{
+					Host: destinationHost,
+					Port: &istioapinetworkingv1beta1.PortSelector{Number: constants.VictoriaLogsPort},
+				},
+			}},
+		},
+		{
+			DirectResponse: &istioapinetworkingv1beta1.HTTPDirectResponse{
+				Status: 403,
+			},
+		},
+	}
+
+	destinationRule := &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: v.namespace}}
+	if err := istio.DestinationRuleWithLocalityPreferenceAndTLS(
+		destinationRule,
+		getLabels(),
+		[]string{v.values.ExternalExposure.IstioIngressGatewayNamespace},
+		destinationHost,
+		&istioapinetworkingv1beta1.ClientTLSSettings{
+			Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+			CredentialName: caBundleInIstioNamespace.Name,
+			Sni:            destinationHost,
+		},
+	)(); err != nil {
+		return nil, fmt.Errorf("failed to create destination rule resource: %w", err)
+	}
+
+	return []client.Object{tlsSecretInIstioNamespace, caBundleInIstioNamespace, gateway, virtualService, destinationRule}, nil
 }

@@ -501,6 +501,11 @@ func (o *Operation) ComputeValiHost() string {
 	return o.ComputeIngressHost("v")
 }
 
+// ComputeVictoriaLogsHost computes the host for VictoriaLogs.
+func (o *Operation) ComputeVictoriaLogsHost() string {
+	return o.ComputeIngressHost("vl")
+}
+
 // ComputeOpenTelemetryCollectorHost computes the host for the Collector in the control-plane.
 func (o *Operation) ComputeOpenTelemetryCollectorHost() string {
 	return o.ComputeIngressHost("otc")

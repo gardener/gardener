@@ -30,6 +30,7 @@ func NewVictoriaLogs(
 	pvcAutoscaling victorialogs.PVCAutoscalingConfig,
 	sm secretsmanager.Interface,
 	secretNameServerCA string,
+	externalExposure *victorialogs.ExposureValues,
 ) (
 	component.DeployWaiter,
 	error,
@@ -55,6 +56,7 @@ func NewVictoriaLogs(
 		PriorityClassName:  priorityClassName,
 		PVCAutoscaling:     pvcAutoscaling,
 		SecretNameServerCA: secretNameServerCA,
+		ExternalExposure:   externalExposure,
 	})
 
 	return deployer, nil
