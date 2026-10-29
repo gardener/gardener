@@ -354,6 +354,10 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
 	}
 
+	if !workerless {
+		allErrs = append(allErrs, ValidateAutoPreservationParameters(spec.Provider.Workers, spec.Kubernetes.ClusterAutoscaler, fldPath.Child("kubernetes"))...)
+	}
+
 	if workerless {
 		if spec.SecretBindingName != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), workerlessErrorMsg))
@@ -420,6 +424,32 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	}
 
 	allErrs = append(allErrs, validateControlPlaneZones(spec.ControlPlane, fldPath.Child("controlPlane"))...)
+
+	return allErrs
+}
+
+func ValidateAutoPreservationParameters(workers []core.Worker, clusterAutoscaler *core.ClusterAutoscaler, fldPath *field.Path) field.ErrorList {
+	if clusterAutoscaler == nil || clusterAutoscaler.MaxTotalUnreadyPercentage == nil {
+		return nil
+	}
+
+	caFldPath := fldPath.Child("clusterAutoscaler")
+	allErrs := field.ErrorList{}
+
+	for _, worker := range workers {
+		if worker.MachineControllerManagerSettings == nil {
+			continue
+		}
+		autoPreserveFailedMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0)
+		autoPreserveMaxPercentage := 100 * float64(autoPreserveFailedMax) / float64(worker.Maximum)
+
+		if autoPreserveFailedMax > 0 && (autoPreserveMaxPercentage > *clusterAutoscaler.MaxTotalUnreadyPercentage) {
+			allErrs = append(allErrs, field.Invalid(caFldPath.Child("maxTotalUnreadyPercentage"),
+				*clusterAutoscaler.MaxTotalUnreadyPercentage,
+				fmt.Sprintf("cannot be less than autoPreserveFailedMax/Maximum for worker %s", worker.Name),
+			))
+		}
+	}
 
 	return allErrs
 }
@@ -1590,6 +1620,15 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 
 	if autoScaler.MaxDrainParallelism != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.MaxDrainParallelism), fldPath.Child("maxDrainParallelism"))...)
+	}
+
+	if percentage := autoScaler.MaxTotalUnreadyPercentage; percentage != nil {
+		if *percentage <= 0.0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxTotalUnreadyPercentage"), *percentage, "has to be a positive non-zero value"))
+		}
+		if *percentage > 100.0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxTotalUnreadyPercentage"), *percentage, "cannot be greater than 100.0"))
+		}
 	}
 
 	if autoScaler.Verbosity != nil {
