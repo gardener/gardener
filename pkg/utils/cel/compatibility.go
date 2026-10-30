@@ -2,25 +2,20 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-// Package cel provides a small helper to compile and evaluate the CEL compatibility rules of an
-// ExtensionProfile version (GEP-0078) against a Shoot. The CEL environment binds a single variable
-// `shoot` to the Shoot being admitted.
-//
-// The `shoot` variable is bound as a dynamic type and evaluated against the unstructured form of the
-// Shoot. This is a deliberate trade-off for the alpha of GEP-0078: rules may reference arbitrary Shoot
-// fields without the helper carrying the full Shoot schema as a CEL DeclType, at the cost of no
-// compile-time field checking — a rule referencing a non-existent field compiles but errors at
-// evaluation time. Callers must treat an evaluation error as a rejection with a clear message.
+// Package cel compiles and evaluates the CEL compatibility rules of an ExtensionProfile version
+// (GEP-0078) against a Shoot. The CEL environment binds the single variable `shoot` to the (unstructured)
+// Shoot being admitted. The variable is dynamically typed, so a rule referencing a non-existent field
+// compiles but fails at evaluation time; callers must treat an evaluation error as a rejection.
 package cel
 
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apiserver/pkg/cel/environment"
@@ -28,14 +23,18 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-// shootVariableName is the name of the CEL variable bound to the Shoot.
-const shootVariableName = "shoot"
+const (
+	// shootVariableName is the name of the CEL variable bound to the Shoot.
+	shootVariableName = "shoot"
+	// compiledRuleCacheSize bounds the number of compiled rules kept in memory. It caps the memory a large
+	// (or adversarial) set of distinct rules can consume; evicted rules are simply recompiled on next use.
+	compiledRuleCacheSize = 1024
+)
 
 // Compiler compiles and caches ExtensionProfile compatibility CEL rules.
 type Compiler struct {
 	env   *cel.Env
-	mutex sync.RWMutex
-	cache map[string]*CompiledRule
+	cache *lru.Cache[string, *CompiledRule]
 }
 
 // CompiledRule is a compiled compatibility CEL rule, ready to be evaluated against a Shoot.
@@ -44,7 +43,8 @@ type CompiledRule struct {
 	program cel.Program
 }
 
-// NewCompiler returns a Compiler whose CEL environment binds the variable `shoot`.
+// NewCompiler returns a Compiler whose CEL environment binds the variable `shoot`. It only fails on an
+// environment error, never on user input.
 func NewCompiler() (*Compiler, error) {
 	baseEnv := environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion())
 
@@ -59,19 +59,31 @@ func NewCompiler() (*Compiler, error) {
 		return nil, fmt.Errorf("failed to extend CEL environment: %w", err)
 	}
 
+	cache, err := lru.New[string, *CompiledRule](compiledRuleCacheSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create compiled rule cache: %w", err)
+	}
+
 	return &Compiler{
 		env:   extended.NewExpressionsEnv(),
-		cache: make(map[string]*CompiledRule),
+		cache: cache,
 	}, nil
 }
 
-// Compile compiles a single CEL rule, enforcing that it returns a boolean. Compiled programs are
-// cached by rule string, so repeated compilation of the same rule is cheap.
+// MustNewCompiler returns a Compiler, panicking on the (environment-only) error. Use it at package
+// initialization where a build failure is a programming error rather than a recoverable condition.
+func MustNewCompiler() *Compiler {
+	compiler, err := NewCompiler()
+	if err != nil {
+		panic(fmt.Errorf("failed to create CEL compiler: %w", err))
+	}
+	return compiler
+}
+
+// Compile compiles a single CEL rule, enforcing that it returns a boolean. Compiled programs are cached
+// (bounded LRU) by rule string, so repeated compilation of the same rule is cheap.
 func (c *Compiler) Compile(rule string) (*CompiledRule, error) {
-	c.mutex.RLock()
-	compiled, ok := c.cache[rule]
-	c.mutex.RUnlock()
-	if ok {
+	if compiled, ok := c.cache.Get(rule); ok {
 		return compiled, nil
 	}
 
@@ -88,11 +100,8 @@ func (c *Compiler) Compile(rule string) (*CompiledRule, error) {
 		return nil, fmt.Errorf("failed to build CEL program for rule %q: %w", rule, err)
 	}
 
-	compiled = &CompiledRule{rule: rule, program: program}
-
-	c.mutex.Lock()
-	c.cache[rule] = compiled
-	c.mutex.Unlock()
+	compiled := &CompiledRule{rule: rule, program: program}
+	c.cache.Add(rule, compiled)
 
 	return compiled, nil
 }

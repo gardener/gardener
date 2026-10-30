@@ -39,7 +39,6 @@
 ### Shoot
 
 * [Accessing Shoot Clusters](usage/shoot/shoot_access.md)
-* [Extension Component Version Profiles](usage/shoot/extension-profiles.md)
 * [Hibernate a Cluster](usage/shoot/shoot_hibernate.md)
 * [Shoot Info `ConfigMap`](usage/shoot/shoot_info_configmap.md)
 * [Shoot Kubernetes Minor Version Upgrades](usage/shoot/shoot_kubernetes_versions.md)
@@ -61,6 +60,7 @@
 * [Trigger shoot operations](usage/shoot-operations/shoot_operations.md)
 * [Shoot Updates and Upgrades](usage/shoot-operations/shoot_updates.md)
 * [Shoot Kubernetes and Operating System Versioning](usage/shoot-operations/shoot_versions.md)
+* [Extension Component Version Profiles](usage/shoot-operations/extension-profiles.md)
 * [Supported Kubernetes versions](usage/shoot-operations/supported_k8s_versions.md)
 * [Controlling the Kubernetes versions for specific worker pools](usage/shoot-operations/worker_pool_k8s_versions.md)
 * [Migration from SecretBinding to CredentialsBinding](usage/shoot-operations/secretbinding-to-credentialsbinding-migration.md)

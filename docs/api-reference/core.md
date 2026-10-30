@@ -4657,7 +4657,7 @@ boolean
 <td>
 <code>updateStrategy</code></br>
 <em>
-<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a>
+<a href="#updatestrategy">UpdateStrategy</a>
 </em>
 </td>
 <td>
@@ -4871,7 +4871,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>UpdateStrategy overrides the profile-level update strategy for this component. Optional.</p>
+<p>UpdateStrategy overrides the profile-level update strategy for this component.</p>
 </td>
 </tr>
 <tr>
@@ -5138,22 +5138,22 @@ ExtensionUpdateStrategy defines the auto-update policy for an extension or one o
 <td>
 <code>default</code></br>
 <em>
-<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a>
+<a href="#updatestrategy">UpdateStrategy</a>
 </em>
 </td>
 <td>
-<p>Default is the update strategy applied when a shoot does not request an explicit strategy.<br />Possible values are: patch, minor, major.</p>
+<em>(Optional)</em>
+<p>Default is the update strategy applied when a shoot does not request an explicit strategy. Required<br />at the profile level; at the component level it may be omitted and is then inherited from the profile.<br />Possible values are: patch, minor, major.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>supported</code></br>
 <em>
-<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a> array
+<a href="#updatestrategy">UpdateStrategy</a> array
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Supported is the allow-list of update strategies this extension implements. Admission rejects any<br />shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.</p>
 </td>
 </tr>
@@ -5202,8 +5202,7 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of<br />CloudProfile versions, see GEP-0032).</p>
+<p>Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of<br />CloudProfile versions, see GEP-0032). At least one stage must be provided.</p>
 </td>
 </tr>
 <tr>
@@ -8236,7 +8235,7 @@ string
 
 
 <p>
-(<em>Appears on:</em><a href="#extensionautoupdate">ExtensionAutoUpdate</a>, <a href="#extensionupdatestrategy">ExtensionUpdateStrategy</a>, <a href="#machineimage">MachineImage</a>, <a href="#shootextensioncomponent">ShootExtensionComponent</a>)
+(<em>Appears on:</em><a href="#machineimage">MachineImage</a>)
 </p>
 
 <p>
@@ -13024,14 +13023,14 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>AutoUpdate overrides the extension-level auto-update policy for this component. Optional.</p>
+<p>AutoUpdate overrides the extension-level auto-update policy for this component.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>updateStrategy</code></br>
 <em>
-<a href="#machineimageupdatestrategy">MachineImageUpdateStrategy</a>
+<a href="#updatestrategy">UpdateStrategy</a>
 </em>
 </td>
 <td>
@@ -14199,6 +14198,16 @@ string
 
 </tbody>
 </table>
+
+
+<h3 id="updatestrategy">UpdateStrategy
+</h3>
+
+
+<p>
+UpdateStrategy is the update strategy to use for versioned entities. It shares the vocabulary
+(patch/minor/major) with MachineImageUpdateStrategy and is used for extension components (GEP-0078).
+</p>
 
 
 <h3 id="versionclassification">VersionClassification

@@ -68,7 +68,7 @@ var _ rest.ShortNamesProvider = &REST{}
 
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
-	return []string{"extprofile"}
+	return []string{"extprofile", "extprof"}
 }
 
 // StatusREST implements the REST endpoint for changing the status of an ExtensionProfile.

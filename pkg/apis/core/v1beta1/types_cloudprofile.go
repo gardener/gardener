@@ -403,6 +403,10 @@ const (
 // MachineImageUpdateStrategy is the update strategy to use for a machine image
 type MachineImageUpdateStrategy string
 
+// UpdateStrategy is the update strategy to use for versioned entities. It shares the vocabulary
+// (patch/minor/major) with MachineImageUpdateStrategy and is used for extension components (GEP-0078).
+type UpdateStrategy = MachineImageUpdateStrategy
+
 const (
 	// UpdateStrategyPatch indicates that auto-updates are performed to the latest patch version of the current minor version.
 	// When using an expired version during the maintenance window, force updates to the latest patch of the next (not necessarily consecutive) minor when using an expired version.

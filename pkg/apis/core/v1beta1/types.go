@@ -105,7 +105,7 @@ type ExtensionAutoUpdate struct {
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 	// UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.
 	// +optional
-	UpdateStrategy *MachineImageUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,2,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
+	UpdateStrategy *UpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,2,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
 }
 
 // ShootExtensionComponent pins the version of a single component managed by an extension.
@@ -116,13 +116,13 @@ type ShootExtensionComponent struct {
 	// version at admission. When omitted, the extension behaves as before this field existed.
 	// +optional
 	Version *string `json:"version,omitempty" protobuf:"bytes,2,opt,name=version"`
-	// AutoUpdate overrides the extension-level auto-update policy for this component. Optional.
+	// AutoUpdate overrides the extension-level auto-update policy for this component.
 	// +optional
 	AutoUpdate *ExtensionAutoUpdate `json:"autoUpdate,omitempty" protobuf:"bytes,3,opt,name=autoUpdate"`
 	// UpdateStrategy overrides the resolved update strategy for this component. Possible values are:
 	// patch, minor, major.
 	// +optional
-	UpdateStrategy *MachineImageUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,4,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
+	UpdateStrategy *UpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,4,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
 }
 
 // NamedResourceReference is a named reference to a resource.

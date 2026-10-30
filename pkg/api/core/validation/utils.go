@@ -689,6 +689,7 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 }
 
 // validateShootExtensionComponents validates the pinned component versions of a shoot extension entry.
+// An empty slice is valid: pinning is optional and the extension then behaves as before (GEP-0078).
 func validateShootExtensionComponents(components []core.ShootExtensionComponent, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -704,8 +705,13 @@ func validateShootExtensionComponents(components []core.ShootExtensionComponent,
 
 		if names.Has(component.Name) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), component.Name))
-		} else {
-			names.Insert(component.Name)
+		}
+		names.Insert(component.Name)
+
+		// A component entry that pins nothing (no version, no autoUpdate, no updateStrategy) has no effect
+		// and is almost certainly a mistake, so reject it.
+		if component.Version == nil && component.AutoUpdate == nil && component.UpdateStrategy == nil {
+			allErrs = append(allErrs, field.Required(idxPath, "a component entry must set at least one of version, autoUpdate or updateStrategy"))
 		}
 
 		if component.Version != nil && *component.Version == "" {
@@ -716,8 +722,8 @@ func validateShootExtensionComponents(components []core.ShootExtensionComponent,
 			allErrs = append(allErrs, validateExtensionAutoUpdate(component.AutoUpdate, idxPath.Child("autoUpdate"))...)
 		}
 
-		if component.UpdateStrategy != nil && !availableUpdateStrategiesForMachineImage.Has(string(*component.UpdateStrategy)) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("updateStrategy"), *component.UpdateStrategy, sets.List(availableUpdateStrategiesForMachineImage)))
+		if component.UpdateStrategy != nil && !availableExtensionUpdateStrategies.Has(string(*component.UpdateStrategy)) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("updateStrategy"), *component.UpdateStrategy, sets.List(availableExtensionUpdateStrategies)))
 		}
 	}
 
@@ -728,8 +734,8 @@ func validateShootExtensionComponents(components []core.ShootExtensionComponent,
 func validateExtensionAutoUpdate(autoUpdate *core.ExtensionAutoUpdate, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if autoUpdate.UpdateStrategy != nil && !availableUpdateStrategiesForMachineImage.Has(string(*autoUpdate.UpdateStrategy)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *autoUpdate.UpdateStrategy, sets.List(availableUpdateStrategiesForMachineImage)))
+	if autoUpdate.UpdateStrategy != nil && !availableExtensionUpdateStrategies.Has(string(*autoUpdate.UpdateStrategy)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *autoUpdate.UpdateStrategy, sets.List(availableExtensionUpdateStrategies)))
 	}
 
 	return allErrs

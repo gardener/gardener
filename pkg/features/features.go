@@ -147,11 +147,15 @@ const (
 	// alpha: v1.155.0
 	AllowlistSeedReferences featuregate.Feature = "AllowlistSeedReferences"
 
-	// ExtensionComponentVersions enables the homogeneous version profile for extension-managed components
-	// introduced by GEP-0078: the ExtensionProfile resource, the shoot-side pin/auto-update surface, and
-	// the resolution of component versions to the seed Extension resource.
+	// ExtensionComponentVersions enables version lifecycle management for extension-managed components
+	// (GEP-0078). When enabled, the `gardener-apiserver` serves the `ExtensionProfile` resource and
+	// evaluates the shoot-side `spec.extensions[].components[]` pins against it (profile existence,
+	// classification, in-use protection, and compatibility). When disabled, the API surface still exists
+	// but is inert: the pins are not validated against any profile and are passed through unchanged, so
+	// extensions behave exactly as before. The gate guards an alpha feature and is safe to toggle off
+	// again; the only effect of disabling it is that existing pins are no longer enforced.
 	// owner: @docktofuture
-	// alpha: v1.138.0
+	// alpha: v1.155.0
 	ExtensionComponentVersions featuregate.Feature = "ExtensionComponentVersions"
 )
 

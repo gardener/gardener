@@ -1337,7 +1337,7 @@ message ExtensionProfileComponent {
   // Name is the name of the component.
   optional string name = 1;
 
-  // UpdateStrategy overrides the profile-level update strategy for this component. Optional.
+  // UpdateStrategy overrides the profile-level update strategy for this component.
   // +optional
   optional ExtensionUpdateStrategy updateStrategy = 2;
 
@@ -1413,13 +1413,14 @@ message ExtensionResourceState {
 
 // ExtensionUpdateStrategy defines the auto-update policy for an extension or one of its components.
 message ExtensionUpdateStrategy {
-  // Default is the update strategy applied when a shoot does not request an explicit strategy.
+  // Default is the update strategy applied when a shoot does not request an explicit strategy. Required
+  // at the profile level; at the component level it may be omitted and is then inherited from the profile.
   // Possible values are: patch, minor, major.
+  // +optional
   optional string default = 1;
 
   // Supported is the allow-list of update strategies this extension implements. Admission rejects any
   // shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
-  // +optional
   repeated string supported = 2;
 }
 
@@ -1429,8 +1430,7 @@ message ExtensionVersion {
   optional string version = 1;
 
   // Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
-  // CloudProfile versions, see GEP-0032).
-  // +optional
+  // CloudProfile versions, see GEP-0032). At least one stage must be provided.
   repeated LifecycleStage lifecycle = 2;
 
   // Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
@@ -3644,7 +3644,7 @@ message ShootExtensionComponent {
   // +optional
   optional string version = 2;
 
-  // AutoUpdate overrides the extension-level auto-update policy for this component. Optional.
+  // AutoUpdate overrides the extension-level auto-update policy for this component.
   // +optional
   optional ExtensionAutoUpdate autoUpdate = 3;
 
