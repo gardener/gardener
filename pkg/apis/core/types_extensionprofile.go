@@ -42,7 +42,7 @@ type ExtensionProfileList struct {
 // ExtensionProfileSpec is the specification of an ExtensionProfile.
 type ExtensionProfileSpec struct {
 	// UpdateStrategy is the default auto-update policy for this extension type. It is applied to a
-	// component that does not define its own UpdateStrategy.
+	// component that does not define its own updateStrategy.
 	UpdateStrategy ExtensionUpdateStrategy
 	// Components is the list of named components offered by this extension, each versioned independently.
 	Components []ExtensionProfileComponent
@@ -50,7 +50,8 @@ type ExtensionProfileSpec struct {
 
 // ExtensionUpdateStrategy defines the auto-update policy for an extension or one of its components.
 type ExtensionUpdateStrategy struct {
-	// Default is the update strategy applied when a shoot does not request an explicit strategy.
+	// Default is the update strategy applied when a shoot does not request an explicit strategy. Required
+	// at the profile level; at the component level it may be omitted and is then inherited from the profile.
 	// Possible values are: patch, minor, major.
 	Default UpdateStrategy
 	// Supported is the allow-list of update strategies this extension implements. Admission rejects any
@@ -73,7 +74,7 @@ type ExtensionVersion struct {
 	// Version is the version identifier. Must be a valid semantic version.
 	Version string
 	// Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
-	// CloudProfile versions, see GEP-0032).
+	// CloudProfile versions, see GEP-0032). At least one stage must be provided.
 	Lifecycle []LifecycleStage
 	// Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
 	Compatibility *ExtensionCompatibility
