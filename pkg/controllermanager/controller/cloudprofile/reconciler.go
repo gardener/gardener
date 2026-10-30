@@ -71,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 // delete deletes the CloudProfile as intended by its deletionTimestamp. Before deletion, it has to be ensured that
-// no Shoots, Seeds, or other NamespacedCloudProfiles are assigned to the CloudProfile anymore.
+// no Shoots, or other NamespacedCloudProfiles are assigned to the CloudProfile anymore.
 // If this is the case, the controller will remove the finalizers from the CloudProfile so that it can be garbage collected.
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (reconcile.Result, error) {
 	if !sets.New(cloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {

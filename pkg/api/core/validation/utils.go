@@ -406,6 +406,7 @@ func ValidateMachineImageVersion(image core.MachineImage, machineVersion core.Ma
 			allErrs = append(allErrs, field.Invalid(versionsPath.Child("minVersionForInPlaceUpdate"), *machineVersion.InPlaceUpdates.MinVersionForUpdate, "could not parse version. Use a semantic version."))
 		}
 	}
+	allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, versionsPath)...)
 
 	allErrs = append(allErrs, validateMachineImageVersionFlavors(machineVersion, capabilities, versionsPath)...)
 

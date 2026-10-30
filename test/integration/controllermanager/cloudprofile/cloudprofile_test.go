@@ -208,7 +208,7 @@ var _ = DescribeTableSubtree("CloudProfile controller tests", func(isCapabilitie
 			}).Should(Succeed())
 		})
 
-		It("should patch the status versions after the CloudProfile spec changed with old classification", func() {
+		It("should patch the status versions after the CloudProfile spec changed with legacy classification", func() {
 			By("Update CloudProfile spec")
 			Eventually(func() error {
 				if err := testClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), cloudProfile); err != nil {
