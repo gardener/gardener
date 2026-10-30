@@ -4635,7 +4635,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionProfileComponent(ref common.Reference
 					},
 					"updateStrategy": {
 						SchemaProps: spec.SchemaProps{
-							Description: "UpdateStrategy overrides the profile-level update strategy for this component. Optional.",
+							Description: "UpdateStrategy overrides the profile-level update strategy for this component.",
 							Ref:         ref(v1beta1.ExtensionUpdateStrategy{}.OpenAPIModelName()),
 						},
 					},
@@ -4890,8 +4890,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionUpdateStrategy(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"default": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Default is the update strategy applied when a shoot does not request an explicit strategy. Possible values are: patch, minor, major.",
-							Default:     "",
+							Description: "Default is the update strategy applied when a shoot does not request an explicit strategy. Required at the profile level; at the component level it may be omitted and is then inherited from the profile. Possible values are: patch, minor, major.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4911,7 +4910,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionUpdateStrategy(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"default"},
+				Required: []string{"supported"},
 			},
 		},
 	}
@@ -4934,7 +4933,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionVersion(ref common.ReferenceCallback)
 					},
 					"lifecycle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of CloudProfile versions, see GEP-0032).",
+							Description: "Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of CloudProfile versions, see GEP-0032). At least one stage must be provided.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4958,7 +4957,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionVersion(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"version"},
+				Required: []string{"version", "lifecycle"},
 			},
 		},
 		Dependencies: []string{
@@ -10458,7 +10457,7 @@ func schema_pkg_apis_core_v1beta1_ShootExtensionComponent(ref common.ReferenceCa
 					},
 					"autoUpdate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AutoUpdate overrides the extension-level auto-update policy for this component. Optional.",
+							Description: "AutoUpdate overrides the extension-level auto-update policy for this component.",
 							Ref:         ref(v1beta1.ExtensionAutoUpdate{}.OpenAPIModelName()),
 						},
 					},

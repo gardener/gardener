@@ -8,37 +8,33 @@ import (
 	"github.com/Masterminds/semver/v3"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
-	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	celutils "github.com/gardener/gardener/pkg/utils/cel"
 )
 
-// celCompiler compiles ExtensionProfile compatibility CEL rules for syntax validation. It is created
-// once; a nil compiler (should the environment fail to build) degrades gracefully to skipping the
-// syntax check, which the admission plugin then catches at evaluation time.
-var celCompiler, _ = celutils.NewCompiler()
+// celCompiler compiles ExtensionProfile compatibility CEL rules for syntax validation. The compiler only
+// fails to build on an environment error (never on user input), so a build failure is a programming error
+// and panics at package initialization.
+var celCompiler = celutils.MustNewCompiler()
 
 // ValidateExtensionProfile validates an ExtensionProfile object.
 func ValidateExtensionProfile(extensionProfile *core.ExtensionProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// The ExtensionProfile is bound to an extension type by its name (metadata.name == the extension
-	// type, i.e. Shoot.spec.extensions[].type). The name must therefore be a valid extension type: a
-	// DNS1123 label, exactly as validated for Extension.type. This binding only addresses the generic
-	// `Extension` kind, whose type is unique; types of other kinds (ControlPlane/Infrastructure/Worker)
-	// are configured via spec.provider/spec.networking and are not addressable here, so no collision arises.
+	// The ExtensionProfile is bound to an extension type by its name (metadata.name == the extension type,
+	// i.e. Shoot.spec.extensions[].type), so the name must be a valid extension type (a DNS1123 label).
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&extensionProfile.ObjectMeta, false, extensionTypeNameValidator, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateExtensionProfileSpec(&extensionProfile.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
 
-// extensionTypeNameValidator validates that an ExtensionProfile name is a valid extension type
-// (a DNS1123 label), matching the constraint applied to Shoot.spec.extensions[].type.
+// extensionTypeNameValidator validates that an ExtensionProfile name is a valid extension type, which is a
+// DNS1123 label (matching Shoot.spec.extensions[].type), not the DNS1123 subdomain that ValidateName allows.
 func extensionTypeNameValidator(name string, _ bool) []string {
-	return utilvalidation.IsDNS1123Label(name)
+	return apivalidation.NameIsDNSLabel(name, false)
 }
 
 // ValidateExtensionProfileUpdate validates an ExtensionProfile object before an update.
@@ -47,36 +43,50 @@ func ValidateExtensionProfileUpdate(newProfile, oldProfile *core.ExtensionProfil
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProfile.ObjectMeta, &oldProfile.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateExtensionProfile(newProfile)...)
+	allErrs = append(allErrs, ValidateExtensionProfileSpecUpdate(&newProfile.Spec, &oldProfile.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
 
-// ValidateExtensionProfileStatusUpdate validates the status of an ExtensionProfile object before an update.
-func ValidateExtensionProfileStatusUpdate(newProfile, oldProfile *core.ExtensionProfile) field.ErrorList {
+// ValidateExtensionProfileSpecUpdate validates the spec update of an ExtensionProfile. Offered versions use
+// the same immutability rules as CloudProfile versions (a version's classification may only move forward).
+func ValidateExtensionProfileSpecUpdate(newSpec, oldSpec *core.ExtensionProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProfile.ObjectMeta, &oldProfile.ObjectMeta, field.NewPath("metadata"))...)
+	oldComponents := map[string]core.ExtensionProfileComponent{}
+	for _, component := range oldSpec.Components {
+		oldComponents[component.Name] = component
+	}
 
-	statusPath := field.NewPath("status")
-	componentNames := sets.New[string]()
-	for i, component := range newProfile.Status.Components {
-		idxPath := statusPath.Child("components").Index(i)
-		if component.Name == "" {
-			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "component name must not be empty"))
+	for i, newComponent := range newSpec.Components {
+		oldComponent, ok := oldComponents[newComponent.Name]
+		if !ok {
+			continue
 		}
-		if componentNames.Has(component.Name) {
-			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), component.Name))
+
+		var oldVersions, newVersions []core.ExpirableVersion
+		for _, oldVersion := range oldComponent.Versions {
+			oldVersions = append(oldVersions, core.ExpirableVersion{Version: oldVersion.Version, Lifecycle: oldVersion.Lifecycle})
 		}
-		componentNames.Insert(component.Name)
+		for _, newVersion := range newComponent.Versions {
+			newVersions = append(newVersions, core.ExpirableVersion{Version: newVersion.Version, Lifecycle: newVersion.Lifecycle})
+		}
+
+		allErrs = append(allErrs, ValidateCloudProfileExpirableVersionsUpdate(newVersions, oldVersions, fldPath.Child("components").Index(i).Child("versions"))...)
 	}
 
 	return allErrs
 }
 
+// ValidateExtensionProfileStatusUpdate validates the status of an ExtensionProfile object before an update.
+func ValidateExtensionProfileStatusUpdate(_, _ *core.ExtensionProfile) field.ErrorList {
+	return field.ErrorList{}
+}
+
 func validateExtensionProfileSpec(spec *core.ExtensionProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateExtensionUpdateStrategy(&spec.UpdateStrategy, fldPath.Child("updateStrategy"))...)
+	allErrs = append(allErrs, validateExtensionUpdateStrategy(&spec.UpdateStrategy, false, fldPath.Child("updateStrategy"))...)
 
 	componentNames := sets.New[string]()
 	for i, component := range spec.Components {
@@ -94,7 +104,9 @@ func validateExtensionProfileSpec(spec *core.ExtensionProfileSpec, fldPath *fiel
 		componentNames.Insert(component.Name)
 
 		if component.UpdateStrategy != nil {
-			allErrs = append(allErrs, validateExtensionUpdateStrategy(component.UpdateStrategy, idxPath.Child("updateStrategy"))...)
+			// The component-level override may adjust the supported strategies without repeating the
+			// default, which is inherited from the profile-level updateStrategy, so default is optional here.
+			allErrs = append(allErrs, validateExtensionUpdateStrategy(component.UpdateStrategy, true, idxPath.Child("updateStrategy"))...)
 		}
 
 		allErrs = append(allErrs, validateExtensionVersions(component.Versions, idxPath.Child("versions"))...)
@@ -103,24 +115,33 @@ func validateExtensionProfileSpec(spec *core.ExtensionProfileSpec, fldPath *fiel
 	return allErrs
 }
 
-func validateExtensionUpdateStrategy(updateStrategy *core.ExtensionUpdateStrategy, fldPath *field.Path) field.ErrorList {
+// validateExtensionUpdateStrategy validates an update strategy. At the profile level a default is required;
+// at the component level (defaultOptional) it may be omitted and inherited from the profile.
+func validateExtensionUpdateStrategy(updateStrategy *core.ExtensionUpdateStrategy, defaultOptional bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if updateStrategy.Default == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("default"), "must provide a default update strategy"))
-	} else if !availableUpdateStrategiesForMachineImage.Has(string(updateStrategy.Default)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("default"), updateStrategy.Default, sets.List(availableUpdateStrategiesForMachineImage)))
+	switch {
+	case updateStrategy.Default == "":
+		if !defaultOptional {
+			allErrs = append(allErrs, field.Required(fldPath.Child("default"), "must provide a default update strategy"))
+		}
+	case !availableExtensionUpdateStrategies.Has(string(updateStrategy.Default)):
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("default"), updateStrategy.Default, sets.List(availableExtensionUpdateStrategies)))
+	}
+
+	if len(updateStrategy.Supported) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("supported"), "must list at least one supported update strategy"))
 	}
 
 	supported := sets.New[string]()
 	for i, strategy := range updateStrategy.Supported {
-		if !availableUpdateStrategiesForMachineImage.Has(string(strategy)) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("supported").Index(i), strategy, sets.List(availableUpdateStrategiesForMachineImage)))
+		if !availableExtensionUpdateStrategies.Has(string(strategy)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("supported").Index(i), strategy, sets.List(availableExtensionUpdateStrategies)))
 		}
 		supported.Insert(string(strategy))
 	}
 
-	if updateStrategy.Default != "" && len(updateStrategy.Supported) > 0 && !supported.Has(string(updateStrategy.Default)) {
+	if updateStrategy.Default != "" && !supported.Has(string(updateStrategy.Default)) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("default"), updateStrategy.Default, "default update strategy must be contained in the supported strategies"))
 	}
 
@@ -145,6 +166,10 @@ func validateExtensionVersions(versions []core.ExtensionVersion, fldPath *field.
 		}
 		seenVersions.Insert(version.Version)
 
+		// An empty lifecycle leaves the version without any classification, so it can never be selected.
+		if len(version.Lifecycle) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("lifecycle"), "must provide at least one lifecycle stage"))
+		}
 		allErrs = append(allErrs, validateLifecycleClassificationsValid(version.Lifecycle, idxPath.Child("lifecycle"))...)
 		allErrs = append(allErrs, validateLifecycleNoDuplicates(version.Lifecycle, idxPath.Child("lifecycle"))...)
 		allErrs = append(allErrs, validateLifecycleInOrder(version.Lifecycle, idxPath.Child("lifecycle"))...)
@@ -161,18 +186,21 @@ func validateExtensionVersions(versions []core.ExtensionVersion, fldPath *field.
 func validateExtensionCompatibility(compatibility *core.ExtensionCompatibility, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if len(compatibility.Validations) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("validations"), "compatibility must list at least one validation; omit the compatibility field entirely if there are none"))
+	}
+
 	for i, validation := range compatibility.Validations {
 		idxPath := fldPath.Child("validations").Index(i)
 
 		if validation.Rule == "" {
 			allErrs = append(allErrs, field.Required(idxPath.Child("rule"), "rule must not be empty"))
+			// An empty rule cannot be compiled; skip the compile to avoid a second, redundant error.
 			continue
 		}
 
-		if celCompiler != nil {
-			if _, err := celCompiler.Compile(validation.Rule); err != nil {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("rule"), validation.Rule, "invalid CEL rule: "+err.Error()))
-			}
+		if _, err := celCompiler.Compile(validation.Rule); err != nil {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("rule"), validation.Rule, "invalid CEL rule: "+err.Error()))
 		}
 	}
 
