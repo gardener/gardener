@@ -111,7 +111,7 @@ Afterwards, the Gardener resources will be deployed into the cluster.
 The command `make gardener-up` from the previous section is an alias for `make operator-up garden-up seed-up`.
 These build targets use [Skaffold](https://skaffold.dev/) to build images, push them to the local registry, insert their references into Helm values or Kubernetes manifests, and apply the resulting configuration to the cluster through Helm or kubectl.
 
-However, the `make` targets that build the images of the components are not necessarily the same as the ones that deploy them.
+However, the `make` targets that **build** the images of the components are not necessarily the same as the ones that **deploy** them.
 For example, `make operator-up` uses Skaffold to build and deploy the `gardener-operator` through Helm.
 Images for other components such as the `gardener-controller-manager` are also built at this stage, but those components are not deployed yet. Their image references are passed into the operator’s image vector.
 `make garden-up` then creates the `Garden` resource. The `gardener-operator` reconciles it and deploys the Gardener components using those previously defined image references.
