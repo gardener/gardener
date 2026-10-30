@@ -81,10 +81,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Fn:   r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceEtcdPreparedForPeerJoin, sourceEtcdPreparedForPeerJoinTaskGroup(botanist)),
 		})
 
-		_ = g.Add(flow.Task{
+		destinationEtcdPeersJoined = g.Add(flow.Task{
 			Name:         "Joining destination etcd to the source cluster",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined, destinationEtcdPeersJoinedTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(sourceEtcdReadyForPeerJoin),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Migrating etcd cluster to destination seed",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(destinationEtcdPeersJoined),
 		})
 
 		// TODO(GEP-39): Future PRs will add other steps as the topic progresses.
@@ -265,8 +271,10 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 			Dependencies: flow.NewTaskIDs(restoreBackupEntry),
 		})
 		deployEtcd = g.Add(flow.Task{
-			Name:         "Deploying etcd",
-			Fn:           b.DeployEtcd,
+			Name: "Deploying destination etcd to join the source etcd cluster",
+			Fn: func(ctx context.Context) error {
+				return b.DeployEtcdForLiveMigrationPhase(ctx, 2)
+			},
 			Dependencies: flow.NewTaskIDs(initSecretsManagement, deployEtcdPeerExposure, waitBackupEntryReady),
 		})
 		_ = g.Add(flow.Task{
@@ -275,6 +283,69 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
 	)
+
+	return g
+}
+
+// taskGroupEtcdMigrationComplete is a flow.TaskID for the etcd migration completion task group.
+const taskGroupEtcdMigrationComplete flow.TaskID = "TaskGroupEtcdMigrationComplete"
+
+// etcdMigrationCompleteTaskGroup returns the flow.TaskGroup for completing the etcd migration:
+// scaling out the destination etcd to 3 replicas, removing source members, cleaning up
+// the live migration configuration, and taking a full snapshot.
+func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	var (
+		skipIfSourceMembersAlreadyRemoved = func(fn flow.TaskFn) flow.TaskFn {
+			return func(ctx context.Context) error {
+				sourceMembersAlreadyRemoved, err := b.IsSourceMembersAlreadyRemoved(ctx)
+				if err != nil || sourceMembersAlreadyRemoved {
+					return err
+				}
+				return fn(ctx)
+			}
+		}
+		g = flow.NewTaskGroup(taskGroupEtcdMigrationComplete)
+
+		deployEtcd = g.Add(flow.Task{
+			Name: "Scaling out destination etcd to 3 replicas",
+			Fn:   skipIfSourceMembersAlreadyRemoved(b.DeployEtcd),
+		})
+		waitUntilEtcdReady = g.Add(flow.Task{
+			Name:         "Waiting until etcd is scaled out and ready",
+			Fn:           skipIfSourceMembersAlreadyRemoved(b.WaitUntilEtcdsReady),
+			Dependencies: flow.NewTaskIDs(deployEtcd),
+		})
+		removeSourceMembers = g.Add(flow.Task{
+			Name:         "Removing source etcd members from the joined cluster",
+			Fn:           skipIfSourceMembersAlreadyRemoved(b.RemoveSourceEtcdMembers),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
+		})
+		waitUntilSourceMembersRemoved = g.Add(flow.Task{
+			Name:         "Waiting until source etcd members are removed",
+			Fn:           b.WaitUntilSourceEtcdMembersRemoved,
+			Dependencies: flow.NewTaskIDs(removeSourceMembers),
+		})
+		deployEtcdWithoutLiveMigration = g.Add(flow.Task{
+			Name: "Removing live migration configuration from etcd",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.EtcdMain.SetLiveMigration(nil)
+				return b.DeployEtcd(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilSourceMembersRemoved),
+		})
+		waitUntilEtcdReadyAfterCleanup = g.Add(flow.Task{
+			Name:         "Waiting until etcds are ready after cleanup",
+			Fn:           b.WaitUntilEtcdsReady,
+			Dependencies: flow.NewTaskIDs(deployEtcdWithoutLiveMigration),
+		})
+	)
+
+	_ = g.Add(flow.Task{
+		Name:         "Taking full etcd snapshot",
+		Fn:           b.SnapshotEtcd,
+		SkipIf:       v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), b.GetSeed()) == nil,
+		Dependencies: flow.NewTaskIDs(waitUntilEtcdReadyAfterCleanup),
+	})
 
 	return g
 }

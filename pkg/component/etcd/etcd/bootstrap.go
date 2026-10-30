@@ -715,6 +715,9 @@ func (b *bootstrapper) getDeployment(serverSecretName string, operatorConfigMapN
 						v1beta1constants.LabelNetworkPolicyToDNS:                                      v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                         v1beta1constants.LabelNetworkPolicyAllowed,
 						"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": v1beta1constants.LabelNetworkPolicyAllowed,
+						// Required for cross-seed etcd peer communication during live control plane migration.
+						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                          v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-2379": v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{

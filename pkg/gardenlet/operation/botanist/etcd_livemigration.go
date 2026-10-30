@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"k8s.io/utils/ptr"
@@ -19,13 +20,17 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/etcd/memberexposure"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
 	// liveMigrationHostLabelHashLength is the number of hex characters of the SHA256 hash used in the left-most DNS label
 	// of the cross-seed etcd hostnames.
 	liveMigrationHostLabelHashLength = 6
+	sourceMemberRemovalTimeout       = 10 * time.Minute
+	sourceMemberRemovalInterval      = 10 * time.Second
 )
 
 // NewMemberExposure is the constructor for the member exposure component. Exposed for testing.
@@ -296,4 +301,112 @@ func (b *Botanist) setLiveMigrationEtcdValues(ctx context.Context, values *etcd.
 	}
 
 	return nil
+}
+
+// DeployEtcdForLiveMigrationPhase deploys etcd-main with the given replica count and matching
+// AdditionalAdvertisedURLs for the destination seed. All other live migration values (Bootstrap,
+// Extra*ServiceDNSNames, SkipClientSANVerification) are preserved unchanged so cert hashes stay
+// stable across phase transitions and no unintended cert rotation occurs.
+func (b *Botanist) DeployEtcdForLiveMigrationPhase(ctx context.Context, phaseReplicas int32) error {
+	etcdMain := b.Shoot.Components.ControlPlane.EtcdMain
+	lmValues := etcdMain.GetValues().LiveMigration
+	if lmValues == nil {
+		return fmt.Errorf("etcd-main has no LiveMigration values set")
+	}
+
+	var (
+		localSeedName      = b.Seed.GetInfo().Name
+		localIngressDomain = b.Seed.IngressDomain()
+		shootNamespace     = b.Shoot.ControlPlaneNamespace
+		role               = v1beta1constants.ETCDRoleMain
+	)
+
+	originalReplicas := etcdMain.GetReplicas()
+	defer func() {
+		etcdMain.SetReplicas(originalReplicas)
+		etcdMain.SetLiveMigration(lmValues)
+	}()
+
+	etcdMain.SetReplicas(new(phaseReplicas))
+	etcdMain.SetLiveMigration(&etcd.LiveMigrationValues{
+		SkipClientSANVerification:    lmValues.SkipClientSANVerification,
+		BootstrapWithExistingCluster: lmValues.BootstrapWithExistingCluster,
+		ExtraPeerServiceDNSNames:     lmValues.ExtraPeerServiceDNSNames,
+		ExtraClientServiceDNSNames:   lmValues.ExtraClientServiceDNSNames,
+		AdditionalAdvertisedURLs: &druidcorev1alpha1.AdditionalAdvertiseURLsSpec{
+			PeerURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+				OverrideDefaultURL: new(true),
+				Members:            ComputeMemberPeerURLs(localSeedName, shootNamespace, localIngressDomain, role, phaseReplicas),
+			},
+			ClientURLs: &druidcorev1alpha1.AdditionalURLsSpec{
+				OverrideDefaultURL: new(true),
+				Members:            ComputeMemberClientURLs(localSeedName, shootNamespace, localIngressDomain, role, phaseReplicas),
+			},
+		},
+	})
+	return b.DeployEtcd(ctx)
+}
+
+// IsSourceMembersAlreadyRemoved reports whether the source etcd members have already been
+// removed from the destination cluster. Returns true if the etcd CR has no bootstrap members
+// left to decommission, meaning a prior reconcile already completed this step.
+func (b *Botanist) IsSourceMembersAlreadyRemoved(ctx context.Context) (bool, error) {
+	etcdCR, err := b.Shoot.Components.ControlPlane.EtcdMain.Get(ctx)
+	if err != nil {
+		return false, err
+	}
+	if etcdCR.Spec.Etcd.BootstrapWithExistingCluster != nil {
+		return false, nil
+	}
+	return !druidcorev1alpha1.HasBootstrapMembersToDecommission(etcdCR), nil
+}
+
+// RemoveSourceEtcdMembers clears bootstrapWithExistingCluster on the etcd-main CR and triggers
+// a reconcile so etcd-druid decommissions the source members. Skips the patch if already nil.
+func (b *Botanist) RemoveSourceEtcdMembers(ctx context.Context) error {
+	etcdCR, err := b.Shoot.Components.ControlPlane.EtcdMain.Get(ctx)
+	if err != nil {
+		return err
+	}
+	if etcdCR.Spec.Etcd.BootstrapWithExistingCluster == nil {
+		return nil
+	}
+
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), etcdCR, func() error {
+		if !druidcorev1alpha1.HasScaleOperationCompleted(etcdCR) {
+			return fmt.Errorf("scale-out still in progress, cannot remove bootstrap field yet")
+		}
+		cond := druidcorev1alpha1.GetCondition(etcdCR, druidcorev1alpha1.ConditionTypeBootstrappedWithExistingCluster)
+		if cond == nil || cond.Status != druidcorev1alpha1.ConditionTrue {
+			return fmt.Errorf("destination etcd has not yet bootstrapped with the existing cluster")
+		}
+		etcdCR.Spec.Etcd.BootstrapWithExistingCluster = nil
+		if etcdCR.Annotations == nil {
+			etcdCR.SetAnnotations(make(map[string]string))
+		}
+		etcdCR.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
+		etcdCR.Annotations[v1beta1constants.GardenerTimestamp] = b.Clock.Now().UTC().Format(time.RFC3339Nano)
+		return nil
+	})
+	return err
+}
+
+// WaitUntilSourceEtcdMembersRemoved polls the etcd-main CR until etcd-druid has finished removing
+// the source members (scale operation complete and no bootstrap members left to decommission).
+func (b *Botanist) WaitUntilSourceEtcdMembersRemoved(ctx context.Context) error {
+	return retryutils.UntilTimeout(ctx, sourceMemberRemovalInterval, sourceMemberRemovalTimeout,
+		func(ctx context.Context) (done bool, err error) {
+			etcdCR, err := b.Shoot.Components.ControlPlane.EtcdMain.Get(ctx)
+			if err != nil {
+				return retryutils.MinorError(err)
+			}
+			if !druidcorev1alpha1.HasScaleOperationCompleted(etcdCR) ||
+				druidcorev1alpha1.IsScaleOperationInProgressWithReason(etcdCR, druidcorev1alpha1.ScaleOperationReasonBootstrapMembersRemoval) {
+				return retryutils.NotOk()
+			}
+			if druidcorev1alpha1.HasBootstrapMembersToDecommission(etcdCR) {
+				return retryutils.NotOk()
+			}
+			return retryutils.Ok()
+		})
 }

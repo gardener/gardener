@@ -2297,4 +2297,18 @@ var _ = Describe("Etcd", func() {
 			Expect(Name("foo")).To(Equal("etcd-foo"))
 		})
 	})
+
+	Describe("#SetLiveMigration", func() {
+		It("should set the LiveMigration field in Values", func() {
+			lm := &LiveMigrationValues{SkipClientSANVerification: true}
+			etcd.SetLiveMigration(lm)
+			Expect(etcd.GetValues().LiveMigration).To(Equal(lm))
+		})
+
+		It("should clear the LiveMigration field when called with nil", func() {
+			etcd.SetLiveMigration(&LiveMigrationValues{SkipClientSANVerification: true})
+			etcd.SetLiveMigration(nil)
+			Expect(etcd.GetValues().LiveMigration).To(BeNil())
+		})
+	})
 })
