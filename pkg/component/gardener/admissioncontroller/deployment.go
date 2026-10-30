@@ -46,6 +46,13 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       new(intstr.FromString("100%")),
+					MaxUnavailable: new(intstr.FromInt32(0)),
+				},
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
