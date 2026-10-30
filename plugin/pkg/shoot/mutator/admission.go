@@ -36,7 +36,6 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -208,9 +207,7 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	mutationContext.defaultWorkerArchitectures()
 	allErrs = append(allErrs, mutationContext.ensureMachineImages()...)
 
-	if features.DefaultFeatureGate.Enabled(features.ExtensionComponentVersions) {
-		allErrs = append(allErrs, m.resolveExtensionComponentVersions(shoot)...)
-	}
+	allErrs = append(allErrs, m.resolveExtensionComponentVersions(shoot)...)
 
 	if len(allErrs) > 0 {
 		return admission.NewForbidden(a, allErrs.ToAggregate())
