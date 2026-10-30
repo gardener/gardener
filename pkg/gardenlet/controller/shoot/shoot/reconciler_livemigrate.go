@@ -269,7 +269,8 @@ const taskGroupSourceEtcdPreparedForPeerJoin flow.TaskID = "TaskGroupSourceEtcdP
 // sourceEtcdPreparedForPeerJoinTaskGroup returns the flow.TaskGroup for making the source etcd ready for peer join.
 func sourceEtcdPreparedForPeerJoinTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(taskGroupSourceEtcdPreparedForPeerJoin)
+		g = flow.NewTaskGroup(taskGroupSourceEtcdPreparedForPeerJoin).
+			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup) != nil)
 
 		deployEtcdPeerExposure = g.Add(flow.Task{
 			Name: "Deploying etcd member exposure",
@@ -325,7 +326,8 @@ const taskGroupDestinationEtcdPeersJoined flow.TaskID = "TaskGroupDestinationEtc
 // destinationEtcdPeersJoinedTaskGroup returns the flow.TaskGroup for joining the destination etcd to the source cluster.
 func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(taskGroupDestinationEtcdPeersJoined)
+		g = flow.NewTaskGroup(taskGroupDestinationEtcdPeersJoined).
+			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete) != nil)
 
 		// Fetch the ShootState written by the source so InitializeSecretsManagement can restore from it.
 		refreshShootState = g.Add(flow.Task{
@@ -392,7 +394,8 @@ const taskGroupDestinationKubeAPIServerReady flow.TaskID = "TaskGroupDestination
 
 // destinationKubeAPIServerReadyTaskGroup brings up the destination control plane and the temporary VPN.
 func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
-	g := flow.NewTaskGroup(taskGroupDestinationKubeAPIServerReady)
+	g := flow.NewTaskGroup(taskGroupDestinationKubeAPIServerReady).
+		SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationMigrationCompleted) != nil)
 
 	refreshShootState := g.Add(flow.Task{
 		Name: "Refreshing shoot state",
@@ -572,6 +575,16 @@ func sourceSeedCleanupTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	migrateInfrastructureGroup := b.MigrateAndDeleteInfrastructureTaskGroup()
 	g = g.AddAll(migrateInfrastructureGroup.WithTaskDependencies(migrateExtensionsAfterKubeAPIServerGroup)...)
 
+	destroyEtcd := g.Add(flow.Task{
+		Name:         "Destroying source etcd",
+		Fn:           flow.TaskFn(b.DestroyEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		Dependencies: flow.NewTaskIDs(migrateInfrastructureGroup),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Waiting until source etcd has been destroyed",
+		Fn:           flow.TaskFn(b.WaitUntilEtcdsDeleted).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		Dependencies: flow.NewTaskIDs(destroyEtcd),
+	})
 	_ = g.Add(flow.Task{
 		Name:         "Deleting DNSRecords from the source namespace",
 		Fn:           b.DestroyDNSRecords,
