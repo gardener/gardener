@@ -236,7 +236,7 @@ var _ = Describe("Reconciler", func() {
 			moreFuture = &metav1.Time{Time: now.Add(48 * time.Hour)}
 		})
 
-		It("should reconcile status of old classifications and requeue due to expiration date", func() {
+		It("should reconcile status of legacy classifications and requeue due to expiration date", func() {
 			cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{
 					Version:        "1.28.2",
@@ -266,6 +266,27 @@ var _ = Describe("Reconciler", func() {
 			}
 
 			result := testStatus(wantStatus)
+			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
+		})
+
+		It("should reconcile machine image classifications and an unavailable future version", func() {
+			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{{
+				Name: "image-a",
+				Versions: []gardencorev1beta1.MachineImageVersion{
+					{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0", ExpirationDate: past}},
+					{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0", Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationPreview, StartTime: future}}}},
+				},
+			}}
+
+			result := testStatus(gardencorev1beta1.CloudProfileStatus{
+				MachineImages: []gardencorev1beta1.MachineImageStatus{{
+					Name: "image-a",
+					Versions: []gardencorev1beta1.ExpirableVersionStatus{
+						{Version: "1.0", Classification: gardencorev1beta1.ClassificationExpired},
+						{Version: "2.0", Classification: gardencorev1beta1.ClassificationUnavailable},
+					},
+				}},
+			})
 			Expect(result.RequeueAfter).To(BeNumerically("~", future.Sub(now), time.Second))
 		})
 

@@ -64,6 +64,8 @@ type NamespacedCloudProfileStatus struct {
 	CloudProfileSpec CloudProfileSpec
 	// ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
 	ObservedGeneration int64
+	// CloudProfileStatus contains the current classifications of the versions in CloudProfileSpec.
+	CloudProfileStatus *CloudProfileStatus
 }
 
 // CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
