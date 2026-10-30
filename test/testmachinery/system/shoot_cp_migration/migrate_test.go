@@ -5,6 +5,7 @@
 /**
 	Overview
 		- Tests the migration of a shoot by using the "framework/shootmigrationtest.go"
+		- When --live-migration is set, also ensures there is no kube-apiserver downtime during the migration.
 		- Performs sanity checks on the migrated shoot to verify that migration is working as expected.
  **/
 
@@ -17,13 +18,22 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	. "github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
+	shootupdate "github.com/gardener/gardener/test/utils/shoots/update"
+	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 )
 
 const (
 	ControlPlaneMigrationTimeout = 2 * time.Hour
+
+	zeroDownTimeValidatorJobName      = "live-migration"
+	zeroDownTimeValidatorJobNamespace = metav1.NamespaceDefault
 )
 
 var (
@@ -33,6 +43,7 @@ var (
 	mrExcludeList              *string
 	resourcesWithGeneratedName *string
 	addTestRunTaint            *string
+	liveMigration              *bool
 	gardenerConfig             *GardenerConfig
 )
 
@@ -44,6 +55,7 @@ func init() {
 	mrExcludeList = flag.String("mr-exclude-list", "", "comma-separated values of the ManagedResources that will be exclude during the 'CreationTimestamp' check")
 	resourcesWithGeneratedName = flag.String("resources-with-generated-name", "", "comma-separated names of resources deployed via managed resources that get their name generated during reconciliation and will be excluded during the 'CreationTimestamp' check")
 	addTestRunTaint = flag.String("add-test-run-taint", "", "if this property is set to 'true' the 'test.gardener.cloud/test-run' taint with the value of the 'TM_TESTRUN_ID' environment variable, will be applied to the shoot")
+	liveMigration = flag.Bool("live-migration", false, "if true, performs a live control plane migration ensuring zero kube-apiserver downtime")
 }
 
 var _ = ginkgo.Describe("Shoot migration testing", func() {
@@ -68,6 +80,9 @@ var _ = ginkgo.Describe("Shoot migration testing", func() {
 		if err != nil {
 			ginkgo.Fail("Unable to initialize the shoot migration test: " + err.Error())
 		}
+		if *liveMigration {
+			validateShootForLiveMigration(t)
+		}
 		if err = beforeMigration(ctx, t, &guestBookApp); err != nil {
 			ginkgo.Fail("The Shoot CP Migration preparation steps failed with: " + err.Error())
 		}
@@ -79,7 +94,7 @@ var _ = ginkgo.Describe("Shoot migration testing", func() {
 	}, 15*time.Minute)
 
 	CIt("Migrate Shoot", func(ctx context.Context) {
-		if err := t.MigrateShoot(ctx); err != nil {
+		if err := t.MigrateShoot(ctx, *liveMigration); err != nil {
 			ginkgo.Fail("Shoot CP Migration failed with: " + err.Error())
 		}
 	}, ControlPlaneMigrationTimeout)
@@ -94,6 +109,15 @@ func validateConfig() {
 	}
 	if !StringSet(*shootNamespace) {
 		ginkgo.Fail("You should specify a namespace of the Shoot that will be migrated")
+	}
+}
+
+func validateShootForLiveMigration(t *ShootMigrationTest) {
+	if t.Shoot.Status.IsHibernated {
+		ginkgo.Fail("Live control plane migration is not supported for hibernated shoots")
+	}
+	if !v1beta1helper.IsHAControlPlaneConfigured(&t.Shoot) {
+		ginkgo.Fail("Live control plane migration requires the shoot control plane to be configured for high availability")
 	}
 }
 
@@ -117,6 +141,16 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 	guestBookApp.DeployGuestBookApp(ctx)
 	guestBookApp.Test(ctx)
 
+	if *liveMigration {
+		ginkgo.By("Deploy zero-downtime validator job inside the shoot to ensure no kube-apiserver downtime during live migration")
+		job, err := highavailability.DeployZeroDownTimeValidatorJob(ctx, t.ShootClient.Client(), zeroDownTimeValidatorJobName, zeroDownTimeValidatorJobNamespace, "")
+		if err != nil {
+			return err
+		}
+		ginkgo.By("Wait until the zero-downtime validator job is ready")
+		shootupdate.WaitForJobToBeReady(ctx, t.ShootClient.Client(), job)
+	}
+
 	return nil
 }
 
@@ -129,6 +163,15 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	ginkgo.By("Verifying migration")
 	if err := t.VerifyMigration(ctx); err != nil {
 		return err
+	}
+
+	if *liveMigration {
+		ginkgo.By("Ensure there was no kube-apiserver downtime during the live migration")
+		job := highavailability.EmptyZeroDownTimeValidatorJob(zeroDownTimeValidatorJobName, zeroDownTimeValidatorJobNamespace)
+		if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(job), job); err != nil {
+			return err
+		}
+		Expect(job.Status.Failed).To(BeZero(), "the kube-apiserver experienced downtime during the live control plane migration")
 	}
 
 	if t.Shoot.Status.IsHibernated {
@@ -158,6 +201,14 @@ func cleanUp(ctx context.Context, t *ShootMigrationTest, guestBookApp applicatio
 	}
 	ginkgo.By("Cleanup the Guest Book Application")
 	guestBookApp.Cleanup(ctx)
+
+	if *liveMigration {
+		ginkgo.By("Cleanup the zero-downtime validator job")
+		job := highavailability.EmptyZeroDownTimeValidatorJob(zeroDownTimeValidatorJobName, zeroDownTimeValidatorJobNamespace)
+		if err := t.ShootClient.Client().Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationForeground)); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
 
 	return nil
 }
