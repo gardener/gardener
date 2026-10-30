@@ -196,7 +196,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// Serial reconciliation lease serializes control-plane pool node reconciliations. For in-place updates the
 	// lease is held throughout drain and update so that only one control-plane node gets updated at a time.
-	if serialReconciliation(secret) {
+	if serialReconciliation(secret) && r.LeaseClient != nil {
 		log.Info("OperatingSystemConfig reconciliation is serial")
 
 		if err := serialReconciliationLease.reload(ctx); err != nil {

@@ -88,34 +88,34 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			ReconciliationTimeout:   controllerutils.DefaultReconciliationTimeout,
 		})
 
-	// In case the OperatingSystemConfig reconciliation is serial, we require another Lease object for leader election
-	// among the responsible gardener-node-agent instances. We don't use the Lease cache from the mgr because this is
-	// already restricted in `cmd/gardener-node-agent/app.go` to the health check Lease object of the Node the
-	// gardener-node-agent is responsible for.
-	// It is not possible to add another field selector for the leader election Lease (multiple field selectors are
-	// AND-ed). Completely lifting the field selector for Leases in the mgr would result in too many unrelated update
-	// calls for all gardener-node-agent instances (and thus, increased network I/O).
-	log.Info("Setting up cluster object for serial reconciliation leader election Lease cache")
-	leaseCluster, err := cluster.New(mgr.GetConfig(), func(opts *cluster.Options) {
-		opts.Scheme = mgr.GetScheme()
-		opts.Logger = log.WithName("serial-reconciliation-leader-election-cluster")
-		opts.Cache.ByObject = map[client.Object]cache.ByObject{&coordinationv1.Lease{}: {
-			Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
-			Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: r.Config.SecretName}),
-		}}
-	})
-	if err != nil {
-		return fmt.Errorf("could not instantiate cluster for serial reconciliation leader election Lease cache: %w", err)
-	}
-	if err := mgr.Add(leaseCluster); err != nil {
-		return fmt.Errorf("could not add cluster for serial reconciliation leader election Lease cache to manager: %w", err)
-	}
-	if r.LeaseClient == nil {
-		r.LeaseClient = leaseCluster.GetClient()
-	}
-
 	if r.NodeName != "" {
-		controller = controller.WatchesRawSource(source.Kind[client.Object](leaseCluster.GetCache(),
+		// In case the OperatingSystemConfig reconciliation is serial, we require another Lease object for leader election
+		// among the responsible gardener-node-agent instances. We don't use the Lease cache from the mgr because this is
+		// already restricted in `cmd/gardener-node-agent/app.go` to the health check Lease object of the Node the
+		// gardener-node-agent is responsible for.
+		// It is not possible to add another field selector for the leader election Lease (multiple field selectors are
+		// AND-ed). Completely lifting the field selector for Leases in the mgr would result in too many unrelated update
+		// calls for all gardener-node-agent instances (and thus, increased network I/O).
+		log.Info("Setting up cluster object for serial reconciliation leader election Lease cache")
+		cluster, err := cluster.New(mgr.GetConfig(), func(opts *cluster.Options) {
+			opts.Scheme = mgr.GetScheme()
+			opts.Logger = log.WithName("serial-reconciliation-leader-election-cluster")
+			opts.Cache.ByObject = map[client.Object]cache.ByObject{&coordinationv1.Lease{}: {
+				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
+				Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: r.Config.SecretName}),
+			}}
+		})
+		if err != nil {
+			return fmt.Errorf("could not instantiate cluster for serial reconciliation leader election Lease cache: %w", err)
+		}
+		if err := mgr.Add(cluster); err != nil {
+			return fmt.Errorf("could not add cluster for serial reconciliation leader election Lease cache to manager: %w", err)
+		}
+		if r.LeaseClient == nil {
+			r.LeaseClient = cluster.GetClient()
+		}
+
+		controller = controller.WatchesRawSource(source.Kind[client.Object](cluster.GetCache(),
 			&coordinationv1.Lease{},
 			handler.EnqueueRequestsFromMapFunc(r.LeaseToSecretMapper()),
 			predicateutils.HasName(r.Config.SecretName), r.LeasePredicate(ctx, log.WithName("leader-election-lease-predicate")),
