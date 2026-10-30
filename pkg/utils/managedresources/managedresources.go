@@ -402,10 +402,12 @@ func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string
 // Therefore gardener-resource-manager handles forceful deletion.
 type ForceDeletionFinalizer struct{}
 
+// HasFinalizers returns true if the given object has at least one finalizer.
 func (f *ForceDeletionFinalizer) HasFinalizers(obj client.Object) (bool, error) {
 	return len(obj.GetFinalizers()) > 0, nil
 }
 
+// Finalize annotates the given object for force deletion.
 func (f *ForceDeletionFinalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
 	return SetForceDeletion(ctx, c, obj.GetNamespace(), obj.GetName())
 }

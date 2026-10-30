@@ -684,6 +684,71 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 		})
 
+		Describe("Force Deletion of Namespace", func() {
+			const namespaceDataKey = "namespace.yaml"
+
+			var testNS *corev1.Namespace
+
+			BeforeEach(func() {
+				testNS = &corev1.Namespace{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Namespace",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-force-delete-ns-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+						Finalizers: []string{"some.finalizer.to/block-deletion"},
+					},
+				}
+
+				secretForManagedResource.Data = secretDataForObject(testNS, namespaceDataKey)
+			})
+
+			JustBeforeEach(func() {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(ContainCondition(
+					OfType(resourcesv1alpha1.ResourcesApplied),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason(resourcesv1alpha1.ConditionApplySucceeded),
+				))
+			})
+
+			JustAfterEach(func() {
+				// In envtest there is no namespace controller, so clean up manually if the namespace is still around.
+				ns := &corev1.Namespace{}
+				if err := testClient.Get(ctx, client.ObjectKeyFromObject(testNS), ns); err == nil {
+					ns.SetFinalizers(nil)
+					ns.Spec.Finalizers = nil
+					Expect(testClient.SubResource("finalize").Update(ctx, ns)).To(Or(Succeed(), BeNotFoundError()))
+				}
+			})
+
+			It("should forcefully delete namespace with stuck metadata.finalizers and spec.finalizers", func() {
+				By("Verify Namespace exists with both metadata.finalizers and spec.finalizers")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(testNS), testNS)).To(Succeed())
+					g.Expect(testNS.Finalizers).To(ContainElement("some.finalizer.to/block-deletion"))
+					// The API server automatically adds spec.finalizers: [kubernetes] on creation
+					g.Expect(testNS.Spec.Finalizers).To(ContainElement(corev1.FinalizerKubernetes))
+				}).Should(Succeed())
+
+				By("Annotate ManagedResource for force deletion")
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, resourcesv1alpha1.ForceDeletion, "true")
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
+				By("Delete ManagedResource")
+				Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
+
+				By("Expect Namespace to disappear despite stuck metadata.finalizers and spec.finalizers")
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(testNS), testNS)
+				}).Should(BeNotFoundError())
+			})
+		})
+
 		Describe("Keep garbage-collectable object", func() {
 			var node *corev1.Node
 
