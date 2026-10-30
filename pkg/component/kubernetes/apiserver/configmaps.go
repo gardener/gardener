@@ -96,7 +96,6 @@ func (k *kubeAPIServer) reconcileConfigMapEnvoyConfig(ctx context.Context, confi
 		return nil
 	}
 
-	// Restrict the CONNECT proxy to the shoot's own node, pod, and service networks.
 	allowedDestinationCIDRs := slices.Concat(k.values.VPN.NodeNetworkCIDRs, k.values.VPN.PodNetworkCIDRs, k.values.ServiceNetworkCIDRs)
 
 	envoyConfig, err := envoy.GetEnvoyConfig(allowedDestinationCIDRs)

@@ -76,9 +76,8 @@ static_resources:
                 name: dynamic_forward_proxy_cache_config
                 dns_lookup_family: {{ .dnsLookupFamily }}
                 max_hosts: 8192
-                # resolved_address_filter is an allow-list on the resolved upstream IP: with
-                # invert_match any address outside the shoot CIDRs is dropped, so the connection
-                # fails. An empty allow-list denies all destinations (fail-closed).
+                # resolved_address_filter allow-lists only the shoot's own CIDRs (evaluated on the
+                # resolved IP, so it covers IP-literal targets and resists DNS rebinding).
                 resolved_address_filter:
                   invert_match: true
                   {{- if .allowedDestinationCIDRs }}
@@ -147,7 +146,6 @@ static_resources:
           name: dynamic_forward_proxy_cache_config
           dns_lookup_family: {{ .dnsLookupFamily }}
           max_hosts: 8192
-          # Must stay identical to the HTTP filter's dns_cache_config (same named cache).
           resolved_address_filter:
             invert_match: true
             {{- if .allowedDestinationCIDRs }}
