@@ -126,7 +126,7 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapNameAuthorizationConfig           = "kube-apiserver-authorization-config-341e03e7"
 		configMapNameAuthorizationConfigWorkerless = "kube-apiserver-authorization-config-9112a677"
 		configMapNameEgressPolicy                  = "kube-apiserver-egress-selector-config-53d92abc"
-		configMapEnvoyConfig                       = "kube-apiserver-envoy-config-b27aee4d"
+		configMapEnvoyConfig                       = "kube-apiserver-envoy-config-a17958c2"
 		configMapEgressSelectorConfig              = "kube-apiserver-egress-selector-config-02bc784a"
 
 		deployment                     *appsv1.Deployment
@@ -2480,7 +2480,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
 						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
 						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
-						"reference.resources.gardener.cloud/configmap-294ec148": configMapEnvoyConfig,
+						"reference.resources.gardener.cloud/configmap-17f38241": configMapEnvoyConfig,
 						"reference.resources.gardener.cloud/configmap-a90d2cd3": configMapEgressSelectorConfig,
 						"reference.resources.gardener.cloud/configmap-c413f07d": configMapNameAuthorizationConfigWorkerless,
 					})))
@@ -2712,7 +2712,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
 						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
 						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
-						"reference.resources.gardener.cloud/configmap-294ec148": configMapEnvoyConfig,
+						"reference.resources.gardener.cloud/configmap-17f38241": configMapEnvoyConfig,
 						"reference.resources.gardener.cloud/configmap-a90d2cd3": configMapEgressSelectorConfig,
 						"reference.resources.gardener.cloud/configmap-c413f07d": configMapNameAuthorizationConfigWorkerless,
 					})))
