@@ -121,7 +121,7 @@ Refer to the following table to see which `make` targets build the images of whi
 
 | Target | Builds | Deploys |
 |---|---|---|
-| `make kind-up` | Local cloud-controller-manager, provider-local loadbalancer image (configured for the runtime cloud-controller-manager) | Kubernetes runtime cluster, `cloud-controller-manager`, `calico-node`, `calico-kube-controllers`, `metrics-server`, local DNS and registry containers |
+| `make kind-up` | `gardener-extension-provider-local` images | [kind](https://kind.sigs.k8s.io/) cluster, `cloud-controller-manager`, `calico-node`, `calico-kube-controllers`, `metrics-server`, local DNS and registry containers |
 | `make operator-up` | `gardener-operator`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, `gardener-resource-manager`, `gardener-extension-provider-local`, `gardener-extension-admission-local`, `cloud-controller-manager-local`, `machine-controller-manager-provider-local` | `gardener-operator` |
 | `make garden-up` | Nothing | Via gardener-operator: `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, `gardener-resource-manager`, `gardener-dashboard`, `gardener-discovery-server`, `virtual-garden-etcd-main`, `virtual-garden-etcd-events`, `virtual-garden-kube-apiserver`, `virtual-garden-kube-controller-manager` |
 | `make seed-up` | `gardenlet`, `gardener-resource-manager`, `gardener-node-agent`, `gardener-extension-provider-local` images | `gardenlet` (bootstrapped by gardener-operator) and garden configuration (projects, credentials, cloud profiles). Gardenlet also deploys `gardener-resource-manager` if the Seed cluster differs from the garden runtime cluster. |
