@@ -22,7 +22,6 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/features"
 	celutils "github.com/gardener/gardener/pkg/utils/cel"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -107,11 +106,6 @@ func (v *ExtensionProfileValidator) Validate(ctx context.Context, a admission.At
 	}
 	if !v.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
-	}
-
-	// The whole feature is guarded by the ExtensionComponentVersions feature gate.
-	if !features.DefaultFeatureGate.Enabled(features.ExtensionComponentVersions) {
-		return nil
 	}
 
 	if a.GetSubresource() != "" {

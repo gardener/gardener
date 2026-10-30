@@ -5,7 +5,7 @@ title: ExtensionProfiles
 # `ExtensionProfile`s
 
 > [!NOTE]
-> This feature is introduced by [GEP-78](https://github.com/gardener/enhancements/blob/master/geps/0078-extension-profile/README.md) and is guarded by the `ExtensionComponentVersions` feature gate (alpha, disabled by default). When the gate is disabled, extensions behave exactly as before and the fields described here are inert.
+> This feature is introduced by [GEP-78](https://github.com/gardener/enhancements/blob/master/geps/0078-extension-profile/README.md). Extensions that do not publish an `ExtensionProfile` and shoots that pin no component versions are unaffected: the fields described here are optional and inert until used.
 
 `ExtensionProfile`s give extension-managed components (for example Traefik, Envoy Gateway, Falco) the same version-lifecycle experience that `CloudProfile` already provides for Kubernetes and machine-image versions. A landscape operator lists the offered component versions with a `preview → supported → deprecated → expired` lifecycle, and a cluster owner pins a version on the `Shoot` and optionally opts in to auto-upgrade.
 

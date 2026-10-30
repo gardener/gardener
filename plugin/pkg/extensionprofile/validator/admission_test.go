@@ -16,8 +16,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/plugin/pkg/extensionprofile/validator"
 )
 
@@ -45,8 +43,6 @@ var _ = Describe("ExtensionProfile Admission", func() {
 
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
-
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ExtensionComponentVersions, true))
 
 			extensionProfile = &gardencorev1beta1.ExtensionProfile{
 				ObjectMeta: metav1.ObjectMeta{Name: "shoot-traefik"},
@@ -110,13 +106,6 @@ var _ = Describe("ExtensionProfile Admission", func() {
 
 		It("should reject a pin when no matching ExtensionProfile exists", func() {
 			Expect(admissionHandler.Validate(ctx, newShootAttrs(admission.Create, nil), nil)).To(MatchError(ContainSubstring("no ExtensionProfile found")))
-		})
-
-		It("should be a no-op when the feature gate is disabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ExtensionComponentVersions, false))
-			shoot.Spec.Extensions[0].Components[0].Version = new("9.9.9")
-
-			Expect(admissionHandler.Validate(ctx, newShootAttrs(admission.Create, nil), nil)).To(Succeed())
 		})
 
 		It("should not re-check an unchanged expired pin on update", func() {
