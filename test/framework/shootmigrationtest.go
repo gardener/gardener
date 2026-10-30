@@ -113,7 +113,7 @@ func (t *ShootMigrationTest) initSeedsAndClients(ctx context.Context) error {
 }
 
 // MigrateShoot triggers shoot migration by changing the value of "shoot.Spec.SeedName" to the value of "ShootMigrationConfig.TargetSeedName".
-func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
+func (t *ShootMigrationTest) MigrateShoot(ctx context.Context, live bool) error {
 	// Dump gardener state if delete shoot is in exit handler
 	if os.Getenv("TM_PHASE") == "Exit" {
 		if shootFramework, err := t.GardenerFramework.NewShootFramework(ctx, &t.Shoot); err == nil {
@@ -124,7 +124,7 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	}
 
 	t.MigrationTime = metav1.Now()
-	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
+	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, live, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
 		if applyTestRunTaint, err := strconv.ParseBool(t.Config.AddTestRunTaint); applyTestRunTaint && err == nil {
 			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, new(GetTestRunID()))
