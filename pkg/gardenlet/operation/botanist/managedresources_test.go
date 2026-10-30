@@ -24,7 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ManagedResources", func() {
@@ -64,6 +66,53 @@ var _ = Describe("ManagedResources", func() {
 		shootManagedResourceNoClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: "shoot-no-class", Namespace: namespace.Name},
 		}
+	})
+
+	Describe("#DeleteManagedResourcesAndWait", func() {
+		It("should delete all managed resources with origin=gardener", func() {
+			mr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-mr",
+					Namespace: namespace.Name,
+					Labels:    map[string]string{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(botanist.DeleteManagedResourcesAndWait(ctx)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(BeNotFoundError())
+		})
+
+		It("should not delete managed resources with a different origin label", func() {
+			mr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "other-mr",
+					Namespace: namespace.Name,
+					Labels:    map[string]string{managedresources.LabelKeyOrigin: "other"},
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(botanist.DeleteManagedResourcesAndWait(ctx)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+		})
+
+		It("should not delete managed resources in a different namespace", func() {
+			otherNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "other"}}
+			Expect(fakeClient.Create(ctx, otherNamespace)).To(Succeed())
+
+			mrInOtherNamespace := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "mr-other-ns",
+					Namespace: otherNamespace.Name,
+					Labels:    map[string]string{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
+				},
+			}
+			Expect(fakeClient.Create(ctx, mrInOtherNamespace)).To(Succeed())
+
+			Expect(botanist.DeleteManagedResourcesAndWait(ctx)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mrInOtherNamespace), mrInOtherNamespace)).To(Succeed())
+		})
 	})
 
 	Describe("#WaitUntilShootManagedResourcesDeleted", func() {
