@@ -114,7 +114,7 @@ These build targets use [Skaffold](https://skaffold.dev/) to build images, push 
 However, the `make` targets that build the images of the components are not necessarily the same as the ones that deploy them.
 For example, `make operator-up` uses Skaffold to build and deploy the `gardener-operator` through Helm.
 Images for other components such as the `gardener-controller-manager` are also built at this stage, but those components are not deployed yet. Their image references are passed into the operator’s image vector.
-`make garden-up` then creates the Garden resource. The `gardener-operator` reconciles it and deploys the Gardener components using those previously defined image references.
+`make garden-up` then creates the `Garden` resource. The `gardener-operator` reconciles it and deploys the Gardener components using those previously defined image references.
 
 Therefore, to update a component during a local development cycle, one has to use the `make` target that rebuilds the image of the component, which sometimes is not the same `make` target as the one that does the initial deployment.
 Refer to the following table to see which `make` targets build the images of which components, and when the initial deployments of these components happen.
