@@ -2643,6 +2643,67 @@ ExtensionClass is a string alias for an extension class.
 </p>
 
 
+<h3 id="extensioncomponent">ExtensionComponent
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#extensionspec">ExtensionSpec</a>)
+</p>
+
+<p>
+ExtensionComponent carries the resolved version and optional provider configuration of a single
+extension-managed component.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Version is the resolved concrete version of the component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg">RawExtension</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is optional, opaque, extension-owned per-version configuration copied verbatim from<br />the matching ExtensionProfile version entry.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="extensionspec">ExtensionSpec
 </h3>
 
@@ -2697,6 +2758,18 @@ string
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig is the provider specific configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>components</code></br>
+<em>
+<a href="#extensioncomponent">ExtensionComponent</a> array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Components is the list of extension-managed components and their resolved versions. It is populated<br />by gardenlet from the shoot's pinned component versions and the matching ExtensionProfile.</p>
 </td>
 </tr>
 

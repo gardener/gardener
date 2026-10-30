@@ -1258,6 +1258,49 @@ message Extension {
   // Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.
   // +optional
   optional bool disabled = 3;
+
+  // AutoUpdate is the default auto-update policy for the components of this extension. It applies to
+  // every component that does not define its own autoUpdate. Only relevant for extension types that
+  // publish an ExtensionProfile.
+  // +optional
+  optional ExtensionAutoUpdate autoUpdate = 4;
+
+  // Components pins the versions of the components managed by this extension and optionally overrides
+  // the auto-update policy per component. A pinned version is validated against the matching
+  // ExtensionProfile. Only relevant for extension types that publish an ExtensionProfile.
+  // +optional
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  repeated ShootExtensionComponent components = 5;
+}
+
+// ExtensionAutoUpdate defines the auto-update policy for the components of an extension.
+message ExtensionAutoUpdate {
+  // Enabled indicates whether components are automatically upgraded within the configured update strategy.
+  // When disabled, a component only moves off its pinned version once that version expires (force-upgrade).
+  optional bool enabled = 1;
+
+  // UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.
+  // +optional
+  optional string updateStrategy = 2;
+}
+
+// ExtensionCompatibility is a compatibility envelope for an offered version.
+message ExtensionCompatibility {
+  // Validations is a list of CEL rules, all of which must evaluate to true against the shoot. The CEL
+  // environment binds the variable `shoot` to the Shoot being admitted.
+  // +optional
+  repeated ExtensionCompatibilityValidation validations = 1;
+}
+
+// ExtensionCompatibilityValidation is a single CEL compatibility rule.
+message ExtensionCompatibilityValidation {
+  // Rule is a CEL expression evaluated against the shoot, bound to the variable `shoot`. It must return a boolean.
+  optional string rule = 1;
+
+  // Message is the message surfaced when the rule evaluates to false.
+  // +optional
+  optional string message = 2;
 }
 
 // ExtensionExposure holds the type and provider config of the exposure extension.
@@ -1270,6 +1313,79 @@ message ExtensionExposure {
   // ProviderConfig holds the extension specific configuration.
   // +optional
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+}
+
+// ExtensionProfile describes the offered component versions and their lifecycle for an
+// extension-managed component. One ExtensionProfile exists per participating extension type;
+// the binding to the extension type is the object's name (metadata.name equals the extension type).
+message ExtensionProfile {
+  // Standard object metadata.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec defines the offered component versions and the update policy.
+  // +optional
+  optional ExtensionProfileSpec spec = 2;
+
+  // Status contains the computed classification of the offered versions.
+  // +optional
+  optional ExtensionProfileStatus status = 3;
+}
+
+// ExtensionProfileComponent is a named component of an extension with an independently versioned lifecycle.
+message ExtensionProfileComponent {
+  // Name is the name of the component.
+  optional string name = 1;
+
+  // UpdateStrategy overrides the profile-level update strategy for this component.
+  // +optional
+  optional ExtensionUpdateStrategy updateStrategy = 2;
+
+  // Versions is the list of offered versions of this component.
+  // +optional
+  // +patchMergeKey=version
+  // +patchStrategy=merge
+  repeated ExtensionVersion versions = 3;
+}
+
+// ExtensionProfileComponentStatus is the computed status for a single component.
+message ExtensionProfileComponentStatus {
+  // Name is the name of the component.
+  optional string name = 1;
+
+  // Versions is the list of offered versions with their currently computed classification.
+  // +optional
+  repeated ExpirableVersionStatus versions = 2;
+}
+
+// ExtensionProfileList is a collection of ExtensionProfiles.
+message ExtensionProfileList {
+  // Standard list object metadata.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of ExtensionProfiles.
+  repeated ExtensionProfile items = 2;
+}
+
+// ExtensionProfileSpec is the specification of an ExtensionProfile.
+message ExtensionProfileSpec {
+  // UpdateStrategy is the default auto-update policy for this extension type. It is applied to a
+  // component that does not define its own updateStrategy.
+  optional ExtensionUpdateStrategy updateStrategy = 1;
+
+  // Components is the list of named components offered by this extension, each versioned independently.
+  // +optional
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  repeated ExtensionProfileComponent components = 2;
+}
+
+// ExtensionProfileStatus is the computed status of an ExtensionProfile.
+message ExtensionProfileStatus {
+  // Components mirrors spec.components and carries the computed classification of each offered version.
+  // +optional
+  repeated ExtensionProfileComponentStatus components = 1;
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's
@@ -1293,6 +1409,38 @@ message ExtensionResourceState {
   // Resources holds a list of named resource references that can be referred to in the state by their names.
   // +optional
   repeated NamedResourceReference resources = 5;
+}
+
+// ExtensionUpdateStrategy defines the auto-update policy for an extension or one of its components.
+message ExtensionUpdateStrategy {
+  // Default is the update strategy applied when a shoot does not request an explicit strategy. Required
+  // at the profile level; at the component level it may be omitted and is then inherited from the profile.
+  // Possible values are: patch, minor, major.
+  // +optional
+  optional string default = 1;
+
+  // Supported is the allow-list of update strategies this extension implements. Admission rejects any
+  // shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
+  repeated string supported = 2;
+}
+
+// ExtensionVersion is a single offered version of a component with its lifecycle and compatibility envelope.
+message ExtensionVersion {
+  // Version is the version identifier. Must be a valid semantic version.
+  optional string version = 1;
+
+  // Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
+  // CloudProfile versions, see GEP-0032). At least one stage must be provided.
+  repeated LifecycleStage lifecycle = 2;
+
+  // Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
+  // +optional
+  optional ExtensionCompatibility compatibility = 3;
+
+  // ProviderConfig is optional, opaque, extension-owned per-version metadata. It is not written to the
+  // Shoot spec; gardenlet carries it into the seed Extension resource when the version is resolved.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 4;
 }
 
 // FailureTolerance describes information about failure tolerance level of a highly available resource.
@@ -3484,6 +3632,26 @@ message ShootCredentialsRotation {
   // ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
   // +optional
   optional ETCDEncryptionKeyRotation etcdEncryptionKey = 6;
+}
+
+// ShootExtensionComponent pins the version of a single component managed by an extension.
+message ShootExtensionComponent {
+  // Name is the name of the component as listed in the ExtensionProfile.
+  optional string name = 1;
+
+  // Version pins the component version. A partial version is resolved to the highest matching supported
+  // version at admission. When omitted, the extension behaves as before this field existed.
+  // +optional
+  optional string version = 2;
+
+  // AutoUpdate overrides the extension-level auto-update policy for this component.
+  // +optional
+  optional ExtensionAutoUpdate autoUpdate = 3;
+
+  // UpdateStrategy overrides the resolved update strategy for this component. Possible values are:
+  // patch, minor, major.
+  // +optional
+  optional string updateStrategy = 4;
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.

@@ -54,6 +54,7 @@ type MutateShoot struct {
 	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
 	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
 	seedLister                   gardencorev1beta1listers.SeedLister
+	extensionProfileLister       gardencorev1beta1listers.ExtensionProfileLister
 	readyFunc                    admission.ReadyFunc
 }
 
@@ -87,11 +88,15 @@ func (m *MutateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInforme
 	seedInformer := f.Core().V1beta1().Seeds()
 	m.seedLister = seedInformer.Lister()
 
+	extensionProfileInformer := f.Core().V1beta1().ExtensionProfiles()
+	m.extensionProfileLister = extensionProfileInformer.Lister()
+
 	readyFuncs = append(
 		readyFuncs,
 		cloudProfileInformer.Informer().HasSynced,
 		namespacedCloudProfileInformer.Informer().HasSynced,
 		seedInformer.Informer().HasSynced,
+		extensionProfileInformer.Informer().HasSynced,
 	)
 }
 
@@ -105,6 +110,9 @@ func (m *MutateShoot) ValidateInitialization() error {
 	}
 	if m.seedLister == nil {
 		return errors.New("missing seed lister")
+	}
+	if m.extensionProfileLister == nil {
+		return errors.New("missing extensionProfile lister")
 	}
 	return nil
 }
@@ -198,6 +206,8 @@ func (m *MutateShoot) Admit(_ context.Context, a admission.Attributes, _ admissi
 	allErrs = append(allErrs, mutationContext.defaultKubernetesVersionForWorkers()...)
 	mutationContext.defaultWorkerArchitectures()
 	allErrs = append(allErrs, mutationContext.ensureMachineImages()...)
+
+	allErrs = append(allErrs, m.resolveExtensionComponentVersions(shoot)...)
 
 	if len(allErrs) > 0 {
 		return admission.NewForbidden(a, allErrs.ToAggregate())
@@ -704,4 +714,105 @@ func parseSemanticVersionPart(part string) (*uint64, error) {
 		return nil, fmt.Errorf("%s must be a semantic version: %w", part, err)
 	}
 	return new(v), nil
+}
+
+// resolveExtensionComponentVersions resolves each pinned, partial extension component version to the
+// highest matching supported version offered by the component's ExtensionProfile, and persists it on
+// the shoot spec. A pin that is already a concrete offered version is left unchanged; a pin for an
+// extension type without a matching profile, or without a resolvable version, is reported as an error.
+func (m *MutateShoot) resolveExtensionComponentVersions(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+	extensionsPath := field.NewPath("spec", "extensions")
+
+	for i := range shoot.Spec.Extensions {
+		extension := &shoot.Spec.Extensions[i]
+		for j := range extension.Components {
+			component := &extension.Components[j]
+			// A nil version means the component is not pinned; validation already rejects an empty string.
+			if component.Version == nil {
+				continue
+			}
+
+			versionPath := extensionsPath.Index(i).Child("components").Index(j).Child("version")
+
+			profile, err := m.extensionProfileLister.Get(extension.Type)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					allErrs = append(allErrs, field.Invalid(versionPath, *component.Version, fmt.Sprintf("no ExtensionProfile found for extension type %q", extension.Type)))
+				} else {
+					allErrs = append(allErrs, field.InternalError(versionPath, fmt.Errorf("could not get ExtensionProfile %q: %w", extension.Type, err)))
+				}
+				continue
+			}
+
+			resolved, err := resolveComponentVersion(profile, component.Name, *component.Version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(versionPath, *component.Version, err.Error()))
+				continue
+			}
+			component.Version = &resolved
+		}
+	}
+
+	return allErrs
+}
+
+// resolveComponentVersion returns the highest supported version of the given component in the profile
+// that matches the requested version. A concrete version that is offered is returned as-is; otherwise the
+// requested value is interpreted as a semver constraint (e.g. "3.1", "3.1.x", "~3.1", "^3") and resolved to
+// the highest supported offered version satisfying it.
+func resolveComponentVersion(profile *gardencorev1beta1.ExtensionProfile, componentName, requested string) (string, error) {
+	var versions []gardencorev1beta1.ExtensionVersion
+	componentFound := false
+	for _, component := range profile.Spec.Components {
+		if component.Name == componentName {
+			versions = component.Versions
+			componentFound = true
+			break
+		}
+	}
+	if !componentFound {
+		return "", fmt.Errorf("ExtensionProfile %q does not offer a component %q", profile.Name, componentName)
+	}
+
+	// Exact match that is offered: keep it (classification is checked by the ExtensionProfileValidator).
+	for _, version := range versions {
+		if version.Version == requested {
+			return requested, nil
+		}
+	}
+
+	// Otherwise interpret the request as a semver constraint. A bare "3.1" means ">=3.1.0 <3.2.0", so it
+	// matches 3.1.x but not 3.10.x; "3.1.x", "~3.1" and "^3" are supported too. An unparsable value is
+	// rejected with a clear error rather than silently matching nothing.
+	constraint, err := semver.NewConstraint(requested)
+	if err != nil {
+		return "", fmt.Errorf("version %q of component %q is neither an offered version nor a valid version constraint: %w", requested, componentName, err)
+	}
+
+	// Only supported versions are resolution targets: preview is explicit-pin-only (never auto-selected),
+	// and deprecated/expired versions must not be introduced by a fresh resolution. An exact pin of a
+	// non-supported version is still honoured by the exact-match branch above.
+	var (
+		best    *semver.Version
+		bestRaw string
+	)
+	for _, version := range versions {
+		parsed, err := semver.NewVersion(version.Version)
+		if err != nil || !constraint.Check(parsed) {
+			continue
+		}
+		if v1beta1helper.CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{Lifecycle: version.Lifecycle}) != gardencorev1beta1.ClassificationSupported {
+			continue
+		}
+		if best == nil || parsed.GreaterThan(best) {
+			best = parsed
+			bestRaw = version.Version
+		}
+	}
+
+	if best == nil {
+		return "", fmt.Errorf("no supported version of component %q matches %q", componentName, requested)
+	}
+	return bestRaw, nil
 }

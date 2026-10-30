@@ -144,6 +144,20 @@ func (mr *MockCoreV1beta1InterfaceMockRecorder) ExposureClasses() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExposureClasses", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ExposureClasses))
 }
 
+// ExtensionProfiles mocks base method.
+func (m *MockCoreV1beta1Interface) ExtensionProfiles() v1beta10.ExtensionProfileInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtensionProfiles")
+	ret0, _ := ret[0].(v1beta10.ExtensionProfileInterface)
+	return ret0
+}
+
+// ExtensionProfiles indicates an expected call of ExtensionProfiles.
+func (mr *MockCoreV1beta1InterfaceMockRecorder) ExtensionProfiles() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtensionProfiles", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ExtensionProfiles))
+}
+
 // InternalSecrets mocks base method.
 func (m *MockCoreV1beta1Interface) InternalSecrets(namespace string) v1beta10.InternalSecretInterface {
 	m.ctrl.T.Helper()

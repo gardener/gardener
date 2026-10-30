@@ -23,6 +23,7 @@ type CoreV1beta1Interface interface {
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	ExposureClassesGetter
+	ExtensionProfilesGetter
 	InternalSecretsGetter
 	NamespacedCloudProfilesGetter
 	ProjectsGetter
@@ -64,6 +65,10 @@ func (c *CoreV1beta1Client) ControllerRegistrations() ControllerRegistrationInte
 
 func (c *CoreV1beta1Client) ExposureClasses() ExposureClassInterface {
 	return newExposureClasses(c)
+}
+
+func (c *CoreV1beta1Client) ExtensionProfiles() ExtensionProfileInterface {
+	return newExtensionProfiles(c)
 }
 
 func (c *CoreV1beta1Client) InternalSecrets(namespace string) InternalSecretInterface {

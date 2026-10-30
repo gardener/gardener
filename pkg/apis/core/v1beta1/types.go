@@ -84,6 +84,45 @@ type Extension struct {
 	// Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.
 	// +optional
 	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
+	// AutoUpdate is the default auto-update policy for the components of this extension. It applies to
+	// every component that does not define its own autoUpdate. Only relevant for extension types that
+	// publish an ExtensionProfile.
+	// +optional
+	AutoUpdate *ExtensionAutoUpdate `json:"autoUpdate,omitempty" protobuf:"bytes,4,opt,name=autoUpdate"`
+	// Components pins the versions of the components managed by this extension and optionally overrides
+	// the auto-update policy per component. A pinned version is validated against the matching
+	// ExtensionProfile. Only relevant for extension types that publish an ExtensionProfile.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Components []ShootExtensionComponent `json:"components,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,5,rep,name=components"`
+}
+
+// ExtensionAutoUpdate defines the auto-update policy for the components of an extension.
+type ExtensionAutoUpdate struct {
+	// Enabled indicates whether components are automatically upgraded within the configured update strategy.
+	// When disabled, a component only moves off its pinned version once that version expires (force-upgrade).
+	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
+	// UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.
+	// +optional
+	UpdateStrategy *UpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,2,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
+}
+
+// ShootExtensionComponent pins the version of a single component managed by an extension.
+type ShootExtensionComponent struct {
+	// Name is the name of the component as listed in the ExtensionProfile.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Version pins the component version. A partial version is resolved to the highest matching supported
+	// version at admission. When omitted, the extension behaves as before this field existed.
+	// +optional
+	Version *string `json:"version,omitempty" protobuf:"bytes,2,opt,name=version"`
+	// AutoUpdate overrides the extension-level auto-update policy for this component.
+	// +optional
+	AutoUpdate *ExtensionAutoUpdate `json:"autoUpdate,omitempty" protobuf:"bytes,3,opt,name=autoUpdate"`
+	// UpdateStrategy overrides the resolved update strategy for this component. Possible values are:
+	// patch, minor, major.
+	// +optional
+	UpdateStrategy *UpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,4,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
 }
 
 // NamedResourceReference is a named reference to a resource.

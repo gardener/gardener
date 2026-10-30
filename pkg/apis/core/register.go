@@ -49,6 +49,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ControllerInstallationList{},
 		&ExposureClass{},
 		&ExposureClassList{},
+		&ExtensionProfile{},
+		&ExtensionProfileList{},
 		&InternalSecret{},
 		&InternalSecretList{},
 		&NamespacedCloudProfile{},

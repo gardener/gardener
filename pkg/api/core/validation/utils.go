@@ -680,7 +680,65 @@ func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.
 		} else {
 			types.Insert(extension.Type)
 		}
+
+		if extension.AutoUpdate != nil {
+			allErrs = append(allErrs, validateExtensionAutoUpdate(extension.AutoUpdate, fldPath.Index(i).Child("autoUpdate"))...)
+		}
+		allErrs = append(allErrs, validateShootExtensionComponents(extension.Components, fldPath.Index(i).Child("components"))...)
 	}
+	return allErrs
+}
+
+// validateShootExtensionComponents validates the pinned component versions of a shoot extension entry.
+// An empty slice is valid: pinning is optional and the extension then behaves as before (GEP-0078).
+func validateShootExtensionComponents(components []core.ShootExtensionComponent, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	names := sets.Set[string]{}
+	for i, component := range components {
+		idxPath := fldPath.Index(i)
+
+		if component.Name == "" {
+			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "component name must not be empty"))
+		} else {
+			allErrs = append(allErrs, validateDNS1123Label(component.Name, idxPath.Child("name"))...)
+		}
+
+		if names.Has(component.Name) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), component.Name))
+		}
+		names.Insert(component.Name)
+
+		// A component entry that pins nothing (no version, no autoUpdate, no updateStrategy) has no effect
+		// and is almost certainly a mistake, so reject it.
+		if component.Version == nil && component.AutoUpdate == nil && component.UpdateStrategy == nil {
+			allErrs = append(allErrs, field.Required(idxPath, "a component entry must set at least one of version, autoUpdate or updateStrategy"))
+		}
+
+		if component.Version != nil && *component.Version == "" {
+			allErrs = append(allErrs, field.Required(idxPath.Child("version"), "version must not be empty when set"))
+		}
+
+		if component.AutoUpdate != nil {
+			allErrs = append(allErrs, validateExtensionAutoUpdate(component.AutoUpdate, idxPath.Child("autoUpdate"))...)
+		}
+
+		if component.UpdateStrategy != nil && !availableExtensionUpdateStrategies.Has(string(*component.UpdateStrategy)) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("updateStrategy"), *component.UpdateStrategy, sets.List(availableExtensionUpdateStrategies)))
+		}
+	}
+
+	return allErrs
+}
+
+// validateExtensionAutoUpdate validates the auto-update policy of a shoot extension or component.
+func validateExtensionAutoUpdate(autoUpdate *core.ExtensionAutoUpdate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if autoUpdate.UpdateStrategy != nil && !availableExtensionUpdateStrategies.Has(string(*autoUpdate.UpdateStrategy)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *autoUpdate.UpdateStrategy, sets.List(availableExtensionUpdateStrategies)))
+	}
+
 	return allErrs
 }
 
