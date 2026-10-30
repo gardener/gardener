@@ -30,6 +30,10 @@ var (
 		string(core.UpdateStrategyMinor),
 		string(core.UpdateStrategyMajor),
 	)
+
+	// availableExtensionUpdateStrategies is the set of valid update strategies for extension components
+	// (GEP-0078). It is the same patch/minor/major vocabulary used for machine images.
+	availableExtensionUpdateStrategies = availableUpdateStrategiesForMachineImage
 )
 
 // ValidateCloudProfile validates a CloudProfile object.

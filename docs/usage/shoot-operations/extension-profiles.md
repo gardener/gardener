@@ -93,7 +93,7 @@ spec:
 - **Pinning is optional.** If a shoot lists no `components[].version`, the extension behaves exactly as before and the profile is not consulted.
 - **A pin requires a matching profile.** `gardener-apiserver` rejects pinning a version for an extension type that has no `ExtensionProfile`.
 - **Only selectable classifications are accepted.** When the pin changes, the selected version must be classified `preview`, `supported`, or `deprecated`; `unavailable` and `expired` are rejected. A `preview` version may be explicitly pinned but is never an auto-upgrade or defaulting target.
-- **Partial versions are resolved.** A partial pin (e.g. `3.1`) is resolved to the highest matching supported version at admission and persisted.
+- **Partial versions are resolved.** A pin that is not an offered version is interpreted as a semver constraint and resolved to the highest matching supported version at admission, then persisted. A bare `3.1` means "the latest `3.1.x`" (it does not match `3.10.x`); `3` means "the latest `3.x`". Explicit range syntax works too: `3.1.x`, `~3.1`, `^3`. An unparsable value is rejected.
 - **Compatibility is checked old-vs-new.** The version's `compatibility.validations[]` CEL rules are evaluated against the shoot; admission rejects only a violation the update introduces.
 - **In-use versions are protected.** The operator cannot remove a version from a profile (or delete the profile) while a shoot still pins that version.
 
@@ -103,9 +103,6 @@ spec:
 | --- | --- |
 | `patch` | Upgrade to newer supported patch releases within the pinned minor (`3.1.4 → 3.1.7`). |
 | `minor` | Upgrade to newer supported minor releases within the pinned major (`3.1.4 → 3.2.0`). |
-| `major` | Always track the newest supported version (crosses major boundaries). |
+| `major` | Always track the newest supported version, crossing major boundaries (`3.2.0 → 4.0.1`). |
 
-Setting `autoUpdate.enabled: false` freezes the component on its pinned version until that version expires, at which point a force-upgrade fires regardless (see GEP-5 semantics). The effective policy for a component is resolved in order: its own `autoUpdate`, then the extension-level `autoUpdate`, then the component's `updateStrategy.default`, then the profile's `updateStrategy.default`, falling back to `patch`.
-
-> [!NOTE]
-> Classification, auto-upgrade, force-upgrade, and the resolution of the pinned version into the seed `Extension` resource are implemented by `gardener-controller-manager` and `gardenlet` (later work packages of GEP-78). This document describes the API surface and admission behaviour served by `gardener-apiserver`.
+Setting `autoUpdate.enabled: false` freezes the component on its pinned version until that version expires, at which point a force-upgrade fires regardless (see the [versioning policy, GEP-5](https://github.com/gardener/enhancements/tree/main/geps/0005-versioning-policy)). The effective policy for a component is resolved in order: its own `autoUpdate`, then the extension-level `autoUpdate`, then the component's `updateStrategy.default`, then the profile's `updateStrategy.default`, falling back to `patch`.

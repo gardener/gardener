@@ -13,5 +13,5 @@ import (
 
 func TestExtensionProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Core ExtensionProfile Suite")
+	RunSpecs(t, "APIServer Registry Core ExtensionProfile Suite")
 }

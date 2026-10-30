@@ -5,6 +5,8 @@
 package validation_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -68,14 +70,20 @@ var _ = Describe("ExtensionProfile Validation Tests", func() {
 			}))))
 		})
 
-		It("should reject an unsupported update strategy value", func() {
+		It("should reject an unsupported update strategy value for both default and supported", func() {
 			extensionProfile.Spec.UpdateStrategy.Default = "weekly"
 			extensionProfile.Spec.UpdateStrategy.Supported = []core.MachineImageUpdateStrategy{"weekly"}
 
-			Expect(ValidateExtensionProfile(extensionProfile)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.updateStrategy.default"),
-			}))))
+			Expect(ValidateExtensionProfile(extensionProfile)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.updateStrategy.default"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.updateStrategy.supported[0]"),
+				})),
+			))
 		})
 
 		It("should reject duplicate component names", func() {
@@ -117,6 +125,70 @@ var _ = Describe("ExtensionProfile Validation Tests", func() {
 			}
 
 			Expect(ValidateExtensionProfile(extensionProfile)).To(BeEmpty())
+		})
+
+		It("should reject an empty supported list", func() {
+			extensionProfile.Spec.UpdateStrategy.Supported = nil
+
+			Expect(ValidateExtensionProfile(extensionProfile)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.updateStrategy.supported"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.updateStrategy.default"),
+				})),
+			))
+		})
+
+		It("should reject a version without any lifecycle stage", func() {
+			extensionProfile.Spec.Components[0].Versions[0].Lifecycle = nil
+
+			Expect(ValidateExtensionProfile(extensionProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.components[0].versions[0].lifecycle"),
+			}))))
+		})
+
+		It("should reject a compatibility envelope without any validation", func() {
+			extensionProfile.Spec.Components[0].Versions[0].Compatibility = &core.ExtensionCompatibility{}
+
+			Expect(ValidateExtensionProfile(extensionProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.components[0].versions[0].compatibility.validations"),
+			}))))
+		})
+
+		It("should accept a component-level update strategy that omits the default (inherited from the profile)", func() {
+			extensionProfile.Spec.Components[0].UpdateStrategy = &core.ExtensionUpdateStrategy{
+				Supported: []core.MachineImageUpdateStrategy{core.UpdateStrategyPatch},
+			}
+
+			Expect(ValidateExtensionProfile(extensionProfile)).To(BeEmpty())
+		})
+	})
+
+	Describe("#ValidateExtensionProfileUpdate", func() {
+		BeforeEach(func() {
+			extensionProfile.ResourceVersion = "1"
+		})
+
+		It("should reject turning an already-advanced version unavailable", func() {
+			newProfile := extensionProfile.DeepCopy()
+			// A single stage with a future start time makes the current classification unavailable.
+			newProfile.Spec.Components[0].Versions[0].Lifecycle = []core.LifecycleStage{
+				{Classification: core.ClassificationSupported, StartTime: &metav1.Time{Time: time.Now().Add(time.Hour)}},
+			}
+
+			Expect(ValidateExtensionProfileUpdate(newProfile, extensionProfile)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.components[0].versions[0]"),
+			}))))
+		})
+
+		It("should accept an unchanged profile", func() {
+			Expect(ValidateExtensionProfileUpdate(extensionProfile.DeepCopy(), extensionProfile)).To(BeEmpty())
 		})
 	})
 })

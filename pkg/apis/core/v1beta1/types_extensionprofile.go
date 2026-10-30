@@ -57,20 +57,21 @@ type ExtensionProfileSpec struct {
 
 // ExtensionUpdateStrategy defines the auto-update policy for an extension or one of its components.
 type ExtensionUpdateStrategy struct {
-	// Default is the update strategy applied when a shoot does not request an explicit strategy.
+	// Default is the update strategy applied when a shoot does not request an explicit strategy. Required
+	// at the profile level; at the component level it may be omitted and is then inherited from the profile.
 	// Possible values are: patch, minor, major.
-	Default MachineImageUpdateStrategy `json:"default" protobuf:"bytes,1,opt,name=default,casttype=MachineImageUpdateStrategy"`
+	// +optional
+	Default UpdateStrategy `json:"default,omitempty" protobuf:"bytes,1,opt,name=default,casttype=MachineImageUpdateStrategy"`
 	// Supported is the allow-list of update strategies this extension implements. Admission rejects any
 	// shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
-	// +optional
-	Supported []MachineImageUpdateStrategy `json:"supported,omitempty" protobuf:"bytes,2,rep,name=supported,casttype=MachineImageUpdateStrategy"`
+	Supported []UpdateStrategy `json:"supported" protobuf:"bytes,2,rep,name=supported,casttype=MachineImageUpdateStrategy"`
 }
 
 // ExtensionProfileComponent is a named component of an extension with an independently versioned lifecycle.
 type ExtensionProfileComponent struct {
 	// Name is the name of the component.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// UpdateStrategy overrides the profile-level update strategy for this component. Optional.
+	// UpdateStrategy overrides the profile-level update strategy for this component.
 	// +optional
 	UpdateStrategy *ExtensionUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,2,opt,name=updateStrategy"`
 	// Versions is the list of offered versions of this component.
@@ -85,9 +86,8 @@ type ExtensionVersion struct {
 	// Version is the version identifier. Must be a valid semantic version.
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
-	// CloudProfile versions, see GEP-0032).
-	// +optional
-	Lifecycle []LifecycleStage `json:"lifecycle,omitempty" protobuf:"bytes,2,rep,name=lifecycle"`
+	// CloudProfile versions, see GEP-0032). At least one stage must be provided.
+	Lifecycle []LifecycleStage `json:"lifecycle" protobuf:"bytes,2,rep,name=lifecycle"`
 	// Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
 	// +optional
 	Compatibility *ExtensionCompatibility `json:"compatibility,omitempty" protobuf:"bytes,3,opt,name=compatibility"`

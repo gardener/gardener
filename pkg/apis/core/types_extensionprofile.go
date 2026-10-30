@@ -52,17 +52,17 @@ type ExtensionProfileSpec struct {
 type ExtensionUpdateStrategy struct {
 	// Default is the update strategy applied when a shoot does not request an explicit strategy.
 	// Possible values are: patch, minor, major.
-	Default MachineImageUpdateStrategy
+	Default UpdateStrategy
 	// Supported is the allow-list of update strategies this extension implements. Admission rejects any
 	// shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
-	Supported []MachineImageUpdateStrategy
+	Supported []UpdateStrategy
 }
 
 // ExtensionProfileComponent is a named component of an extension with an independently versioned lifecycle.
 type ExtensionProfileComponent struct {
 	// Name is the name of the component.
 	Name string
-	// UpdateStrategy overrides the profile-level update strategy for this component. Optional.
+	// UpdateStrategy overrides the profile-level update strategy for this component.
 	UpdateStrategy *ExtensionUpdateStrategy
 	// Versions is the list of offered versions of this component.
 	Versions []ExtensionVersion

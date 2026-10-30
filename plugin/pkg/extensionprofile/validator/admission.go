@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -160,14 +161,27 @@ func (v *ExtensionProfileValidator) validateExtensionProfile(a admission.Attribu
 		return err
 	}
 	if len(pinningShoots) > 0 {
-		return admission.NewForbidden(a, fmt.Errorf("cannot remove version(s) of ExtensionProfile %q still in use by shoot(s): %v", oldProfile.Name, pinningShoots))
+		return admission.NewForbidden(a, fmt.Errorf("cannot remove version(s) of ExtensionProfile %q still in use by shoot(s): %s", oldProfile.Name, formatShootList(pinningShoots)))
 	}
 
 	return nil
 }
 
+// maxReportedShoots bounds the number of shoots named in an in-use error; the full count can be large.
+const maxReportedShoots = 10
+
+// formatShootList renders a bounded, human-readable list of shoot names, summarizing the remainder.
+func formatShootList(shoots []string) string {
+	if len(shoots) <= maxReportedShoots {
+		return strings.Join(shoots, ", ")
+	}
+	return fmt.Sprintf("%s and %d more", strings.Join(shoots[:maxReportedShoots], ", "), len(shoots)-maxReportedShoots)
+}
+
 // shootsPinningRemovedVersions returns the shoots that pin a (component, version) of the profile that is
-// no longer present in the `remaining` set.
+// no longer present in the `remaining` set. The informer lister only supports label selectors, so all
+// shoots are listed and filtered in memory (as other admission plugins do); listing stops once the
+// reported cap is reached, since the exact total is not surfaced.
 func (v *ExtensionProfileValidator) shootsPinningRemovedVersions(profile *gardencore.ExtensionProfile, remaining map[string]map[string]struct{}) ([]string, error) {
 	shoots, err := v.shootLister.List(labels.Everything())
 	if err != nil {
@@ -190,6 +204,9 @@ func (v *ExtensionProfileValidator) shootsPinningRemovedVersions(profile *garden
 				}
 				pinningShoots = append(pinningShoots, shoot.Namespace+"/"+shoot.Name)
 			}
+		}
+		if len(pinningShoots) > maxReportedShoots {
+			return pinningShoots, nil
 		}
 	}
 
@@ -219,13 +236,13 @@ func (v *ExtensionProfileValidator) validateShoot(ctx context.Context, a admissi
 	// Convert the shoot to v1beta1 for CEL evaluation, which binds the `shoot` variable to the external type.
 	shootV1beta1 := &gardencorev1beta1.Shoot{}
 	if err := gardencoreapi.Scheme.Convert(shoot, shootV1beta1, nil); err != nil {
-		return apierrors.NewInternalError(err)
+		return apierrors.NewInternalError(fmt.Errorf("could not convert shoot to v1beta1 for compatibility evaluation: %w", err))
 	}
 	var oldShootV1beta1 *gardencorev1beta1.Shoot
 	if oldShoot != nil {
 		oldShootV1beta1 = &gardencorev1beta1.Shoot{}
 		if err := gardencoreapi.Scheme.Convert(oldShoot, oldShootV1beta1, nil); err != nil {
-			return apierrors.NewInternalError(err)
+			return apierrors.NewInternalError(fmt.Errorf("could not convert old shoot to v1beta1 for compatibility evaluation: %w", err))
 		}
 	}
 
@@ -271,7 +288,7 @@ func (v *ExtensionProfileValidator) getProfile(extensionType string) (*gardencor
 
 	profile := &gardencore.ExtensionProfile{}
 	if err := gardencoreapi.Scheme.Convert(profileV1beta1, profile, nil); err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("could not convert ExtensionProfile %q to internal version: %w", extensionType, err))
 	}
 	return profile, nil
 }
@@ -305,8 +322,13 @@ func (v *ExtensionProfileValidator) validateCompatibility(ctx context.Context, a
 			continue
 		}
 
-		// Reject only a newly introduced violation: if the old shoot already failed this rule, an unrelated
-		// change is not blocked; the force-/auto-upgrade paths drag the shoot back into compatibility.
+		// Reject only a violation this request introduces. If the old shoot already failed the same rule, an
+		// unrelated change (e.g. editing some other field) must not be blocked by a pre-existing
+		// incompatibility; the dedicated auto-/force-upgrade paths are responsible for dragging such a shoot
+		// back into compatibility. Example: an operator tightens a component's compatibility rule after shoots
+		// already pinned that version; those shoots keep reconciling, and only a change that newly breaks the
+		// rule is rejected. If the old shoot cannot be evaluated (err != nil), we do not treat it as
+		// previously-passing and fall through to rejecting the new violation.
 		if oldShoot != nil {
 			oldResult, err := compiled.EvalBool(ctx, oldShoot)
 			if err == nil && !oldResult {
@@ -314,9 +336,9 @@ func (v *ExtensionProfileValidator) validateCompatibility(ctx context.Context, a
 			}
 		}
 
-		message := rule.Message
-		if message == "" {
-			message = fmt.Sprintf("compatibility rule %q is not satisfied", rule.Rule)
+		message := fmt.Sprintf("compatibility rule %q is not satisfied", rule.Rule)
+		if rule.Message != "" {
+			message = fmt.Sprintf("%s (rule %q)", rule.Message, rule.Rule)
 		}
 		return admission.NewForbidden(a, fmt.Errorf("extension %q component %q: %s", extensionType, componentName, message))
 	}
@@ -324,7 +346,9 @@ func (v *ExtensionProfileValidator) validateCompatibility(ctx context.Context, a
 	return nil
 }
 
-// findVersion returns the offered version entry for the given component and version, if present.
+// findVersion returns the offered version entry for the given component and version, if present. It only
+// matches exact versions: a partial pin has already been resolved to a concrete offered version by the
+// ShootMutator (mutating admission), which runs before this validating admission plugin.
 func findVersion(profile *gardencore.ExtensionProfile, componentName, version string) (*gardencore.ExtensionVersion, bool) {
 	for _, component := range profile.Spec.Components {
 		if component.Name != componentName {

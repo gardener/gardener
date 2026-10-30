@@ -100,7 +100,7 @@ type ExtensionAutoUpdate struct {
 	// Enabled indicates whether components are automatically upgraded within the configured update strategy.
 	Enabled bool
 	// UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.
-	UpdateStrategy *MachineImageUpdateStrategy
+	UpdateStrategy *UpdateStrategy
 }
 
 // ShootExtensionComponent pins the version of a single component managed by an extension.
@@ -113,7 +113,7 @@ type ShootExtensionComponent struct {
 	AutoUpdate *ExtensionAutoUpdate
 	// UpdateStrategy overrides the resolved update strategy for this component. Possible values are:
 	// patch, minor, major.
-	UpdateStrategy *MachineImageUpdateStrategy
+	UpdateStrategy *UpdateStrategy
 }
 
 // NamedResourceReference is a named reference to a resource.

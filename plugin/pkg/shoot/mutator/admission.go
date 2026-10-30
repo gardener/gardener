@@ -731,25 +731,26 @@ func (m *MutateShoot) resolveExtensionComponentVersions(shoot *core.Shoot) field
 		extension := &shoot.Spec.Extensions[i]
 		for j := range extension.Components {
 			component := &extension.Components[j]
-			if component.Version == nil || *component.Version == "" {
+			// A nil version means the component is not pinned; validation already rejects an empty string.
+			if component.Version == nil {
 				continue
 			}
 
-			componentPath := extensionsPath.Index(i).Child("components").Index(j).Child("version")
+			versionPath := extensionsPath.Index(i).Child("components").Index(j).Child("version")
 
 			profile, err := m.extensionProfileLister.Get(extension.Type)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
-					allErrs = append(allErrs, field.Invalid(componentPath, *component.Version, fmt.Sprintf("no ExtensionProfile found for extension type %q", extension.Type)))
+					allErrs = append(allErrs, field.Invalid(versionPath, *component.Version, fmt.Sprintf("no ExtensionProfile found for extension type %q", extension.Type)))
 				} else {
-					allErrs = append(allErrs, field.InternalError(componentPath, fmt.Errorf("could not get ExtensionProfile %q: %w", extension.Type, err)))
+					allErrs = append(allErrs, field.InternalError(versionPath, fmt.Errorf("could not get ExtensionProfile %q: %w", extension.Type, err)))
 				}
 				continue
 			}
 
 			resolved, err := resolveComponentVersion(profile, component.Name, *component.Version)
 			if err != nil {
-				allErrs = append(allErrs, field.Invalid(componentPath, *component.Version, err.Error()))
+				allErrs = append(allErrs, field.Invalid(versionPath, *component.Version, err.Error()))
 				continue
 			}
 			component.Version = &resolved
@@ -760,17 +761,20 @@ func (m *MutateShoot) resolveExtensionComponentVersions(shoot *core.Shoot) field
 }
 
 // resolveComponentVersion returns the highest supported version of the given component in the profile
-// that matches the (possibly partial) requested version. An exact match that is offered is returned
-// as-is; otherwise the requested value is treated as a prefix constraint.
+// that matches the requested version. A concrete version that is offered is returned as-is; otherwise the
+// requested value is interpreted as a semver constraint (e.g. "3.1", "3.1.x", "~3.1", "^3") and resolved to
+// the highest supported offered version satisfying it.
 func resolveComponentVersion(profile *gardencorev1beta1.ExtensionProfile, componentName, requested string) (string, error) {
 	var versions []gardencorev1beta1.ExtensionVersion
+	componentFound := false
 	for _, component := range profile.Spec.Components {
 		if component.Name == componentName {
 			versions = component.Versions
+			componentFound = true
 			break
 		}
 	}
-	if versions == nil {
+	if !componentFound {
 		return "", fmt.Errorf("ExtensionProfile %q does not offer a component %q", profile.Name, componentName)
 	}
 
@@ -781,20 +785,27 @@ func resolveComponentVersion(profile *gardencorev1beta1.ExtensionProfile, compon
 		}
 	}
 
-	// Otherwise resolve the highest supported version matching the requested prefix.
+	// Otherwise interpret the request as a semver constraint. A bare "3.1" means ">=3.1.0 <3.2.0", so it
+	// matches 3.1.x but not 3.10.x; "3.1.x", "~3.1" and "^3" are supported too. An unparsable value is
+	// rejected with a clear error rather than silently matching nothing.
+	constraint, err := semver.NewConstraint(requested)
+	if err != nil {
+		return "", fmt.Errorf("version %q of component %q is neither an offered version nor a valid version constraint: %w", requested, componentName, err)
+	}
+
+	// Only supported versions are resolution targets: preview is explicit-pin-only (never auto-selected),
+	// and deprecated/expired versions must not be introduced by a fresh resolution. An exact pin of a
+	// non-supported version is still honoured by the exact-match branch above.
 	var (
 		best    *semver.Version
 		bestRaw string
 	)
 	for _, version := range versions {
-		if !strings.HasPrefix(version.Version, requested) {
+		parsed, err := semver.NewVersion(version.Version)
+		if err != nil || !constraint.Check(parsed) {
 			continue
 		}
 		if v1beta1helper.CurrentLifecycleClassification(gardencorev1beta1.ExpirableVersion{Lifecycle: version.Lifecycle}) != gardencorev1beta1.ClassificationSupported {
-			continue
-		}
-		parsed, err := semver.NewVersion(version.Version)
-		if err != nil {
 			continue
 		}
 		if best == nil || parsed.GreaterThan(best) {

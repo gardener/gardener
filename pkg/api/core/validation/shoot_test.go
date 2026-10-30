@@ -320,15 +320,31 @@ var _ = Describe("Shoot Validation Tests", func() {
 					{
 						Type: "shoot-traefik",
 						Components: []core.ShootExtensionComponent{
-							{Name: "traefik"},
+							{Name: "traefik", Version: new("3.1.4")},
+							{Name: "traefik", Version: new("3.1.4")},
+						},
+					},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.extensions[0].components[1].name"),
+				}))))
+			})
+
+			It("should reject a component entry that pins nothing", func() {
+				shoot.Spec.Extensions = []core.Extension{
+					{
+						Type: "shoot-traefik",
+						Components: []core.ShootExtensionComponent{
 							{Name: "traefik"},
 						},
 					},
 				}
 
-				Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.extensions[0].components[1].name"),
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.extensions[0].components[0]"),
 				}))))
 			})
 
@@ -342,7 +358,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.extensions[0].components[0].version"),
 				}))))
@@ -359,7 +375,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.extensions[0].autoUpdate.updateStrategy"),
 				}))))
