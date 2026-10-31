@@ -6,7 +6,9 @@ package gardenadm
 
 import (
 	"context"
+	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -25,6 +27,7 @@ import (
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,6 +36,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -273,6 +278,89 @@ func ItShouldVerifyAfterConnect(
 			))
 		}
 	}, SpecTimeout(5*time.Minute))
+}
+
+// ItShouldUseExpectedAPIServerAddressOnNodes verifies that kubelet and kube-proxy talk to the control plane via
+// workerNodeHost on the worker nodes and via localhost on the control plane nodes.
+func ItShouldUseExpectedAPIServerAddressOnNodes(
+	shootClientSetPtr *kubernetes.Interface,
+	runInNode func(ctx context.Context, nodeName string, command ...string) (*gbytes.Buffer, *gbytes.Buffer, error),
+	workerNodeHost string,
+) {
+	GinkgoHelper()
+
+	It("should let kubelet and kube-proxy talk to the control plane via the expected address", func(ctx SpecContext) {
+		shootClient := (*shootClientSetPtr).Client()
+
+		nodeList := &corev1.NodeList{}
+		Expect(shootClient.List(ctx, nodeList)).To(Succeed())
+		Expect(nodeList.Items).To(ContainElement(HaveField("ObjectMeta.Labels", HaveKey(v1beta1constants.LabelNodeRoleControlPlane))), "there should be a control plane node")
+		Expect(nodeList.Items).To(ContainElement(HaveField("ObjectMeta.Labels", Not(HaveKey(v1beta1constants.LabelNodeRoleControlPlane)))), "there should be a worker node")
+
+		for _, node := range nodeList.Items {
+			expectedHost := workerNodeHost
+			if _, isControlPlaneNode := node.Labels[v1beta1constants.LabelNodeRoleControlPlane]; isControlPlaneNode {
+				expectedHost = "localhost"
+			}
+
+			By("Verify that kubelet on node " + node.Name + " uses " + expectedHost)
+			stdOut, _, err := runInNode(ctx, node.Name, "cat", kubeletcomponent.PathKubeconfigReal)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(serverHostsOfKubeconfig(stdOut.Contents())).To(HaveEach(expectedHost), "kubelet on node %s should use the expected address", node.Name)
+
+			By("Verify that kube-proxy on node " + node.Name + " uses " + expectedHost)
+			Eventually(ctx, func(g Gomega) []string {
+				return kubeProxyServerHosts(ctx, g, shootClient, node.Name)
+			}).Should(HaveEach(expectedHost), "kube-proxy on node %s should use the expected address", node.Name)
+		}
+	}, SpecTimeout(5*time.Minute))
+}
+
+// serverHostsOfKubeconfig returns the hosts of the servers of all clusters in the given kubeconfig.
+func serverHostsOfKubeconfig(rawKubeconfig []byte) []string {
+	GinkgoHelper()
+
+	kubeconfig, err := clientcmd.Load(rawKubeconfig)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(kubeconfig.Clusters).NotTo(BeEmpty())
+
+	var hosts []string
+	for _, cluster := range kubeconfig.Clusters {
+		serverURL, err := url.Parse(cluster.Server)
+		Expect(err).NotTo(HaveOccurred())
+		hosts = append(hosts, serverURL.Hostname())
+	}
+	return hosts
+}
+
+// kubeProxyServerHosts returns the hosts of the API server that the kube-proxy pod on the given node talks to. This is
+// either the address passed via the `--master` flag or the server in the kubeconfig.
+func kubeProxyServerHosts(ctx context.Context, g Gomega, c client.Client, nodeName string) []string {
+	podList := &corev1.PodList{}
+	g.Expect(c.List(ctx, podList,
+		client.InNamespace(metav1.NamespaceSystem),
+		client.MatchingLabels(kubeproxy.GetLabels()),
+		client.MatchingFields{indexer.PodNodeName: nodeName},
+	)).To(Succeed())
+	g.Expect(podList.Items).To(HaveLen(1), "there should be exactly one kube-proxy pod on node %s", nodeName)
+	pod := podList.Items[0]
+
+	containerIdx := slices.IndexFunc(pod.Spec.Containers, func(container corev1.Container) bool { return container.Name == "kube-proxy" })
+	g.Expect(containerIdx).NotTo(Equal(-1), "kube-proxy pod %s should have a kube-proxy container", pod.Name)
+	for _, arg := range pod.Spec.Containers[containerIdx].Command {
+		if master, ok := strings.CutPrefix(arg, "--master="); ok {
+			masterURL, err := url.Parse(master)
+			g.Expect(err).NotTo(HaveOccurred())
+			return []string{masterURL.Hostname()}
+		}
+	}
+
+	volumeIdx := slices.IndexFunc(pod.Spec.Volumes, func(volume corev1.Volume) bool { return volume.Name == "kubeconfig" })
+	g.Expect(volumeIdx).NotTo(Equal(-1), "kube-proxy pod %s should have a kubeconfig volume", pod.Name)
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: pod.Spec.Volumes[volumeIdx].Secret.SecretName, Namespace: metav1.NamespaceSystem}}
+	g.Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+	return serverHostsOfKubeconfig(secret.Data["kubeconfig"])
 }
 
 // ItShouldBeReconciledByGardenlet verifies that the initial reconcile of the `gardenlet` for the self-hosted shoot is successful.

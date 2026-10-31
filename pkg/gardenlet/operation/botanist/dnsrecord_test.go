@@ -478,6 +478,71 @@ var _ = Describe("dnsrecord", func() {
 				},
 			}))
 		})
+
+		Context("self-hosted shoot", func() {
+			var exposure *gardencorev1beta1.Exposure
+
+			BeforeEach(func() {
+				exposure = &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}}
+			})
+
+			JustBeforeEach(func() {
+				b.Garden.InternalDomain = nil
+				b.Shoot.InternalClusterDomain = nil
+
+				shoot := b.Shoot.GetInfo()
+				shoot.Spec.CredentialsBindingName = new("credentials")
+				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+					Name:         "control-plane",
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{Exposure: exposure},
+				}}
+				b.Shoot.SetInfo(shoot)
+			})
+
+			It("should use the external domain's provider and credentials if the control plane is exposed", func() {
+				r := b.DefaultInternalDNSRecord()
+				r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+				r.SetValues([]string{address})
+
+				Expect(r.GetValues()).To(DeepEqual(&dnsrecord.Values{
+					Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+					SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+					Namespace:         controlPlaneNamespace,
+					TTL:               new(ttl),
+					Type:              externalProvider,
+					Zone:              new(externalZone),
+					DNSName:           "api.internal." + externalDomain,
+					RecordType:        extensionsv1alpha1.DNSRecordTypeA,
+					Values:            []string{address},
+					AnnotateOperation: false,
+					IPStack:           "ipv4",
+					Labels: map[string]string{
+						"role":                "internal",
+						"gardener.cloud/role": "controlplane",
+					},
+				}))
+
+				Expect(r.Deploy(ctx)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: controlPlaneNamespace}, secret)).To(Succeed())
+				Expect(secret.Data).To(Equal(map[string][]byte{
+					"external-foo": []byte("external-bar"),
+				}))
+			})
+
+			When("the control plane is not exposed", func() {
+				BeforeEach(func() {
+					exposure = nil
+				})
+
+				It("should not configure the internal DNSRecord", func() {
+					values := b.DefaultInternalDNSRecord().GetValues()
+					Expect(values.Type).To(BeEmpty())
+					Expect(values.DNSName).To(BeEmpty())
+				})
+			})
+		})
 	})
 
 	Describe("#DeployOrDestroyExternalDNSRecord", func() {

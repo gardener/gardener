@@ -41,7 +41,11 @@ func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx co
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	oscData, controlPlaneWorkerPoolName, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, true, false, backupDataPath)
+	// While bootstrapping the control plane, the components on this node (e.g., gardener-node-agent) talk to the API
+	// server via localhost. The DNS records of the shoot (e.g., the internal domain used by the components on the nodes)
+	// can only be deployed once the control plane is bootstrapped. The OperatingSystemConfig is redeployed with the
+	// regular API server address afterward.
+	oscData, controlPlaneWorkerPoolName, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, true, false, backupDataPath, "localhost")
 	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}

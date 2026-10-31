@@ -56,6 +56,27 @@ func (b *GardenadmBotanist) RestoreExternalDNSRecord(ctx context.Context) error 
 	return b.Shoot.Components.Extensions.ExternalDNSRecord.Wait(ctx)
 }
 
+// DeployInternalDNSRecord deploys the internal DNSRecord for the self-hosted shoot's API server. It points to the
+// internal IPs of the control plane nodes, so that components on the worker nodes can talk to the control plane without
+// depending on the control plane exposure.
+// For dual-stack setups, IP families are preferred in the order they appear in spec.networking.ipFamilies.
+func (b *GardenadmBotanist) DeployInternalDNSRecord(ctx context.Context) error {
+	nodes, err := b.ListControlPlaneNodes(ctx)
+	if err != nil {
+		return err
+	}
+
+	addresses, recordType, err := extensionsv1alpha1helper.DNSValuesFromNodes(nodes, b.Shoot.GetInfo().Spec.Networking.IPFamilies, corev1.NodeInternalIP)
+	if err != nil {
+		return err
+	}
+
+	b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(recordType)
+	b.Shoot.Components.Extensions.InternalDNSRecord.SetValues(addresses)
+
+	return component.OpWait(b.Shoot.Components.Extensions.InternalDNSRecord).Deploy(ctx)
+}
+
 func (b *GardenadmBotanist) externalDNSRecordValues(ctx context.Context) ([]string, extensionsv1alpha1.DNSRecordType, error) {
 	ipFamilies := b.Shoot.GetInfo().Spec.Networking.IPFamilies
 

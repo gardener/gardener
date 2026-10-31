@@ -19,6 +19,9 @@ The `SelfHostedShootExposure` resource is reconciled by an extension controller.
 2. Provisioning a load balancer (or similar mechanism) that accepts traffic on `.spec.port` and routes traffic to the listed control plane endpoints.
 3. Updating the `.status.ingress` field with the public address (IP or hostname) of the provisioned load balancer.
 
+The address of the load balancer is used for the external domain of the shoot (`api.<Shoot.spec.dns.domain>`), i.e., for accessing the API server from outside the cluster.
+For shoots with managed infrastructure, components on the shoot's nodes don't depend on the exposure but talk to the control plane via the internal domain (`api.internal.<Shoot.spec.dns.domain>`), which points to the internal IPs of the control plane nodes directly.
+
 The `.spec.credentialsRef` field references the cloudprovider credentials in case the self-hosted shoot has managed infrastructure (i.e., if `Shoot.spec.{credentials,secret}BindingName` is set).
 For shoots with unmanaged infrastructure, `.spec.credentialsRef` is unset.
 

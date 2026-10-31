@@ -121,6 +121,12 @@ func (b *Botanist) OperatingSystemConfigValues() (*operatingsystemconfig.Values,
 // DeployOperatingSystemConfig deploys the OperatingSystemConfig custom resource and triggers the restore operation in
 // case the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
+	return b.deployOperatingSystemConfig(ctx, b.Shoot.ComputeAPIServerAddressForNodes())
+}
+
+// deployOperatingSystemConfig deploys the OperatingSystemConfig custom resource with the given address of the API server
+// that is used by the components on the nodes.
+func (b *Botanist) deployOperatingSystemConfig(ctx context.Context, apiServerAddress string) error {
 	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
@@ -130,7 +136,7 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 		return fmt.Errorf("key %q not found in secret %q", secretsutils.DataKeyCertificateBundle, v1beta1constants.SecretNameCACluster)
 	}
 
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(true)))
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", apiServerAddress))
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCABundle))
 
 	shoot := b.Shoot.GetInfo()

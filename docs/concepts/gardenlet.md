@@ -553,7 +553,9 @@ This reconciler watches for the `extensionsv1alpha1.Worker` resource in the cont
 This reconciler only runs if `gardenlet` is responsible for a self-hosted `Shoot`.
 It keeps its API server exposure in sync with the control-plane `Node`s.
 Depending on `spec.provider.workers[].controlPlane.exposure`, it either maintains the `SelfHostedShootExposure` extension resource's endpoints and updates the external `DNSRecord` from the reported ingress (extension-based exposure), or points the external `DNSRecord` directly at the control-plane node addresses (DNS-based exposure).
-When the mechanism is switched or exposure is removed, it updates the `DNSRecord` a final time and deletes the obsolete `SelfHostedShootExposure`.
+For shoots with managed infrastructure, it also points the internal `DNSRecord` (`api.internal.<spec.dns.domain>`) at the internal IPs of the healthy control-plane nodes, which is used by components on the shoot's nodes for talking to the control plane.
+The internal `DNSRecord` is updated before and independently of the exposure, so that the nodes can still reach the control plane if the exposure is broken.
+When the mechanism is switched or exposure is removed, it updates the `DNSRecord`s a final time and deletes the obsolete `SelfHostedShootExposure`.
 Please refer to [GEP-0036: Self-Hosted Shoot Exposure](https://github.com/gardener/enhancements/tree/main/geps/0036-self-hosted-shoot-exposure) for more details.
 
 ### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/controller/tokenrequestor)

@@ -23,9 +23,9 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 	const exposureType = "local"
 
 	var (
-		shoot         *gardencorev1beta1.Shoot
-		dnsRecord     *extensionsv1alpha1.DNSRecord
-		dnsRecordName = shootName + "-" + v1beta1constants.DNSRecordExternalName
+		shoot             *gardencorev1beta1.Shoot
+		externalDNSRecord *extensionsv1alpha1.DNSRecord
+		internalDNSRecord *extensionsv1alpha1.DNSRecord
 	)
 
 	// controlPlaneNode returns a healthy control-plane Node with the given addresses.
@@ -52,8 +52,9 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 				Labels:    map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: new("cloudprofile1"),
-				Region:           "europe-central-1",
+				CloudProfileName:       new("cloudprofile1"),
+				CredentialsBindingName: new("credentials"),
+				Region:                 "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: exposureType,
 					Workers: []gardencorev1beta1.Worker{{
@@ -69,6 +70,7 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 					}},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
+				DNS:        &gardencorev1beta1.DNS{Domain: new("root.example.com")},
 				Networking: &gardencorev1beta1.Networking{
 					Type:       new("foo-networking"),
 					Services:   new("10.0.0.0/16"),
@@ -78,10 +80,11 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 			},
 		}
 
-		// The external DNSRecord already exists (created during bootstrapping); the controller only keeps it in sync.
-		dnsRecord = &extensionsv1alpha1.DNSRecord{
+		// The external and internal DNSRecords already exist (created during bootstrapping); the controller only keeps
+		// them in sync.
+		externalDNSRecord = &extensionsv1alpha1.DNSRecord{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      dnsRecordName,
+				Name:      shootName + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace: metav1.NamespaceSystem,
 				Labels:    map[string]string{testID: testRunID},
 			},
@@ -94,9 +97,24 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 				Values: []string{"9.9.9.9"},
 			},
 		}
+		internalDNSRecord = &extensionsv1alpha1.DNSRecord{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName + "-" + v1beta1constants.DNSRecordInternalName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{testID: testRunID},
+			},
+			Spec: extensionsv1alpha1.DNSRecordSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{Type: exposureType},
+				SecretRef:   corev1.SecretReference{Name: "dnsrecord-secret", Namespace: metav1.NamespaceSystem},
+				Name:        "api.internal.root.example.com",
+				RecordType:  extensionsv1alpha1.DNSRecordTypeA,
+				// A stale value the controller is expected to overwrite.
+				Values: []string{"10.9.9.9"},
+			},
+		}
 	})
 
-	// createNode/createShoot/createDNSRecord create the object and register cleanup.
+	// createNode/createShoot/createDNSRecords create the objects and register cleanup.
 	createNode := func(n *corev1.Node) {
 		ExpectWithOffset(1, testClient.Create(ctx, n)).To(Succeed())
 		DeferCleanup(func() {
@@ -109,17 +127,19 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 			ExpectWithOffset(1, testClient.Delete(ctx, shoot)).To(Or(Succeed(), BeNotFoundError()))
 		})
 	}
-	createDNSRecord := func() {
-		ExpectWithOffset(1, testClient.Create(ctx, dnsRecord)).To(Succeed())
-		DeferCleanup(func() {
-			ExpectWithOffset(1, testClient.Delete(ctx, dnsRecord)).To(Or(Succeed(), BeNotFoundError()))
-		})
+	createDNSRecords := func() {
+		for _, record := range []*extensionsv1alpha1.DNSRecord{externalDNSRecord, internalDNSRecord} {
+			ExpectWithOffset(1, testClient.Create(ctx, record)).To(Succeed())
+			DeferCleanup(func() {
+				ExpectWithOffset(1, testClient.Delete(ctx, record)).To(Or(Succeed(), BeNotFoundError()))
+			})
+		}
 	}
 
-	dnsRecordValues := func() func() []string {
+	dnsRecordValues := func(record *extensionsv1alpha1.DNSRecord) func() []string {
 		return func() []string {
 			updated := &extensionsv1alpha1.DNSRecord{}
-			if err := testClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated); err != nil {
+			if err := testClient.Get(ctx, client.ObjectKeyFromObject(record), updated); err != nil {
 				return nil
 			}
 			return updated.Spec.Values
@@ -131,29 +151,58 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 			shoot.Spec.Provider.Workers[0].ControlPlane.Exposure = &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}}
 		})
 
-		It("should keep the external DNSRecord in sync with the control-plane node external addresses", func() {
-			createNode(controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.4"}))
-			createDNSRecord()
+		It("should keep the DNSRecords in sync with the control-plane node external and internal addresses", func() {
+			createNode(controlPlaneNode("cp-1",
+				corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.4"},
+				corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
+			))
+			createDNSRecords()
 			createShoot()
 
-			Eventually(dnsRecordValues()).Should(ConsistOf("1.2.3.4"))
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("1.2.3.4"))
+			Eventually(dnsRecordValues(internalDNSRecord)).Should(ConsistOf("10.0.0.1"))
 
 			updated := &extensionsv1alpha1.DNSRecord{}
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(dnsRecord), updated)).To(Succeed())
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(externalDNSRecord), updated)).To(Succeed())
 			Expect(updated.Spec.RecordType).To(Equal(extensionsv1alpha1.DNSRecordTypeA))
 			Expect(updated.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
 		})
 
+		It("should keep the DNSRecords in sync with the healthy control-plane nodes", func() {
+			createNode(controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))
+			createDNSRecords()
+			createShoot()
+
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("10.0.0.1"))
+			Eventually(dnsRecordValues(internalDNSRecord)).Should(ConsistOf("10.0.0.1"))
+
+			By("Add another control-plane node")
+			node2 := controlPlaneNode("cp-2", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.2"})
+			createNode(node2)
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("10.0.0.1", "10.0.0.2"))
+			Eventually(dnsRecordValues(internalDNSRecord)).Should(ConsistOf("10.0.0.1", "10.0.0.2"))
+
+			By("Mark the new control-plane node unhealthy")
+			patch := client.MergeFrom(node2.DeepCopy())
+			node2.Status.Conditions = []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}
+			Expect(testClient.Status().Patch(ctx, node2, patch)).To(Succeed())
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("10.0.0.1"))
+			Eventually(dnsRecordValues(internalDNSRecord)).Should(ConsistOf("10.0.0.1"))
+		})
+
 		It("should delete a SelfHostedShootExposure left over from a previous extension-based exposure", func() {
-			createNode(controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.4"}))
-			createDNSRecord()
+			createNode(controlPlaneNode("cp-1",
+				corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.4"},
+				corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
+			))
+			createDNSRecords()
 			leftover := createExposure()
 			createShoot()
 
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(leftover), leftover)
 			}).Should(BeNotFoundError(), "orphaned SelfHostedShootExposure should be deleted")
-			Eventually(dnsRecordValues()).Should(ConsistOf("1.2.3.4"))
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("1.2.3.4"))
 		})
 	})
 
@@ -166,15 +215,18 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 
 		It("should propagate ingress changes reported by the extension to the DNSRecord", func() {
 			createNode(controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))
-			createDNSRecord()
+			createDNSRecords()
 			exposure := createExposure()
 			stampExposureIngress(exposure, "172.18.0.10")
 			createShoot()
 
-			Eventually(dnsRecordValues()).Should(ConsistOf("172.18.0.10"))
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("172.18.0.10"))
 
 			stampExposureIngress(exposure, "172.18.0.11")
-			Eventually(dnsRecordValues()).Should(ConsistOf("172.18.0.11"))
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("172.18.0.11"))
+
+			// The internal DNSRecord points directly at the control-plane nodes, independent of the exposure.
+			Eventually(dnsRecordValues(internalDNSRecord)).Should(ConsistOf("10.0.0.1"))
 		})
 	})
 
@@ -186,29 +238,33 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 			createControllerRegistrationAndInstallation(new(false))
 		})
 
-		It("should neither deploy a SelfHostedShootExposure nor touch the DNSRecord", func() {
+		It("should neither deploy a SelfHostedShootExposure nor touch the external DNSRecord", func() {
 			createNode(controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))
-			createDNSRecord()
+			createDNSRecords()
 			createShoot()
+
+			// The internal DNSRecord is kept in sync independent of the exposure.
+			Eventually(dnsRecordValues(internalDNSRecord)).Should(ConsistOf("10.0.0.1"))
 
 			exposure := &extensionsv1alpha1.SelfHostedShootExposure{}
 			Consistently(func() error {
 				return testClient.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: shootName}, exposure)
 			}).Should(BeNotFoundError(), "SelfHostedShootExposure must not be created")
-			// The DNSRecord keeps its bootstrap value untouched.
-			Expect(dnsRecordValues()()).To(ConsistOf("9.9.9.9"))
+			// The external DNSRecord keeps its bootstrap value untouched.
+			Expect(dnsRecordValues(externalDNSRecord)()).To(ConsistOf("9.9.9.9"))
 		})
 	})
 
-	Context("exposure disabled (switch-off handoff)", func() {
-		It("should point the DNSRecord at the node addresses and delete the SelfHostedShootExposure", func() {
+	Context("extension-based exposure disabled", func() {
+		It("should point the DNSRecords at the node addresses and delete the SelfHostedShootExposure", func() {
 			// Exposure is omitted, but a SelfHostedShootExposure from the prior extension-based setup still exists.
 			createNode(controlPlaneNode("cp-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}))
-			createDNSRecord()
+			createDNSRecords()
 			exposure := createExposure()
 			createShoot()
 
-			Eventually(dnsRecordValues()).Should(ConsistOf("10.0.0.1"))
+			Eventually(dnsRecordValues(externalDNSRecord)).Should(ConsistOf("10.0.0.1"))
+			Eventually(dnsRecordValues(internalDNSRecord)).Should(ConsistOf("10.0.0.1"))
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(exposure), exposure)
 			}).Should(BeNotFoundError(), "SelfHostedShootExposure should be deleted after the final DNSRecord update")

@@ -1116,6 +1116,62 @@ var _ = Describe("Shoot", func() {
 		})
 	})
 
+	Describe("#GetSelfHostedShootInternalAPIServerDomain", func() {
+		It("should return the internal API server domain", func() {
+			Expect(GetSelfHostedShootInternalAPIServerDomain("foo.bar.com")).To(Equal("api.internal.foo.bar.com"))
+		})
+	})
+
+	Describe("#SelfHostedShootHasInternalAPIServerDomain", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					CredentialsBindingName: new("credentials"),
+					DNS:                    &gardencorev1beta1.DNS{Domain: new("foo.bar.com")},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{{
+							Name: "control-plane",
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{
+								Exposure: &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}},
+							},
+						}},
+					},
+				},
+			}
+		})
+
+		It("should return true for self-hosted shoots with managed infrastructure and DNS exposure", func() {
+			Expect(SelfHostedShootHasInternalAPIServerDomain(shoot)).To(BeTrue())
+		})
+
+		It("should return true for self-hosted shoots with managed infrastructure and extension exposure", func() {
+			shoot.Spec.Provider.Workers[0].ControlPlane.Exposure = &gardencorev1beta1.Exposure{Extension: &gardencorev1beta1.ExtensionExposure{}}
+			Expect(SelfHostedShootHasInternalAPIServerDomain(shoot)).To(BeTrue())
+		})
+
+		It("should return false for shoots that are not self-hosted", func() {
+			shoot.Spec.Provider.Workers[0].ControlPlane = nil
+			Expect(SelfHostedShootHasInternalAPIServerDomain(shoot)).To(BeFalse())
+		})
+
+		It("should return false for self-hosted shoots with unmanaged infrastructure", func() {
+			shoot.Spec.CredentialsBindingName = nil
+			Expect(SelfHostedShootHasInternalAPIServerDomain(shoot)).To(BeFalse())
+		})
+
+		It("should return false for self-hosted shoots without control plane exposure", func() {
+			shoot.Spec.Provider.Workers[0].ControlPlane.Exposure = nil
+			Expect(SelfHostedShootHasInternalAPIServerDomain(shoot)).To(BeFalse())
+		})
+
+		It("should return false for self-hosted shoots without DNS domain", func() {
+			shoot.Spec.DNS = nil
+			Expect(SelfHostedShootHasInternalAPIServerDomain(shoot)).To(BeFalse())
+		})
+	})
+
 	var (
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
