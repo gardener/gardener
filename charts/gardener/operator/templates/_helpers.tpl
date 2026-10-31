@@ -144,6 +144,12 @@ config.yaml: |
       concurrentSyncs: {{ .Values.config.controllers.extensionRequiredVirtual.concurrentSyncs }}
       {{- end }}
     {{- end }}
+    {{- if .Values.config.controllers.tokenRequestor }}
+    tokenRequestor:
+      {{- if .Values.config.controllers.tokenRequestor.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.tokenRequestor.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
   {{- if .Values.nodeToleration }}
   nodeToleration:
 {{ toYaml .Values.nodeToleration | indent 4 }}

@@ -7,11 +7,14 @@ package fake
 import (
 	"context"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ResourceManager is a test fake for resourcemanager.Interface.
 type ResourceManager struct {
+	Namespace   string
 	Replicas    *int32
 	DeployError error
 	Secrets     resourcemanager.Secrets
@@ -34,6 +37,15 @@ func (f *ResourceManager) GetValues() resourcemanager.Values { return f.Values }
 
 // SetBootstrapControlPlaneNode is a no-op.
 func (f *ResourceManager) SetBootstrapControlPlaneNode(bool) {}
+
+// NewClusterAccessSecret returns a shoot access secret for gardener-resource-manager.
+func (f *ResourceManager) NewClusterAccessSecret() *gardenerutils.AccessSecret {
+	ns := f.Namespace
+	if ns == "" {
+		ns = "fake-ns"
+	}
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameGardenerResourceManager, ns)
+}
 
 // Deploy records that it was called and returns DeployError.
 func (f *ResourceManager) Deploy(_ context.Context) error {
