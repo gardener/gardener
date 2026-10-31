@@ -37,6 +37,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
+var (
+	hostName1 = "host1"
+	hostName2 = "host2"
+	hostName3 = "host3"
+)
+
 var _ = Describe("OperatingSystemConfig controller serial reconciliation tests", func() {
 	var (
 		fakeDBus *fakedbus.DBus
@@ -52,8 +58,7 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 		pathBootstrapTokenFile             = filepath.Join("/", "var", "lib", "gardener-node-agent", "credentials", "bootstrap-token")
 		pathKubeletBootstrapKubeconfigFile = filepath.Join("/", "var", "lib", "kubelet", "kubeconfig-bootstrap")
 
-		hostName1, hostName2, hostName3 = "host1", "host2", "host3"
-		remainingHosts                  = func(leaders ...string) []string {
+		remainingHosts = func(leaders ...string) []string {
 			var (
 				allHosts  = sets.New(hostName1, hostName2, hostName3)
 				leaderSet = sets.New(leaders...).Intersection(allHosts)
@@ -220,7 +225,139 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 	})
 })
 
-func startNewOperatingSystemConfigControllerInstance(hostName, oscSecretName string, fakeDBus *fakedbus.DBus, fakeFS afero.Afero, imageMountDirectory string) {
+var _ = Describe("OperatingSystemConfig controller serial reconciliation stale Lease tests", func() {
+	var (
+		fakeDBus *fakedbus.DBus
+		fakeFS   afero.Afero
+
+		oscSecretName = testRunID + "-stale"
+
+		oscRaw    []byte
+		oscSecret *corev1.Secret
+
+		imageMountDirectory string
+
+		pathBootstrapTokenFile             = filepath.Join("/", "var", "lib", "gardener-node-agent", "credentials", "bootstrap-token")
+		pathKubeletBootstrapKubeconfigFile = filepath.Join("/", "var", "lib", "kubelet", "kubeconfig-bootstrap")
+	)
+
+	BeforeEach(func() {
+		fakeDBus = fakedbus.New()
+		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
+		mgrClient = testClient
+
+		DeferCleanup(test.WithVars(
+			&operatingsystemconfig.RequeueAfterRestart, time.Second,
+			&operatingsystemconfig.Exec, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+				return []byte(""), nil
+			},
+		))
+
+		operatingSystemConfig := &extensionsv1alpha1.OperatingSystemConfig{
+			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+				Files: []extensionsv1alpha1.File{
+					{
+						Path:        "/example/file/" + hostName2,
+						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "data"}},
+						Permissions: new(int32(0777)),
+						HostName:    &hostName2,
+					},
+				},
+			},
+		}
+
+		var err error
+		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		oscSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      oscSecretName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{testID: testRunID},
+				Annotations: map[string]string{
+					"checksum/data-script":                                utils.ComputeSHA256Hex(oscRaw),
+					"reconciliation.osc.node-agent.gardener.cloud/serial": "true",
+				},
+			},
+			Data: map[string][]byte{"osc.yaml": oscRaw},
+		}
+
+		imageMountDirectory, err = fakeFS.TempDir("", "fake-node-agent-stale-")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(fakeFS.RemoveAll(imageMountDirectory)).To(Succeed()) })
+
+		By("Create bootstrap token file")
+		_, err = fakeFS.Create(pathBootstrapTokenFile)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(fakeFS.Remove(pathBootstrapTokenFile)).To(Or(Succeed(), MatchError(afero.ErrFileNotFound)))
+		})
+
+		By("Create kubelet bootstrap kubeconfig file")
+		_, err = fakeFS.Create(pathKubeletBootstrapKubeconfigFile)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(fakeFS.Remove(pathKubeletBootstrapKubeconfigFile)).To(Or(Succeed(), MatchError(afero.ErrFileNotFound)))
+		})
+	})
+
+	It("should proceed when the Lease holder node no longer exists in the cluster", func() {
+		leaseDuration := int32(4)
+		DeferCleanup(test.WithVar(&operatingsystemconfig.LeaseDurationSeconds, leaseDuration))
+
+		By("Create Secret containing the operating system config")
+		Expect(testClient.Create(ctx, oscSecret)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, oscSecret)).To(Succeed())
+		})
+
+		// Simulate a dead holder: create the Node and a Lease that was acquired by it but never renewed (process died).
+		// RenewTime is set to 3/4 of the lease duration in the past so that renewedInTime() is true (lease not yet
+		// expired) but renewedRecently() is false (past the half-life threshold), triggering the holder-node existence
+		// check.
+		By("Create holder node (" + hostName1 + ") and a stale Lease")
+		holderNode := &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   hostName1,
+				Labels: map[string]string{testID: testRunID, "kubernetes.io/hostname": hostName1},
+			},
+		}
+		Expect(testClient.Create(ctx, holderNode)).To(Succeed())
+
+		staleLease := &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      oscSecret.Name,
+				Namespace: oscSecret.Namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(oscSecret, corev1.SchemeGroupVersion.WithKind("Secret")),
+				},
+			},
+			Spec: coordinationv1.LeaseSpec{
+				HolderIdentity:       &hostName1,
+				LeaseDurationSeconds: &leaseDuration,
+				AcquireTime:          &metav1.MicroTime{Time: time.Now().Add(-time.Duration(leaseDuration) * time.Second * 3 / 4)},
+				RenewTime:            &metav1.MicroTime{Time: time.Now().Add(-time.Duration(leaseDuration) * time.Second * 3 / 4)},
+			},
+		}
+		Expect(testClient.Create(ctx, staleLease)).To(Succeed())
+
+		By("Delete holder node to simulate process death")
+		Expect(testClient.Delete(ctx, holderNode)).To(Succeed())
+
+		By("Create and start waiter instance (" + hostName2 + ")")
+		startNewOperatingSystemConfigControllerInstance(hostName2, oscSecretName, fakeDBus, fakeFS, imageMountDirectory)
+
+		By("Ensure waiter reconciles despite the stale Lease")
+		Eventually(func(g Gomega) {
+			exists, err := fakeFS.Exists("/example/file/" + hostName2)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(exists).To(BeTrue())
+		}, 10*time.Second, 500*time.Millisecond).Should(Succeed())
+	})
+})
+
+func startNewOperatingSystemConfigControllerInstance(hostName, oscSecretName string, fakeDBus *fakedbus.DBus, fakeFS afero.Afero, imageMountDirectory string) context.CancelFunc {
 	GinkgoHelper()
 
 	node := &corev1.Node{
@@ -236,7 +373,7 @@ func startNewOperatingSystemConfigControllerInstance(hostName, oscSecretName str
 	Expect(testClient.Create(ctx, node)).To(Succeed())
 	DeferCleanup(func() {
 		By("Delete Node")
-		Expect(testClient.Delete(ctx, node)).To(Succeed())
+		Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
 	})
 
 	By("Setup manager")
@@ -283,6 +420,8 @@ func startNewOperatingSystemConfigControllerInstance(hostName, oscSecretName str
 		By("Stop manager")
 		mgrCancel()
 	})
+
+	return mgrCancel
 }
 
 // slowFs makes "WriteFile" slower for the purpose of this integration test. This is to make the test reliably able to

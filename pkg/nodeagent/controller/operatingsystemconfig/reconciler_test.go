@@ -201,6 +201,35 @@ PRETTY_NAME="Garden Linux 1592Foo"
 		})
 	})
 
+	Describe("#holderNodeExists", func() {
+		var holderHostName = "holder-node"
+
+		BeforeEach(func() {
+			reconciler.APIReader = c
+		})
+
+		It("should return true when a node with the holder hostname exists", func() {
+			holderNode := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   holderHostName,
+					Labels: map[string]string{corev1.LabelHostname: holderHostName},
+				},
+			}
+			Expect(c.Create(ctx, holderNode)).To(Succeed())
+			DeferCleanup(func() { Expect(c.Delete(ctx, holderNode)).To(Succeed()) })
+
+			exists, err := reconciler.holderNodeExists(ctx, holderHostName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exists).To(BeTrue())
+		})
+
+		It("should return false when no node with the holder hostname exists", func() {
+			exists, err := reconciler.holderNodeExists(ctx, holderHostName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exists).To(BeFalse())
+		})
+	})
+
 	Context("#deleteRemainingPods", func() {
 		It("should delete all pods running on this node", func() {
 			pods := []*corev1.Pod{

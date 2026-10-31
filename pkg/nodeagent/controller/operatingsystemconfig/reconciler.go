@@ -198,12 +198,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		if serialReconciliationLease.acquiredByAnotherInstance() {
 			if serialReconciliationLease.renewedInTime() {
-				requeueAfter := serialReconciliationLease.durationUntilLeaseExpires()
-				serialReconciliationLease.logger().Info("Lease was acquired by another instance, exiting early and requeue when Lease expires", "requeueAfter", requeueAfter)
-				return reconcile.Result{RequeueAfter: requeueAfter}, nil
-			}
+				// The Lease holder identity is the hostname of the gardener-node-agent instance holding it. If it has
+				// not been renewed recently, the holder might have been removed from the cluster (e.g., during a control
+				// plane node rollout) without releasing the Lease. In this case, we must not respect the stale Lease -
+				// otherwise serial reconciliation would be blocked until it expires. We only perform this (uncached)
+				// lookup once renewals lag behind to avoid querying the API server on every reconciliation.
+				holderNodeExists := true
+				if !serialReconciliationLease.renewedRecently() {
+					var err error
+					if holderNodeExists, err = r.holderNodeExists(ctx, serialReconciliationLease.holderIdentity()); err != nil {
+						return reconcile.Result{}, fmt.Errorf("failed checking whether the Lease holder node still exists: %w", err)
+					}
+				}
 
-			serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
+				if holderNodeExists {
+					// If the Lease was renewed recently, requeue when the holder node existence should be rechecked.
+					// Otherwise, requeue when the Lease expires.
+					requeueAfter := serialReconciliationLease.durationUntilLeaseExpires()
+					if durationUntilRecheck := serialReconciliationLease.durationUntilNotRenewedRecently(); durationUntilRecheck > 0 {
+						requeueAfter = durationUntilRecheck
+					}
+
+					serialReconciliationLease.logger().Info("Lease was acquired by another instance, exiting early and requeue", "requeueAfter", requeueAfter)
+					return reconcile.Result{RequeueAfter: requeueAfter}, nil
+				}
+
+				serialReconciliationLease.logger().Info("Lease was acquired by another instance, but its holder node no longer exists in the cluster")
+			} else {
+				serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
+			}
 		}
 
 		if err := serialReconciliationLease.tryAcquireOrRenew(ctx); err != nil {
@@ -423,6 +446,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, serialReconciliationLease.release(ctx)
+}
+
+// holderNodeExists returns whether a node whose hostname matches the given Lease holder identity still exists in the
+// cluster. It uses the uncached APIReader because the manager's node cache is restricted to this instance's own node.
+func (r *Reconciler) holderNodeExists(ctx context.Context, holderIdentity string) (bool, error) {
+	node, err := nodeagent.FetchNodeByHostName(ctx, r.APIReader, holderIdentity)
+	if err != nil {
+		return false, err
+	}
+
+	return node != nil, nil
 }
 
 func (r *Reconciler) getNode(ctx context.Context) (*corev1.Node, bool, error) {
