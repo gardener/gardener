@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
@@ -117,6 +118,9 @@ type Shoot struct {
 	EncryptedResources                      []string
 	ServiceAccountIssuerHostname            *string
 	StorageVersionMigratorEnabled           bool
+
+	// LiveMigrationRole is the role this gardenlet's seed plays in a live control plane migration.
+	LiveMigrationRole v1beta1helper.LiveMigrationRole
 
 	Components *Components
 }

@@ -258,7 +258,10 @@ func (b *Botanist) deployOrRestoreEtcd(ctx context.Context) error {
 }
 
 func (b *Botanist) isRestorationOfMultiNodeMainEtcdRequired(ctx context.Context) (bool, error) {
-	if !b.Shoot.IsRestorePhase() || !v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+	// During a live control plane migration the destination etcd joins the still-running source cluster via
+	// BootstrapWithExistingCluster and must never take the snapshot-restore path, even though IsRestorePhase() is true
+	// for the destination so that all other migrated resources are restored from the ShootState.
+	if !b.Shoot.IsRestorePhase() || b.Shoot.IsLiveMigrationDestination() || !v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		return false, nil
 	}
 
