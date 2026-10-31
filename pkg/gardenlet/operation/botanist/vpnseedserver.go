@@ -39,7 +39,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		Replicas:                             b.Shoot.GetReplicas(1),
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
-		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
+		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityTotalShootClients,
 		VPAUpdateDisabled:                    b.Shoot.VPNVPAUpdateDisabled,
 		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
 		AutoMTU:                              b.Shoot.VPNAutoMTU,
@@ -69,4 +69,14 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)
+}
+
+// DestroyVPNServer deletes the vpn-seed-server. During live control plane migration the source no longer serves shoot
+// traffic once it has been handed over to the destination, so its vpn-seed-server is removed during the source cleanup
+// rather than waiting for the source namespace teardown.
+func (b *Botanist) DestroyVPNServer(ctx context.Context) error {
+	if b.Shoot.Components.ControlPlane.VPNSeedServer == nil {
+		return nil
+	}
+	return b.Shoot.Components.ControlPlane.VPNSeedServer.Destroy(ctx)
 }
