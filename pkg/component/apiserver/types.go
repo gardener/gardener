@@ -73,6 +73,12 @@ type AuditWebhook struct {
 	Kubeconfig []byte
 	// BatchMaxSize is the maximum size of a batch.
 	BatchMaxSize *int32
+	// TruncateEnabled specifies whether audit event and batch truncation is enabled.
+	TruncateEnabled *bool
+	// TruncateMaxBatchSize is the maximum size in bytes of a batch sent to the webhook.
+	TruncateMaxBatchSize *int64
+	// TruncateMaxEventSize is the maximum size in bytes of an audit event sent to the webhook.
+	TruncateMaxEventSize *int64
 	// Version is the API group and version used for serializing audit events written to webhook.
 	Version *string
 }
