@@ -65,6 +65,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 					return true, (&networkpolicy.Reconciler{
 						ConcurrentSyncs:              cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
 						AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
+						NetworkPolicyNamePrefix:      networkpolicy.NetworkPolicyNamePrefixOperator,
 						RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 							// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
 							IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
