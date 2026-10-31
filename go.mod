@@ -1,6 +1,25 @@
 module github.com/gardener/gardener
 
-go 1.26.8
+go 1.27.2
+
+replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
+
+// TODO(marc1404): Drop this line once test fixtures have been updated to match the new serialization behavior past v4.0.0-rc.2
+replace go.yaml.in/yaml/v4 => go.yaml.in/yaml/v4 v4.0.0-rc.2
+
+// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
+exclude github.com/gardener/cert-management v0.22.0
+
+// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/terminal-controller-manager` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
+exclude github.com/gardener/cert-management v0.23.0
+
+// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
+exclude github.com/gardener/gardener/pkg/apis v1.143.0
+
+// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/terminal-controller-manager` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
+exclude github.com/gardener/gardener/pkg/apis v1.147.1
+
+tool github.com/joelanford/go-apidiff
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
@@ -29,7 +48,6 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/go-logr/logr v1.4.4
 	github.com/go-test/deep v1.1.1
-	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.0
 	github.com/google/uuid v1.6.0
@@ -44,7 +62,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/perses/perses v0.54.0
 	github.com/perses/perses-operator v0.5.0
-	github.com/perses/spec v0.2.0
+	github.com/perses/spec v0.3.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.2
 	github.com/prometheus/blackbox_exporter v0.29.1
 	github.com/prometheus/client_golang v1.25.0
@@ -64,7 +82,6 @@ require (
 	golang.org/x/crypto v0.58.0
 	golang.org/x/text v0.43.0
 	golang.org/x/time v0.16.0
-	golang.org/x/tools v0.52.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/protobuf v1.36.12
@@ -96,25 +113,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/yaml v1.6.0
 )
-
-replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
-
-// TODO(marc1404): Drop this line once test fixtures have been updated to match the new serialization behavior past v4.0.0-rc.2
-replace go.yaml.in/yaml/v4 => go.yaml.in/yaml/v4 v4.0.0-rc.2
-
-// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
-exclude github.com/gardener/cert-management v0.22.0
-
-// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/terminal-controller-manager` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
-exclude github.com/gardener/cert-management v0.23.0
-
-// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
-exclude github.com/gardener/gardener/pkg/apis v1.143.0
-
-// TODO(MartinWeindel) drop this line as soon as `github.com/gardener/terminal-controller-manager` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
-exclude github.com/gardener/gardener/pkg/apis v1.147.1
-
-tool github.com/joelanford/go-apidiff
 
 require (
 	cel.dev/cel-go v0.32.0 // indirect
@@ -221,6 +219,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.30.0 // indirect
+	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/pprof v0.0.0-20261016150608-1facf8f91b50 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
@@ -355,6 +354,7 @@ require (
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260921155816-b14227669459 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941 // indirect
 	google.golang.org/grpc v1.84.0 // indirect
