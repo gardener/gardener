@@ -2264,6 +2264,21 @@ func (m *ClusterAutoscaler) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.OkTotalUnreadyCount != nil {
+		i = encodeVarintGenerated(dAtA, i, uint64(*m.OkTotalUnreadyCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xd0
+	}
+	if m.MaxTotalUnreadyPercentage != nil {
+		i -= 8
+		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(*m.MaxTotalUnreadyPercentage))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xc9
+	}
 	if m.Autoscaling != nil {
 		{
 			size, err := m.Autoscaling.MarshalToSizedBuffer(dAtA[:i])
@@ -14516,6 +14531,12 @@ func (m *ClusterAutoscaler) Size() (n int) {
 		l = m.Autoscaling.Size()
 		n += 2 + l + sovGenerated(uint64(l))
 	}
+	if m.MaxTotalUnreadyPercentage != nil {
+		n += 10
+	}
+	if m.OkTotalUnreadyCount != nil {
+		n += 2 + sovGenerated(uint64(*m.OkTotalUnreadyCount))
+	}
 	return n
 }
 
@@ -19220,6 +19241,8 @@ func (this *ClusterAutoscaler) String() string {
 		`EmitPerNodeGroupMetrics:` + valueToStringGenerated(this.EmitPerNodeGroupMetrics) + `,`,
 		`MaxBinpackingTime:` + strings.Replace(fmt.Sprintf("%v", this.MaxBinpackingTime), "Duration", "v11.Duration", 1) + `,`,
 		`Autoscaling:` + strings.Replace(this.Autoscaling.String(), "ControlPlaneAutoscaling", "ControlPlaneAutoscaling", 1) + `,`,
+		`MaxTotalUnreadyPercentage:` + valueToStringGenerated(this.MaxTotalUnreadyPercentage) + `,`,
+		`OkTotalUnreadyCount:` + valueToStringGenerated(this.OkTotalUnreadyCount) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -27916,6 +27939,38 @@ func (m *ClusterAutoscaler) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 25:
+			if wireType != 1 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MaxTotalUnreadyPercentage", wireType)
+			}
+			var v uint64
+			if (iNdEx + 8) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			iNdEx += 8
+			v2 := float64(math.Float64frombits(v))
+			m.MaxTotalUnreadyPercentage = &v2
+		case 26:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OkTotalUnreadyCount", wireType)
+			}
+			var v int32
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.OkTotalUnreadyCount = &v
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

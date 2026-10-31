@@ -629,7 +629,6 @@ type ClusterAutoscaler struct {
 	// Maximum percentage of unready nodes in total. (default: 45)
 	// If the unready nodes percentage crosses this and the number of unready
 	// nodes is higher than OkTotalUnreadyCount, autoscaling activities are stopped.
-	// Set to 100 when machine preservation is enabled for a cluster.
 	MaxTotalUnreadyPercentage *float64
 	// Minimum number of nodes that must be unready for MaxTotalUnreadyPercentage to apply. (default: 3)
 	OkTotalUnreadyCount *int32
