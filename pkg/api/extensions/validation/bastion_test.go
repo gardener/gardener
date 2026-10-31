@@ -68,6 +68,58 @@ var _ = Describe("Bastion validation tests", func() {
 
 			Expect(errorList).To(BeEmpty())
 		})
+
+		Context("machine", func() {
+			It("should allow a fully specified machine", func() {
+				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+					Type:  "large",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
+				}
+
+				Expect(ValidateBastion(bastion)).To(BeEmpty())
+			})
+
+			It("should allow an absent machine", func() {
+				bastion.Spec.Machine = nil
+
+				Expect(ValidateBastion(bastion)).To(BeEmpty())
+			})
+
+			It("should forbid a machine with an empty type", func() {
+				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
+				}
+
+				Expect(ValidateBastion(bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.machine.type"),
+				}))))
+			})
+
+			It("should forbid a machine with an empty image name", func() {
+				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+					Type:  "large",
+					Image: extensionsv1alpha1.BastionMachineImage{Version: "1.2.3"},
+				}
+
+				Expect(ValidateBastion(bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.machine.image.name"),
+				}))))
+			})
+
+			It("should forbid a machine with an empty image version", func() {
+				bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+					Type:  "large",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux"},
+				}
+
+				Expect(ValidateBastion(bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.machine.image.version"),
+				}))))
+			})
+		})
 	})
 
 	Describe("#ValidBastionUpdate", func() {
@@ -111,6 +163,25 @@ var _ = Describe("Bastion validation tests", func() {
 			errorList := ValidateBastionUpdate(newBastion, bastion)
 
 			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should prevent updating the machine", func() {
+			bastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+				Type:  "large",
+				Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
+			}
+			newBastion := prepareBastionForUpdate(bastion)
+			newBastion.Spec.Machine = &extensionsv1alpha1.BastionMachine{
+				Type:  "small",
+				Image: extensionsv1alpha1.BastionMachineImage{Name: "gardenlinux", Version: "1.2.3"},
+			}
+
+			errorList := ValidateBastionUpdate(newBastion, bastion)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.machine"),
+			}))))
 		})
 	})
 })

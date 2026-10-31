@@ -9,6 +9,7 @@ import (
 	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
 
 	backupbucketvalidator "github.com/gardener/gardener/plugin/pkg/backupbucket/validator"
+	bastionmutator "github.com/gardener/gardener/plugin/pkg/bastion/mutator"
 	bastionvalidator "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
@@ -61,6 +62,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	customverbauthorizer.Register(plugins)
 	managedseedvalidator.Register(plugins)
 	managedseedshoot.Register(plugins)
+	bastionmutator.Register(plugins)
 	bastionvalidator.Register(plugins)
 	resourcequota.Register(plugins)
 	shootvpa.Register(plugins)

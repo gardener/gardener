@@ -65,6 +65,18 @@ func ValidateBastionSpec(spec *operations.BastionSpec, fldPath *field.Path) fiel
 		}
 	}
 
+	if spec.Machine != nil {
+		if len(spec.Machine.Type) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "type"), "machine type must be specified"))
+		}
+		if len(spec.Machine.Image.Name) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "machine image name must be specified"))
+		}
+		if len(spec.Machine.Image.Version) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "version"), "machine image version must be specified"))
+		}
+	}
+
 	return allErrs
 }
 
@@ -74,6 +86,7 @@ func ValidateBastionSpecUpdate(newSpec, oldSpec *operations.BastionSpec, fldPath
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ShootRef.Name, oldSpec.ShootRef.Name, fldPath.Child("shootRef.name"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SSHPublicKey, oldSpec.SSHPublicKey, fldPath.Child("sshPublicKey"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Machine, oldSpec.Machine, fldPath.Child("machine"))...)
 
 	return allErrs
 }
