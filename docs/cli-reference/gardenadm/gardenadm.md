@@ -14,6 +14,7 @@ gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener proj
 
 * [gardenadm bootstrap](gardenadm_bootstrap.md)	 - Bootstrap the infrastructure for a Self-Hosted Shoot Cluster
 * [gardenadm connect](gardenadm_connect.md)	 - Deploy a gardenlet for further cluster management
+* [gardenadm destroy](gardenadm_destroy.md)	 - Destroy the infrastructure of a Self-Hosted Shoot Cluster
 * [gardenadm discover](gardenadm_discover.md)	 - Conveniently download Gardener configuration resources from an existing garden cluster
 * [gardenadm init](gardenadm_init.md)	 - Bootstrap the first control plane node
 * [gardenadm join](gardenadm_join.md)	 - Bootstrap control plane or worker nodes and join them to the cluster

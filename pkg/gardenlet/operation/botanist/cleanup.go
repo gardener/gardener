@@ -20,9 +20,13 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kube-aggregator/pkg/controllers/autoregister"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -50,6 +55,8 @@ const (
 
 	// MetadataNameField is the `metadata.name` field for a field selector.
 	MetadataNameField = "metadata.name"
+	// MetadataNamespaceField is the `metadata.namespace` field for a field selector.
+	MetadataNamespaceField = "metadata.namespace"
 )
 
 var (
@@ -174,9 +181,36 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 		return err
 	}
 
+	controlPlaneNamespaces, err := b.selfHostedControlPlaneNamespaces(ctx)
+	if err != nil {
+		return err
+	}
+
+	mutatingWebhookConfigurationOption, err := skipServedFromNamespaces(ctx, c, controlPlaneNamespaces, &admissionregistrationv1.MutatingWebhookConfigurationList{}, func(obj client.Object) []*admissionregistrationv1.ServiceReference {
+		var services []*admissionregistrationv1.ServiceReference
+		for _, webhook := range obj.(*admissionregistrationv1.MutatingWebhookConfiguration).Webhooks {
+			services = append(services, webhook.ClientConfig.Service)
+		}
+		return services
+	})
+	if err != nil {
+		return err
+	}
+
+	validatingWebhookConfigurationOption, err := skipServedFromNamespaces(ctx, c, controlPlaneNamespaces, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, func(obj client.Object) []*admissionregistrationv1.ServiceReference {
+		var services []*admissionregistrationv1.ServiceReference
+		for _, webhook := range obj.(*admissionregistrationv1.ValidatingWebhookConfiguration).Webhooks {
+			services = append(services, webhook.ClientConfig.Service)
+		}
+		return services
+	})
+	if err != nil {
+		return err
+	}
+
 	return flow.Parallel(
-		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, mutatingWebhookConfigurationOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, validatingWebhookConfigurationOption, cleanOptions),
 	)(ctx)
 }
 
@@ -193,9 +227,33 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 		return err
 	}
 
+	controlPlaneNamespaces, err := b.selfHostedControlPlaneNamespaces(ctx)
+	if err != nil {
+		return err
+	}
+
+	apiServiceOption, err := skipServedFromNamespaces(ctx, c, controlPlaneNamespaces, &apiregistrationv1.APIServiceList{}, func(obj client.Object) []*admissionregistrationv1.ServiceReference {
+		if service := obj.(*apiregistrationv1.APIService).Spec.Service; service != nil {
+			return []*admissionregistrationv1.ServiceReference{{Namespace: service.Namespace, Name: service.Name}}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	customResourceDefinitionCleanOption := CustomResourceDefinitionCleanOption
+	if b.Shoot.IsSelfHosted() {
+		// The CRDs of the control plane components of self-hosted shoots (e.g., extensions, machines, etcd) are
+		// protected against deletion. Deleting them would delete the resources of the control plane.
+		customResourceDefinitionCleanOption = utilclient.ListWith{client.MatchingLabelsSelector{
+			Selector: CleanupSelector.DeepCopySelector().Add(utils.MustNewRequirement(gardenerutils.DeletionProtected, selection.NotEquals, "true")),
+		}}
+	}
+
 	return flow.Parallel(
-		cleanResourceFn(ops, b.Logger, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &apiextensionsv1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, apiServiceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &apiextensionsv1.CustomResourceDefinitionList{}, customResourceDefinitionCleanOption, cleanOptions),
 	)(ctx)
 }
 
@@ -231,32 +289,112 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return err
 	}
 
+	controlPlaneNamespaces, err := b.selfHostedControlPlaneNamespaces(ctx)
+	if err != nil {
+		return err
+	}
+	// The option is only passed for namespaced resources, as cluster-scoped resources don't support the namespace field
+	// selector.
+	namespaceOption := skipNamespaces(controlPlaneNamespaces)
+
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
 		return flow.Parallel(
-			cleanResourceFn(ops, b.Logger, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
-			cleanResourceFn(ops, b.Logger, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
-			cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, cleanOptions),
+			cleanResourceFn(ops, b.Logger, c, &corev1.ServiceList{}, ServiceCleanOption, namespaceOption, cleanOptions),
+			cleanResourceFn(ops, b.Logger, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, namespaceOption, cleanOptions),
+			cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, namespaceOption, cleanOptions),
 			cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, cleanOptions),
 		)(ctx)
 	}
 
 	return flow.Parallel(
-		cleanResourceFn(ops, b.Logger, c, &batchv1.CronJobList{}, CronJobCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &networkingv1.IngressList{}, IngressCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &batchv1.JobList{}, JobCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &corev1.PodList{}, PodCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, b.Logger, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &batchv1.CronJobList{}, CronJobCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.DeploymentList{}, DeploymentCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &networkingv1.IngressList{}, IngressCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &batchv1.JobList{}, JobCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.PodList{}, PodCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.ServiceList{}, ServiceCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, namespaceOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, namespaceOption, cleanOptions),
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
-		cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, namespaceOption, snapshotCleanOptions),
 		cleanResourceFn(snapshotContentOps, b.Logger, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 	)(ctx)
+}
+
+// selfHostedControlPlaneNamespaces returns the namespaces of the control plane components of self-hosted shoots, i.e.,
+// kube-system, garden (e.g., gardener-resource-manager, etcd-druid), and the namespaces of the extensions. It returns
+// nil for hosted shoots.
+// Unlike the system components of hosted shoots, the control plane components of self-hosted shoots (e.g., the static
+// pods, gardener-resource-manager, and the components deployed via ManagedResources for the seed like
+// cloud-controller-manager) are not excluded from the cleanup by labels. Hence, the cleanup skips the resources in and
+// served from these namespaces. Otherwise, it would delete the control plane components, which are recreated
+// immediately, so that the cleanup never finishes.
+func (b *Botanist) selfHostedControlPlaneNamespaces(ctx context.Context) (sets.Set[string], error) {
+	if !b.Shoot.IsSelfHosted() {
+		return nil, nil
+	}
+
+	namespaceList := &corev1.NamespaceList{}
+	if err := b.ShootClientSet.Client().List(ctx, namespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}); err != nil {
+		return nil, fmt.Errorf("could not list extension namespaces: %w", err)
+	}
+
+	namespaces := sets.New(metav1.NamespaceSystem, v1beta1constants.GardenNamespace)
+	for _, namespace := range namespaceList.Items {
+		namespaces.Insert(namespace.Name)
+	}
+
+	return namespaces, nil
+}
+
+// skipNamespaces returns a clean option that skips the namespaced resources in the given namespaces.
+func skipNamespaces(namespaces sets.Set[string]) utilclient.ListWith {
+	if namespaces.Len() == 0 {
+		return nil
+	}
+
+	var selectors []fields.Selector
+	for _, namespace := range sets.List(namespaces) {
+		selectors = append(selectors, fields.OneTermNotEqualSelector(MetadataNamespaceField, namespace))
+	}
+
+	return utilclient.ListWith{client.MatchingFieldsSelector{Selector: fields.AndSelectors(selectors...)}}
+}
+
+// skipServedFromNamespaces returns a clean option that skips the objects of the given list (e.g., webhook
+// configurations) which are served by a service in one of the given namespaces.
+func skipServedFromNamespaces(ctx context.Context, c client.Client, namespaces sets.Set[string], list client.ObjectList, servicesOf func(client.Object) []*admissionregistrationv1.ServiceReference) (utilclient.ListWith, error) {
+	if namespaces.Len() == 0 {
+		return nil, nil
+	}
+
+	if err := c.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("could not list %T: %w", list, err)
+	}
+
+	var selectors []fields.Selector
+	if err := meta.EachListItem(list, func(o runtime.Object) error {
+		obj := o.(client.Object)
+		for _, service := range servicesOf(obj) {
+			if service != nil && namespaces.Has(service.Namespace) {
+				selectors = append(selectors, fields.OneTermNotEqualSelector(MetadataNameField, obj.GetName()))
+				return nil
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(selectors) == 0 {
+		return nil, nil
+	}
+
+	return utilclient.ListWith{client.MatchingFieldsSelector{Selector: fields.AndSelectors(selectors...)}}, nil
 }
 
 // addAndGetCleanupStartTime adds the cleanup start time annotation to the shoot namespace if not already present
