@@ -6,6 +6,7 @@ package logging
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -15,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -55,14 +57,22 @@ var _ = ginkgo.Describe("Shoot logging testing", func() {
 
 	framework.CBeforeEach(func(ctx context.Context) {
 
-		checkRequiredResources(ctx, shootFramework.SeedClient)
+		_, err := getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
+		}
+
+		err = shootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, &appsv1.StatefulSet{})
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
+		}
 
 		// Get shoot namespace name
 		shootNamespace.Name = shootFramework.ShootSeedNamespace()
 
 		seedClient := shootFramework.SeedClient.Client()
 		// Set label to the testing namespace
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx,
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx,
 			seedClient, shootNamespace,
 			func() error {
 				metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
