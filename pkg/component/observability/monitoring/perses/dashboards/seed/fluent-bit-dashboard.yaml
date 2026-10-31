@@ -1269,41 +1269,6 @@ spec:
                   minStep: ""
                   query: sum by (server_address) (  rate(output_plugin_otel_sdk_exporter_log_exported_total{server_address=~".+$host.+"}[$__rate_interval]))
                   seriesNameFormat: '{{server_address}}'
-    "3_3":
-      kind: Panel
-      spec:
-        display:
-          name: Export duration P50
-          description: OTLP Exporter Duration 50 percentile
-        plugin:
-          kind: TimeSeriesChart
-          spec:
-            legend:
-              mode: table
-              position: bottom
-              values:
-                - last-number
-              size: small
-            visual:
-              areaOpacity: 0
-              connectNulls: false
-              display: line
-              lineWidth: 1
-            yAxis:
-              format:
-                unit: milliseconds
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
-                spec:
-                  datasource:
-                    kind: PrometheusDatasource
-                    name: prometheus-aggregate
-                  minStep: ""
-                  query: histogram_quantile(0.50,sum by (le, server_address) (    rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_bucket{server_address=~".+$host.+"}[$__rate_interval])))
-                  seriesNameFormat: '{{server_address}} - p50'
     "3_4":
       kind: Panel
       spec:
@@ -1670,28 +1635,22 @@ spec:
         items:
           - x: 0
             "y": 4
-            width: 6
+            width: 12
             height: 8
             content:
               $ref: '#/spec/panels/3_0'
-          - x: 6
-            "y": 4
-            width: 6
-            height: 8
-            content:
-              $ref: '#/spec/panels/3_1'
           - x: 12
             "y": 4
             width: 12
             height: 8
             content:
-              $ref: '#/spec/panels/3_2'
+              $ref: '#/spec/panels/3_1'
           - x: 0
             "y": 12
             width: 12
             height: 8
             content:
-              $ref: '#/spec/panels/3_3'
+              $ref: '#/spec/panels/3_2'
           - x: 12
             "y": 12
             width: 12
@@ -1710,7 +1669,7 @@ spec:
             height: 8
             content:
               $ref: '#/spec/panels/3_6'
-          - x: 12
+          - x: 0
             "y": 28
             width: 12
             height: 8

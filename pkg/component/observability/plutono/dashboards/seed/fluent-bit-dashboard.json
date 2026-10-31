@@ -2544,7 +2544,7 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 6,
+            "w": 12,
             "x": 0,
             "y": 4
           },
@@ -2605,8 +2605,8 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 6,
-            "x": 6,
+            "w": 12,
+            "x": 12,
             "y": 4
           },
           "id": 148,
@@ -2685,8 +2685,8 @@
           "gridPos": {
             "h": 8,
             "w": 12,
-            "x": 12,
-            "y": 4
+            "x": 0,
+            "y": 12
           },
           "id": 144,
           "options": {
@@ -2715,93 +2715,6 @@
             }
           ],
           "title": "Records throughput /s",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "description": "OTLP Exporter Duration 50 percentile",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "yellow",
-                    "value": 100
-                  },
-                  {
-                    "color": "red",
-                    "value": 500
-                  }
-                ]
-              },
-              "unit": "ms"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 12
-          },
-          "id": 111,
-          "options": {
-            "legend": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "displayMode": "table",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "pluginVersion": "7.5.42",
-          "targets": [
-            {
-              "exemplar": true,
-              "expr": "histogram_quantile(0.50,sum by (le, server_address) (    rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_bucket{server_address=~\".+$host.+\"}[$__rate_interval])))",
-              "interval": "",
-              "legendFormat": "{{server_address}} - p50",
-              "refId": "A"
-            }
-          ],
-          "title": "Export duration P50",
           "type": "timeseries"
         },
         {
@@ -3154,7 +3067,7 @@
           "gridPos": {
             "h": 8,
             "w": 12,
-            "x": 12,
+            "x": 0,
             "y": 28
           },
           "id": 150,
