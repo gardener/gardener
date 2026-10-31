@@ -65,7 +65,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/vpainplaceupdates"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -330,10 +329,6 @@ type Values struct {
 	IsSelfHostedShoot bool
 	// PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
 	PodKubeAPIServerLoadBalancingWebhook PodKubeAPIServerLoadBalancingWebhook
-	// VPAInPlaceUpdatesEnabled specifies if a vpa-in-place-updates webhook should be enabled.
-	//
-	// TODO(vitanovs): Remove the vpa-in-place-updates webhook in favor of setting the update mode to InPlaceOrRecreate explicitly.
-	VPAInPlaceUpdatesEnabled bool
 }
 
 // PodKubeAPIServerLoadBalancingWebhook specifies the settings of pod-kube-apiserver-load-balancing webhook.
@@ -611,9 +606,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, config *resourcem
 			},
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
-			},
-			VPAInPlaceUpdates: resourcemanagerconfigv1alpha1.VPAInPlaceUpdatesConfig{
-				Enabled: r.values.VPAInPlaceUpdatesEnabled,
 			},
 		},
 	}
@@ -1404,10 +1396,6 @@ func (r *resourceManager) newMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, NewPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	if config.Webhooks.VPAInPlaceUpdates.Enabled {
-		webhooks = append(webhooks, NewInPlaceUpdatesWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
-	}
-
 	r.skipStaticPods(webhooks)
 	return webhooks
 }
@@ -1961,45 +1949,6 @@ func NewHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 	}
 }
 
-// NewInPlaceUpdatesWebhook returns the VerticalPodAutoscaler mutating webhook for the resourcemanager component for reuse
-// between the component and integration tests.
-func NewInPlaceUpdatesWebhook(
-	namespaceSelector *metav1.LabelSelector,
-	secretServerCA *corev1.Secret,
-	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
-) admissionregistrationv1.MutatingWebhook {
-	return admissionregistrationv1.MutatingWebhook{
-		Name: "vpa-in-place-updates.resources.gardener.cloud",
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{vpaautoscalingv1.SchemeGroupVersion.Group},
-				APIVersions: []string{vpaautoscalingv1.SchemeGroupVersion.Version},
-				Resources:   []string{"verticalpodautoscalers"},
-			},
-			Operations: []admissionregistrationv1.OperationType{
-				admissionregistrationv1.Create,
-				admissionregistrationv1.Update,
-			},
-		}},
-		NamespaceSelector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
-			MatchExpressions: []metav1.LabelSelectorRequirement{
-				{
-					Key:      resourcesv1alpha1.VPAInPlaceUpdatesSkip,
-					Operator: metav1.LabelSelectorOpDoesNotExist,
-				},
-			},
-		},
-		ClientConfig:            buildClientConfigFn(secretServerCA, vpainplaceupdates.WebhookPath),
-		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		ReinvocationPolicy:      new(admissionregistrationv1.NeverReinvocationPolicy),
-		FailurePolicy:           new(admissionregistrationv1.Fail),
-		MatchPolicy:             new(admissionregistrationv1.Equivalent),
-		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
-		TimeoutSeconds:          new(int32(10)),
-	}
-}
-
 // buildWebhookNamespaceSelector constructs a label selector that can be used as namespaceSelector in webhook
 // configurations.
 // If gardener-resource-manager is responsible for runtime resources, all Gardener-managed namespaces
@@ -2204,7 +2153,6 @@ func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerconf
 	config.Webhooks.KubernetesServiceHost.Enabled = false
 	config.Webhooks.SeccompProfile.Enabled = false
 	config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled = false
-	config.Webhooks.VPAInPlaceUpdates.Enabled = false
 	config.Webhooks.NodeAgentAuthorizer.Enabled = false
 }
 

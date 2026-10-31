@@ -357,7 +357,6 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 				},
 			},
 		},
-		VPAInPlaceUpdatesEnabled: true,
 	})
 }
 
