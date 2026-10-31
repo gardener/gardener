@@ -2262,6 +2262,30 @@ boolean
 <p>Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>maxTotalUnreadyPercentage</code></br>
+<em>
+float
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Maximum percentage of unready nodes in total. (default: 45)<br />If the unready nodes percentage crosses this and the number of unready<br />nodes is higher than OkTotalUnreadyCount, autoscaling activities are stopped.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>okTotalUnreadyCount</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Minimum number of nodes that must be unready for MaxTotalUnreadyPercentage to apply. (default: 3)</p>
+</td>
+</tr>
 
 </tbody>
 </table>

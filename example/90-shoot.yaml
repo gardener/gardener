@@ -348,6 +348,8 @@ spec:
   #   newPodScaleUpDelay: 0s
   #   maxScaleDownParallelism: 10
   #   maxDrainParallelism: 1
+  #   maxTotalUnreadyPercentage: 45
+  #   okTotalUnreadyCount: 3
   #   ignoreDaemonsetsUtilization: false
   #   emitPerNodeGroupMetrics: false
   #   verbosity: 2

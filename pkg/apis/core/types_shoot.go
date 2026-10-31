@@ -626,6 +626,12 @@ type ClusterAutoscaler struct {
 	Verbosity *int32
 	// Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.
 	Autoscaling *ControlPlaneAutoscaling
+	// Maximum percentage of unready nodes in total. (default: 45)
+	// If the unready nodes percentage crosses this and the number of unready
+	// nodes is higher than OkTotalUnreadyCount, autoscaling activities are stopped.
+	MaxTotalUnreadyPercentage *float64
+	// Minimum number of nodes that must be unready for MaxTotalUnreadyPercentage to apply. (default: 3)
+	OkTotalUnreadyCount *int32
 }
 
 // ExpanderMode is type used for Expander values

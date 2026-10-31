@@ -133,6 +133,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configVerbosity                       int32 = 4
 		configMaxScaleDownParallelism               = new(int32(20))
 		configMaxDrainParallelism                   = new(int32(2))
+		configMaxTotalUnreadyPercentage             = new(float64(60))
+		configOkTotalUnreadyCount                   = new(int32(5))
 		configNewPodScaleUpDelay                    = &metav1.Duration{Duration: time.Second}
 		configTaints                                = []string{"taint-1", "taint-2"}
 		configFull                                  = &gardencorev1beta1.ClusterAutoscaler{
@@ -158,6 +160,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			MaxDrainParallelism:             configMaxDrainParallelism,
 			NewPodScaleUpDelay:              configNewPodScaleUpDelay,
 			MaxBinpackingTime:               configMaxBinpackingTime,
+			MaxTotalUnreadyPercentage:       configMaxTotalUnreadyPercentage,
+			OkTotalUnreadyCount:             configOkTotalUnreadyCount,
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -295,7 +299,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
-		deploymentFor = func(withConfig, withWorkerPriority, withAutoPreservation bool) *appsv1.Deployment {
+		deploymentFor = func(withConfig, withWorkerPriority bool) *appsv1.Deployment {
 			var commandConfigFlags []string
 
 			expander := string(configExpander)
@@ -325,6 +329,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--max-nodes-total=0",
 					"--emit-per-nodegroup-metrics=false",
 					"--max-binpacking-time=5m0s",
+					"--ok-total-unready-count=3",
+					"--max-total-unready-percentage=45.000000",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
@@ -348,6 +354,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--max-nodes-total=0",
 					fmt.Sprintf("--emit-per-nodegroup-metrics=%t", configEmitPerNodeGroupMetrics),
 					fmt.Sprintf("--max-binpacking-time=%s", configMaxBinpackingTime.Duration),
+					fmt.Sprintf("--ok-total-unready-count=%d", *configOkTotalUnreadyCount),
+					fmt.Sprintf("--max-total-unready-percentage=%f", *configMaxTotalUnreadyPercentage),
 					fmt.Sprintf("--startup-taint=%s", configTaints[0]),
 					fmt.Sprintf("--startup-taint=%s", configTaints[1]),
 					fmt.Sprintf("--status-taint=%s", configTaints[0]),
@@ -376,9 +384,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment4Min, machineDeployment4Max, namespace, machineDeployment4Name),
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment5Min, machineDeployment5Max, namespace, machineDeployment5Name),
 			)
-			if withAutoPreservation {
-				command = append(command, "--max-total-unready-percentage=100")
-			}
 
 			deploy := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
@@ -697,7 +702,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool, withWorkerConfig bool, withPriorityExpander bool, k8sVersionGreaterEqual135 bool, withAutoPreservation bool) {
+			test := func(withConfig bool, withWorkerConfig bool, withPriorityExpander bool, k8sVersionGreaterEqual135 bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
 				var shootWorkerConfig []gardencorev1beta1.Worker
 				if withConfig {
@@ -715,14 +720,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				shootVersion := "1.33.1"
 				if k8sVersionGreaterEqual135 {
 					shootVersion = "1.35.0"
-				}
-
-				if withAutoPreservation {
-					autoPreserveWorkerConfig := []gardencorev1beta1.Worker{{
-						Name:                             machineDeployment1Name,
-						MachineControllerManagerSettings: &gardencorev1beta1.MachineControllerManagerSettings{AutoPreserveFailedMachineMax: new(int32(1))},
-					}}
-					shootWorkerConfig = autoPreserveWorkerConfig
 				}
 
 				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.33.1"), semver.MustParse(shootVersion))
@@ -760,7 +757,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualSecret).To(DeepEqual(secret))
 
 				actualDeployment := &appsv1.Deployment{}
-				deploy := deploymentFor(withConfig, withWorkerConfig, withAutoPreservation)
+				deploy := deploymentFor(withConfig, withWorkerConfig)
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), actualDeployment)).To(Succeed())
 				Expect(actualDeployment).To(DeepEqual(deploy))
 
@@ -781,14 +778,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			}
 
-			It("w/o config", func() { test(false, false, false, false, false) })
-			It("w/o config, k8s v1.35", func() { test(false, false, false, true, false) })
-			It("w/ config", func() { test(true, false, false, false, false) })
-			It("w/ config, k8s v1.35", func() { test(true, false, false, true, false) })
-			It("w/ config, w/ workerConfig", func() { test(true, true, false, false, false) })
-			It("w/ config, w/ workerConfig, w/ 'priority' expander already configured", func() { test(true, true, true, false, false) })
-			It("w/o config, w/ autoPreservation", func() { test(false, false, false, false, true) })
-			It("w/ config, w/ autoPreservation", func() { test(true, false, false, false, true) })
+			It("w/o config", func() { test(false, false, false, false) })
+			It("w/o config, k8s v1.35", func() { test(false, false, false, true) })
+			It("w/ config", func() { test(true, false, false, false) })
+			It("w/ config, k8s v1.35", func() { test(true, false, false, true) })
+			It("w/ config, w/ workerConfig", func() { test(true, true, false, false) })
+			It("w/ config, w/ workerConfig, w/ 'priority' expander already configured", func() { test(true, true, true, false) })
 
 			It("w/ config, w/ minAllowed in VPA", func() {
 				config := configFull.DeepCopy()
@@ -829,7 +824,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploymentFor(false, false, false)), &appsv1.Deployment{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploymentFor(false, false)), &appsv1.Deployment{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pdb), &policyv1.PodDisruptionBudget{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), &monitoringv1.PrometheusRule{})).To(Succeed())
@@ -861,7 +856,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploymentFor(false, false, false)), &appsv1.Deployment{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploymentFor(false, false)), &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pdb), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), &monitoringv1.PrometheusRule{})).To(BeNotFoundError())

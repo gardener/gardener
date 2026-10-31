@@ -622,6 +622,16 @@ message ClusterAutoscaler {
   // Autoscaling contains auto-scaling configuration options for the cluster-autoscaler.
   // +optional
   optional ControlPlaneAutoscaling autoscaling = 24;
+
+  // Maximum percentage of unready nodes in total. (default: 45)
+  // If the unready nodes percentage crosses this and the number of unready
+  // nodes is higher than OkTotalUnreadyCount, autoscaling activities are stopped.
+  // +optional
+  optional double maxTotalUnreadyPercentage = 25;
+
+  // Minimum number of nodes that must be unready for MaxTotalUnreadyPercentage to apply. (default: 3)
+  // +optional
+  optional int32 okTotalUnreadyCount = 26;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
