@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/events"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -2660,6 +2661,9 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should mark maintenance as failed and return nil when dry-run update encounters non-conflict error", func() {
+			previousUpdateTime := metav1.Time{Time: time.Now().Add(-24 * time.Hour).Truncate(time.Second)}
+			shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{LastUpdateTime: &previousUpdateTime}
+
 			forbiddenErr := apierrors.NewForbidden(schema.GroupResource{Group: "core.gardener.cloud", Resource: "shoots"}, shoot.Name, errors.New("validation failed"))
 
 			fakeClient := fakeclient.NewClientBuilder().
@@ -2689,6 +2693,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
 			Expect(shoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
 			Expect(*shoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
+			Expect(shoot.Status.LastMaintenance.LastUpdateTime.Time).To(Equal(previousUpdateTime.Time))
 
 			fetchedShoot := &gardencorev1beta1.Shoot{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
@@ -2696,6 +2701,75 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(fetchedShoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
 			Expect(fetchedShoot.Status.LastMaintenance.FailureReason).NotTo(BeNil())
 			Expect(*fetchedShoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Updates to the Shoot failed to be applied"))
+			Expect(fetchedShoot.Status.LastMaintenance.LastUpdateTime.Time).To(Equal(previousUpdateTime.Time))
+		})
+
+		It("should record TriggeredTime in a newly created LastMaintenance even when no changes are performed", func() {
+			// no updates are due: Kubernetes auto-update is disabled and the version is already the latest
+			shoot.Spec.Kubernetes.Version = "1.30.1"
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+
+			fakeClock := testclock.NewFakeClock(time.Now().Truncate(time.Second))
+
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(cloudProfile, shoot).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				Build()
+
+			r := &Reconciler{
+				Client: fakeClient,
+				Clock:  fakeClock,
+			}
+
+			Expect(r.reconcile(ctx, log, shoot)).To(Succeed())
+
+			fetchedShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), fetchedShoot)).To(Succeed())
+			Expect(fetchedShoot.Status.LastMaintenance).NotTo(BeNil())
+			Expect(fetchedShoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+			Expect(fetchedShoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+		})
+
+		It("should advance TriggeredTime on an idle run while leaving LastUpdateTime unchanged", func() {
+			fakeClock := testclock.NewFakeClock(time.Now().Truncate(time.Second))
+
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(cloudProfile, shoot).
+				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+				Build()
+
+			r := &Reconciler{
+				Client:   fakeClient,
+				Clock:    fakeClock,
+				Recorder: events.NewFakeRecorder(10),
+			}
+
+			// first run performs a Kubernetes version update (auto-update is enabled and 1.30.1 is available),
+			// so both TriggeredTime and LastUpdateTime are stamped with the current time.
+			Expect(r.reconcile(ctx, log, shoot)).To(Succeed())
+
+			activeShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), activeShoot)).To(Succeed())
+			Expect(activeShoot.Status.LastMaintenance).NotTo(BeNil())
+			lastUpdateTime := activeShoot.Status.LastMaintenance.LastUpdateTime
+			Expect(lastUpdateTime).NotTo(BeNil())
+			Expect(*lastUpdateTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+			Expect(activeShoot.Status.LastMaintenance.TriggeredTime).To(Equal(*lastUpdateTime))
+
+			// advance the clock and run maintenance again; nothing is due now (version is already up-to-date),
+			// so TriggeredTime must move forward while LastUpdateTime stays frozen at the previous run.
+			fakeClock.Step(time.Hour)
+			activeShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationMaintain}
+			Expect(r.reconcile(ctx, log, activeShoot)).To(Succeed())
+
+			idleShoot := &gardencorev1beta1.Shoot{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shoot), idleShoot)).To(Succeed())
+			Expect(idleShoot.Status.LastMaintenance).NotTo(BeNil())
+			Expect(idleShoot.Status.LastMaintenance.LastUpdateTime).To(Equal(lastUpdateTime))
+			Expect(idleShoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+			Expect(idleShoot.Status.LastMaintenance.TriggeredTime.Time).To(BeTemporally(">", lastUpdateTime.Time))
 		})
 	})
 })
