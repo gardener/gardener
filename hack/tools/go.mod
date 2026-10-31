@@ -29,7 +29,7 @@ require (
 	// use go version -m hack/tools/bin/<<architecture>>/golangci-lint to detect the dependency versions
 	// or, with `go work` enabled, use `go work sync`
 	golang.org/x/tools v0.52.0
-	sigs.k8s.io/kube-api-linter v0.0.0-20261012124120-79b557aa8c8d
+	sigs.k8s.io/kube-api-linter v0.0.0-20261030144752-d90122c89087
 )
 
 require (

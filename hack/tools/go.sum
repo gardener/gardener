@@ -1040,8 +1040,8 @@ sigs.k8s.io/controller-tools v0.22.0 h1:eG3FAVja/KnlXKIWg95udIFz1cMyAtMjP11cqBh3
 sigs.k8s.io/controller-tools v0.22.0/go.mod h1:VizwUStoZK7rReCj704czGGrB7mLxXTiJSJt7wN5ilI=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730/go.mod h1:mdzfpAEoE6DHQEN0uh9ZbOCuHbLK5wOm7dK4ctXE9Tg=
-sigs.k8s.io/kube-api-linter v0.0.0-20261012124120-79b557aa8c8d h1:XNllDc3cAHdTzBYTyfZObS5izoWrM0JoT63q4zxbUeQ=
-sigs.k8s.io/kube-api-linter v0.0.0-20261012124120-79b557aa8c8d/go.mod h1:rV2mWRPlEGeU1RkcLR1zc2ZsC7Y72fScbi+TrMA779Y=
+sigs.k8s.io/kube-api-linter v0.0.0-20261030144752-d90122c89087 h1:UMGzIsnhhNPtSRHreTvOA2Ox7aitGqcwyYHSJAfzsqw=
+sigs.k8s.io/kube-api-linter v0.0.0-20261030144752-d90122c89087/go.mod h1:rV2mWRPlEGeU1RkcLR1zc2ZsC7Y72fScbi+TrMA779Y=
 sigs.k8s.io/randfill v1.0.0 h1:JfjMILfT8A6RbawdsK2JXGBR5AQVfd+9TbzrlneTyrU=
 sigs.k8s.io/randfill v1.0.0/go.mod h1:XeLlZ/jmk4i1HRopwe7/aU3H5n1zNUcX6TM94b3QxOY=
 sigs.k8s.io/structured-merge-diff/v6 v6.4.2 h1:qdOxHwrl2Kaag1aQEarlYcOA9vSyGCp3CIki3aW8c4Q=
