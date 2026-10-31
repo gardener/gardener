@@ -6966,6 +6966,13 @@ func (in *WorkersSettings) DeepCopyInto(out *WorkersSettings) {
 		*out = new(SSHAccess)
 		**out = **in
 	}
+	if in.Sysctls != nil {
+		in, out := &in.Sysctls, &out.Sysctls
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

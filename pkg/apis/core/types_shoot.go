@@ -1387,7 +1387,8 @@ type Worker struct {
 	Zones []string
 	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
 	MachineControllerManagerSettings *MachineControllerManagerSettings
-	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
+	// Sysctls is a map of kernel settings to apply on all machines in this worker pool. If set, it fully
+	// overrides the global `.spec.provider.workersSettings.sysctls` for this pool; the two maps are not merged.
 	Sysctls map[string]string
 	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
 	ClusterAutoscaler *ClusterAutoscalerOptions
@@ -1607,6 +1608,9 @@ var (
 type WorkersSettings struct {
 	// SSHAccess contains settings regarding ssh access to the worker nodes.
 	SSHAccess *SSHAccess
+	// Sysctls is a map of kernel settings to apply on all worker pools. It can be overridden per worker pool via
+	// `.spec.provider.workers[].sysctls` (the per-pool value fully replaces this global value, there is no merge).
+	Sysctls map[string]string
 }
 
 // SSHAccess contains settings regarding ssh access to the worker nodes.

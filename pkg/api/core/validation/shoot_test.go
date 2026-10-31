@@ -1470,6 +1470,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(errorList).To(BeEmpty())
 				})
+
+				It("should allow valid global sysctls", func() {
+					shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{
+						Sysctls: map[string]string{"net.ipv4.tcp_wmem": "4096 131072 16777216"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should reject invalid global sysctls", func() {
+					shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{
+						Sysctls: map[string]string{"net.ipv4.tcp_wmem": ""},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Field": Equal("spec.provider.workersSettings.sysctls.net.ipv4.tcp_wmem"),
+					}))))
+				})
 			})
 
 			Context("self-hosted shoots", func() {

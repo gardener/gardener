@@ -534,6 +534,23 @@ func CalculateEffectiveKubeletConfiguration(shootKubelet *gardencorev1beta1.Kube
 	return shootKubelet
 }
 
+// CalculateEffectiveSysctls returns the worker-pool-specific sysctls if set, otherwise the global
+// (`.spec.provider.workersSettings.sysctls`) sysctls. There is no merge between the two.
+func CalculateEffectiveSysctls(globalSysctls, workerSysctls map[string]string) map[string]string {
+	if workerSysctls != nil {
+		return workerSysctls
+	}
+	return globalSysctls
+}
+
+// GetGlobalSysctls returns the global sysctls configured in `.spec.provider.workersSettings.sysctls`, or nil if unset.
+func GetGlobalSysctls(shoot *gardencorev1beta1.Shoot) map[string]string {
+	if shoot.Spec.Provider.WorkersSettings != nil {
+		return shoot.Spec.Provider.WorkersSettings.Sysctls
+	}
+	return nil
+}
+
 // SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
 func SystemComponentsAllowed(worker *gardencorev1beta1.Worker) bool {
 	return worker.SystemComponents == nil || worker.SystemComponents.Allow
