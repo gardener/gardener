@@ -32,11 +32,14 @@ import (
 type Garden struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec contains the specification of this garden.
+	// +optional
 	Spec GardenSpec `json:"spec,omitempty"`
 	// Status contains the status of this garden.
+	// +optional
 	Status GardenStatus `json:"status,omitempty"`
 }
 
@@ -61,8 +64,10 @@ type GardenSpec struct {
 	// +optional
 	Extensions []GardenExtension `json:"extensions,omitempty"`
 	// RuntimeCluster contains configuration for the runtime cluster.
+	// +required
 	RuntimeCluster RuntimeCluster `json:"runtimeCluster"`
 	// VirtualCluster contains configuration for the virtual cluster.
+	// +required
 	VirtualCluster VirtualCluster `json:"virtualCluster"`
 	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
 	// +optional
@@ -73,6 +78,7 @@ type GardenSpec struct {
 type DNSManagement struct {
 	// Providers is a list of DNS providers.
 	// +kubebuilder:validation:MinItems=1
+	// +required
 	Providers []DNSProvider `json:"providers"`
 }
 
@@ -80,24 +86,30 @@ type DNSManagement struct {
 type DNSProvider struct {
 	// Name is the name of the DNS provider.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Name string `json:"name"`
 	// Type is the type of the DNS provider.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Type string `json:"type"`
 	// Config is the provider-specific configuration passed to DNSRecord resources.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 	// SecretRef is a reference to a Secret object containing the DNS provider credentials.
+	// +required
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
 	// Ingress configures Ingress specific settings for the Garden cluster.
+	// +required
 	Ingress Ingress `json:"ingress"`
 	// Networking defines the networking configuration of the runtime cluster.
+	// +required
 	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
+	// +required
 	Provider Provider `json:"provider"`
 	// Settings contains certain settings for this cluster.
 	// +optional
@@ -112,8 +124,10 @@ type Ingress struct {
 	// Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
 	// to construct ingress URLs for system applications running in runtime cluster.
 	// +kubebuilder:validation:MinItems=1
+	// +optional
 	Domains []DNSDomain `json:"domains,omitempty"`
 	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.
+	// +required
 	Controller gardencorev1beta1.IngressController `json:"controller"`
 }
 
@@ -121,6 +135,7 @@ type Ingress struct {
 type DNSDomain struct {
 	// Name is the domain name.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Name string `json:"name"`
 	// Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
 	// It is only optional, if the `.spec.dns` section is not provided at all.
@@ -140,9 +155,11 @@ type RuntimeNetworking struct {
 	Nodes []string `json:"nodes,omitempty"`
 	// Pods are the CIDRs of the pod network. Elements can be appended to this list, but not removed.
 	// +kubebuilder:validation:MinItems=1
+	// +required
 	Pods []string `json:"pods"`
 	// Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.
 	// +kubebuilder:validation:MinItems=1
+	// +required
 	Services []string `json:"services"`
 	// BlockCIDRs is a list of network addresses that should be blocked.
 	// +optional
@@ -203,6 +220,7 @@ type LoadBalancerServicesProxyProtocol struct {
 	// Until the load balancers are configured with ProxyProtocol, enabling this setting may allow clients to spoof their source IP addresses.
 	// The option allows a migration from non-ProxyProtocol to ProxyProtocol without downtime (depending on the infrastructure).
 	// Defaults to false.
+	// +required
 	Allowed bool `json:"allowed"`
 }
 
@@ -235,6 +253,7 @@ type SettingTopologyAwareRouting struct {
 	// These Services are virtual-garden-etcd-main-client, virtual-garden-etcd-events-client and virtual-garden-kube-apiserver.
 	// Additionally, other components that are deployed to the runtime cluster via other means can read this field and
 	// according to its value enable/disable topology-aware routing for their Services.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
@@ -242,6 +261,7 @@ type SettingTopologyAwareRouting struct {
 type SettingPersistentVolumeClaimAutoscaler struct {
 	// Enabled controls whether the PVC Autoscaler components shall be deployed into the garden namespace in the
 	// garden cluster.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
@@ -258,18 +278,23 @@ type VirtualCluster struct {
 	// +optional
 	ControlPlane *ControlPlane `json:"controlPlane,omitempty"`
 	// DNS holds information about DNS settings.
+	// +required
 	DNS DNS `json:"dns"`
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
 	// Gardener contains the configuration options for the Gardener control plane components.
+	// +required
 	Gardener Gardener `json:"gardener"`
 	// Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
 	// cluster.
+	// +required
 	Kubernetes Kubernetes `json:"kubernetes"`
 	// Maintenance contains information about the time window for maintenance operations.
+	// +required
 	Maintenance Maintenance `json:"maintenance"`
 	// Networking contains information about cluster networking such as CIDRs, etc.
+	// +required
 	Networking Networking `json:"networking"`
 }
 
@@ -278,6 +303,7 @@ type DNS struct {
 	// Domains are the external domains of the virtual garden cluster.
 	// The first given domain in this list is immutable.
 	// +kubebuilder:validation:MinItems=1
+	// +optional
 	Domains []DNSDomain `json:"domains,omitempty"`
 }
 
@@ -329,6 +355,7 @@ type Storage struct {
 type Backup struct {
 	// Provider is a provider name. This field is immutable.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Provider is immutable"
+	// +required
 	Provider string `json:"provider"`
 	// BucketName is the name of the backup bucket. If not provided, gardener-operator attempts to manage a new bucket.
 	// In this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating
@@ -345,12 +372,14 @@ type Backup struct {
 	Region *string `json:"region,omitempty"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
+	// +required
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // Maintenance contains information about the time window for maintenance operations.
 type Maintenance struct {
 	// TimeWindow contains information about the time window for maintenance operations.
+	// +required
 	TimeWindow gardencorev1beta1.MaintenanceTimeWindow `json:"timeWindow"`
 }
 
@@ -375,6 +404,7 @@ type Kubernetes struct {
 	KubeControllerManager *KubeControllerManagerConfig `json:"kubeControllerManager,omitempty"`
 	// Version is the semantic Kubernetes version to use for the virtual garden cluster.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Version string `json:"version"`
 }
 
@@ -409,6 +439,7 @@ type AuditWebhook struct {
 	BatchMaxSize *int32 `json:"batchMaxSize,omitempty"`
 	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
 	// +kubebuilder:default=audit.k8s.io/v1
@@ -433,6 +464,7 @@ type AuthenticationWebhook struct {
 	CacheTTL *metav1.Duration `json:"cacheTTL,omitempty"`
 	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
 	// +kubebuilder:default=v1beta1
@@ -445,9 +477,11 @@ type AuthenticationWebhook struct {
 type GroupResource struct {
 	// Group is the API group name.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Group string `json:"group"`
 	// Resource is the resource name.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Resource string `json:"resource"`
 }
 
@@ -470,6 +504,7 @@ type SNI struct {
 type Networking struct {
 	// Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.
 	// +kubebuilder:validation:MinItems=1
+	// +required
 	Services []string `json:"services"`
 }
 
@@ -493,6 +528,7 @@ type Gardener struct {
 	// ClusterIdentity is the identity of the garden cluster. This field is immutable.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +required
 	ClusterIdentity string `json:"clusterIdentity"`
 	// APIServer contains configuration settings for the gardener-apiserver.
 	// +optional
@@ -587,6 +623,7 @@ type GardenerAdmissionControllerConfig struct {
 // ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.
 type ResourceAdmissionConfiguration struct {
 	// Limits contains configuration for resources which are subjected to size limitations.
+	// +required
 	Limits []ResourceLimit `json:"limits"`
 	// UnrestrictedSubjects contains references to users, groups, or service accounts which aren't subjected to any resource size limit.
 	// +optional
@@ -608,6 +645,7 @@ type ResourceLimit struct {
 	// +optional
 	APIVersions []string `json:"apiVersions,omitempty"`
 	// Resources is the name of the resource this rule applies to. WildcardAll represents all resources.
+	// +required
 	Resources []string `json:"resources"`
 	// Size specifies the imposed limit.
 	// +optional
@@ -636,6 +674,7 @@ type GardenerControllerManagerConfig struct {
 // ProjectQuotaConfiguration defines quota configurations.
 type ProjectQuotaConfiguration struct {
 	// Config is the corev1.ResourceQuota specification used for the project set-up.
+	// +required
 	Config corev1.ResourceQuota `json:"config"`
 	// ProjectSelector is an optional setting to select the projects considered for quotas.
 	// Defaults to empty LabelSelector, which matches all projects.
@@ -737,14 +776,18 @@ type DashboardGitHub struct {
 	// APIURL is the URL to the GitHub API.
 	// +kubebuilder:default=`https://api.github.com`
 	// +kubebuilder:validation:MinLength=1
-	APIURL string `json:"apiURL"`
+	// +required
+	APIURL string `json:"apiURL"` //nolint:kubeapilinter // defaulted field; omitempty would change serialization
 	// Organisation is the name of the GitHub organisation.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Organisation string `json:"organisation"`
 	// Repository is the name of the GitHub repository.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Repository string `json:"repository"`
 	// SecretRef is the reference to a secret in the garden namespace containing the GitHub credentials.
+	// +required
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 	// PollInterval is the interval of how often the GitHub API is polled for issue updates. This field is used as a
 	// fallback mechanism to ensure state synchronization, even when there is a GitHub webhook configuration. If a
@@ -778,6 +821,7 @@ type DashboardOIDC struct {
 	// +optional
 	AdditionalScopes []string `json:"additionalScopes,omitempty"`
 	// SecretRef is the reference to a secret in the garden namespace containing the OIDC client ID and secret for the dashboard.
+	// +required
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 	// CertificateAuthoritySecretRef is the reference to a secret in the garden namespace containing a custom CA certificate under the "ca.crt" key
 	// +optional
@@ -787,6 +831,7 @@ type DashboardOIDC struct {
 // DashboardTerminal contains configuration for the terminal settings.
 type DashboardTerminal struct {
 	// Container contains configuration for the dashboard terminal container.
+	// +required
 	Container DashboardTerminalContainer `json:"container"`
 	// AllowedHosts should consist of permitted hostnames (without the scheme) for terminal connections.
 	// It is important to consider that the usage of wildcards follows the rules defined by the content security policy.
@@ -799,6 +844,7 @@ type DashboardTerminal struct {
 // DashboardTerminalContainer contains configuration for the dashboard terminal container.
 type DashboardTerminalContainer struct {
 	// Image is the container image for the dashboard terminal container.
+	// +required
 	Image string `json:"image"`
 	// Description is a description for the dashboard terminal container with hints for the user.
 	// +optional
@@ -842,6 +888,7 @@ const (
 type GardenExtension struct {
 	// Type is the type of the extension resource.
 	// +kubebuilder:validation:MinLength=1
+	// +required
 	Type string `json:"type"`
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
@@ -854,6 +901,7 @@ type GardenStatus struct {
 	// +optional
 	Gardener *gardencorev1beta1.Gardener `json:"gardener,omitempty"`
 	// Conditions is a list of conditions based on health checks.
+	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// Constraints represents conditions of a Garden's current state that constraint some operations on it.
 	// +patchMergeKey=type
@@ -864,12 +912,14 @@ type GardenStatus struct {
 	// +optional
 	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
+	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Credentials contains information about the virtual garden cluster credentials.
 	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
 	// List of addresses that are relevant to the Garden.
 	// These include the Kube API server address of the virtual garden cluster.
+	// +optional
 	AdvertisedAddresses []AdvertisedAddress `json:"advertisedAddresses,omitempty"`
 }
 
@@ -910,18 +960,21 @@ type EncryptionAtRest struct {
 	// +optional
 	Resources []string `json:"resources,omitempty"`
 	// Provider contains information about virtual garden encryption provider.
+	// +required
 	Provider EncryptionProviderStatus `json:"provider"`
 }
 
 // EncryptionProviderStatus contains information about virtual garden encryption provider.
 type EncryptionProviderStatus struct {
 	// Type is the used encryption provider type.
+	// +required
 	Type gardencorev1beta1.EncryptionProviderType `json:"type"`
 }
 
 // WorkloadIdentityKeyRotation contains information about the workload identity key credential rotation.
 type WorkloadIdentityKeyRotation struct {
 	// Phase describes the phase of the workload identity key credential rotation.
+	// +required
 	Phase gardencorev1beta1.CredentialsRotationPhase `json:"phase"`
 	// LastCompletionTime is the most recent time when the workload identity key credential rotation was successfully
 	// completed.
@@ -943,8 +996,10 @@ type WorkloadIdentityKeyRotation struct {
 // AdvertisedAddress contains information for the Garden's servers.
 type AdvertisedAddress struct {
 	// Name of the advertised address. e.g. virtual or discovery-server
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// The URL of the server. e.g. https://api.foo.bar or https://1.2.3.4
+	// +required
 	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 }
 

@@ -25,19 +25,25 @@ type ResourceManagerConfiguration struct {
 	// +optional
 	TargetClientConnection *ClientConnection `json:"targetClientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
+	// +required
 	LeaderElection componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection"`
 	// Server defines the configuration of the HTTP server.
+	// +required
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
 	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// +required
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
+	// +required
 	LogFormat string `json:"logFormat"`
 	// Controllers defines the configuration of the controllers.
+	// +required
 	Controllers ResourceManagerControllerConfiguration `json:"controllers"`
 	// Webhooks defines the configuration of the webhooks.
+	// +required
 	Webhooks ResourceManagerWebhookConfiguration `json:"webhooks"`
 }
 
@@ -56,6 +62,7 @@ type ClientConnection struct {
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
 	// Webhooks is the configuration for the HTTPS webhook server.
+	// +required
 	Webhooks HTTPSServer `json:"webhooks"`
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
 	// +optional
@@ -68,8 +75,10 @@ type ServerConfiguration struct {
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
+	// +required
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
+	// +required
 	Port int32 `json:"port"`
 }
 
@@ -79,6 +88,7 @@ type HTTPSServer struct {
 	Server `json:",inline"`
 
 	// TLSServer contains information about the TLS configuration for an HTTPS server.
+	// +required
 	TLS TLSServer `json:"tls"`
 }
 
@@ -86,6 +96,7 @@ type HTTPSServer struct {
 type TLSServer struct {
 	// ServerCertDir is the path to a directory containing the server's TLS certificate and key (the files must be
 	// named tls.crt and tls.key respectively).
+	// +required
 	ServerCertDir string `json:"serverCertDir"`
 }
 
@@ -102,28 +113,38 @@ type ResourceManagerControllerConfiguration struct {
 	CacheSyncTimeout *metav1.Duration `json:"cacheSyncTimeout,omitempty"`
 
 	// GarbageCollector is the configuration for the garbage-collector controller.
+	// +required
 	GarbageCollector GarbageCollectorControllerConfig `json:"garbageCollector"`
 	// Health is the configuration for the health controller.
+	// +required
 	Health HealthControllerConfig `json:"health"`
 	// CSRApprover is the configuration for the csr-approver controller.
+	// +required
 	CSRApprover CSRApproverControllerConfig `json:"csrApprover"`
 	// ManagedResource is the configuration for the managed resource controller.
+	// +required
 	ManagedResource ManagedResourceControllerConfig `json:"managedResource"`
 	// IstioClusterConfiguration is the configuration for the istio-cluster-configuration controller.
+	// +required
 	IstioClusterConfiguration IstioClusterConfigurationControllerConfig `json:"istioClusterConfiguration"`
 	// NetworkPolicy is the configuration for the networkpolicy controller.
+	// +required
 	NetworkPolicy NetworkPolicyControllerConfig `json:"networkPolicy"`
 	// NodeCriticalComponents is the configuration for the node critical components controller.
+	// +required
 	NodeCriticalComponents NodeCriticalComponentsControllerConfig `json:"nodeCriticalComponents"`
 	// NodeAgentReconciliationDelay is the configuration for the node-agent reconciliation delay controller.
+	// +required
 	NodeAgentReconciliationDelay NodeAgentReconciliationDelayControllerConfig `json:"nodeAgentReconciliationDelay"`
 	// TokenRequestor is the configuration for the token-requestor controller.
+	// +required
 	TokenRequestor TokenRequestorControllerConfig `json:"tokenRequestor"`
 }
 
 // CSRApproverControllerConfig is the configuration for the csr-approver controller.
 type CSRApproverControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
@@ -136,6 +157,7 @@ type CSRApproverControllerConfig struct {
 // GarbageCollectorControllerConfig is the configuration for the garbage-collector controller.
 type GarbageCollectorControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	// +optional
@@ -145,6 +167,7 @@ type GarbageCollectorControllerConfig struct {
 // IstioClusterConfigurationControllerConfig is the configuration for the istio-cluster-configuration controller.
 type IstioClusterConfigurationControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
@@ -183,6 +206,7 @@ type ManagedResourceControllerConfig struct {
 // NetworkPolicyControllerConfig is the configuration for the networkpolicy controller.
 type NetworkPolicyControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
@@ -201,14 +225,17 @@ type NetworkPolicyControllerConfig struct {
 // IngressControllerSelector contains the pod selector and namespace for an ingress controller.
 type IngressControllerSelector struct {
 	// Namespace is the name of the namespace in which the ingress controller runs.
+	// +required
 	Namespace string `json:"namespace"`
 	// PodSelector is the selector for the ingress controller pods.
+	// +required
 	PodSelector metav1.LabelSelector `json:"podSelector"`
 }
 
 // TokenRequestorControllerConfig is the configuration for the token-requestor controller.
 type TokenRequestorControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
@@ -218,6 +245,7 @@ type TokenRequestorControllerConfig struct {
 // NodeCriticalComponentsControllerConfig is the configuration for the node critical components controller.
 type NodeCriticalComponentsControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
@@ -230,6 +258,7 @@ type NodeCriticalComponentsControllerConfig struct {
 // NodeAgentReconciliationDelayControllerConfig is the configuration for the node-agent reconciliation delay controller.
 type NodeAgentReconciliationDelayControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// MinDelay is the minimum duration to use for delays (default: 0s).
 	// +optional
@@ -242,46 +271,61 @@ type NodeAgentReconciliationDelayControllerConfig struct {
 // ResourceManagerWebhookConfiguration defines the configuration of the webhooks.
 type ResourceManagerWebhookConfiguration struct {
 	// CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
+	// +required
 	CRDDeletionProtection CRDDeletionProtection `json:"crdDeletionProtection"`
 	// ExtensionValidation is the configuration for the extension-validation webhook.
+	// +required
 	ExtensionValidation ExtensionValidation `json:"extensionValidation"`
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
+	// +required
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
 	// KubernetesServiceHost is the configuration for the kubernetes-service-host webhook.
+	// +required
 	KubernetesServiceHost KubernetesServiceHostWebhookConfig `json:"kubernetesServiceHost"`
 	// SystemComponentsConfig is the configuration for the system-components-config webhook.
+	// +required
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
 	// PodKubeAPIServerLoadBalancing is the configuration for the pod-kube-apiserver-load-balancing webhook.
+	// +required
 	PodKubeAPIServerLoadBalancing PodKubeAPIServerLoadBalancingWebhookConfig `json:"podKubeAPIServerLoadBalancing"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
+	// +required
 	PodSchedulerName PodSchedulerNameWebhookConfig `json:"podSchedulerName"`
 	// PodTopologySpreadConstraints is the configuration for the pod-topology-spread-constraints webhook.
+	// +required
 	PodTopologySpreadConstraints PodTopologySpreadConstraintsWebhookConfig `json:"podTopologySpreadConstraints"`
 	// ProjectedTokenMount is the configuration for the projected-token-mount webhook.
+	// +required
 	ProjectedTokenMount ProjectedTokenMountWebhookConfig `json:"projectedTokenMount"`
 	// NodeAgentAuthorizer is the configuration for the node-agent-authorizer webhook.
+	// +required
 	NodeAgentAuthorizer NodeAgentAuthorizerWebhookConfig `json:"nodeAgentAuthorizer"`
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
+	// +required
 	SeccompProfile SeccompProfileWebhookConfig `json:"seccompProfile"`
 	// VPAInPlaceUpdates is the configuration for the vpa-in-place-updates webhook.
+	// +required
 	VPAInPlaceUpdates VPAInPlaceUpdatesConfig `json:"vpaInPlaceUpdates"`
 }
 
 // CRDDeletionProtection is the configuration for the crd-deletion-protection webhook.
 type CRDDeletionProtection struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
 // ExtensionValidation is the configuration for the extension-validation webhook.
 type ExtensionValidation struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
 // HighAvailabilityConfigWebhookConfig is the configuration for the high-availability-config webhook.
 type HighAvailabilityConfigWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// DefaultNotReadyTolerationSeconds specifies the seconds for the `node.kubernetes.io/not-ready` toleration that
 	// should be added to pods not already tolerating this taint.
@@ -296,14 +340,17 @@ type HighAvailabilityConfigWebhookConfig struct {
 // KubernetesServiceHostWebhookConfig is the configuration for the kubernetes-service-host webhook.
 type KubernetesServiceHostWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// Host is the FQDN of the API server.
+	// +required
 	Host string `json:"host"`
 }
 
 // SystemComponentsConfigWebhookConfig is the configuration for the system-components-config webhook.
 type SystemComponentsConfigWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// NodeSelector is the selector used to retrieve nodes that run system components.
 	// +optional
@@ -319,12 +366,14 @@ type SystemComponentsConfigWebhookConfig struct {
 // PodKubeAPIServerLoadBalancingWebhookConfig is the configuration for the pod-kube-apiserver-load-balancing webhook.
 type PodKubeAPIServerLoadBalancingWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
 // PodSchedulerNameWebhookConfig is the configuration for the pod-scheduler-name webhook.
 type PodSchedulerNameWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// SchedulerName is the name of the scheduler that should be written into the .spec.schedulerName of pod resources.
 	// +optional
@@ -334,12 +383,14 @@ type PodSchedulerNameWebhookConfig struct {
 // PodTopologySpreadConstraintsWebhookConfig is the configuration for the pod-topology-spread-constraints webhook.
 type PodTopologySpreadConstraintsWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
 // ProjectedTokenMountWebhookConfig is the configuration for the projected-token-mount webhook.
 type ProjectedTokenMountWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// ExpirationSeconds is the number of seconds until mounted projected service account tokens expire.
 	// +optional
@@ -349,6 +400,7 @@ type ProjectedTokenMountWebhookConfig struct {
 // NodeAgentAuthorizerWebhookConfig is the configuration for the node-agent-authorizer webhook.
 type NodeAgentAuthorizerWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
 	// +optional
@@ -361,12 +413,14 @@ type NodeAgentAuthorizerWebhookConfig struct {
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.
 type SeccompProfileWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
 // VPAInPlaceUpdatesConfig is the configuration for the vpa-in-place-updates webhook.
 type VPAInPlaceUpdatesConfig struct {
 	// Enabled defines whether this webhook is enabled.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
