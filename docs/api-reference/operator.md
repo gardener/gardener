@@ -3630,6 +3630,18 @@ object (keys:string, values:string)
 <p>ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.<br />Defaults to nil, which is equivalent to not allowing ProxyProtocol.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>loadBalancerSourceRanges</code></br>
+<em>
+string array
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LoadBalancerSourceRanges is a list of allowed IP sources for the virtual garden load balancer service.<br />The list must include the egress IP ranges of all seeds registered with this garden.</p>
+</td>
+</tr>
 
 </tbody>
 </table>

@@ -42,6 +42,7 @@ type istioTestValues struct {
 	kubeAPIServerPolicyLabel           string
 	lbAnnotations                      map[string]string
 	loadBalancerClass                  *string
+	loadBalancerSourceRanges           []string
 	externalTrafficPolicy              *corev1.ServiceExternalTrafficPolicy
 	serviceExternalIP                  *string
 	servicePorts                       []corev1.ServicePort
@@ -75,6 +76,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		[]string{testValues.kubeAPIServerPolicyLabel},
 		testValues.lbAnnotations,
 		testValues.loadBalancerClass,
+		testValues.loadBalancerSourceRanges,
 		testValues.externalTrafficPolicy,
 		testValues.serviceExternalIP,
 		testValues.servicePorts,
@@ -129,6 +131,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				IstiodNamespace:                    "istio-system",
 				Annotations:                        testValues.lbAnnotations,
 				LoadBalancerClass:                  testValues.loadBalancerClass,
+				LoadBalancerSourceRanges:           testValues.loadBalancerSourceRanges,
 				ExternalTrafficPolicy:              testValues.externalTrafficPolicy,
 				MinReplicas:                        minReplicas,
 				MaxReplicas:                        maxReplicas,
@@ -241,6 +244,7 @@ var _ = Describe("Istio", func() {
 			kubeAPIServerPolicyLabel:           "to-all-test-kube-apiserver",
 			lbAnnotations:                      map[string]string{"some": "annotationValue"},
 			loadBalancerClass:                  new("non-default-load-balancer-class"),
+			loadBalancerSourceRanges:           []string{"192.168.123.56/32", "2001:db8::/64"},
 			externalTrafficPolicy:              &trafficPolicy,
 			serviceExternalIP:                  new("1.2.3.4"),
 			servicePorts:                       []corev1.ServicePort{{Port: 443}},

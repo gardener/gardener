@@ -194,6 +194,10 @@ type SettingLoadBalancerServices struct {
 	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
 	// +optional
 	ProxyProtocol *LoadBalancerServicesProxyProtocol `json:"proxyProtocol,omitempty"`
+	// LoadBalancerSourceRanges is a list of allowed IP sources for the virtual garden load balancer service.
+	// The list must include the egress IP ranges of all seeds registered with this garden.
+	// +optional
+	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 }
 
 // LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
