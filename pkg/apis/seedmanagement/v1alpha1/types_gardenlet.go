@@ -48,6 +48,7 @@ type GardenletList struct {
 type GardenletSpec struct {
 	// Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
 	// the image, etc.
+	// +required
 	Deployment GardenletSelfDeployment `json:"deployment" protobuf:"bytes,1,opt,name=deployment"`
 	// Config is the GardenletConfiguration used to configure gardenlet.
 	// +optional
@@ -68,6 +69,7 @@ type GardenletSelfDeployment struct {
 	GardenletDeployment `json:",inline" protobuf:"bytes,1,opt,name=gardenletDeployment"`
 
 	// Helm is the Helm deployment configuration.
+	// +required
 	Helm GardenletHelm `json:"helm" protobuf:"bytes,2,opt,name=helm"`
 	// ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.
 	// +optional
@@ -84,6 +86,7 @@ type GardenletSelfDeployment struct {
 // GardenletHelm is the Helm deployment configuration for gardenlet.
 type GardenletHelm struct {
 	// OCIRepository defines where to pull the chart.
+	// +required
 	OCIRepository gardencorev1.OCIRepository `json:"ociRepository" protobuf:"bytes,1,opt,name=ociRepository"`
 }
 
