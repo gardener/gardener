@@ -54,7 +54,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 				})),
 			))
 
-			testGardenerDiscoverServerAlert(config, isGardenerDiscoveryServerEnabled)
+			testGardenerDiscoveryServerAlert(config, isGardenerDiscoveryServerEnabled)
 
 			test.PrometheusRule(healthcheck, "testdata/healthcheck.prometheusrule.test.yaml")
 			test.PrometheusRule(metering, "testdata/metering-meta.prometheusrule.test.yaml")
@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 	})
 })
 
-func testGardenerDiscoverServerAlert(config []*monitoringv1.PrometheusRule, isGardenerDiscoveryServerEnabled bool) {
+func testGardenerDiscoveryServerAlert(config []*monitoringv1.PrometheusRule, isGardenerDiscoveryServerEnabled bool) {
 	var gardenConfig *monitoringv1.PrometheusRule
 	for _, c := range config {
 		if c.Name == "garden" {
@@ -94,6 +94,9 @@ func testGardenerDiscoverServerAlert(config []*monitoringv1.PrometheusRule, isGa
 
 	if isGardenerDiscoveryServerEnabled {
 		Expect(discoveryServerAlert).ToNot(BeNil())
+		Expect(discoveryServerAlert.Expr.StrVal).To(Equal(
+			`probe_success{job = "blackbox-discovery-server", purpose = "availability"} == 0`,
+		))
 	} else {
 		Expect(discoveryServerAlert).To(BeNil())
 	}

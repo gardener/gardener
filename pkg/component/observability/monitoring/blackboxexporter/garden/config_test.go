@@ -16,9 +16,18 @@ import (
 )
 
 var _ = Describe("Config", func() {
+	var params Params
+
+	BeforeEach(func() {
+		params = Params{
+			DashboardCertificateIssuedByGardener: false,
+			DiscoveryServerEnabled:               true,
+		}
+	})
+
 	Describe("#Config", func() {
 		It("should return the expected config for the garden's blackbox-exporter", func() {
-			Expect(Config(false, true)).To(Equal(blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
+			Expect(Config(params)).To(Equal(blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
 				"http_gardener_apiserver": {
 					Prober:  "http",
 					Timeout: 10 * time.Second,
@@ -87,9 +96,16 @@ var _ = Describe("Config", func() {
 			}}))
 		})
 
-		When("isDashboardCertificateIssuedByGardener is true", func() {
-			It("should configure the Gardener CA for the http_gardener_dashboard module", func() {
-				Expect(Config(true, true).Modules["http_gardener_dashboard"].HTTP.HTTPClientConfig.TLSConfig).To(Equal(
+		When("Dashboard and DiscoveryServer certificates are issued by Gardener", func() {
+			It("should configure the Gardener CA for the http_gardener_dashboard and http_gardener_discovery_server modules", func() {
+				params.DashboardCertificateIssuedByGardener = true
+				params.DiscoveryServerCertificateIssuedByGardener = true
+				modules := Config(params).Modules
+				Expect(modules["http_gardener_dashboard"].HTTP.HTTPClientConfig.TLSConfig).To(Equal(
+					prometheuscommonconfig.TLSConfig{
+						CAFile: "/var/run/secrets/blackbox_exporter/gardener-ca/bundle.crt"},
+				))
+				Expect(modules["http_gardener_discovery_server"].HTTP.HTTPClientConfig.TLSConfig).To(Equal(
 					prometheuscommonconfig.TLSConfig{
 						CAFile: "/var/run/secrets/blackbox_exporter/gardener-ca/bundle.crt"},
 				))
@@ -98,7 +114,8 @@ var _ = Describe("Config", func() {
 
 		When("isGardenerDiscoveryServerEnabled is false", func() {
 			It("should remove configuration for http_gardener_discovery_server module", func() {
-				Expect(Config(false, false).Modules).ToNot(HaveKey("http_gardener_discovery_server"))
+				params.DiscoveryServerEnabled = false
+				Expect(Config(params).Modules).ToNot(HaveKey("http_gardener_discovery_server"))
 			})
 		})
 	})

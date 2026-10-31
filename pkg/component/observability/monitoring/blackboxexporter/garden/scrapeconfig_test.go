@@ -17,13 +17,20 @@ import (
 var _ = Describe("ScrapeConfig", func() {
 	Describe("#ScrapeConfig", func() {
 		var (
-			namespace               = "namespace"
-			kubeAPIServerTargets    = []monitoringv1alpha1.Target{"target1", "target2"}
-			gardenerDashboardTarget = monitoringv1alpha1.Target("target3")
+			namespace = "namespace"
+			params    Params
 		)
 
+		BeforeEach(func() {
+			params = Params{
+				KubeAPIServerTargets:        []monitoringv1alpha1.Target{"target1", "target2"},
+				DashboardTarget:             monitoringv1alpha1.Target("target3"),
+				DiscoveryServerPublicTarget: monitoringv1alpha1.Target("target4"),
+			}
+		})
+
 		It("should compute the scrape configs when discovery server is disabled", func() {
-			Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget, false)).To(ConsistOf(
+			Expect(ScrapeConfig(namespace, params)).To(ConsistOf(
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "garden-blackbox-gardener-apiserver",
@@ -84,7 +91,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_kube_apiserver"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: kubeAPIServerTargets,
+							Targets: []monitoringv1alpha1.Target{"target1", "target2"},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -142,7 +149,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_gardener_dashboard"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: []monitoringv1alpha1.Target{gardenerDashboardTarget},
+							Targets: []monitoringv1alpha1.Target{monitoringv1alpha1.Target("target3")},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -186,7 +193,10 @@ var _ = Describe("ScrapeConfig", func() {
 		})
 
 		It("should compute the scrape configs when discovery server is enabled", func() {
-			Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget, true)).To(ConsistOf(
+			params.DiscoveryServerEnabled = true
+			scrapeConfigs := ScrapeConfig(namespace, params)
+			Expect(scrapeConfigs).To(HaveLen(4))
+			Expect(scrapeConfigs).To(ContainElements(
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "garden-blackbox-gardener-apiserver",
@@ -247,7 +257,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_kube_apiserver"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: kubeAPIServerTargets,
+							Targets: []monitoringv1alpha1.Target{"target1", "target2"},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -305,7 +315,7 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_gardener_dashboard"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: []monitoringv1alpha1.Target{gardenerDashboardTarget},
+							Targets: []monitoringv1alpha1.Target{monitoringv1alpha1.Target("target3")},
 							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -355,8 +365,11 @@ var _ = Describe("ScrapeConfig", func() {
 						Params:      map[string][]string{"module": {"http_gardener_discovery_server"}},
 						MetricsPath: new("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz"},
-							Labels:  map[string]string{"purpose": "availability"},
+							Targets: []monitoringv1alpha1.Target{
+								"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz",
+								monitoringv1alpha1.Target("target4"),
+							},
+							Labels: map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{

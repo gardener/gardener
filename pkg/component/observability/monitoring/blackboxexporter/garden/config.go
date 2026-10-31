@@ -7,6 +7,7 @@ package garden
 import (
 	"time"
 
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -22,8 +23,20 @@ const (
 	httpGardenerDiscoveryServerModuleName = "http_gardener_discovery_server"
 )
 
+// Params sets blackbox-exporter configuration parameters.
+type Params struct {
+	DashboardCertificateIssuedByGardener bool
+	DashboardTarget                      monitoringv1alpha1.Target
+
+	DiscoveryServerEnabled                     bool
+	DiscoveryServerCertificateIssuedByGardener bool
+	DiscoveryServerPublicTarget                monitoringv1alpha1.Target
+
+	KubeAPIServerTargets []monitoringv1alpha1.Target
+}
+
 // Config returns the blackbox-exporter config for the garden use-case.
-func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEnabled bool) blackboxexporterconfig.Config {
+func Config(p Params) blackboxexporterconfig.Config {
 	var (
 		defaultModuleConfig = func() blackboxexporterconfig.Module {
 			return blackboxexporterconfig.Module{
@@ -39,11 +52,10 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 			}
 		}
 
-		httpGardenerAPIServerModule       = defaultModuleConfig()
-		httpKubeAPIServerModule           = defaultModuleConfig()
-		httpKubeAPIServerRootCAsModule    = defaultModuleConfig()
-		httpGardenerDashboardModule       = defaultModuleConfig()
-		httpGardenerDiscoveryServerModule = defaultModuleConfig()
+		httpGardenerAPIServerModule    = defaultModuleConfig()
+		httpKubeAPIServerModule        = defaultModuleConfig()
+		httpKubeAPIServerRootCAsModule = defaultModuleConfig()
+		httpGardenerDashboardModule    = defaultModuleConfig()
 
 		pathGardenerAPIServerCABundle = blackboxexporter.VolumeMountPathGardenerCA + "/" + secretsutils.DataKeyCertificateBundle
 		pathKubeAPIServerCABundle     = blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle
@@ -55,7 +67,7 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 	httpKubeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
 	httpKubeAPIServerRootCAsModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
 
-	if isDashboardCertificateIssuedByGardener {
+	if p.DashboardCertificateIssuedByGardener {
 		httpGardenerDashboardModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
 	}
 
@@ -66,7 +78,12 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 		httpGardenerDashboardModuleName:    httpGardenerDashboardModule,
 	}}
 
-	if isGardenerDiscoveryServerEnabled {
+	if p.DiscoveryServerEnabled {
+		httpGardenerDiscoveryServerModule := defaultModuleConfig()
+		if p.DiscoveryServerCertificateIssuedByGardener {
+			httpGardenerDiscoveryServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
+		}
+
 		config.Modules[httpGardenerDiscoveryServerModuleName] = httpGardenerDiscoveryServerModule
 	}
 
