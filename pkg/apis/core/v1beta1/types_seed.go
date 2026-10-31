@@ -525,6 +525,10 @@ type SeedVolume struct {
 	// +patchStrategy=merge
 	// +optional
 	Providers []SeedVolumeProvider `json:"providers,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,2,rep,name=providers"`
+	// ETCDStorageClassName defines the name of the StorageClass used by etcd (if provided) for
+	// persistent volumes in the seed. If unset, the provider extension's default applies.
+	// +optional
+	ETCDStorageClassName *string `json:"etcdStorageClassName,omitempty" protobuf:"bytes,3,opt,name=etcdStorageClassName"`
 }
 
 // SeedVolumeProvider is a storage class provisioner type.

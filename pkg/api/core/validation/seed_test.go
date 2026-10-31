@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -394,6 +395,23 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Detail": Equal(`supported values: "security.gardener.cloud/v1alpha1.WorkloadIdentity", "v1.Secret"`),
 					})),
 				))
+			})
+
+			It("should allow a valid spec.volume.etcdStorageClassName", func() {
+				seed.Spec.Volume = &core.SeedVolume{
+					ETCDStorageClassName: ptr.To("gce-sc-hd-balanced"),
+				}
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			It("should forbid an invalid spec.volume.etcdStorageClassName", func() {
+				seed.Spec.Volume = &core.SeedVolume{
+					ETCDStorageClassName: ptr.To("Invalid_Name"),
+				}
+				Expect(ValidateSeed(seed)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.volume.etcdStorageClassName"),
+				}))))
 			})
 
 			It("should return error if the internal DNS configures a malformed domain", func() {

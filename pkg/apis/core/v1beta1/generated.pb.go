@@ -11316,6 +11316,13 @@ func (m *SeedVolume) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.ETCDStorageClassName != nil {
+		i -= len(*m.ETCDStorageClassName)
+		copy(dAtA[i:], *m.ETCDStorageClassName)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.ETCDStorageClassName)))
+		i--
+		dAtA[i] = 0x1a
+	}
 	if len(m.Providers) > 0 {
 		for iNdEx := len(m.Providers) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -17825,6 +17832,10 @@ func (m *SeedVolume) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	if m.ETCDStorageClassName != nil {
+		l = len(*m.ETCDStorageClassName)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -21572,6 +21583,7 @@ func (this *SeedVolume) String() string {
 	s := strings.Join([]string{`&SeedVolume{`,
 		`MinimumSize:` + strings.Replace(fmt.Sprintf("%v", this.MinimumSize), "Quantity", "resource.Quantity", 1) + `,`,
 		`Providers:` + repeatedStringForProviders + `,`,
+		`ETCDStorageClassName:` + valueToStringGenerated(this.ETCDStorageClassName) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -53940,6 +53952,39 @@ func (m *SeedVolume) Unmarshal(dAtA []byte) error {
 			if err := m.Providers[len(m.Providers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ETCDStorageClassName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := string(dAtA[iNdEx:postIndex])
+			m.ETCDStorageClassName = &s
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

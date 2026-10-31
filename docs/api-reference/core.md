@@ -11953,6 +11953,18 @@ SeedVolume contains settings for persistentvolumes created in the seed cluster.
 <p>Providers is a list of storage class provisioner types for the seed.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>etcdStorageClassName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCDStorageClassName defines the name of the StorageClass used by etcd (if provided) for<br />persistent volumes in the seed. If unset, the provider extension's default applies.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
