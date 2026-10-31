@@ -77,6 +77,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricscollector"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/perses"
@@ -142,6 +143,7 @@ type components struct {
 	terminalControllerManager component.DeployWaiter
 
 	gardenerMetricsExporter       component.DeployWaiter
+	gardenerMetricsCollector      component.DeployWaiter
 	kubeStateMetrics              component.DeployWaiter
 	fluentOperator                component.DeployWaiter
 	fluentBit                     component.DeployWaiter
@@ -330,6 +332,10 @@ func (r *Reconciler) instantiateComponents(
 
 	// observability components
 	c.gardenerMetricsExporter, err = r.newGardenerMetricsExporter(secretsManager)
+	if err != nil {
+		return
+	}
+	c.gardenerMetricsCollector, err = r.newGardenerMetricsCollector(secretsManager)
 	if err != nil {
 		return
 	}
@@ -1117,6 +1123,21 @@ func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.In
 	}
 
 	return gardenermetricsexporter.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricsexporter.Values{Image: image.String()}), nil
+}
+
+func (r *Reconciler) newGardenerMetricsCollector(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerMetricsCollector)
+	if err != nil {
+		return nil, err
+	}
+
+	deployer := gardenermetricscollector.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricscollector.Values{Image: image.String()})
+
+	if !features.DefaultFeatureGate.Enabled(features.GardenerMetricsCollector) {
+		return component.OpDestroyAndWait(deployer), nil
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newPlutono(

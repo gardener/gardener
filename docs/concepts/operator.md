@@ -281,6 +281,7 @@ The reconciler also manages a few observability-related components:
 - `fluent-operator`
 - `fluent-bit`
 - `gardener-metrics-exporter`
+- `gardener-metrics-collector`
 - `kube-state-metrics`
 - `plutono`
 - `vali`
