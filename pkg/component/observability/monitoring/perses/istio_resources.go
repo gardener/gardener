@@ -39,8 +39,13 @@ func (p *perses) istioResources(ctx context.Context) ([]client.Object, error) {
 	)
 
 	tlsSecretName := ptr.Deref(p.values.ExternalExposure.WildcardCertSecretName, "")
+
+	var tlsSecret *corev1.Secret
 	if tlsSecretName == "" && p.values.ExternalExposure.SecretsManager != nil {
-		ingressTLSSecret, err := p.values.ExternalExposure.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		// Use the secret returned by the secrets manager directly instead of reading it again. The client might read from a
+		// cache which has not observed the newly created secret yet, so reading it could fail with a NotFound error.
+		var err error
+		tlsSecret, err = p.values.ExternalExposure.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        p.persesName() + "-tls",
 			CommonName:                  p.persesName(),
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
@@ -52,27 +57,26 @@ func (p *perses) istioResources(ctx context.Context) ([]client.Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		tlsSecretName = ingressTLSSecret.Name
+	} else {
+		tlsSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      tlsSecretName,
+				Namespace: p.namespace,
+			},
+		}
+		if err := p.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret); err != nil {
+			return nil, fmt.Errorf("failed to get TLS secret %q: %w", tlsSecretName, err)
+		}
 	}
 
 	// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
-	tlsSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      tlsSecretName,
-			Namespace: p.namespace,
-		},
-	}
-	if err := p.client.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret); err != nil {
-		return nil, fmt.Errorf("failed to get TLS secret %q: %w", tlsSecretName, err)
-	}
-
 	tlsSecretInIstioNamespace := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-%s", p.namespace, p.persesName(), tlsSecretName),
+			Name:      fmt.Sprintf("%s-%s-%s", p.namespace, p.persesName(), tlsSecret.Name),
 			Namespace: ingressNamespace,
 			Labels:    p.getLabels(),
 		},
-		Data: tlsSecret.Data,
+		Data: tlsSecret.DeepCopy().Data,
 	}
 
 	gateway := &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gatewayName, Namespace: p.namespace}}
