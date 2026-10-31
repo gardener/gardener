@@ -621,6 +621,12 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client, i
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
+		// Gardenlet owns this annotation. If its not present in the SeedConfig, it should not be present in the Seed.
+		_, found := g.config.SeedConfig.Annotations[v1beta1constants.ConfirmationBackupChange]
+		if !found {
+			delete(seed.Annotations, v1beta1constants.ConfirmationBackupChange)
+		}
+
 		seed.Annotations = utils.MergeStringMaps(seed.Annotations, g.config.SeedConfig.Annotations)
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,

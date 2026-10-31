@@ -493,11 +493,15 @@ const (
 	// cluster kubeconfig of a gardenlet indicating that it should be renewed.
 	KubeconfigSecretOperationRenew = "renew"
 
-	// ConfirmationDeletion is an annotation on a Shoot, Project, and ShootState resources whose value must be set to
+	// ConfirmationDeletion is an annotation on Shoot, Project, and ShootState resources whose value must be set to
 	// "true" in order to allow deleting the resource (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
 	// DeletionConfirmedBy is an annotation on a resource whose value is the subject which confirmed the deletion.
 	DeletionConfirmedBy = "deletion.gardener.cloud/confirmed-by"
+
+	// ConfirmationBackupChange is an annotation on Garden or Seed resources whose value must be set to
+	// "true" in order to allow changing the backup provider/region/bucket name.
+	ConfirmationBackupChange = "confirmation.gardener.cloud/change-backup"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

@@ -61,22 +61,26 @@ func (r *Reconciler) delete(
 		return reconcile.Result{RequeueAfter: time.Minute}, nil
 	}
 
-	if seed.Spec.Backup != nil {
-		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(seed.UID)}}
-
-		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
-			return reconcile.Result{}, fmt.Errorf("failed deleting backup bucket %s: %w", client.ObjectKeyFromObject(backupBucket), err)
-		}
-	}
-
 	associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, r.GardenClient, seed.Name)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to determine backup buckets associated to this seed: %w", err)
 	}
 
-	if len(associatedBackupBuckets) > 0 {
-		log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
-		r.Recorder.Eventf(seed, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, "%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets)
+	for _, bucketName := range associatedBackupBuckets {
+		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: bucketName}}
+		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
+			return reconcile.Result{}, fmt.Errorf("failed deleting backup bucket %s: %w", client.ObjectKeyFromObject(backupBucket), err)
+		}
+	}
+
+	leftoverAssociatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, r.GardenClient, seed.Name)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to determine backup buckets associated to this seed: %w", err)
+	}
+
+	if len(leftoverAssociatedBackupBuckets) > 0 {
+		log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", leftoverAssociatedBackupBuckets)
+		r.Recorder.Eventf(seed, nil, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, gardencorev1beta1.EventActionDelete, "%s BackupBuckets=%v", parentLogMessage, leftoverAssociatedBackupBuckets)
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 

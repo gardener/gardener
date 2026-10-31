@@ -52,3 +52,12 @@ func ConfirmDeletion(ctx context.Context, w client.Writer, obj client.Object) er
 func confirmationAnnotationRequiredError() error {
 	return fmt.Errorf("must have a %q annotation to delete", v1beta1constants.ConfirmationDeletion)
 }
+
+// CheckIfBackupChangeIsConfirmed returns whether changing the backup settings of an object is confirmed or not.
+func CheckIfBackupChangeIsConfirmed(annotations map[string]string) bool {
+	confirmed, err := strconv.ParseBool(annotations[v1beta1constants.ConfirmationBackupChange])
+	if err != nil {
+		return false
+	}
+	return confirmed
+}

@@ -38,6 +38,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
+	operatorgarden "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
@@ -187,9 +188,30 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
 		fldBackup := fldPath.Child("etcd", "main", "backup")
 		if newVirtualCluster.ETCD.Main.Backup != nil {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName, fldBackup.Child("bucketName"))...)
-		}
-		if newVirtualCluster.ETCD.Main.Backup == nil {
+			// etcd-druid expects the backup bucket prefix to be immutable. We enforce immutability for the prefix, even if the confirmation.gardener.cloud/change-backup confirmation is set.
+			_, oldPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(oldGarden)
+			_, newPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(newGarden)
+			if oldPrefix != newPrefix {
+				allErrs = append(allErrs, field.Forbidden(fldBackup.Child("bucketName"), "changing the prefix of the backup bucket is not allowed"))
+			}
+
+			if gardenerutils.CheckIfBackupChangeIsConfirmed(newGarden.Annotations) {
+				bucketNameChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName)
+				providerChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.Provider, newVirtualCluster.ETCD.Main.Backup.Provider)
+				regionChanged := !apiequality.Semantic.DeepEqual(oldVirtualCluster.ETCD.Main.Backup.Region, newVirtualCluster.ETCD.Main.Backup.Region)
+				if (regionChanged || providerChanged) && !bucketNameChanged {
+					if newVirtualCluster.ETCD.Main.Backup.BucketName == nil {
+						allErrs = append(allErrs, field.Forbidden(fldBackup, "changing backup provider or region without adding a new bucketName is not allowed"))
+					} else {
+						allErrs = append(allErrs, field.Forbidden(fldBackup, "changing backup provider or region without changing the bucketName is not allowed"))
+					}
+				}
+			} else {
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup.BucketName, oldVirtualCluster.ETCD.Main.Backup.BucketName, fldBackup.Child("bucketName"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup.Provider, oldVirtualCluster.ETCD.Main.Backup.Provider, fldBackup.Child("provider"))...)
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup.Region, oldVirtualCluster.ETCD.Main.Backup.Region, fldBackup.Child("region"))...)
+			}
+		} else {
 			allErrs = append(allErrs, field.Forbidden(fldBackup, "backup must not be deactivated if it was set before"))
 		}
 	}

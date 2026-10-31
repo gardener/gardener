@@ -158,13 +158,18 @@ func (h *Handler) admitBackupBucket(ctx context.Context, seedName string, reques
 		return h.admitBackupBucketSpecMatchesSeedBackup(ctx, seedName, backupBucket)
 
 	case admissionv1.Delete:
-		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the name is equal to the UID of
-		// the gardenlet's seed.
+		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the bucket is associated with
+		// the gardenlet's seed, regardless of the bucket's name.
 		seed := &gardencorev1beta1.Seed{}
 		if err := h.Client.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		if string(seed.UID) != request.Name {
+
+		backupBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.Decoder.DecodeRaw(request.OldObject, backupBucket); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if backupBucket.Spec.SeedName == nil || seed.Name != *backupBucket.Spec.SeedName {
 			return admission.Errored(http.StatusForbidden, errors.New("cannot delete unrelated BackupBucket"))
 		}
 		return admission.Allowed("")
