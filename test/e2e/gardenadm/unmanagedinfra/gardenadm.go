@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -21,10 +22,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/e2e/gardenadm"
+	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
+	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
 )
 
 var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gardenadm", "unmanaged-infra"), func() {
@@ -203,6 +207,94 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 
 			gardenadm.ItShouldVerifyAfterConnect(&gardenClientSet, shoot, RunInMachine)
 			gardenadm.ItShouldBeReconciledByGardenlet(&gardenClientSet, &shootClientSet, shoot, clusterAdminStaticToken, RunInMachine, RunInNode)
+
+			Context("gardenlet in-place update orchestration", Ordered, Label("inplace-update"), func() {
+				var nextVersion string
+
+				It("should trigger an in-place update by bumping the control-plane pool to the next minor Kubernetes version", func(ctx SpecContext) {
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					}).Should(Succeed())
+
+					cloudProfile := &gardencorev1beta1.CloudProfile{}
+					Expect(gardenClientSet.Client().Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfile.Name}, cloudProfile)).To(Succeed())
+
+					var err error
+					nextVersion, _, err = shootupdatesuite.ComputeNewKubernetesVersions(cloudProfile, shoot, nil, nil)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(nextVersion).NotTo(BeEmpty(), "expected a next minor version for the shoot")
+
+					patch := client.MergeFrom(shoot.DeepCopy())
+					shoot.Spec.Kubernetes.Version = nextVersion
+					Eventually(ctx, func() error {
+						return gardenClientSet.Client().Patch(ctx, shoot, patch)
+					}).Should(Succeed())
+				}, SpecTimeout(time.Minute))
+
+				It("should cordon the control-plane node and set ReadyForUpdate", func(ctx SpecContext) {
+					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(0)}}
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+						g.Expect(node.Spec.Unschedulable).To(BeTrue())
+						cond := getInPlaceUpdateCondition(node)
+						g.Expect(cond).NotTo(BeNil())
+						g.Expect(cond.Reason).To(Equal(machinev1alpha1.ReadyForUpdate))
+					}).WithPolling(10 * time.Second).Should(Succeed())
+				}, SpecTimeout(10*time.Minute))
+
+				It("should set UpdateSuccessful on the control-plane node after GNA completes the update", func(ctx SpecContext) {
+					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(0)}}
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+						cond := getInPlaceUpdateCondition(node)
+						g.Expect(cond).NotTo(BeNil())
+						g.Expect(cond.Reason).To(Equal(machinev1alpha1.UpdateSuccessful))
+					}).WithPolling(10 * time.Second).Should(Succeed())
+				}, SpecTimeout(5*time.Minute))
+
+				It("should update the pool hash and clear the pending AutoInPlaceUpdate from the shoot status", func(ctx SpecContext) {
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
+						g.Expect(shoot.Status.InPlaceUpdates.WorkerPoolToHashMap).To(HaveKey("control-plane"))
+						if shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
+							g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).NotTo(ContainElement("control-plane"))
+						}
+					}).WithPolling(10 * time.Second).Should(Succeed())
+				}, SpecTimeout(2*time.Minute))
+
+				It("should wait for all control-plane nodes to apply the new operating system config", func(ctx SpecContext) {
+					Eventually(ctx, func(g Gomega) {
+						workerPoolToNodes, err := botanistpkg.WorkerPoolToNodesMap(ctx, shootClientSet.Client())
+						g.Expect(err).NotTo(HaveOccurred())
+
+						workerPoolToOSCSecretMeta, err := botanistpkg.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClientSet.Client())
+						g.Expect(err).NotTo(HaveOccurred())
+
+						g.Expect(botanistpkg.OperatingSystemConfigUpdatedForAllWorkerPools(
+							shoot.Spec.Provider.Workers,
+							workerPoolToNodes,
+							workerPoolToOSCSecretMeta,
+						)).To(Succeed())
+					}).Should(Succeed())
+				})
+
+				It("should wait for the shoot reconciliation to complete after the version bump", func(ctx SpecContext) {
+					Eventually(ctx, func(g Gomega) bool {
+						g.Expect(gardenClientSet.Client().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						completed, _ := shootoperation.ReconciliationSuccessful(shoot)
+						return completed
+					}).WithPolling(30 * time.Second).Should(BeTrue())
+				}, SpecTimeout(15*time.Minute))
+
+				It("should verify that the new Kubernetes version was applied to the control-plane node", func(ctx SpecContext) {
+					node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineContainerName(0)}}
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+						g.Expect(node.Status.NodeInfo.KubeletVersion).To(ContainSubstring(nextVersion))
+					}).WithPolling(10 * time.Second).Should(Succeed())
+				}, SpecTimeout(2*time.Minute))
+			})
 		})
 
 		gardenadm.ItShouldPromoteSelfHostedShootToSeed(&gardenClientSet, &shootClientSet, shoot)
@@ -255,4 +347,13 @@ func itShouldSeeJoinedNodeAndCheckHealth(shootClientSet func() kubernetes.Interf
 			}))
 		}).Should(Succeed())
 	}, SpecTimeout(2*time.Minute))
+}
+
+func getInPlaceUpdateCondition(node *corev1.Node) *corev1.NodeCondition {
+	for i := range node.Status.Conditions {
+		if node.Status.Conditions[i].Type == machinev1alpha1.NodeInPlaceUpdate {
+			return &node.Status.Conditions[i]
+		}
+	}
+	return nil
 }

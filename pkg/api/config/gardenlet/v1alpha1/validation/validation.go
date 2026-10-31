@@ -65,6 +65,9 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 		if cfg.Controllers.TokenRequestorWorkloadIdentity != nil {
 			allErrs = append(allErrs, validateTokenRequestorWorkloadIdentityControllerConfiguration(cfg.Controllers.TokenRequestorWorkloadIdentity, fldPath.Child("controllers", "tokenRequestorWorkloadIdentity"))...)
 		}
+		if cfg.Controllers.ShootInPlaceUpdate != nil {
+			allErrs = append(allErrs, validateShootInPlaceUpdateControllerConfiguration(cfg.Controllers.ShootInPlaceUpdate, fldPath.Child("controllers", "shootInPlaceUpdate"))...)
+		}
 	}
 
 	if cfg.LogLevel != "" {
@@ -328,6 +331,25 @@ func validateTokenRequestorWorkloadIdentityControllerConfiguration(cfg *gardenle
 
 	if cfg.TokenExpirationDuration != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.TokenExpirationDuration.Duration), fldPath.Child("tokenExpirationDuration"))...)
+	}
+
+	return allErrs
+}
+
+func validateShootInPlaceUpdateControllerConfiguration(cfg *gardenletconfigv1alpha1.ShootInPlaceUpdateControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cfg.ConcurrentSyncs != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
+	if cfg.DrainTimeout != nil && cfg.DrainTimeout.Duration <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("drainTimeout"), *cfg.DrainTimeout, "must be positive"))
+	}
+	if cfg.UpdateTimeout != nil && cfg.UpdateTimeout.Duration <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("updateTimeout"), *cfg.UpdateTimeout, "must be positive"))
+	}
+	if cfg.PodEvictionRetryInterval != nil && cfg.PodEvictionRetryInterval.Duration <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("podEvictionRetryInterval"), *cfg.PodEvictionRetryInterval, "must be positive"))
 	}
 
 	return allErrs
