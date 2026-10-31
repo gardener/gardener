@@ -91,8 +91,15 @@ type Shoot struct {
 	InternalClusterDomain *string
 	// ExternalClusterDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalClusterDomain *string
+	// PriorExternalClusterDomain is the external domain which is replaced during a running domain migration.
+	// It is nil if no domain migration is running, or if ExternalClusterDomain is nil, e.g. because the builder
+	// removed the shoot DNS with WithoutShootDNS.
+	PriorExternalClusterDomain *string
 	// ExternalDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalDomain *gardenerutils.Domain
+	// PriorExternalDomain holds the domain information of PriorExternalClusterDomain, which can differ from
+	// ExternalDomain in provider, zone and credentials. It is nil if PriorExternalClusterDomain is nil.
+	PriorExternalDomain *gardenerutils.Domain
 
 	Purpose                                 gardencorev1beta1.ShootPurpose
 	IsWorkerless                            bool
@@ -174,6 +181,7 @@ type Extensions struct {
 	ContainerRuntime                containerruntime.Interface
 	ControlPlane                    controlplane.Interface
 	ExternalDNSRecord               dnsrecord.Interface
+	PriorExternalDNSRecord          dnsrecord.Interface
 	InternalDNSRecord               dnsrecord.Interface
 	IngressDNSRecord                dnsrecord.Interface
 	SelfHostedShootIngressDNSRecord dnsrecord.Interface
