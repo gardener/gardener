@@ -13,6 +13,7 @@ import (
 // DefaultSpec contains common status fields for every extension resource.
 type DefaultSpec struct {
 	// Type contains the instance of the resource's kind.
+	// +required
 	Type string `json:"type"`
 	// Class holds the extension class used to control the responsibility for multiple provider extensions.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -73,6 +74,7 @@ type DefaultStatus struct {
 	// +optional
 	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
+	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// State can be filled by the operating controller with what ever data it needs.
 	// +kubebuilder:validation:XPreserveUnknownFields

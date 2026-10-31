@@ -37,6 +37,7 @@ type ContainerRuntime struct {
 
 	// Specification of the ContainerRuntime.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec ContainerRuntimeSpec `json:"spec"`
 	// +optional
 	Status ContainerRuntimeStatus `json:"status,omitempty"`
@@ -69,9 +70,11 @@ type ContainerRuntimeSpec struct {
 	DefaultSpec `json:",inline"`
 
 	// BinaryPath is the Worker's machine path where container runtime extensions should copy the binaries to.
+	// +required
 	BinaryPath string `json:"binaryPath"`
 	// WorkerPool identifies the worker pool of the Shoot.
 	// For each worker pool and type, Gardener deploys a ContainerRuntime CRD.
+	// +required
 	WorkerPool ContainerRuntimeWorkerPool `json:"workerPool"`
 }
 
@@ -79,8 +82,10 @@ type ContainerRuntimeSpec struct {
 type ContainerRuntimeWorkerPool struct {
 	// Name specifies the name of the worker pool the container runtime should be available for.
 	// This field is immutable.
+	// +required
 	Name string `json:"name"`
 	// Selector is the label selector used by the extension to match the nodes belonging to the worker pool.
+	// +required
 	Selector metav1.LabelSelector `json:"selector"`
 }
 

@@ -29,6 +29,7 @@ type Extension struct {
 
 	// Specification of the Extension.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec ExtensionSpec `json:"spec"`
 	// +optional
 	Status ExtensionStatus `json:"status,omitempty"`

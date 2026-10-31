@@ -21,9 +21,11 @@ const ClusterResource = "Cluster"
 
 // Cluster is a specification for a Cluster resource.
 type Cluster struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +required
 	Spec ClusterSpec `json:"spec"`
 }
 
@@ -45,6 +47,7 @@ type ClusterSpec struct {
 	// by the shoot that has to be reconciled.
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields
+	// +required
 	CloudProfile runtime.RawExtension `json:"cloudProfile"`
 	// Seed is a raw extension field that contains the seed resource referenced by the shoot that
 	// has to be reconciled. It is not set for self-hosted shoots (see GEP-28).
@@ -55,5 +58,6 @@ type ClusterSpec struct {
 	// Shoot is a raw extension field that contains the shoot resource that has to be reconciled.
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields
+	// +required
 	Shoot runtime.RawExtension `json:"shoot"`
 }

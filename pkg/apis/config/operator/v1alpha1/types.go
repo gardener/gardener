@@ -19,17 +19,23 @@ type OperatorConfiguration struct {
 
 	// RuntimeClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to
 	// use when communicating with the kube-apiserver of the runtime cluster.
+	// +required
 	RuntimeClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"runtimeClientConnection"`
 	// VirtualClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to
 	// use when communicating with the kube-apiserver of the virtual cluster.
+	// +required
 	VirtualClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"virtualClientConnection"`
 	// LeaderElection defines the configuration of leader election client.
+	// +required
 	LeaderElection componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// +required
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
+	// +required
 	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
+	// +required
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
@@ -40,6 +46,7 @@ type OperatorConfiguration struct {
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// Controllers defines the configuration of the controllers.
+	// +required
 	Controllers ControllerConfiguration `json:"controllers"`
 	// NodeToleration contains optional settings for default tolerations.
 	// +optional
@@ -49,32 +56,44 @@ type OperatorConfiguration struct {
 // ConditionThreshold defines the threshold of the given condition type.
 type ConditionThreshold struct {
 	// Type is the type of the condition to define the threshold for.
+	// +required
 	Type string `json:"type"`
 	// Duration is the duration how long the condition can stay in the progressing state.
+	// +required
 	Duration metav1.Duration `json:"duration"`
 }
 
 // ControllerConfiguration defines the configuration of the controllers.
 type ControllerConfiguration struct {
 	// Garden is the configuration for the garden controller.
+	// +required
 	Garden GardenControllerConfig `json:"garden"`
 	// GardenCare is the configuration for the garden care controller
+	// +required
 	GardenCare GardenCareControllerConfiguration `json:"gardenCare"`
 	// GardenletDeployer is the configuration for the gardenlet deployer controller.
+	// +required
 	GardenletDeployer GardenletDeployerControllerConfig `json:"gardenletDeployer"`
 	// NetworkPolicy is the configuration for the NetworkPolicy controller.
+	// +required
 	NetworkPolicy NetworkPolicyControllerConfiguration `json:"networkPolicy"`
 	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
+	// +required
 	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration `json:"vpaEvictionRequirements"`
 	// Extension defines the configuration of the extension controller.
+	// +required
 	Extension ExtensionControllerConfiguration `json:"extension"`
 	// ExtensionCare is the configuration for the extension care controller
+	// +required
 	ExtensionCare ExtensionCareControllerConfiguration `json:"extensionCare"`
 	// ExtensionReference is the configuration for the extension reference controller
+	// +required
 	ExtensionReference ExtensionReferenceControllerConfiguration `json:"extensionReference"`
 	// ExtensionRequiredRuntime defines the configuration of the ExtensionRequiredRuntime controller.
+	// +required
 	ExtensionRequiredRuntime ExtensionRequiredRuntimeControllerConfiguration `json:"extensionRequiredRuntime"`
 	// ExtensionRequiredVirtual defines the configuration of the ExtensionRequiredVirtual controller.
+	// +required
 	ExtensionRequiredVirtual ExtensionRequiredVirtualControllerConfiguration `json:"extensionRequiredVirtual"`
 }
 
@@ -173,6 +192,7 @@ type ExtensionRequiredVirtualControllerConfiguration struct {
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
 	// Webhooks is the configuration for the HTTPS webhook server.
+	// +required
 	Webhooks Server `json:"webhooks"`
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
 	// +optional
@@ -185,8 +205,10 @@ type ServerConfiguration struct {
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
+	// +required
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
+	// +required
 	Port int32 `json:"port"`
 }
 
