@@ -20,6 +20,7 @@ static_resources:
         name: envoy.transport_sockets.tls
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          require_client_certificate: true
           common_tls_context:
             tls_certificates:
             - certificate_chain: { filename: {{ .certChain }} }
@@ -75,6 +76,19 @@ static_resources:
                 name: dynamic_forward_proxy_cache_config
                 dns_lookup_family: {{ .dnsLookupFamily }}
                 max_hosts: 8192
+                # resolved_address_filter allow-lists only the shoot's own CIDRs (evaluated on the
+                # resolved IP, so it covers IP-literal targets and resists DNS rebinding).
+                resolved_address_filter:
+                  invert_match: true
+                  {{- if .allowedDestinationCIDRs }}
+                  ranges:
+                  {{- range .allowedDestinationCIDRs }}
+                  - address_prefix: "{{ .Address }}"
+                    prefix_len: {{ .PrefixLen }}
+                  {{- end }}
+                  {{- else }}
+                  ranges: []
+                  {{- end }}
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -132,6 +146,17 @@ static_resources:
           name: dynamic_forward_proxy_cache_config
           dns_lookup_family: {{ .dnsLookupFamily }}
           max_hosts: 8192
+          resolved_address_filter:
+            invert_match: true
+            {{- if .allowedDestinationCIDRs }}
+            ranges:
+            {{- range .allowedDestinationCIDRs }}
+            - address_prefix: "{{ .Address }}"
+              prefix_len: {{ .PrefixLen }}
+            {{- end }}
+            {{- else }}
+            ranges: []
+            {{- end }}
   - name: prometheus_stats
     connect_timeout: 0.25s
     type: static

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -170,7 +171,9 @@ func (v *vpnSeedServer) GetValues() Values {
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
-	envoyConfig, err := envoy.GetEnvoyConfig()
+	allowedDestinationCIDRs := slices.Concat(v.values.Network.NodeCIDRs, v.values.Network.PodCIDRs, v.values.Network.ServiceCIDRs)
+
+	envoyConfig, err := envoy.GetEnvoyConfig(allowedDestinationCIDRs)
 	if err != nil {
 		return err
 	}

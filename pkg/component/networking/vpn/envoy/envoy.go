@@ -7,6 +7,7 @@ package envoy
 import (
 	_ "embed"
 	"fmt"
+	"net"
 	"strings"
 	"text/template"
 
@@ -46,17 +47,36 @@ func init() {
 	utilruntime.Must(err)
 }
 
-// GetEnvoyConfig returns the Envoy configuration for the VPN proxy. The same configuration is used both in HA or non-HA mode.
-func GetEnvoyConfig() (string, error) {
+// cidrPrefix is a destination CIDR rendered into the Envoy dynamic forward proxy's
+// resolved_address_filter allow-list.
+type cidrPrefix struct {
+	Address   string
+	PrefixLen int
+}
+
+// GetEnvoyConfig returns the Envoy configuration for the VPN proxy, shared by HA and non-HA mode.
+// allowedDestinationCIDRs restricts the CONNECT proxy to the shoot's own node, pod, and service
+// networks. An empty slice renders a fail-closed config that denies all destinations.
+func GetEnvoyConfig(allowedDestinationCIDRs []net.IPNet) (string, error) {
+	prefixes := make([]cidrPrefix, 0, len(allowedDestinationCIDRs))
+	for _, cidr := range allowedDestinationCIDRs {
+		prefixLen, _ := cidr.Mask.Size()
+		prefixes = append(prefixes, cidrPrefix{
+			Address:   cidr.IP.String(),
+			PrefixLen: prefixLen,
+		})
+	}
+
 	values := map[string]any{
-		"listenAddress":   "0.0.0.0",
-		"listenAddressV6": "::",
-		"dnsLookupFamily": "ALL",
-		"envoyPort":       fmt.Sprintf("%d", envoyPort),
-		"certChain":       volumeMountPathCerts + `/` + secrets.DataKeyCertificate,
-		"privateKey":      volumeMountPathCerts + `/` + secrets.DataKeyPrivateKey,
-		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
-		"metricsPort":     fmt.Sprintf("%d", metricsPort),
+		"listenAddress":           "0.0.0.0",
+		"listenAddressV6":         "::",
+		"dnsLookupFamily":         "ALL",
+		"envoyPort":               fmt.Sprintf("%d", envoyPort),
+		"certChain":               volumeMountPathCerts + `/` + secrets.DataKeyCertificate,
+		"privateKey":              volumeMountPathCerts + `/` + secrets.DataKeyPrivateKey,
+		"caCert":                  volumeMountPathCerts + `/` + fileNameCABundle,
+		"metricsPort":             fmt.Sprintf("%d", metricsPort),
+		"allowedDestinationCIDRs": prefixes,
 	}
 
 	var envoyConfig strings.Builder
