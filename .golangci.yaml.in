@@ -286,6 +286,7 @@ linters:
               - jsontags
               - nonullable
               - optionalfields
+              - optionalorrequired
               - uniquemarkers
           lintersConfig:
             optionalfields:
@@ -340,6 +341,12 @@ linters:
       - linters:
           - kubeapilinter
         path-except: 'pkg/apis/[^/]+(/[^/]+)?/v[0-9]+((alpha|beta)[0-9]+)?/[^/]+$'
+      # optionalorrequired is only enforced for the API groups listed below. Add a group here once its fields are
+      # explicitly marked as +optional or +required; remove this rule when all groups are migrated.
+      - linters:
+          - kubeapilinter
+        text: 'optionalorrequired:'
+        path-except: 'pkg/apis/(operations/v1alpha1)/[^/]+$'
       # optionalfields: Spec/Status and other struct fields on top-level API objects have established non-pointer
       # conventions in Kubernetes APIs. Similarly, scalar fields (int64, string) with incomplete validation
       # are intentionally kept as value types. Converting these to pointers would be API-breaking.
