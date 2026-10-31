@@ -1606,6 +1606,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Status contains the current status of the cloud profile.</p>
 </td>
 </tr>
@@ -1643,6 +1644,7 @@ boolean
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>AllowZonePinning enables shoots to set spec.controlPlane.zones to explicitly pin<br />their control plane to specific seed zones. Only set to true for providers where<br />zone names are globally consistent across all users of the provider.</p>
 </td>
 </tr>
@@ -2802,6 +2804,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Spec contains the specification of this installation.<br />If the object's deletion timestamp is set, this field is immutable.</p>
 </td>
 </tr>
@@ -2813,6 +2816,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Status contains the status of this installation.</p>
 </td>
 </tr>
@@ -2992,6 +2996,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Spec contains the specification of this registration.<br />If the object's deletion timestamp is set, this field is immutable.</p>
 </td>
 </tr>
@@ -4905,6 +4910,7 @@ integer array
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Chart is a Helm chart tarball.</p>
 </td>
 </tr>
@@ -4916,6 +4922,7 @@ integer array
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Values is a map of values for the given chart.</p>
 </td>
 </tr>
@@ -8561,6 +8568,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Spec defines the provider environment properties.</p>
 </td>
 </tr>
@@ -8572,6 +8580,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Most recently observed status of the NamespacedCloudProfile.</p>
 </td>
 </tr>
@@ -8730,6 +8739,7 @@ NamespacedCloudProfileStatus holds the most recently observed status of the Name
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.</p>
 </td>
 </tr>
@@ -9644,6 +9654,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Phase is the current phase of the project.</p>
 </td>
 </tr>
@@ -10348,6 +10359,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Spec contains the specification of this installation.</p>
 </td>
 </tr>
@@ -10359,6 +10371,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Status contains the status of this installation.</p>
 </td>
 </tr>

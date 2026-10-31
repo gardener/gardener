@@ -23,6 +23,7 @@ type SecretBinding struct {
 
 	// SecretRef is a reference to a secret object in the same or another namespace.
 	// This field is immutable.
+	// +required
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
 	// Quotas is a list of references to Quota objects in the same or another namespace.
 	// This field is immutable.
@@ -42,6 +43,7 @@ type SecretBindingProvider struct {
 	//
 	// For backwards compatibility, the field can contain multiple providers separated by a comma.
 	// However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 }
 

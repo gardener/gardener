@@ -85,6 +85,7 @@ type ShootSpec struct {
 	// +optional
 	Hibernation *Hibernation `json:"hibernation,omitempty" protobuf:"bytes,5,opt,name=hibernation"`
 	// Kubernetes contains the version and configuration settings of the control plane components.
+	// +required
 	Kubernetes Kubernetes `json:"kubernetes" protobuf:"bytes,6,opt,name=kubernetes"`
 	// Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
 	// +optional
@@ -97,11 +98,13 @@ type ShootSpec struct {
 	// +optional
 	Monitoring *Monitoring `json:"monitoring,omitempty" protobuf:"bytes,9,opt,name=monitoring"`
 	// Provider contains all provider-specific and provider-relevant information.
+	// +required
 	Provider Provider `json:"provider" protobuf:"bytes,10,opt,name=provider"`
 	// Purpose is the purpose class for this cluster.
 	// +optional
 	Purpose *ShootPurpose `json:"purpose,omitempty" protobuf:"bytes,11,opt,name=purpose,casttype=ShootPurpose"`
 	// Region is a name of a region. This field is immutable.
+	// +required
 	Region string `json:"region" protobuf:"bytes,12,opt,name=region"`
 	// SecretBindingName is the name of a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
@@ -165,8 +168,10 @@ type ShootStatus struct {
 	// +optional
 	Constraints []Condition `json:"constraints,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,2,rep,name=constraints"`
 	// Gardener holds information about the Gardener which last acted on the Shoot.
+	// +required
 	Gardener Gardener `json:"gardener" protobuf:"bytes,3,opt,name=gardener"`
 	// IsHibernated indicates whether the Shoot is currently hibernated.
+	// +required
 	IsHibernated bool `json:"hibernated" protobuf:"varint,4,opt,name=hibernated"`
 	// LastOperation holds information about the last operation on the Shoot.
 	// +optional
@@ -189,9 +194,11 @@ type ShootStatus struct {
 	// TechnicalID is a unique technical ID for this Shoot. It is used for the infrastructure resources, and
 	// basically everything that is related to this particular Shoot. For regular shoot clusters, this is also the name
 	// of the namespace in the seed cluster running the shoot's control plane. This field is immutable.
+	// +required
 	TechnicalID string `json:"technicalID" protobuf:"bytes,10,opt,name=technicalID"`
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes. This field is immutable.
+	// +required
 	UID types.UID `json:"uid" protobuf:"bytes,11,opt,name=uid,casttype=k8s.io/apimachinery/pkg/types.UID"`
 	// ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
 	// +optional
@@ -236,10 +243,13 @@ type ShootStatus struct {
 // LastMaintenance holds information about a maintenance operation on the Shoot.
 type LastMaintenance struct {
 	// A human-readable message containing details about the operations performed in the last maintenance.
+	// +required
 	Description string `json:"description" protobuf:"bytes,1,opt,name=description"`
 	// TriggeredTime is the time when maintenance was triggered.
+	// +required
 	TriggeredTime metav1.Time `json:"triggeredTime" protobuf:"bytes,2,opt,name=triggeredTime"`
 	// Status of the last maintenance operation, one of Processing, Succeeded, Error.
+	// +required
 	State LastOperationState `json:"state" protobuf:"bytes,3,opt,name=state,casttype=LastOperationState"`
 	// FailureReason holds the information about the last maintenance operation failure reason.
 	// +optional
@@ -326,18 +336,21 @@ type EncryptionAtRest struct {
 	// +optional
 	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
 	// Provider contains information about Shoot encryption provider.
+	// +required
 	Provider EncryptionProviderStatus `json:"provider" protobuf:"bytes,2,opt,name=provider"`
 }
 
 // EncryptionProviderStatus contains information about Shoot encryption provider.
 type EncryptionProviderStatus struct {
 	// Type is the used encryption provider type.
+	// +required
 	Type EncryptionProviderType `json:"type" protobuf:"bytes,1,opt,name=type"`
 }
 
 // CARotation contains information about the certificate authority credential rotation.
 type CARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
+	// +required
 	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
@@ -409,6 +422,7 @@ type ObservabilityRotation struct {
 // ServiceAccountKeyRotation contains information about the service account key credential rotation.
 type ServiceAccountKeyRotation struct {
 	// Phase describes the phase of the service account key credential rotation.
+	// +required
 	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
 	// completed.
@@ -434,6 +448,7 @@ type ServiceAccountKeyRotation struct {
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
 type ETCDEncryptionKeyRotation struct {
 	// Phase describes the phase of the ETCD encryption key credential rotation.
+	// +required
 	Phase CredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
 	// completed.
@@ -485,6 +500,7 @@ const (
 // PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout.
 type PendingWorkersRollout struct {
 	// Name is the name of a worker pool.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// LastInitiationTime is the most recent time when the worker rollout was initiated.
 	// +optional
@@ -494,8 +510,10 @@ type PendingWorkersRollout struct {
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
 type ShootAdvertisedAddress struct {
 	// Name of the advertised address. e.g. external
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
+	// +required
 	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 	// Application is the name of the application this address belongs to. Used by UI clients.
 	// +optional
@@ -515,6 +533,7 @@ type Addons struct {
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 type Addon struct {
 	// Enabled indicates whether the addon is enabled or not.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 }
 
@@ -833,6 +852,7 @@ const (
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 type VerticalPodAutoscaler struct {
 	// Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 	// EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given
 	// threshold since its start and if it has only one container (default: 10m0s).
@@ -1066,6 +1086,7 @@ type ControlPlaneAutoscaling struct {
 	// MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
 	// Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
 	// Default values are not applied to this field.
+	// +required
 	MinAllowed corev1.ResourceList `json:"minAllowed" protobuf:"bytes,1,rep,name=minAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 }
 
@@ -1101,6 +1122,7 @@ type EncryptionConfig struct {
 	// +optional
 	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
 	// Provider contains information about the encryption provider.
+	// +required
 	Provider EncryptionProvider `json:"provider" protobuf:"bytes,2,opt,name=provider"`
 }
 
@@ -1166,6 +1188,7 @@ type AuditPolicy struct {
 type StructuredAuthentication struct {
 	// ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthenticationConfiguration
 	// for the kube-apiserver.
+	// +required
 	ConfigMapName string `json:"configMapName" protobuf:"bytes,1,opt,name=configMapName"`
 }
 
@@ -1173,22 +1196,27 @@ type StructuredAuthentication struct {
 type StructuredAuthorization struct {
 	// ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthorizationConfiguration for
 	// the kube-apiserver.
+	// +required
 	ConfigMapName string `json:"configMapName" protobuf:"bytes,1,opt,name=configMapName"`
 	// Kubeconfigs is a list of references for kubeconfigs for the authorization webhooks.
+	// +required
 	Kubeconfigs []AuthorizerKubeconfigReference `json:"kubeconfigs" protobuf:"bytes,2,rep,name=kubeconfigs"`
 }
 
 // AuthorizerKubeconfigReference is a reference for a kubeconfig for a authorization webhook.
 type AuthorizerKubeconfigReference struct {
 	// AuthorizerName is the name of a webhook authorizer.
+	// +required
 	AuthorizerName string `json:"authorizerName" protobuf:"bytes,1,opt,name=authorizerName"`
 	// SecretName is the name of a secret containing the kubeconfig.
+	// +required
 	SecretName string `json:"secretName" protobuf:"bytes,2,opt,name=secretName"`
 }
 
 // AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.
 type AdmissionPlugin struct {
 	// Name is the name of the plugin.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Config is the configuration of the plugin.
 	// +optional
@@ -1224,8 +1252,10 @@ type ResourceWatchCacheSize struct {
 	APIGroup *string `json:"apiGroup,omitempty" protobuf:"bytes,1,opt,name=apiGroup"`
 	// Resource is the name of the resource for which the watch cache size should be configured
 	// (in lowercase plural form, e.g. `secrets`).
+	// +required
 	Resource string `json:"resource" protobuf:"bytes,2,opt,name=resource"`
 	// CacheSize specifies the watch cache size that should be configured for the specified resource.
+	// +required
 	CacheSize int32 `json:"size" protobuf:"varint,3,opt,name=size"`
 }
 
@@ -1670,6 +1700,7 @@ type Maintenance struct {
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
 type MaintenanceAutoUpdate struct {
 	// KubernetesVersion indicates whether the patch Kubernetes version may be automatically updated (default: true).
+	// +required
 	KubernetesVersion bool `json:"kubernetesVersion" protobuf:"varint,1,opt,name=kubernetesVersion"`
 	// MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
 	// +optional
@@ -1708,12 +1739,12 @@ type MaintenanceRotationConfig struct {
 type MaintenanceTimeWindow struct {
 	// Begin is the beginning of the time window in the format HHMMSS±ZONE, e.g. "220000+0100" or "220000-0500".
 	// If not present, a random value will be computed.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Pattern=`([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]([+](0[0-9]|1[0-4])|[-](0[0-9]|1[0-2]))00`
 	Begin string `json:"begin" protobuf:"bytes,1,opt,name=begin"`
 	// End is the end of the time window in the format HHMMSS±ZONE, e.g. "220000+0100" or "220000-0500".
 	// If not present, the value will be computed based on the "Begin" value.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Pattern=`([0-1][0-9]|2[0-3])[0-5][0-9][0-5][0-9]([+](0[0-9]|1[0-4])|[-](0[0-9]|1[0-2]))00`
 	End string `json:"end" protobuf:"bytes,2,opt,name=end"`
 }
@@ -1736,6 +1767,7 @@ type Alerting struct {
 // extension controller.
 type Provider struct {
 	// Type is the type of the provider. This field is immutable.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
@@ -1774,14 +1806,18 @@ type Worker struct {
 	// +optional
 	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,5,rep,name=labels"`
 	// Name is the name of the worker group.
+	// +required
 	Name string `json:"name" protobuf:"bytes,6,opt,name=name"`
 	// Machine contains information about the machine type and image.
+	// +required
 	Machine Machine `json:"machine" protobuf:"bytes,7,opt,name=machine"`
 	// Maximum is the maximum number of machines to create.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// +required
 	Maximum int32 `json:"maximum" protobuf:"varint,8,opt,name=maximum"`
 	// Minimum is the minimum number of machines to create.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// +required
 	Minimum int32 `json:"minimum" protobuf:"varint,9,opt,name=minimum"`
 	// MaxSurge is maximum number of machines that are created during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
@@ -1973,6 +2009,7 @@ type MachineControllerManagerSettings struct {
 // WorkerSystemComponents contains configuration for system components related to this worker pool
 type WorkerSystemComponents struct {
 	// Allow determines whether the pool should be allowed to host system components or not (defaults to true)
+	// +required
 	Allow bool `json:"allow" protobuf:"bytes,1,name=allow"`
 }
 
@@ -1993,6 +2030,7 @@ type WorkerKubernetes struct {
 // Machine contains information about the machine type and image.
 type Machine struct {
 	// Type is the machine type of the worker group.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// Image holds information about the machine image to use for all nodes of this pool. It will default to the
 	// latest version of the first image stated in the referenced CloudProfile if no value has been provided.
@@ -2007,6 +2045,7 @@ type Machine struct {
 // defined in the respective CloudProfile.
 type ShootMachineImage struct {
 	// Name is the name of the image.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// ProviderConfig is the shoot's individual configuration passed to an extension resource.
 	// +optional
@@ -2026,6 +2065,7 @@ type Volume struct {
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
 	// VolumeSize is the size of the volume.
+	// +required
 	VolumeSize string `json:"size" protobuf:"bytes,3,opt,name=size"`
 	// Encrypted determines if the volume should be encrypted.
 	// +optional
@@ -2035,11 +2075,13 @@ type Volume struct {
 // DataVolume contains information about a data volume.
 type DataVolume struct {
 	// Name of the volume to make it referenceable.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Type is the type of the volume.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
 	// VolumeSize is the size of the volume.
+	// +required
 	VolumeSize string `json:"size" protobuf:"bytes,3,opt,name=size"`
 	// Encrypted determines if the volume should be encrypted.
 	// +optional
@@ -2049,6 +2091,7 @@ type DataVolume struct {
 // CRI contains information about the Container Runtimes.
 type CRI struct {
 	// The name of the CRI library. Supported values are `containerd`.
+	// +required
 	Name CRIName `json:"name" protobuf:"bytes,1,opt,name=name,casttype=CRIName"`
 	// ContainerRuntimes is the list of the required container runtimes supported for a worker pool.
 	// +optional
@@ -2066,6 +2109,7 @@ const (
 // ContainerRuntime contains information about worker's available container runtime
 type ContainerRuntime struct {
 	// Type is the type of the Container Runtime.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 
 	// ProviderConfig is the configuration passed to container runtime resource.
@@ -2084,6 +2128,7 @@ type WorkersSettings struct {
 type SSHAccess struct {
 	// Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
 	// Defaults to true.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 }
 
@@ -2124,6 +2169,7 @@ type CoreDNS struct {
 type CoreDNSAutoscaling struct {
 	// The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
 	// Supported values are `horizontal` and `cluster-proportional`.
+	// +required
 	Mode CoreDNSAutoscalingMode `json:"mode" protobuf:"bytes,1,opt,name=mode"`
 }
 
@@ -2147,6 +2193,7 @@ type CoreDNSRewriting struct {
 // NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
 type NodeLocalDNS struct {
 	// Enabled indicates whether node local DNS is enabled or not.
+	// +required
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 	// ForceTCPToClusterDNS indicates whether the connection from the node local DNS to the cluster DNS (Core DNS) will be forced to TCP or not.
 	// Default, if unspecified, is to enforce TCP.

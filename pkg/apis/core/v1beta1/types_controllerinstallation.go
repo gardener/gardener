@@ -18,12 +18,15 @@ import (
 type ControllerInstallation struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec contains the specification of this installation.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +optional
 	Spec ControllerInstallationSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status contains the status of this installation.
+	// +optional
 	Status ControllerInstallationStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -44,6 +47,7 @@ type ControllerInstallationList struct {
 type ControllerInstallationSpec struct {
 	// RegistrationRef is used to reference a ControllerRegistration resource.
 	// The name field of the RegistrationRef is immutable.
+	// +required
 	RegistrationRef corev1.ObjectReference `json:"registrationRef" protobuf:"bytes,1,opt,name=registrationRef"`
 	// SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.
 	// +optional
