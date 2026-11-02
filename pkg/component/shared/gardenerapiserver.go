@@ -121,6 +121,7 @@ func NewGardenerAPIServer(
 func DeployGardenerAPIServer(
 	ctx context.Context,
 	runtimeClient client.Client,
+	runtimeAPIReader client.Reader,
 	runtimeNamespace string,
 	gardenerAPIServer gardenerapiserver.Interface,
 	resourcesToEncrypt []string,
@@ -131,7 +132,7 @@ func DeployGardenerAPIServer(
 ) error {
 	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
 		ctx,
-		runtimeClient,
+		runtimeAPIReader,
 		runtimeNamespace,
 		gardenerapiserver.DeploymentName,
 		etcdEncryptionKeyRotationPhase,

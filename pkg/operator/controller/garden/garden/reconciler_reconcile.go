@@ -1155,6 +1155,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 
 		return shared.DeployKubeAPIServer(
 			ctx,
+			r.RuntimeClientSet.APIReader(),
 			r.RuntimeClientSet.Client(),
 			r.GardenNamespace,
 			kubeAPIServer,
@@ -1212,6 +1213,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 		return shared.DeployGardenerAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
+			r.RuntimeClientSet.APIReader(),
 			r.GardenNamespace,
 			gardenerAPIServer,
 			shared.StringifyGroupResources(getGardenerResourcesForEncryption(garden)),

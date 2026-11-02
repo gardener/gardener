@@ -242,7 +242,7 @@ func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Cl
 
 func computeAPIServerETCDEncryptionConfig(
 	ctx context.Context,
-	runtimeClient client.Client,
+	runtimeAPIReader client.Reader,
 	runtimeNamespace string,
 	deploymentName string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
@@ -261,9 +261,11 @@ func computeAPIServerETCDEncryptionConfig(
 	}
 
 	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {
-		deployment := &metav1.PartialObjectMetadata{}
+		deployment := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: runtimeNamespace, Name: deploymentName}}
 		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: runtimeNamespace, Name: deploymentName}, deployment); err != nil {
+		// We read via the API reader (and not the cached client) because the annotation might have been
+		// written by us in a previous reconciliation, and the cache might not have caught up yet.
+		if err := runtimeAPIReader.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return apiserver.ETCDEncryptionConfig{}, err
 			}
