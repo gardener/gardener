@@ -778,7 +778,7 @@ var _ = Describe("Etcd", func() {
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-		etcd = New(log, c, testNamespace, sm, Values{
+		etcd = New(log, c, c, testNamespace, sm, Values{
 			Role:                    role,
 			Class:                   class,
 			Replicas:                replicas,
@@ -810,7 +810,7 @@ var _ = Describe("Etcd", func() {
 			}).Build()
 			sm = fakesecretsmanager.New(c, testNamespace)
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role: role, Class: class, Replicas: replicas, Autoscaling: autoscalingConfig,
 				StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
@@ -831,7 +831,7 @@ var _ = Describe("Etcd", func() {
 			}).Build()
 			sm = fakesecretsmanager.New(c, testNamespace)
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role: role, Class: class, Replicas: replicas, Autoscaling: autoscalingConfig,
 				StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule,
@@ -873,7 +873,7 @@ var _ = Describe("Etcd", func() {
 				Spec:       druidcorev1alpha1.EtcdSpec{Replicas: existingReplicas},
 			})).To(Succeed())
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                nil,
@@ -918,7 +918,7 @@ var _ = Describe("Etcd", func() {
 				},
 			})).To(Succeed())
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                nil,
@@ -988,7 +988,7 @@ var _ = Describe("Etcd", func() {
 		)
 
 		It("should set spec.memberNamePrefix when the Etcd resource does not yet exist", func() {
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    role,
 				Class:                   class,
 				Replicas:                replicas,
@@ -1032,7 +1032,7 @@ var _ = Describe("Etcd", func() {
 				},
 			})).To(Succeed())
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    role,
 				Class:                   class,
 				Replicas:                replicas,
@@ -1064,7 +1064,7 @@ var _ = Describe("Etcd", func() {
 				},
 			})).To(Succeed())
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    role,
 				Class:                   class,
 				Replicas:                replicas,
@@ -1096,7 +1096,7 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    role,
 				Class:                   class,
 				Replicas:                replicas,
@@ -1133,7 +1133,7 @@ var _ = Describe("Etcd", func() {
 				ClientEndpoints: []string{"https://src-etcd-main-client.source-ns.svc:2379"},
 			}
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    role,
 				Class:                   class,
 				Replicas:                replicas,
@@ -1164,7 +1164,7 @@ var _ = Describe("Etcd", func() {
 				},
 			})).To(Succeed())
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    role,
 				Class:                   class,
 				Replicas:                replicas,
@@ -1191,7 +1191,7 @@ var _ = Describe("Etcd", func() {
 			_, err := sm.Generate(ctx, &secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert})
 			Expect(err).ToNot(HaveOccurred())
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    role,
 				Class:                   class,
 				Replicas:                replicas,
@@ -1253,7 +1253,7 @@ var _ = Describe("Etcd", func() {
 					evictionRequirement = v1beta1constants.EvictionRequirementNever
 				}
 
-				etcd = New(log, c, testNamespace, sm, Values{
+				etcd = New(log, c, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
 					Replicas:                replicas,
@@ -1416,7 +1416,7 @@ var _ = Describe("Etcd", func() {
 					etcd.SetStaticPodControlPlaneNodesIPAddresses(firstIP)
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 
-					etcd2 := New(log, c, testNamespace, sm, Values{
+					etcd2 := New(log, c, c, testNamespace, sm, Values{
 						Role:                    role,
 						Class:                   class,
 						Replicas:                replicas,
@@ -1714,7 +1714,7 @@ var _ = Describe("Etcd", func() {
 
 					replicas = new(int32(1))
 
-					etcd = New(log, c, testNamespace, sm, Values{
+					etcd = New(log, c, c, testNamespace, sm, Values{
 						Role:                        testRole,
 						Class:                       class,
 						Replicas:                    replicas,
@@ -1748,7 +1748,7 @@ var _ = Describe("Etcd", func() {
 					replicas = new(int32(1))
 				)
 
-				etcd = New(log, c, testNamespace, sm, Values{
+				etcd = New(log, c, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
 					Replicas:                replicas,
@@ -1830,7 +1830,7 @@ var _ = Describe("Etcd", func() {
 		var nowFunc func() time.Time
 
 		JustBeforeEach(func() {
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                new(int32(1)),
@@ -1882,7 +1882,7 @@ var _ = Describe("Etcd", func() {
 				},
 			}).Build()
 			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role: testRole, Class: class, Replicas: new(int32(1)),
 				StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule, PriorityClassName: priorityClassName,
@@ -1940,7 +1940,7 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName,
 				StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
 				DefragmentationSchedule: &defragmentationSchedule, MaintenanceTimeWindow: maintenanceTimeWindow,
@@ -1996,7 +1996,7 @@ var _ = Describe("Etcd", func() {
 		var highAvailability bool
 
 		JustBeforeEach(func() {
-			etcd = New(log, c, testNamespace, sm, Values{
+			etcd = New(log, c, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                replicas,
@@ -2095,7 +2095,7 @@ var _ = Describe("Etcd", func() {
 				}).Build()
 				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
 
-				etcd = New(log, c, testNamespace, sm, Values{
+				etcd = New(log, c, c, testNamespace, sm, Values{
 					Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName,
 					StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule, HighAvailabilityEnabled: highAvailability,
@@ -2141,7 +2141,7 @@ var _ = Describe("Etcd", func() {
 				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
 				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: peerCAName, Namespace: testNamespace}})).To(Succeed())
 
-				etcd = New(log, c, testNamespace, sm, Values{
+				etcd = New(log, c, c, testNamespace, sm, Values{
 					Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName,
 					StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
 					DefragmentationSchedule: &defragmentationSchedule, HighAvailabilityEnabled: highAvailability,
@@ -2197,13 +2197,26 @@ var _ = Describe("Etcd", func() {
 			Expect(rolledOut).To(BeTrue())
 		})
 
-		It("should return an error when the client Get fails", func() {
-			c = fakeclient.NewClientBuilder().WithScheme(c.Scheme()).WithInterceptorFuncs(interceptor.Funcs{
+		It("should read via the API reader so a stale cache does not report false", func() {
+			apiReader := fakeclient.NewClientBuilder().WithScheme(c.Scheme()).WithObjects(&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+				Name:        etcdName,
+				Namespace:   testNamespace,
+				Annotations: map[string]string{secretsrotation.AnnotationKeyPeerCARolledOut: "true"},
+			}}).Build()
+			etcd = New(log, apiReader, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
+
+			rolledOut, err := etcd.IsPeerCARolledOut(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rolledOut).To(BeTrue())
+		})
+
+		It("should return an error when the API reader Get fails", func() {
+			apiReader := fakeclient.NewClientBuilder().WithScheme(c.Scheme()).WithInterceptorFuncs(interceptor.Funcs{
 				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
 					return fakeErr
 				},
 			}).Build()
-			etcd = New(log, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
+			etcd = New(log, apiReader, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
 
 			_, err := etcd.IsPeerCARolledOut(ctx)
 			Expect(err).To(MatchError(fakeErr))
@@ -2250,7 +2263,7 @@ var _ = Describe("Etcd", func() {
 					return fakeErr
 				},
 			}).Build()
-			etcd = New(log, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
+			etcd = New(log, c, c, testNamespace, sm, Values{Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName})
 
 			Expect(etcd.MarkAsPeerCARolloutCompleted(ctx)).To(MatchError(fakeErr))
 		})
