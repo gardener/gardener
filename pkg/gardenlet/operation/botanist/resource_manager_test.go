@@ -26,6 +26,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	fakeresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/fake"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
@@ -215,7 +216,7 @@ var _ = Describe("ResourceManager", func() {
 			fakeClock = testclock.NewFakeClock(time.Now())
 			botanist.Clock = fakeClock
 
-			rm = &fakeresourcemanager.ResourceManager{}
+			rm = &fakeresourcemanager.ResourceManager{Namespace: controlPlaneNamespace}
 			kubeAPIServer = &fakeKubeAPIServer{autoscalingReplicas: new(int32(1))}
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
@@ -375,7 +376,9 @@ var _ = Describe("ResourceManager", func() {
 			Context("with success", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVar(&shared.WaitUntilGardenerResourceManagerBootstrapped,
-						func(_ context.Context, _ client.Client, _ clock.Clock, _ string) error { return nil },
+						func(_ context.Context, _ client.Client, _ clock.Clock, _ string, _ resourcemanager.Interface) error {
+							return nil
+						},
 					))
 				})
 

@@ -514,11 +514,16 @@ var _ = Describe("Reconciler", func() {
 
 		Context("fixed target namespace", func() {
 			BeforeEach(func() {
-				ctrl.TargetNamespace = serviceAccountNamespace + "-other"
-				serviceAccount.Namespace = ctrl.TargetNamespace
+				ctrl.TargetDefaultNamespace = func(_ context.Context, _ client.Client) (string, error) {
+					return serviceAccountNamespace + "-other", nil
+				}
+				var err error
+				serviceAccount.Namespace, err = ctrl.TargetDefaultNamespace(ctx, sourceClient)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should create a new service account in the fixed target namespace, generate a new token and requeue", func() {
+				delete(secret.Annotations, "serviceaccount.resources.gardener.cloud/namespace")
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 

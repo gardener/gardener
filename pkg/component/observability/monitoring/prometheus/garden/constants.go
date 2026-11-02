@@ -14,5 +14,5 @@ const (
 	// ServiceAccountName is the name of the service account in the virtual garden cluster.
 	ServiceAccountName = "prometheus-" + Label
 	// AccessSecretName is the name of the secret containing a token for accessing the virtual garden cluster.
-	AccessSecretName = gardenerutils.SecretNamePrefixShootAccess + ServiceAccountName
+	AccessSecretName = gardenerutils.SecretNamePrefixGardenAccess + ServiceAccountName
 )

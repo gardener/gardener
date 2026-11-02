@@ -43,6 +43,11 @@ var _ = Describe("handler", func() {
 			Groups:   []string{"system:serviceaccounts", "system:serviceaccounts:garden-myproject"},
 		}
 
+		operatorUser = authenticationv1.UserInfo{
+			Username: "system:serviceaccount:kube-system:gardener-internal",
+			Groups:   []string{"system:serviceaccounts", "system:serviceaccounts:kube-system"},
+		}
+
 		projectMemberUser = authenticationv1.UserInfo{
 			Username: "alice",
 			Groups:   []string{"system:authenticated"},
@@ -80,6 +85,12 @@ var _ = Describe("handler", func() {
 
 			It("should allow when the caller is the gardenlet for this shoot", func() {
 				request.UserInfo = gardenletUser
+
+				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+			})
+
+			It("should allow when the caller is the gardener-operator", func() {
+				request.UserInfo = operatorUser
 
 				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 			})
@@ -146,6 +157,12 @@ var _ = Describe("handler", func() {
 
 			It("should allow when the caller is the gardenlet for this shoot", func() {
 				request.UserInfo = gardenletUser
+
+				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+			})
+
+			It("should allow when the caller is the gardener-operator", func() {
+				request.UserInfo = operatorUser
 
 				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 			})

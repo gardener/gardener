@@ -67,9 +67,18 @@ func (r *Reconciler) isRelevantSecret(obj client.Object) bool {
 	if !ok {
 		return false
 	}
-	return secret.Labels != nil &&
-		secret.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest &&
-		(r.Class == nil || secret.Labels[resourcesv1alpha1.ResourceManagerClass] == *r.Class)
+	if secret.Labels == nil || secret.Labels[resourcesv1alpha1.ResourceManagerPurpose] != resourcesv1alpha1.LabelPurposeTokenRequest {
+		return false
+	}
+	if len(r.Classes) == 0 {
+		return true
+	}
+	for _, class := range r.Classes {
+		if secret.Labels[resourcesv1alpha1.ResourceManagerClass] == class {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Reconciler) isRelevantSecretUpdate(oldObj, newObj client.Object) bool {

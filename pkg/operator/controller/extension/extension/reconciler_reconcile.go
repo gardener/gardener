@@ -71,12 +71,12 @@ func (r *Reconciler) reconcile(
 		})
 
 		checkGarden = g.Add(flow.Task{
-			Name: "Checking if garden is reconciled",
+			Name: "Checking if garden is reconciled and up-to-date",
 			Fn: func(_ context.Context) error {
-				if !garden.reconciled {
-					log.Info("Garden is not yet in 'Reconcile Succeeded' state, re-queueing", "requeueAfter", RequeueGardenResourceNotReady)
+				if !garden.reconciled || !garden.upToDate {
+					log.Info("Garden is not yet in 'Reconcile Succeeded' state or not up-to-date, re-queueing", "requeueAfter", RequeueGardenResourceNotReady)
 					reconcileResult = reconcile.Result{RequeueAfter: RequeueGardenResourceNotReady}
-					return fmt.Errorf("garden is not yet successfully reconciled")
+					return fmt.Errorf("garden is not yet successfully reconciled or not up-to-date")
 				}
 				return nil
 			},

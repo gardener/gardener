@@ -253,7 +253,9 @@ var _ = Describe("ResourceManager", func() {
 			Context("with success", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVar(&WaitUntilGardenerResourceManagerBootstrapped,
-						func(_ context.Context, _ client.Client, _ clock.Clock, _ string) error { return nil },
+						func(_ context.Context, _ client.Client, _ clock.Clock, _ string, _ resourcemanager.Interface) error {
+							return nil
+						},
 					))
 				})
 

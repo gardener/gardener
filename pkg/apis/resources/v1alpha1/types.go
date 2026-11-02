@@ -79,6 +79,8 @@ const (
 	ResourceManagerClass = "resources.gardener.cloud/class"
 	// ResourceManagerClassGarden is a constant for the 'garden' class.
 	ResourceManagerClassGarden = "garden"
+	// ResourceManagerClassGardenTransitional is a constant for the 'garden-transitional' class.
+	ResourceManagerClassGardenTransitional = "garden-transitional"
 	// ResourceManagerClassShoot is a constant for the 'shoot' class.
 	ResourceManagerClassShoot = "shoot"
 

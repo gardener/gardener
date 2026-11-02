@@ -435,6 +435,9 @@ func (a *Actuator) getGardenletDeployment(ctx context.Context, targetClient kube
 	return deployment, nil
 }
 
+// GardenletConfigVolumeName is the name of the volume containing the gardenlet configuration.
+const GardenletConfigVolumeName = "gardenlet-config"
+
 // verifyExistingGardenlet checks if the existing gardenlet deployment (if any) is configured with the same seed name
 // as the object currently reconciled. This can help preventing multiple deployments with different seed configuration
 // into the same cluster (e.g., because of kubeconfig configuration issues).
@@ -448,7 +451,7 @@ func (a *Actuator) verifyExistingGardenlet(ctx context.Context, log logr.Logger,
 	}
 
 	configMapVolumeIndex := slices.IndexFunc(deployment.Spec.Template.Spec.Volumes, func(volume corev1.Volume) bool {
-		return volume.Name == "gardenlet-config"
+		return volume.Name == GardenletConfigVolumeName
 	})
 	if configMapVolumeIndex < 0 || deployment.Spec.Template.Spec.Volumes[configMapVolumeIndex].ConfigMap == nil {
 		log.Info("Existing gardenlet deployment found, but config volume mount is missing or not using ConfigMap - cannot perform the configuration checks")

@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -27,6 +28,10 @@ type Handler struct {
 	Logger logr.Logger
 }
 
+// gardenerInternalServiceAccountUsername is the username of the `kube-system/gardener-internal` ServiceAccount. The
+// gardener-operator uses the corresponding gardener-internal access secret to communicate with the garden cluster.
+const gardenerInternalServiceAccountUsername = "system:serviceaccount:" + metav1.NamespaceSystem + ":" + v1beta1constants.SecretNameGardenerInternal
+
 // Handle denies the request and logs the caller when the name prefix is reserved but the caller is not the owning
 // shoot gardenlet.
 func (h *Handler) Handle(_ context.Context, request admission.Request) admission.Response {
@@ -38,17 +43,20 @@ func (h *Handler) Handle(_ context.Context, request admission.Request) admission
 	var (
 		shootName, isExtensionServiceAccount                                = gardenerutils.ParseExtensionShootServiceAccountName(request.Name)
 		gardenletNamespace, gardenletShootName, isSelfHostedShoot, userType = shootidentity.FromAuthenticationV1UserInfo(request.UserInfo)
+
+		isOwningGardenlet = isExtensionServiceAccount && isSelfHostedShoot && userType == gardenletidentity.UserTypeGardenlet &&
+			gardenletNamespace == request.Namespace && gardenletShootName == shootName
+		isGardenerOperator = request.UserInfo.Username == gardenerInternalServiceAccountUsername
 	)
 
-	if !isExtensionServiceAccount || !isSelfHostedShoot || userType != gardenletidentity.UserTypeGardenlet ||
-		gardenletNamespace != request.Namespace || gardenletShootName != shootName {
+	if !isExtensionServiceAccount || (!isOwningGardenlet && !isGardenerOperator) {
 		h.Logger.Info("Denied request for reserved ServiceAccount name prefix",
 			"name", request.Name,
 			"namespace", request.Namespace,
 			"username", request.UserInfo.Username,
 		)
 		return admission.Errored(http.StatusForbidden, fmt.Errorf(
-			"the %q prefix is reserved for the self-hosted shoot gardenlet responsible for %q and may not be used by other clients",
+			"the %q prefix is reserved for the self-hosted shoot gardenlet responsible for %q (or the gardener-operator) and may not be used by other clients",
 			v1beta1constants.ExtensionShootServiceAccountPrefix+shootName, shootName,
 		))
 	}
