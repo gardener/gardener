@@ -13,7 +13,7 @@ import (
 )
 
 // ScrapeConfig returns the scrape configs related to the blackbox-exporter for the garden use-case.
-func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target, discoveryServerEnabled bool) []*monitoringv1alpha1.ScrapeConfig {
+func ScrapeConfig(namespace string, p Params) []*monitoringv1alpha1.ScrapeConfig {
 	defaultScrapeConfig := func(name, module string, targets []monitoringv1alpha1.Target) *monitoringv1alpha1.ScrapeConfig {
 		return &monitoringv1alpha1.ScrapeConfig{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-"+name, namespace, gardenprometheus.Label),
@@ -64,10 +64,9 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 	}
 
 	var (
-		gardenerAPIServerScrapeConfig       = defaultScrapeConfig("gardener-apiserver", httpGardenerAPIServerModuleName, []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"})
-		kubeAPIServerScrapeConfig           = defaultScrapeConfig("apiserver", httpKubeAPIServerModuleName, kubeAPIServerTargets)
-		gardenerDashboardScrapeConfig       = defaultScrapeConfig("dashboard", httpGardenerDashboardModuleName, []monitoringv1alpha1.Target{gardenerDashboardTarget})
-		gardenerDiscoveryServerScrapeConfig = defaultScrapeConfig("discovery-server", httpGardenerDiscoveryServerModuleName, []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz"})
+		gardenerAPIServerScrapeConfig = defaultScrapeConfig("gardener-apiserver", httpGardenerAPIServerModuleName, []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"})
+		kubeAPIServerScrapeConfig     = defaultScrapeConfig("apiserver", httpKubeAPIServerModuleName, p.KubeAPIServerTargets)
+		gardenerDashboardScrapeConfig = defaultScrapeConfig("dashboard", httpGardenerDashboardModuleName, []monitoringv1alpha1.Target{p.DashboardTarget})
 	)
 
 	kubeAPIServerScrapeConfig.Spec.RelabelConfigs = append([]monitoringv1.RelabelConfig{{
@@ -80,8 +79,8 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 	}}, kubeAPIServerScrapeConfig.Spec.RelabelConfigs...)
 
 	scrapeConfigs := []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig}
-	if discoveryServerEnabled {
-		scrapeConfigs = append(scrapeConfigs, gardenerDiscoveryServerScrapeConfig)
+	if p.DiscoveryServerEnabled {
+		scrapeConfigs = append(scrapeConfigs, defaultScrapeConfig("discovery-server", httpGardenerDiscoveryServerModuleName, []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz", p.DiscoveryServerPublicTarget}))
 	}
 
 	return scrapeConfigs
