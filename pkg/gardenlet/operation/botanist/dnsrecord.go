@@ -146,8 +146,10 @@ func (b *Botanist) handOverExternalDNSRecord(ctx context.Context) error {
 		return nil
 	}
 
-	// spec.name of a DNSRecord is immutable. The record of the old domain is migrated, which removes its finalizers but
-	// keeps the DNS entry for the prior external record. Then it is deleted and recreated for the new domain.
+	// spec.name of a DNSRecord is immutable, so the record must be deleted and recreated for the new domain. A plain
+	// deletion would make the DNS extension delete the DNS entry of the old domain, which the prior external DNSRecord
+	// (deployed before) now also serves. The "migrate" operation makes the DNS extension keep the DNS entry and remove its
+	// finalizers. Hence, the following deletion only removes the DNSRecord object, and the DNS entry stays in place.
 	if err := b.MigrateExternalDNSRecord(ctx); err != nil {
 		return err
 	}
