@@ -308,7 +308,7 @@ func (r *Reconciler) delete(
 		destroyMainETCDBackupBucket = g.Add(flow.Task{
 			Name: "Destroying main ETCD backup buckets",
 			Fn: func(ctx context.Context) error {
-				backupBuckets := &extensionsv1alpha1.BackupBucketList{}
+				backupBucketList := &extensionsv1alpha1.BackupBucketList{}
 				if err := r.RuntimeClientSet.Client().List(ctx, backupBuckets); err != nil {
 					return fmt.Errorf("failed to determine backup buckets associated to this garden: %w", err)
 				}
