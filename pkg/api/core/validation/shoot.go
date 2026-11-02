@@ -428,6 +428,8 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	return allErrs
 }
 
+// ValidateAutoPreservationParameters validates the workers' autoPreserveFailedMax values from machineControllerManager
+// settings to ensure that the percentage of those machines doesn't breach the clusterAutoscaler maxTotalUnreadyPercentage.
 func ValidateAutoPreservationParameters(workers []core.Worker, clusterAutoscaler *core.ClusterAutoscaler, fldPath *field.Path) field.ErrorList {
 	if clusterAutoscaler == nil || clusterAutoscaler.MaxTotalUnreadyPercentage == nil {
 		return nil
