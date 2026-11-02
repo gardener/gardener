@@ -70,6 +70,7 @@ var _ = Describe("Etcd", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		kubernetesClient = fakekubernetes.NewClientSetBuilder().
 			WithClient(fakeClient).
+			WithAPIReader(fakeClient).
 			Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 		botanist = &Botanist{Operation: &operation.Operation{}}
@@ -105,6 +106,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			validator = &newEtcdValidator{
+				expectedAPIReader:                 Equal(fakeClient),
 				expectedClient:                    Equal(fakeClient),
 				expectedLogger:                    BeAssignableToTypeOf(logr.Logger{}),
 				expectedNamespace:                 Equal(namespace),
@@ -610,6 +612,7 @@ var _ = Describe("Etcd", func() {
 type newEtcdValidator struct {
 	etcd.Interface
 
+	expectedAPIReader                 gomegatypes.GomegaMatcher
 	expectedClient                    gomegatypes.GomegaMatcher
 	expectedLogger                    gomegatypes.GomegaMatcher
 	expectedNamespace                 gomegatypes.GomegaMatcher
@@ -628,12 +631,14 @@ type newEtcdValidator struct {
 
 func (v *newEtcdValidator) NewEtcd(
 	log logr.Logger,
+	apiReader client.Reader,
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values etcd.Values,
 ) etcd.Interface {
 	Expect(log).To(v.expectedLogger)
+	Expect(apiReader).To(v.expectedAPIReader)
 	Expect(client).To(v.expectedClient)
 	Expect(namespace).To(v.expectedNamespace)
 	Expect(secretsManager).To(v.expectedSecretsManager)
