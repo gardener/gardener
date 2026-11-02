@@ -16,6 +16,8 @@ import (
 // RegisterFeatureGates registers the feature gates of gardenadm.
 func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(GetFeatures()...)))
+	// gardenadm runs the gardener-apiserver admission chain in-process, whose plugins read the API server's
+	// feature gates, so they must be registered in the shared feature gate as well.
 	apiserverfeatures.RegisterFeatureGates()
 	// Self-hosted shoots always use AutoInPlaceUpdate for unmanaged infrastructure workers (defaulted in
 	// defaults_shoot.go), so enable InPlaceNodeUpdates unconditionally in gardenadm.

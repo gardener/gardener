@@ -25,8 +25,8 @@ import (
 	_ "github.com/gardener/gardener/pkg/apis/core/install" // ensure internal types are registered for scheme conversion
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	admissionplugins "github.com/gardener/gardener/pkg/apiserver/admission/plugins"
 	shootregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/shoot"
 	gardencorefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -45,6 +45,11 @@ import (
 func RunAdmissionChain(ctx context.Context, log logr.Logger, resources *gardenadm.Resources) error {
 	logger := log.WithValues("shoot", client.ObjectKeyFromObject(resources.Shoot))
 	logger.Info("Running admission chain for Shoot")
+
+	// Cancel the fake informers' goroutines and watches on return — RunAdmissionChain is invoked once per
+	// botanist construction, and `gardenadm init`/`restore` construct the botanist multiple times.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	var (
 		gardenerCoreClient    = gardencorefake.NewSimpleClientset(buildGardenerCoreObjects(resources)...)
@@ -65,8 +70,11 @@ func RunAdmissionChain(ctx context.Context, log logr.Logger, resources *gardenad
 		return fmt.Errorf("failed converting Shoot to internal type: %w", err)
 	}
 
+	// PrepareForCreate resets .status, but gardenadm restore relies on .status.uid from the manifest to locate the
+	// backup data. Preserve it and restore it on the output after the chain has run.
+	originalStatus := internalShoot.Status
+
 	strategy := shootregistry.NewStrategy(0)
-	strategy.PrepareForCreate(ctx, internalShoot)
 
 	var (
 		attrs = admission.NewAttributesRecord(
@@ -125,6 +133,10 @@ func RunAdmissionChain(ctx context.Context, log logr.Logger, resources *gardenad
 		return fmt.Errorf("admission mutation rejected: %w", err)
 	}
 
+	// Mirror the gardener-apiserver order: mutating admission runs first, then rest.BeforeCreate
+	// (PrepareForCreate, static validation, canonicalization), then validating admission.
+	strategy.PrepareForCreate(ctx, internalShoot)
+
 	if errs := strategy.Validate(ctx, internalShoot); len(errs) > 0 {
 		return fmt.Errorf("static Shoot validation failed: %w", errs.ToAggregate())
 	}
@@ -134,6 +146,9 @@ func RunAdmissionChain(ctx context.Context, log logr.Logger, resources *gardenad
 	if err := chain.(admission.ValidationInterface).Validate(ctx, attrs, objectInterfaces); err != nil {
 		return fmt.Errorf("admission validation rejected: %w", err)
 	}
+
+	// Restore the .status wiped by PrepareForCreate so gardenadm restore can read .status.uid.
+	internalShoot.Status = originalStatus
 
 	resources.Shoot = &gardencorev1beta1.Shoot{}
 	if err := kubernetes.GardenScheme.Convert(internalShoot, resources.Shoot, nil); err != nil {
@@ -194,7 +209,7 @@ func buildKubeObjects(resources *gardenadm.Resources) []runtime.Object {
 // picked up automatically — add to GardenadmSkipPlugins only if explicitly inapplicable in gardenadm.
 func buildChain(initializer admission.PluginInitializer) (admission.Interface, error) {
 	registry := admission.NewPlugins()
-	apiserver.RegisterAllAdmissionPlugins(registry)
+	admissionplugins.RegisterAllAdmissionPlugins(registry)
 
 	var (
 		defaultOnPlugins = plugin.DefaultOnPlugins()

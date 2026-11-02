@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -221,6 +222,14 @@ var _ = Describe("RunAdmissionChain", func() {
 
 		Expect(resources.Shoot.Spec.SystemComponents).NotTo(BeNil())
 		Expect(resources.Shoot.Spec.SystemComponents.NodeLocalDNS).To(BeNil())
+	})
+
+	It("should preserve the Shoot's status after running the chain", func(ctx SpecContext) {
+		resources.Shoot.Status.UID = "some-uid"
+
+		Expect(RunAdmissionChain(ctx, log, resources)).To(Succeed())
+
+		Expect(resources.Shoot.Status.UID).To(Equal(types.UID("some-uid")))
 	})
 
 	It("should return an error for a Shoot referencing a kubernetes version not in the CloudProfile", func(ctx SpecContext) {

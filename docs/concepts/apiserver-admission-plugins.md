@@ -25,8 +25,11 @@ This ensures the `Shoot` read from the config directory is mutated and validated
   If it is not applicable in the `gardenadm` context, add it to `GardenadmSkipPlugins` with a comment explaining why.
 - **New non-default plugin** — no action needed; `gardenadm` only runs default-on plugins.
 - **Plugin changed from non-default to default-on** — treat it as a new default-on plugin (see above).
-- **Plugin mutates state that `gardenadm connect` does not propagate** — add it to `GardenadmSkipPlugins`.
-  `gardenadm connect` registers the on-disk `Shoot` in the garden cluster without re-running the admission chain, so any in-memory mutation applied during `gardenadm init` but absent from the on-disk manifest will cause a divergence between what the gardenlet observes and what `gardenadm` deployed.
+- **Plugin produces a non-reproducible mutation** — add it to `GardenadmSkipPlugins`.
+  `gardenadm init` runs the admission chain in-memory only; nothing is written back to the config directory.
+  `gardenadm connect` later registers the unmodified on-disk `Shoot` in the garden cluster, where the real `gardener-apiserver` re-runs the same admission chain on it.
+  A mutation is therefore safe as long as the real `gardener-apiserver` re-derives the identical result from the on-disk manifest (e.g. `kubeReserved` defaulting by `ShootResourceReservation` — deterministic, so `gardenadm init` and the gardenlet compute the same worker pool hash and no Node is rolled).
+  It is _not_ safe if the mutation depends on state that is unavailable or different at `gardenadm connect` time (transient in-memory data, randomness, ordering), because then what `gardenadm init` deployed to the Nodes diverges from what the gardenlet later reconciles.
 
 <!-- Keep the list of admission plugins in (case-sensitive) lexicographical order. -->
 

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package apiserver
+package plugins
 
 import (
 	"k8s.io/apiserver/pkg/admission"

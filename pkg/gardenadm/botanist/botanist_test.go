@@ -26,36 +26,49 @@ import (
 )
 
 var _ = Describe("GardenadmBotanist", func() {
-	Describe("#NewGardenadmBotanistFromResources", func() {
-		const configDir = "manifests"
+	const configDir = "manifests"
 
-		var (
-			ctx = context.Background()
-			log = logr.Discard()
+	var (
+		ctx = context.Background()
+		log = logr.Discard()
 
-			fsys fstest.MapFS
-		)
+		fsys fstest.MapFS
+	)
 
-		BeforeEach(func() {
-			fsys = fstest.MapFS{}
-			createManifests(fsys, configDir)
+	BeforeEach(func() {
+		fsys = fstest.MapFS{}
+		createManifests(fsys, configDir)
 
-			DeferCleanup(test.WithVars(
-				&DirFS, func(dir string) fs.FS {
-					sub, err := fs.Sub(fsys, dir)
-					Expect(err).ToNot(HaveOccurred())
-					return sub
-				},
-				&NewFs, afero.NewMemMapFs,
-			))
+		DeferCleanup(test.WithVars(
+			&DirFS, func(dir string) fs.FS {
+				sub, err := fs.Sub(fsys, dir)
+				Expect(err).ToNot(HaveOccurred())
+				return sub
+			},
+			&NewFs, afero.NewMemMapFs,
+		))
+	})
+
+	readResources := func() gardenadm.Resources {
+		resources, err := gardenadm.ReadManifests(log, DirFS(configDir))
+		Expect(err).NotTo(HaveOccurred())
+		return resources
+	}
+
+	Describe("#NewGardenadmBotanistFromManifests", func() {
+		It("should fail if the directory does not exist", func() {
+			_, err := NewGardenadmBotanistFromManifests(ctx, log, nil, "does/not/exist", true)
+			Expect(err).To(MatchError(ContainSubstring("failed reading Kubernetes resources")))
 		})
 
-		readResources := func() gardenadm.Resources {
-			resources, err := gardenadm.ReadManifests(log, DirFS(configDir))
-			Expect(err).NotTo(HaveOccurred())
-			return resources
-		}
+		It("should run the admission chain and propagate its rejection", func() {
+			// The CloudProfile fixture does not contain the Shoot's Kubernetes version, so the admission chain rejects it.
+			_, err := NewGardenadmBotanistFromManifests(ctx, log, nil, configDir, true)
+			Expect(err).To(MatchError(ContainSubstring("admission chain rejected the configuration")))
+		})
+	})
 
+	Describe("#NewGardenadmBotanistFromResources", func() {
 		It("should fail if the directory does not exist", func() {
 			Expect(gardenadm.ReadManifests(log, DirFS("does/not/exist"))).Error().To(MatchError(fs.ErrNotExist))
 		})
