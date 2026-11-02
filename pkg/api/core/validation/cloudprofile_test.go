@@ -706,7 +706,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 			})
 
-			It("only allow one supported version per minor version", func() {
+			It("should allow multiple supported versions per minor version", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
 					{
 						Version:        "1.1.0",
@@ -719,13 +719,55 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				}
 				errorList := ValidateCloudProfile(cloudProfile)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.versions[1]"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.versions[0]"),
-				}))))
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow multiple implicitly supported versions (nil classification) per minor version", func() {
+				cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+					{
+						Version: "1.1.0",
+					},
+					{
+						Version: "1.1.1",
+					},
+				}
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow multiple supported machine image versions per minor version (explicit, implicit, and lifecycle)", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+				cloudProfile.Spec.MachineImages[0].Versions = []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "1.1.0",
+							Classification: &supportedClassification,
+						},
+						CRI:           []core.CRI{{Name: "containerd"}},
+						Architectures: []string{"amd64"},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.1.1",
+						},
+						CRI:           []core.CRI{{Name: "containerd"}},
+						Architectures: []string{"amd64"},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.1.2",
+							Lifecycle: []core.LifecycleStage{
+								{Classification: supportedClassification},
+							},
+						},
+						CRI:           []core.CRI{{Name: "containerd"}},
+						Architectures: []string{"amd64"},
+					},
+				}
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(BeEmpty())
 			})
 
 			Context("machine image validation", func() {
@@ -3032,7 +3074,7 @@ var _ = Describe("Supported version lifecycle periods", func() {
 	}
 
 	DescribeTable("validates Kubernetes and machine image versions",
-		func(first, second core.ExpirableVersion, secondVersion string, overlap bool) {
+		func(first, second core.ExpirableVersion, secondVersion string) {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			first.Version = "1.30.1"
 			second.Version = secondVersion
@@ -3051,25 +3093,20 @@ var _ = Describe("Supported version lifecycle periods", func() {
 					spec.Kubernetes.Versions = append(spec.Kubernetes.Versions, first, second)
 				}
 				errs := ValidateNamespacedCloudProfileStatus(&spec, field.NewPath("status", "cloudProfileSpec"))
-				if overlap {
-					Expect(errs).NotTo(BeEmpty())
-					for _, err := range errs {
-						Expect(err.Type).To(Equal(field.ErrorTypeForbidden))
-						Expect(err.Detail).To(ContainSubstring("lifecycle stages must not overlap per minor version"))
-					}
-				} else {
-					Expect(errs).To(BeEmpty())
-				}
+				Expect(errs).To(BeEmpty())
 			}
 		},
-		Entry("adjacent periods do not overlap", period(nil, &middle), period(&middle, nil), "1.30.2", false),
-		Entry("separated periods do not overlap", period(&start, &middle), period(&end, nil), "1.30.2", false),
-		Entry("reversed separated periods do not overlap", period(&end, nil), period(&start, &middle), "1.30.2", false),
-		Entry("empty periods do not overlap", period(&middle, &middle), period(&start, &end), "1.30.2", false),
-		Entry("different minors do not conflict", period(nil, nil), period(nil, nil), "1.31.0", false),
-		Entry("explicit legacy and lifecycle versions conflict", core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, period(nil, nil), "1.30.2", true),
-		Entry("implicit legacy classifications retain their compatibility exception", core.ExpirableVersion{}, core.ExpirableVersion{}, "1.30.2", false),
-		Entry("implicit legacy classifications remain excluded beside lifecycle versions", core.ExpirableVersion{}, period(nil, nil), "1.30.2", false),
-		Entry("versions without a supported stage do not conflict", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationPreview}}}, period(nil, nil), "1.30.2", false),
+		Entry("adjacent periods do not conflict", period(nil, &middle), period(&middle, nil), "1.30.2"),
+		Entry("separated periods do not conflict", period(&start, &middle), period(&end, nil), "1.30.2"),
+		Entry("reversed separated periods do not conflict", period(&end, nil), period(&start, &middle), "1.30.2"),
+		Entry("empty periods do not conflict", period(&middle, &middle), period(&start, &end), "1.30.2"),
+		Entry("different minors do not conflict", period(nil, nil), period(nil, nil), "1.31.0"),
+		Entry("overlapping supported lifecycle periods do not conflict", period(nil, nil), period(nil, nil), "1.30.2"),
+		Entry("overlapping bounded supported lifecycle periods do not conflict", period(&start, &end), period(&middle, &end), "1.30.2"),
+		Entry("multiple explicitly supported versions do not conflict", core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, "1.30.2"),
+		Entry("explicit legacy and lifecycle versions do not conflict", core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, period(nil, nil), "1.30.2"),
+		Entry("implicit legacy classifications do not conflict", core.ExpirableVersion{}, core.ExpirableVersion{}, "1.30.2"),
+		Entry("implicit legacy classifications beside lifecycle versions do not conflict", core.ExpirableVersion{}, period(nil, nil), "1.30.2"),
+		Entry("versions without a supported stage do not conflict", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationPreview}}}, period(nil, nil), "1.30.2"),
 	)
 })
