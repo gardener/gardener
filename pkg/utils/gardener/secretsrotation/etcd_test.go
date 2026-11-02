@@ -41,6 +41,7 @@ var _ = Describe("ETCD", func() {
 		kubeAPIServerDeploymentName = namePrefix + "kube-apiserver"
 
 		runtimeClient       client.Client
+		runtimeAPIReader    client.Reader
 		targetClient        client.Client
 		fakeTargetInterface kubernetes.Interface
 		fakeSecretsManager  secretsmanager.Interface
@@ -51,6 +52,7 @@ var _ = Describe("ETCD", func() {
 		logger = logr.Discard()
 
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		runtimeAPIReader = runtimeClient
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 		fakeDiscoveryClient = &fakeDiscoveryWithServerPreferredResources{}
 		fakeTargetInterface = fakekubernetes.NewClientSetBuilder().WithKubernetes(test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)).WithClient(targetClient).Build()
@@ -172,7 +174,7 @@ var _ = Describe("ETCD", func() {
 
 				defaultGVKs := []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
 
-				Expect(RewriteEncryptedDataAddLabel(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, runtimeAPIReader, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
 
 				for _, obj := range []client.Object{
 					secret1, secret2, secret3,
@@ -217,7 +219,7 @@ var _ = Describe("ETCD", func() {
 				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/resources-labeled", "true")
 				Expect(runtimeClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
 
-				Expect(RewriteEncryptedDataAddLabel(ctx, logger, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, runtimeAPIReader, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
 
 				Expect(secret1.ResourceVersion).To(Equal(secret1ResourceVersion))
 				Expect(secret2.ResourceVersion).To(Equal(secret2ResourceVersion))
@@ -232,6 +234,23 @@ var _ = Describe("ETCD", func() {
 
 				Expect(endpointSlice1.ResourceVersion).To(Equal(endpointSlice1ResourceVersion))
 				Expect(endpointSlice2.ResourceVersion).To(Equal(endpointSlice2ResourceVersion))
+			})
+
+			It("should read the resources-labeled annotation via the API reader (and not the cached client)", func() {
+				resources := []string{appsv1.Resource("deployments").String()}
+				defaultGVKs := []schema.GroupVersionKind{corev1.SchemeGroupVersion.WithKind("Secret")}
+
+				// The annotation is only present on the object served by the API reader but not on the one served by the
+				// cached client. The guard must still fire, proving that it reads via the API reader.
+				apiReaderDeployment := kubeAPIServerDeployment.DeepCopy()
+				metav1.SetMetaDataAnnotation(&apiReaderDeployment.ObjectMeta, "credentials.gardener.cloud/resources-labeled", "true")
+				runtimeAPIReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(apiReaderDeployment).Build()
+
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, runtimeAPIReader, runtimeClient, fakeTargetInterface, fakeSecretsManager, kubeAPIServerNamespace, kubeAPIServerDeploymentName, resources, resources, defaultGVKs)).To(Succeed())
+
+				Expect(deployment1.ResourceVersion).To(Equal(deployment1ResourceVersion))
+				Expect(deployment2.ResourceVersion).To(Equal(deployment2ResourceVersion))
+				Expect(deployment3.ResourceVersion).To(Equal(deployment3ResourceVersion))
 			})
 		})
 
@@ -253,10 +272,20 @@ var _ = Describe("ETCD", func() {
 			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
 				etcdMain.EXPECT().Snapshot(ctx, nil)
 
-				Expect(SnapshotETCDAfterRewritingEncryptedData(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, kubeAPIServerDeploymentName)).To(Succeed())
+				Expect(SnapshotETCDAfterRewritingEncryptedData(ctx, runtimeAPIReader, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, kubeAPIServerDeploymentName)).To(Succeed())
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
+			})
+
+			It("should read the etcd-snapshotted annotation via the API reader (and not the cached client)", func() {
+				// The annotation is only present on the object served by the API reader but not on the one served by the
+				// cached client. The guard must still fire and skip the snapshot, proving that it reads via the API reader.
+				apiReaderDeployment := kubeAPIServerDeployment.DeepCopy()
+				metav1.SetMetaDataAnnotation(&apiReaderDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
+				runtimeAPIReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(apiReaderDeployment).Build()
+
+				Expect(SnapshotETCDAfterRewritingEncryptedData(ctx, runtimeAPIReader, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, kubeAPIServerDeploymentName)).To(Succeed())
 			})
 		})
 
