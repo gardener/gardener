@@ -20,12 +20,12 @@ function parse_envoy_access_log_to_record(tag, timestamp, record)
         record["protocol"] = proto
     end
     if resp_code ~= nil then
-        record["response_code"] = tonumber(resp_code)
+        record["response_code"] = resp_code
         record["response_flags"] = resp_flags
-        record["bytes_received"] = tonumber(bytes_rcvd)
-        record["bytes_sent"] = tonumber(bytes_sent)
-        record["duration"] = tonumber(duration)
-        record["upstream_service_time"] = tonumber(upstream_time)
+        record["bytes_received"] = bytes_rcvd
+        record["bytes_sent"] = bytes_sent
+        record["duration"] = duration
+        record["upstream_service_time"] = upstream_time
     end
     if authority ~= nil then
         record["upstream_host"] = upstream_host
