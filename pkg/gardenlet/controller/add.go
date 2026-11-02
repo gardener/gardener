@@ -149,7 +149,8 @@ func AddToManager(
 	}
 
 	if err := (&workloadidentity.Reconciler{
-		Config: cfg.Controllers.TokenRequestorWorkloadIdentity,
+		Config:          cfg.Controllers.TokenRequestorWorkloadIdentity,
+		GardenNamespace: gardenNamespace(),
 	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding TokenRequestorWorkloadIdentity controller: %w", err)
 	}
