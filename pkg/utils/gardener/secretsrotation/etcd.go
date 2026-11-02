@@ -44,6 +44,7 @@ var (
 func RewriteEncryptedData(
 	ctx context.Context,
 	log logr.Logger,
+	runtimeAPIReader client.Reader,
 	runtimeClient client.Client,
 	clientSet kubernetes.Interface,
 	secretsManager secretsmanager.Interface,
@@ -56,10 +57,10 @@ func RewriteEncryptedData(
 	storageVersionMigratorEnabled bool,
 ) error {
 	if storageVersionMigratorEnabled {
-		return CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, log, runtimeClient, clientSet, secretsManager, namespace, name, resourcesToEncrypt, encryptedResources, defaultGRs)
+		return CreateStorageVersionMigrationResourcesAndWaitForCompletion(ctx, log, runtimeAPIReader, runtimeClient, clientSet, secretsManager, namespace, name, resourcesToEncrypt, encryptedResources, defaultGRs)
 	}
 
-	return RewriteEncryptedDataAddLabel(ctx, log, runtimeClient, clientSet, secretsManager, namespace, name, resourcesToEncrypt, encryptedResources, defaultGVKs)
+	return RewriteEncryptedDataAddLabel(ctx, log, runtimeAPIReader, runtimeClient, clientSet, secretsManager, namespace, name, resourcesToEncrypt, encryptedResources, defaultGVKs)
 }
 
 // CreateStorageVersionMigrationResourcesAndWaitForCompletion creates StorageVersionMigration resources for the given
@@ -67,6 +68,7 @@ func RewriteEncryptedData(
 func CreateStorageVersionMigrationResourcesAndWaitForCompletion(
 	ctx context.Context,
 	log logr.Logger,
+	runtimeAPIReader client.Reader,
 	runtimeClient client.Client,
 	clientSet kubernetes.Interface,
 	secretsManager secretsmanager.Interface,
@@ -79,9 +81,11 @@ func CreateStorageVersionMigrationResourcesAndWaitForCompletion(
 	// Check if we have already completed the StorageVersionMigration. If the annotation is present,
 	// we can skip creating the StorageVersionMigration resources. This is to avoid recreating them
 	// unnecessarily in case a later step fails and the flow is retried.
-	apiServerDeployment := &metav1.PartialObjectMetadata{}
+	// We read via the API reader (and not the cached client) because the annotation might have been
+	// written by us in a previous reconciliation, and the cache might not have caught up yet.
+	apiServerDeployment := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: deploymentNamespace, Name: deploymentName}}
 	apiServerDeployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: deploymentNamespace, Name: deploymentName}, apiServerDeployment); err != nil {
+	if err := runtimeAPIReader.Get(ctx, client.ObjectKeyFromObject(apiServerDeployment), apiServerDeployment); err != nil {
 		return err
 	}
 
@@ -196,6 +200,7 @@ func CleanupStorageVersionMigrationObjects(
 func RewriteEncryptedDataAddLabel(
 	ctx context.Context,
 	log logr.Logger,
+	runtimeAPIReader client.Reader,
 	runtimeClient client.Client,
 	clientSet kubernetes.Interface,
 	secretsManager secretsmanager.Interface,
@@ -206,9 +211,11 @@ func RewriteEncryptedDataAddLabel(
 	defaultGVKs []schema.GroupVersionKind,
 ) error {
 	// Check if we have to label the resources to rewrite the data.
-	meta := &metav1.PartialObjectMetadata{}
+	// We read via the API reader (and not the cached client) because the annotation might have been
+	// written by us in a previous reconciliation, and the cache might not have caught up yet.
+	meta := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, meta); err != nil {
+	if err := runtimeAPIReader.Get(ctx, client.ObjectKeyFromObject(meta), meta); err != nil {
 		return err
 	}
 
@@ -387,15 +394,18 @@ func rewriteEncryptedData(
 // after it's done so that it does not take another snapshot again after it succeeded once.
 func SnapshotETCDAfterRewritingEncryptedData(
 	ctx context.Context,
+	runtimeAPIReader client.Reader,
 	runtimeClient client.Client,
 	snapshotEtcd func(ctx context.Context) error,
 	namespace string,
 	name string,
 ) error {
 	// Check if we have to snapshot ETCD now that we have rewritten all encrypted data.
-	meta := &metav1.PartialObjectMetadata{}
+	// We read via the API reader (and not the cached client) because the annotation might have been
+	// written by us in a previous reconciliation, and the cache might not have caught up yet.
+	meta := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, meta); err != nil {
+	if err := runtimeAPIReader.Get(ctx, client.ObjectKeyFromObject(meta), meta); err != nil {
 		return err
 	}
 

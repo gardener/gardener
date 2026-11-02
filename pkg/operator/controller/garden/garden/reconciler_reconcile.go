@@ -638,7 +638,7 @@ func (r *Reconciler) reconcile(
 		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Rewriting encrypted resources after modification of encryption config or to re-encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedData(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs, defaultEncryptedGRs, storageVersionMigratorEnabled)
+				return secretsrotation.RewriteEncryptedData(ctx, log, r.RuntimeClientSet.APIReader(), r.RuntimeClientSet.Client(), virtualClusterClientSet, secretsManager, r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer, resourcesToEncrypt, encryptedResources, defaultEncryptedGVKs, defaultEncryptedGRs, storageVersionMigratorEnabled)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 				sets.New(resourcesToEncrypt...).Equal(sets.New(encryptedResources...)) && (encryptionProviderToUse == encryptionProvider ||
@@ -648,7 +648,7 @@ func (r *Reconciler) reconcile(
 		snapshotETCD = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after modification of encryption config or resources are re-encrypted with new ETCD encryption key",
 			Fn: func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer)
+				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.APIReader(), r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, operatorv1alpha1.DeploymentNameVirtualGardenKubeAPIServer)
 			},
 			SkipIf: !backupConfigured ||
 				(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
