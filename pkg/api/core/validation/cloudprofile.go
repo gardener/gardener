@@ -402,9 +402,7 @@ func checkImageSupport(bastionImageName string, imageVersions []core.MachineImag
 			archSupported = true
 		}
 
-		// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
-		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
-		if version.Classification != nil && helper.VersionIsSupported(version.ExpirableVersion) {
+		if helper.VersionIsSupported(version.ExpirableVersion) {
 			validClassification = true
 		}
 		if archSupported && validClassification {
