@@ -34,7 +34,7 @@ When the external domain of a shoot is changed (see [Changing the External Domai
 As `.spec.name` of a `DNSRecord` is immutable, the `<shoot>-external` record is handed over:
 
 1. Gardener creates a `DNSRecord` `<shoot>-prior-external` (label `role: prior-external`) for the old domain and waits until it is ready.
-2. Gardener migrates the `<shoot>-external` record, deletes it, and creates it again for the new domain.
+2. Gardener recreates the `<shoot>-external` record, deletes it, and creates it again for the new domain.
 3. When the CA rotation is completed, Gardener deletes the `<shoot>-prior-external` record.
 
 Step 2 relies on the `migrate` operation keeping the DNS record at the DNS provider, as it is required for all extensions (see [Control Plane Migration](../migration.md)).
