@@ -5,6 +5,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -13,7 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/ptr"
 
+	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
@@ -134,6 +137,20 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		return nil, nil
 	}
 
+	requesterSeedName, isSeed, _ := seedidentity.FromUserInfoInterface(user)
+	if !isSeed {
+		return nil, apierrors.NewForbidden(securityapi.Resource("workloadidentities"), "", errors.New("cannot determine the seed of the requester"))
+	}
+
+	// The context claims are only trustworthy if they are bound to the requester, hence context objects not related to
+	// the requesting seed are rejected. This check must happen before comparing UIDs to avoid disclosing them.
+	notRelatedToRequester := func() error {
+		return apierrors.NewForbidden(securityapi.Resource("workloadidentities"), "", fmt.Errorf("context object %s is not related to seed %q", ctxObjectKey(ctxObj), requesterSeedName))
+	}
+	isAssignedToRequester := func(seedNames ...*string) bool {
+		return slices.ContainsFunc(seedNames, func(s *string) bool { return ptr.Deref(s, "") == requesterSeedName })
+	}
+
 	var (
 		ctxObjects   = &contextObjects{}
 		shoot        *gardencorev1beta1.Shoot
@@ -149,6 +166,11 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Shoot":
 		if shoot, err = r.shootListers.Shoots(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
 			return nil, err
+		}
+
+		// Accepting the status seed name allows the source seed to request tokens during control plane migration.
+		if !isAssignedToRequester(shoot.Spec.SeedName, shoot.Status.SeedName) {
+			return nil, notRelatedToRequester()
 		}
 		ctxObjects.shoot = shoot.GetObjectMeta()
 
@@ -170,6 +192,10 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		ctxObjects.project = project.GetObjectMeta()
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Seed":
+		if ctxObj.Name != requesterSeedName {
+			return nil, notRelatedToRequester()
+		}
+
 		if seed, err = r.seedLister.Get(ctxObj.Name); err != nil {
 			return nil, err
 		}
@@ -182,6 +208,10 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupBucket":
 		if backupBucket, err = r.backupBucketLister.Get(ctxObj.Name); err != nil {
 			return nil, err
+		}
+
+		if !isAssignedToRequester(backupBucket.Spec.SeedName) {
+			return nil, notRelatedToRequester()
 		}
 
 		if backupBucket.UID != ctxObj.UID {
@@ -200,6 +230,11 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupEntry":
 		if backupEntry, err = r.backupEntryLister.BackupEntries(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
 			return nil, err
+		}
+
+		// Accepting the status seed name allows the source seed to request tokens during control plane migration.
+		if !isAssignedToRequester(backupEntry.Spec.SeedName, backupEntry.Status.SeedName) {
+			return nil, notRelatedToRequester()
 		}
 
 		if backupEntry.UID != ctxObj.UID {
@@ -242,4 +277,11 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 	}
 
 	return ctxObjects, nil
+}
+
+func ctxObjectKey(ctxObj *securityapi.ContextObject) string {
+	if ns := ptr.Deref(ctxObj.Namespace, ""); ns != "" {
+		return fmt.Sprintf("%s %s/%s", ctxObj.Kind, ns, ctxObj.Name)
+	}
+	return fmt.Sprintf("%s %s", ctxObj.Kind, ctxObj.Name)
 }

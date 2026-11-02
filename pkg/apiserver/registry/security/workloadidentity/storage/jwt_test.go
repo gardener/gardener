@@ -45,7 +45,7 @@ var _ = BeforeSuite(func() {
 var _ = Describe("#TokenRequest", func() {
 	BeforeEach(func() {
 		seedUser = user.DefaultInfo{
-			Name: v1beta1constants.SeedUserNamePrefix + "foo",
+			Name: v1beta1constants.SeedUserNamePrefix + "test-seed",
 			Groups: []string{
 				v1beta1constants.SeedsGroup,
 				"foo",
@@ -243,6 +243,7 @@ var _ = Describe("#TokenRequest", func() {
 			shoot = &gardencorev1beta1.Shoot{
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"},
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: shootName, UID: shootUID},
+				Spec:       gardencorev1beta1.ShootSpec{SeedName: new(seedName)},
 				Status:     gardencorev1beta1.ShootStatus{TechnicalID: shootTechnicalID},
 			}
 			seed = &gardencorev1beta1.Seed{
@@ -259,11 +260,12 @@ var _ = Describe("#TokenRequest", func() {
 			backupBucket = &gardencorev1beta1.BackupBucket{
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "BackupBucket"},
 				ObjectMeta: metav1.ObjectMeta{Name: backupBucketName, UID: backupBucketUID},
+				Spec:       gardencorev1beta1.BackupBucketSpec{SeedName: new(seedName)},
 			}
 			backupEntry = &gardencorev1beta1.BackupEntry{
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "BackupEntry"},
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: backupEntryName, UID: backupEntryUID},
-				Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: backupBucketName},
+				Spec:       gardencorev1beta1.BackupEntrySpec{BucketName: backupBucketName, SeedName: new(seedName)},
 			}
 			informerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
@@ -323,31 +325,7 @@ var _ = Describe("#TokenRequest", func() {
 				UID:        shootUID,
 			}
 
-			By("Resolve context object before the shoot is scheduled to a seed")
 			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(ctxObjects).ToNot(BeNil())
-
-			Expect(ctxObjects.shoot).ToNot(BeNil())
-			Expect(ctxObjects.shoot.GetName()).To(Equal(shootName))
-			Expect(ctxObjects.shoot.GetNamespace()).To(Equal(namespaceName))
-			Expect(ctxObjects.shoot.GetUID()).To(Equal(shootUID))
-
-			Expect(ctxObjects.seed).To(BeNil())
-			Expect(ctxObjects.backupBucket).To(BeNil())
-			Expect(ctxObjects.backupEntry).To(BeNil())
-
-			Expect(ctxObjects.project).ToNot(BeNil())
-			Expect(ctxObjects.project.GetName()).To(Equal(projectName))
-			Expect(ctxObjects.project.GetUID()).To(Equal(projectUID))
-
-			By("Schedule the shoot to a seed")
-			shootCopy := shoot.DeepCopy()
-			shootCopy.Spec = gardencorev1beta1.ShootSpec{SeedName: new(seedName)}
-			Expect(shootInformer.Informer().GetStore().Update(shootCopy)).To(Succeed())
-
-			By("Resolve context object after the shoot is scheduled to a seed")
-			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ctxObjects).ToNot(BeNil())
 
@@ -486,26 +464,6 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(ctxObjects).ToNot(BeNil())
 
 			Expect(ctxObjects.shoot).To(BeNil())
-			Expect(ctxObjects.seed).To(BeNil())
-			Expect(ctxObjects.project).To(BeNil())
-			Expect(ctxObjects.backupEntry).To(BeNil())
-
-			Expect(ctxObjects.backupBucket).ToNot(BeNil())
-			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
-			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
-
-			By("bind the backupBucket to the seed")
-			backupBucketCopy := backupBucket.DeepCopy()
-			backupBucketCopy.Spec = gardencorev1beta1.BackupBucketSpec{
-				SeedName: new(seedName),
-			}
-			Expect(backupBucketInformer.Informer().GetStore().Update(backupBucketCopy)).To(Succeed())
-
-			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(ctxObjects).ToNot(BeNil())
-
-			Expect(ctxObjects.shoot).To(BeNil())
 			Expect(ctxObjects.project).To(BeNil())
 			Expect(ctxObjects.backupEntry).To(BeNil())
 
@@ -577,7 +535,10 @@ var _ = Describe("#TokenRequest", func() {
 
 			Expect(ctxObjects.shoot).To(BeNil())
 			Expect(ctxObjects.project).To(BeNil())
-			Expect(ctxObjects.seed).To(BeNil())
+
+			Expect(ctxObjects.seed).ToNot(BeNil())
+			Expect(ctxObjects.seed.GetName()).To(Equal(seedName))
+			Expect(ctxObjects.seed.GetUID()).To(Equal(seedUID))
 
 			Expect(ctxObjects.backupEntry).ToNot(BeNil())
 			Expect(ctxObjects.backupEntry.GetName()).To(Equal(backupEntryName))
@@ -596,35 +557,6 @@ var _ = Describe("#TokenRequest", func() {
 				UID:        shootUID,
 			}}
 			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntry)).To(Succeed())
-
-			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(ctxObjects).ToNot(BeNil())
-
-			Expect(ctxObjects.seed).To(BeNil())
-
-			Expect(ctxObjects.backupEntry).ToNot(BeNil())
-			Expect(ctxObjects.backupEntry.GetName()).To(Equal(backupEntryName))
-			Expect(ctxObjects.backupEntry.GetNamespace()).To(Equal(namespaceName))
-			Expect(ctxObjects.backupEntry.GetUID()).To(Equal(backupEntryUID))
-
-			Expect(ctxObjects.backupBucket).ToNot(BeNil())
-			Expect(ctxObjects.backupBucket.GetName()).To(Equal(backupBucketName))
-			Expect(ctxObjects.backupBucket.GetUID()).To(Equal(backupBucketUID))
-
-			Expect(ctxObjects.shoot).ToNot(BeNil())
-			Expect(ctxObjects.shoot.GetName()).To(Equal(shootName))
-			Expect(ctxObjects.shoot.GetNamespace()).To(Equal(namespaceName))
-			Expect(ctxObjects.shoot.GetUID()).To(Equal(shootUID))
-
-			Expect(ctxObjects.project).ToNot(BeNil())
-			Expect(ctxObjects.project.GetName()).To(Equal(projectName))
-			Expect(ctxObjects.project.GetUID()).To(Equal(projectUID))
-
-			By("bind the backupEntry to the seed")
-			backupEntryCopy := backupEntry.DeepCopy()
-			backupEntryCopy.Spec.SeedName = new(seedName)
-			Expect(backupEntryInformer.Informer().GetStore().Update(backupEntryCopy)).To(Succeed())
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
@@ -770,6 +702,148 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(err.Error()).To(Equal("unsupported GVK for context object: test/v1alpha1, Kind=Foo"))
 			Expect(ctxObjects).To(BeNil())
 		})
+
+		It("should forbid requesters in the seeds group without a seed identity", func() {
+			contextObject := &securityapi.ContextObject{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Seed",
+				Name:       seedName,
+				UID:        seedUID,
+			}
+			invalidSeedUser := &user.DefaultInfo{Name: "foo", Groups: []string{v1beta1constants.SeedsGroup}}
+
+			ctxObjects, err := r.resolveContextObject(invalidSeedUser, contextObject)
+			Expect(err).To(BeForbiddenError())
+			Expect(ctxObjects).To(BeNil())
+		})
+
+		Context("context object not related to the requesting seed", func() {
+			const otherSeedName = "other-seed"
+
+			var uidMismatch = types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
+
+			It("should forbid shoots of other seeds without disclosing their UID", func() {
+				shoot.Spec.SeedName = new(otherSeedName)
+				Expect(shootInformer.Informer().GetStore().Update(shoot)).To(Succeed())
+
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Shoot",
+					Namespace:  new(namespaceName),
+					Name:       shootName,
+					UID:        uidMismatch,
+				})
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).NotTo(ContainSubstring(string(shootUID)))
+				Expect(ctxObjects).To(BeNil())
+			})
+
+			It("should forbid shoots which are not scheduled", func() {
+				shoot.Spec.SeedName = nil
+				Expect(shootInformer.Informer().GetStore().Update(shoot)).To(Succeed())
+
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Shoot",
+					Namespace:  new(namespaceName),
+					Name:       shootName,
+					UID:        shootUID,
+				})
+				Expect(err).To(BeForbiddenError())
+				Expect(ctxObjects).To(BeNil())
+			})
+
+			It("should allow the source seed to resolve shoots during control plane migration", func() {
+				Expect(seedInformer.Informer().GetStore().Add(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: otherSeedName}})).To(Succeed())
+				shoot.Spec.SeedName = new(otherSeedName)
+				shoot.Status.SeedName = new(seedName)
+				Expect(shootInformer.Informer().GetStore().Update(shoot)).To(Succeed())
+
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Shoot",
+					Namespace:  new(namespaceName),
+					Name:       shootName,
+					UID:        shootUID,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ctxObjects.shoot.GetUID()).To(Equal(shootUID))
+			})
+
+			It("should forbid other seeds without looking them up", func() {
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Seed",
+					Name:       "non-existing-seed",
+					UID:        uidMismatch,
+				})
+				Expect(err).To(BeForbiddenError())
+				Expect(ctxObjects).To(BeNil())
+			})
+
+			It("should forbid backupBuckets of other seeds without disclosing their UID", func() {
+				backupBucket.Spec.SeedName = new(otherSeedName)
+				Expect(backupBucketInformer.Informer().GetStore().Update(backupBucket)).To(Succeed())
+
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "BackupBucket",
+					Name:       backupBucketName,
+					UID:        uidMismatch,
+				})
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).NotTo(ContainSubstring(string(backupBucketUID)))
+				Expect(ctxObjects).To(BeNil())
+			})
+
+			It("should forbid backupBuckets which are not assigned to a seed", func() {
+				backupBucket.Spec.SeedName = nil
+				Expect(backupBucketInformer.Informer().GetStore().Update(backupBucket)).To(Succeed())
+
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "BackupBucket",
+					Name:       backupBucketName,
+					UID:        backupBucketUID,
+				})
+				Expect(err).To(BeForbiddenError())
+				Expect(ctxObjects).To(BeNil())
+			})
+
+			It("should forbid backupEntries of other seeds without disclosing their UID", func() {
+				backupEntry.Spec.SeedName = new(otherSeedName)
+				Expect(backupEntryInformer.Informer().GetStore().Update(backupEntry)).To(Succeed())
+
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "BackupEntry",
+					Namespace:  new(namespaceName),
+					Name:       backupEntryName,
+					UID:        uidMismatch,
+				})
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).NotTo(ContainSubstring(string(backupEntryUID)))
+				Expect(ctxObjects).To(BeNil())
+			})
+
+			It("should allow the source seed to resolve backupEntries during control plane migration", func() {
+				Expect(seedInformer.Informer().GetStore().Add(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: otherSeedName}})).To(Succeed())
+				backupEntry.Spec.SeedName = new(otherSeedName)
+				backupEntry.Status.SeedName = new(seedName)
+				Expect(backupEntryInformer.Informer().GetStore().Update(backupEntry)).To(Succeed())
+
+				ctxObjects, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "BackupEntry",
+					Namespace:  new(namespaceName),
+					Name:       backupEntryName,
+					UID:        backupEntryUID,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ctxObjects.backupEntry.GetUID()).To(Equal(backupEntryUID))
+			})
+		})
+
 	})
 
 	Context("#issueToken", func() {
