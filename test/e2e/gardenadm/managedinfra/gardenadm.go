@@ -212,7 +212,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, session.Err).Should(gbytes.Say("Writing kubeconfig of the self-hosted shoot to file"))
 
 			// #nosec G304 -- kubeconfigOutputFile is controlled by the test
-			Expect(os.ReadFile(kubeconfigOutputFile)).To(ContainSubstring("server: https://api.root.garden.external.local.gardener.cloud"))
+			Expect(os.ReadFile(kubeconfigOutputFile)).To(ContainSubstring("server: https://api.root.garden.local.gardener.cloud"))
 		}, SpecTimeout(time.Minute))
 
 		var kubeconfig string
@@ -294,7 +294,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-internal", Namespace: "kube-system"}}
 			Eventually(ctx, shootKomega.Object(dnsRecord)).Should(And(
 				BeHealthy(health.CheckExtensionObject),
-				HaveField("Spec.Name", "api.internal.root.garden.external.local.gardener.cloud"),
+				HaveField("Spec.Name", "api.internal.root.garden.local.gardener.cloud"),
 			))
 
 			nodeList := &corev1.NodeList{}
@@ -396,7 +396,7 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 		}, SpecTimeout(time.Minute))
 
 		// Worker nodes use the internal domain pointing to the internal IPs of the control plane nodes.
-		gardenadm.ItShouldUseExpectedAPIServerAddressOnNodes(&shootClientSet, runInNode, "api.internal.root.garden.external.local.gardener.cloud")
+		gardenadm.ItShouldUseExpectedAPIServerAddressOnNodes(&shootClientSet, runInNode, "api.internal.root.garden.local.gardener.cloud")
 	})
 
 	Context("gardenadm connect", Ordered, Label("connect"), func() {

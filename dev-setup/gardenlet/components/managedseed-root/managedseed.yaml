@@ -50,7 +50,7 @@ spec:
           extensions:
             - type: local-ext-seed
           ingress:
-            domain: ingress.root.garden.external.local.gardener.cloud
+            domain: ingress.root.garden.local.gardener.cloud
             controller:
               kind: nginx
           settings:

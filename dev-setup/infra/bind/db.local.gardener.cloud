@@ -25,4 +25,4 @@ docker-dns      IN      A       127.0.0.11
 
 ; The self-hosted shoot API server is accessible from the host machine via the gind Envoy load balancer.
 ; The loopback device for this IP is set up in 'dev-setup/infra.sh setup-loopback-devices'.
-api.root.garden.external    IN  A       172.18.255.123
+api.root.garden             IN  A       172.18.255.123
