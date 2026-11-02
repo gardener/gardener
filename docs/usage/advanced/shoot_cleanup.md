@@ -12,7 +12,7 @@ Some resources are deleted with a grace period, and all resources are forcefully
 
 **Cleanup steps:**
 
-1. All `ValidatingWebhookConfiguration`s, `MutatingWebhookConfiguration`s, `ValidatingAdmissionPolicy`s, and `ValidatingAdmissionPolicyBinding`s are deleted with a `5m` grace period. Forceful finalization happens after `5m`.
+1. All `ValidatingWebhookConfiguration`s, `MutatingWebhookConfiguration`s, and `ValidatingAdmissionPolicyBinding`s are deleted with a `5m` grace period. Forceful finalization happens after `5m`.
 1. All `APIService`s and `CustomResourceDefinition`s are deleted with a `5m` grace period. Forceful finalization happens after `1h`.
 1. All `CronJob`s, `DaemonSet`s, `Deployment`s, `Ingress`s, `Job`s, `Pod`s, `ReplicaSet`s, `ReplicationController`s, `Service`s, `StatefulSet`s, `PersistentVolumeClaim`s are deleted with a `5m` grace period. Forceful finalization happens after `5m`.
    > If the `Shoot` is annotated with `shoot.gardener.cloud/skip-cleanup=true`, then only `Service`s and `PersistentVolumeClaim`s are considered.

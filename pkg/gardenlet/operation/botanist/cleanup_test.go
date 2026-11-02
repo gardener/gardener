@@ -32,7 +32,7 @@ var _ = Describe("Cleanup", func() {
 			shootClient client.Client
 			botanist    *Botanist
 
-			policy, policyBinding, systemPolicy, noCleanupPolicy client.Object
+			policy, policyBinding, systemBinding, noCleanupBinding client.Object
 		)
 
 		BeforeEach(func() {
@@ -49,27 +49,27 @@ var _ = Describe("Cleanup", func() {
 
 			policy = &admissionregistrationv1.ValidatingAdmissionPolicy{ObjectMeta: metav1.ObjectMeta{Name: "policy"}}
 			policyBinding = &admissionregistrationv1.ValidatingAdmissionPolicyBinding{ObjectMeta: metav1.ObjectMeta{Name: "binding"}}
-			systemPolicy = &admissionregistrationv1.ValidatingAdmissionPolicy{ObjectMeta: metav1.ObjectMeta{
-				Name:   "system-policy",
+			systemBinding = &admissionregistrationv1.ValidatingAdmissionPolicyBinding{ObjectMeta: metav1.ObjectMeta{
+				Name:   "system-binding",
 				Labels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent},
 			}}
-			noCleanupPolicy = &admissionregistrationv1.ValidatingAdmissionPolicy{ObjectMeta: metav1.ObjectMeta{
-				Name:   "no-cleanup-policy",
+			noCleanupBinding = &admissionregistrationv1.ValidatingAdmissionPolicyBinding{ObjectMeta: metav1.ObjectMeta{
+				Name:   "no-cleanup-binding",
 				Labels: map[string]string{v1beta1constants.ShootNoCleanup: "true"},
 			}}
 
-			for _, obj := range []client.Object{policy, policyBinding, systemPolicy, noCleanupPolicy} {
+			for _, obj := range []client.Object{policy, policyBinding, systemBinding, noCleanupBinding} {
 				Expect(shootClient.Create(ctx, obj)).To(Succeed())
 			}
 		})
 
-		It("should delete ValidatingAdmissionPolicies and their bindings but keep protected ones", func() {
+		It("should delete ValidatingAdmissionPolicyBindings but keep protected ones and the policies", func() {
 			Expect(botanist.CleanWebhooks(ctx)).To(Succeed())
 
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(policy), &admissionregistrationv1.ValidatingAdmissionPolicy{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(policy), &admissionregistrationv1.ValidatingAdmissionPolicy{})).To(Succeed())
 			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(policyBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{}))).To(BeTrue())
-			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemPolicy), &admissionregistrationv1.ValidatingAdmissionPolicy{})).To(Succeed())
-			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupPolicy), &admissionregistrationv1.ValidatingAdmissionPolicy{})).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{})).To(Succeed())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{})).To(Succeed())
 		})
 	})
 })
