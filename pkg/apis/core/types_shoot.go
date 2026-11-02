@@ -180,12 +180,16 @@ type ShootStatus struct {
 type LastMaintenance struct {
 	// A human-readable message containing details about the operations performed in the last maintenance.
 	Description string
-	// TriggeredTime is the time when maintenance was triggered.
+	// TriggeredTime is the time when the last maintenance run was triggered. It is set on every maintenance run,
+	// including runs that performed no changes.
 	TriggeredTime metav1.Time
 	// Status of the last maintenance operation, one of Processing, Succeeded, Error.
 	State LastOperationState
 	// FailureReason holds the information about the last maintenance operation failure reason.
 	FailureReason *string
+	// LastUpdateTime is the time when maintenance last updated the Shoot spec. It is nil if maintenance
+	// has never updated the Shoot spec.
+	LastUpdateTime *metav1.Time
 }
 
 // NetworkingStatus contains information about cluster networking such as CIDRs.

@@ -3448,6 +3448,10 @@ func (in *LastMaintenance) DeepCopyInto(out *LastMaintenance) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.LastUpdateTime != nil {
+		in, out := &in.LastUpdateTime, &out.LastUpdateTime
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 
