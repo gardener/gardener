@@ -541,7 +541,25 @@ users:
 			}))
 		})
 
-		It("should add the internal domain of self-hosted shoots", func() {
+		It("should add the internal domain of self-hosted shoots with managed infrastructure", func() {
+			botanist.Shoot.InternalClusterDomain = nil
+			shoot := botanist.Shoot.GetInfo()
+			shoot.Spec.CredentialsBindingName = new("credentials")
+			shoot.Spec.Provider.Workers[0].ControlPlane = &gardencorev1beta1.WorkerControlPlane{}
+			botanist.Shoot.SetInfo(shoot)
+
+			Expect(botanist.computeKubeAPIServerServerCertificateConfig()).To(Equal(kubeapiserver.ServerCertificateConfig{
+				ExtraIPAddresses: apiServerNetwork,
+				ExtraDNSNames: []string{
+					controlPlaneNamespace,
+					externalClusterDomain,
+					"api." + externalClusterDomain,
+					"api.internal." + externalClusterDomain,
+				},
+			}))
+		})
+
+		It("should not add the internal domain of self-hosted shoots with unmanaged infrastructure", func() {
 			botanist.Shoot.InternalClusterDomain = nil
 			shoot := botanist.Shoot.GetInfo()
 			shoot.Spec.Provider.Workers[0].ControlPlane = &gardencorev1beta1.WorkerControlPlane{}
@@ -553,7 +571,6 @@ users:
 					controlPlaneNamespace,
 					externalClusterDomain,
 					"api." + externalClusterDomain,
-					"api.internal." + externalClusterDomain,
 				},
 			}))
 		})

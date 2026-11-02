@@ -526,8 +526,16 @@ var _ = Describe("dnsrecord", func() {
 
 				secret := &corev1.Secret{}
 				Expect(c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: controlPlaneNamespace}, secret)).To(Succeed())
-				Expect(secret.Data).To(Equal(map[string][]byte{
-					"external-foo": []byte("external-bar"),
+				Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName,
+						Namespace:       controlPlaneNamespace,
+						ResourceVersion: "1",
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: map[string][]byte{
+						"external-foo": []byte("external-bar"),
+					},
 				}))
 			})
 

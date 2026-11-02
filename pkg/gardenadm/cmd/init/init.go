@@ -198,8 +198,9 @@ func RunInitFlow(ctx context.Context, b *gardenadmbotanist.GardenadmBotanist, op
 			SkipIf:       !b.Shoot.HasManagedInfrastructure(),
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped, deploySelfHostedShootExposure),
 		})
-		// Components on the nodes (e.g., gardener-node-agent) talk to the control plane via the internal DNSRecord, so it
-		// must exist before rolling out the OperatingSystemConfig with the internal domain (static control plane pods) and
+		// gardener-node-agent on all nodes as well as kubelet and kube-proxy on the worker nodes talk to the control plane
+		// via the internal DNSRecord (kubelet and kube-proxy on the control plane nodes use localhost instead). Hence, it
+		// must exist before rolling out the OperatingSystemConfig of the control plane nodes with the internal domain and
 		// before deploying the Worker.
 		deployInternalDNSRecord = g.Add(flow.Task{
 			Name: "Deploying internal DNSRecord",

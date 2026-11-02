@@ -328,7 +328,7 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should use the IPv6 internal IPs for IPv6 shoots", func(ctx SpecContext) {
-			node := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "fd12::1"})
+			node := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "2001:db8::1"})
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 
 			shoot := b.Shoot.GetInfo()
@@ -336,7 +336,7 @@ var _ = Describe("DNSRecord", func() {
 			b.Shoot.SetInfo(shoot)
 
 			internalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeAAAA)
-			internalDNSRecord.EXPECT().SetValues([]string{"fd12::1"})
+			internalDNSRecord.EXPECT().SetValues([]string{"2001:db8::1"})
 			internalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 			internalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
