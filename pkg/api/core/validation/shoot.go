@@ -892,7 +892,7 @@ func validateDNSUpdate(newDNS, oldDNS *core.DNS, seedGotAssigned bool, annotatio
 	}
 
 	if newDNS != nil && oldDNS != nil {
-		if oldDNS.Domain != nil && ptr.Deref(newDNS.Domain, "") != ptr.Deref(oldDNS.Domain, "") {
+		if oldDNS.Domain != nil && *oldDNS.Domain != ptr.Deref(newDNS.Domain, "") {
 			allErrs = append(allErrs, validateDomainChange(newDNS, oldDNS, annotations, isSelfHosted, nginxIngressEnabled, fldPath)...)
 		}
 
