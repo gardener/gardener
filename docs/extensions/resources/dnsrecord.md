@@ -38,7 +38,7 @@ As `.spec.name` of a `DNSRecord` is immutable, the `<shoot>-external` record is 
 3. When the CA rotation is completed, Gardener deletes the `<shoot>-prior-external` record.
 
 Step 2 relies on the `migrate` operation keeping the DNS record at the DNS provider, as it is required for all extensions (see [Control Plane Migration](../migration.md)).
-Otherwise, the old domain stops resolving while the shoot is still reachable under both domains.
+Otherwise, the old domain stops resolving while the shoot is still configured with both domains.
 
 ### Ingress Domain Name (Deprecated)
 
