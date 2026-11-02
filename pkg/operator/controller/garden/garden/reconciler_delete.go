@@ -314,8 +314,7 @@ func (r *Reconciler) delete(
 				}
 
 				var waitFns []flow.TaskFn
-				for i := range backupBuckets.Items {
-					backupBucket := &backupBuckets.Items[i]
+				for _, backupBucket := range backupBuckets.Items {
 					if backupBucket.Spec.Class == nil || *backupBucket.Spec.Class != extensionsv1alpha1.ExtensionClassGarden ||
 						backupBucket.Spec.SecretRef.Namespace != r.GardenNamespace {
 						continue
