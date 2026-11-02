@@ -38,7 +38,7 @@ func runMigrations(ctx context.Context, c client.Client, log logr.Logger) manage
 		if err := migrateExtensionManagedResources(ctx, c, log); err != nil {
 			return err
 		}
-		// TODO(timuthy): Remove migration after Gardener v1.162 has been released.
+		// TODO(timuthy): Remove migration after Gardener v1.155 has been released.
 		return DeleteStaleShootAccessSecrets(ctx, c, log)
 	}
 }

@@ -313,7 +313,7 @@ func NewGardenAccessSecret(name, namespace string) *AccessSecret {
 }
 
 // NewGardenTransitionalAccessSecret is like NewGardenAccessSecret, but with class `garden-transitional`.
-// TODO(timuthy): Drop this function and switch usage to `NewGardenAccessSecret` after release v1.157
+// TODO(timuthy): Drop this function and switch usage to `NewGardenAccessSecret` after release v1.154
 func NewGardenTransitionalAccessSecret(name, namespace string) *AccessSecret {
 	return newGardenAccessSecret(name, namespace, resourcesv1alpha1.ResourceManagerClassGardenTransitional)
 }
