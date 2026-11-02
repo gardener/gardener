@@ -37,7 +37,7 @@ require (
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/miekg/dns v1.1.73
 	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/onsi/ginkgo/v2 v2.33.1
+	github.com/onsi/ginkgo/v2 v2.34.0
 	github.com/onsi/gomega v1.44.0
 	github.com/open-telemetry/opentelemetry-operator/apis v0.162.0
 	github.com/opencontainers/image-spec v1.1.1
