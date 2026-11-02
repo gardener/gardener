@@ -209,20 +209,31 @@ var _ = BeforeSuite(func() {
 			Region:                 "foo-region",
 			Provider: gardencorev1beta1.Provider{
 				Type: providerType,
-				Workers: []gardencorev1beta1.Worker{{
-					Name:         "controlplane",
-					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
-					Minimum:      1,
-					Maximum:      1,
-					Machine: gardencorev1beta1.Machine{
-						Type:  "large",
-						Image: &gardencorev1beta1.ShootMachineImage{Name: providerType, Version: new("0.0.0")},
+				Workers: []gardencorev1beta1.Worker{
+					{
+						Name:         "controlplane",
+						ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+						Minimum:      1,
+						Maximum:      1,
+						Machine: gardencorev1beta1.Machine{
+							Type:  "large",
+							Image: &gardencorev1beta1.ShootMachineImage{Name: providerType, Version: new("0.0.0")},
+						},
+						CRI: &gardencorev1beta1.CRI{
+							Name:              gardencorev1beta1.CRINameContainerD,
+							ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: providerType}},
+						},
 					},
-					CRI: &gardencorev1beta1.CRI{
-						Name:              gardencorev1beta1.CRINameContainerD,
-						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: providerType}},
+					{
+						Name:    "worker",
+						Minimum: 1,
+						Maximum: 1,
+						Machine: gardencorev1beta1.Machine{
+							Type:  "large",
+							Image: &gardencorev1beta1.ShootMachineImage{Name: providerType, Version: new("0.0.0")},
+						},
 					},
-				}},
+				},
 			},
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version: "1.31.1",

@@ -598,6 +598,42 @@ var _ = Describe("Interface", func() {
 
 				expectCreateGardenNamespace()
 			})
+
+			It("should set only the control-plane toleration for managed-infrastructure shoots", func() {
+				credentialsBindingName := "some-binding"
+				shoot.Spec.CredentialsBindingName = &credentialsBindingName
+
+				recorder.EXPECT().Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
+
+				vh.EXPECT().MergeGardenletDeployment(deployment).Return(deployment, nil)
+				expectGetGardenletChartValues(true, false, true)
+				expectApplyGardenletChart()
+
+				_, err := actuator.Reconcile(ctx, log, shoot, nil, deployment, &runtime.RawExtension{Object: config}, seedmanagementv1alpha1.BootstrapToken, false)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gardenletChartValues).To(HaveKeyWithValue("tolerations", ConsistOf(
+					map[string]any{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists", "effect": "NoSchedule"},
+				)))
+				Expect(gardenletChartValues).NotTo(HaveKey("unmanagedInfrastructure"))
+			})
+
+			It("should set both tolerations for unmanaged-infrastructure shoots", func() {
+				recorder.EXPECT().Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Ensuring gardenlet namespace in target cluster")
+				recorder.EXPECT().Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, gardencorev1beta1.EventActionReconcile, "Deploying gardenlet into target cluster")
+
+				vh.EXPECT().MergeGardenletDeployment(deployment).Return(deployment, nil)
+				expectGetGardenletChartValues(true, false, true)
+				expectApplyGardenletChart()
+
+				_, err := actuator.Reconcile(ctx, log, shoot, nil, deployment, &runtime.RawExtension{Object: config}, seedmanagementv1alpha1.BootstrapToken, false)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gardenletChartValues).To(HaveKeyWithValue("tolerations", ConsistOf(
+					map[string]any{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists", "effect": "NoSchedule"},
+					map[string]any{"key": string(corev1.TaintNodeUnschedulable), "operator": "Exists", "effect": "NoSchedule"},
+				)))
+				Expect(gardenletChartValues).To(HaveKeyWithValue("unmanagedInfrastructure", true))
+			})
 		})
 
 		Context("seed is garden", func() {

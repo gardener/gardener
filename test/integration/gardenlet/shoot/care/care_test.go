@@ -618,6 +618,18 @@ var _ = Describe("Shoot Care controller tests (self-hosted shoot)", func() {
 							},
 							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
 						},
+						{
+							Name:    "worker-2",
+							Minimum: 1,
+							Maximum: 1,
+							Machine: gardencorev1beta1.Machine{
+								Type: "large",
+								Image: &gardencorev1beta1.ShootMachineImage{
+									Name:    "some-image",
+									Version: new("1.0.0"),
+								},
+							},
+						},
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{

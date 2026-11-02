@@ -460,7 +460,7 @@ var _ = Describe("ShootSystem", func() {
 					values.IsSelfHosted = true
 				})
 
-				It("should deploy allow-from-control-plane-components using node network CIDRs", func() {
+				It("should deploy allow-from-control-plane-components using node and pod network CIDRs", func() {
 					networkPolicyAllowFromSeed := &networkingv1.NetworkPolicy{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "gardener.cloud--allow-from-control-plane-components",
@@ -479,6 +479,8 @@ var _ = Describe("ShootSystem", func() {
 								From: []networkingv1.NetworkPolicyPeer{
 									{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[0].String()}},
 									{IPBlock: &networkingv1.IPBlock{CIDR: nodeCIDRs[1].String()}},
+									{IPBlock: &networkingv1.IPBlock{CIDR: podCIDRs[0].String()}},
+									{IPBlock: &networkingv1.IPBlock{CIDR: podCIDRs[1].String()}},
 								},
 							}},
 							PolicyTypes: []networkingv1.PolicyType{

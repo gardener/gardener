@@ -180,11 +180,18 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 	}
 
 	// For self-hosted shoots, VPN is skipped so gardener.cloud--allow-from-seed is never deployed.
-	// Allow ingress from node CIDRs so the host-network kube-apiserver can reach aggregated
-	// API servers (e.g., metrics-server) on any node.
-	if s.values.IsSelfHosted && len(s.values.NodeNetworkCIDRs) > 0 {
+	// Allow ingress from node and pod CIDRs so the host-network kube-apiserver can reach aggregated
+	// API servers (e.g., metrics-server) on any node. Pod CIDRs are required because when the
+	// kube-apiserver routes through Calico IPIP to reach pods on other nodes, the TCP source
+	// address is the tunl0 IP (allocated from the pod CIDR), not the node IP.
+	if s.values.IsSelfHosted && (len(s.values.NodeNetworkCIDRs) > 0 || len(s.values.PodNetworkCIDRs) > 0) {
 		var peers []networkingv1.NetworkPolicyPeer
 		for _, cidr := range s.values.NodeNetworkCIDRs {
+			peers = append(peers, networkingv1.NetworkPolicyPeer{
+				IPBlock: &networkingv1.IPBlock{CIDR: cidr.String()},
+			})
+		}
+		for _, cidr := range s.values.PodNetworkCIDRs {
 			peers = append(peers, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{CIDR: cidr.String()},
 			})

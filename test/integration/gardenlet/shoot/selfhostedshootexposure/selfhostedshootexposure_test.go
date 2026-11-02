@@ -56,17 +56,28 @@ var _ = Describe("SelfHostedShootExposure controller tests", func() {
 				Region:           "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: exposureType,
-					Workers: []gardencorev1beta1.Worker{{
-						Name:    "control-plane",
-						Minimum: 1,
-						Maximum: 1,
-						Machine: gardencorev1beta1.Machine{
-							Type:  "large",
-							Image: &gardencorev1beta1.ShootMachineImage{Name: "some-image", Version: new("1.0.0")},
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name:    "control-plane",
+							Minimum: 1,
+							Maximum: 1,
+							Machine: gardencorev1beta1.Machine{
+								Type:  "large",
+								Image: &gardencorev1beta1.ShootMachineImage{Name: "some-image", Version: new("1.0.0")},
+							},
+							ControlPlane:   &gardencorev1beta1.WorkerControlPlane{},
+							UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
 						},
-						ControlPlane:   &gardencorev1beta1.WorkerControlPlane{},
-						UpdateStrategy: new(gardencorev1beta1.AutoInPlaceUpdate),
-					}},
+						{
+							Name:    "worker-2",
+							Minimum: 1,
+							Maximum: 1,
+							Machine: gardencorev1beta1.Machine{
+								Type:  "large",
+								Image: &gardencorev1beta1.ShootMachineImage{Name: "some-image", Version: new("1.0.0")},
+							},
+						},
+					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
 				Networking: &gardencorev1beta1.Networking{

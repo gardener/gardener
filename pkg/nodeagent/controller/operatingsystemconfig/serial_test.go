@@ -175,9 +175,21 @@ var _ = Describe("leaderElector", func() {
 	})
 
 	Describe("#renewedInTime", func() {
-		It("should return false when LeaseDurationSeconds is nil", func() {
+		It("should return false when LeaseDurationSeconds is nil and no holder", func() {
 			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
 			Expect(le.renewedInTime()).To(BeFalse())
+		})
+
+		It("should return false when LeaseDurationSeconds is nil and held by me", func() {
+			le.lease.Spec.HolderIdentity = new(identity)
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
+			Expect(le.renewedInTime()).To(BeFalse())
+		})
+
+		It("should return true when LeaseDurationSeconds is nil and held by another instance", func() {
+			le.lease.Spec.HolderIdentity = new("other-node")
+			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
+			Expect(le.renewedInTime()).To(BeTrue())
 		})
 
 		It("should return false when LeaseDurationSeconds is negative", func() {
@@ -211,9 +223,9 @@ var _ = Describe("leaderElector", func() {
 	})
 
 	Describe("#durationUntilLeaseExpires", func() {
-		It("should return zero when LeaseDurationSeconds is nil", func() {
+		It("should return 5 minutes when LeaseDurationSeconds is nil", func() {
 			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
-			Expect(le.durationUntilLeaseExpires()).To(Equal(time.Duration(0)))
+			Expect(le.durationUntilLeaseExpires()).To(Equal(5 * time.Minute))
 		})
 
 		It("should return zero when LeaseDurationSeconds is negative", func() {
@@ -260,11 +272,23 @@ var _ = Describe("leaderElector", func() {
 	Describe("#tryAcquireOrRenew", func() {
 		When("lease does not yet exist", func() {
 			It("should create lease with holder identity, duration and timings", func() {
-				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
+				Expect(le.tryAcquireOrRenew(ctx, new(int32(600)))).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
 				Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(600))))
+				Expect(lease.Spec.AcquireTime).NotTo(BeNil())
+				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(now.UTC()))
+				Expect(lease.Spec.RenewTime).NotTo(BeNil())
+				Expect(lease.Spec.RenewTime.UTC()).To(Equal(now.UTC()))
+			})
+
+			It("should create lease with nil duration when leaseDurationSeconds is nil", func() {
+				Expect(le.tryAcquireOrRenew(ctx, nil)).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
+				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
+				Expect(lease.Spec.LeaseDurationSeconds).To(BeNil())
 				Expect(lease.Spec.AcquireTime).NotTo(BeNil())
 				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(now.UTC()))
 				Expect(lease.Spec.RenewTime).NotTo(BeNil())
@@ -277,7 +301,7 @@ var _ = Describe("leaderElector", func() {
 				le.lease.Spec.LeaseDurationSeconds = new(int32(600))
 				le.lease.Spec.AcquireTime = &metav1.MicroTime{Time: acquireTime}
 
-				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
+				Expect(le.tryAcquireOrRenew(ctx, new(int32(600)))).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(acquireTime.UTC()))
@@ -288,7 +312,7 @@ var _ = Describe("leaderElector", func() {
 				le.lease.Spec.HolderIdentity = new("other")
 				le.lease.Spec.AcquireTime = &metav1.MicroTime{Time: now.Add(-10 * time.Minute)}
 
-				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
+				Expect(le.tryAcquireOrRenew(ctx, new(int32(600)))).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
@@ -303,11 +327,21 @@ var _ = Describe("leaderElector", func() {
 			})
 
 			It("should update the lease with holder identity and timings", func() {
-				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
+				Expect(le.tryAcquireOrRenew(ctx, new(int32(600)))).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
 				Expect(lease.Spec.LeaseDurationSeconds).To(PointTo(Equal(int32(600))))
+				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(now.UTC()))
+				Expect(lease.Spec.RenewTime.UTC()).To(Equal(now.UTC()))
+			})
+
+			It("should update the lease with nil duration when leaseDurationSeconds is nil", func() {
+				Expect(le.tryAcquireOrRenew(ctx, nil)).To(Succeed())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
+				Expect(lease.Spec.HolderIdentity).To(Equal(new(identity)))
+				Expect(lease.Spec.LeaseDurationSeconds).To(BeNil())
 				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(now.UTC()))
 				Expect(lease.Spec.RenewTime.UTC()).To(Equal(now.UTC()))
 			})
@@ -319,7 +353,7 @@ var _ = Describe("leaderElector", func() {
 				le.lease.Spec.AcquireTime = &metav1.MicroTime{Time: acquireTime}
 				Expect(fakeClient.Update(ctx, le.lease)).To(Succeed())
 
-				Expect(le.tryAcquireOrRenew(ctx)).To(Succeed())
+				Expect(le.tryAcquireOrRenew(ctx, new(int32(600)))).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(lease), lease)).To(Succeed())
 				Expect(lease.Spec.AcquireTime.UTC()).To(Equal(acquireTime.UTC()))

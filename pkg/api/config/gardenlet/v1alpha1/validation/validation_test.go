@@ -547,6 +547,51 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
+		Context("shoot in-place update controller", func() {
+			BeforeEach(func() {
+				cfg.Controllers.ShootInPlaceUpdate = &gardenletconfigv1alpha1.ShootInPlaceUpdateControllerConfiguration{}
+			})
+
+			It("should allow valid configuration", func() {
+				cfg.Controllers.ShootInPlaceUpdate.DrainTimeout = &metav1.Duration{Duration: 2 * time.Hour}
+				cfg.Controllers.ShootInPlaceUpdate.UpdateTimeout = &metav1.Duration{Duration: 30 * time.Minute}
+				cfg.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval = &metav1.Duration{Duration: 20 * time.Second}
+
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+			})
+
+			It("should allow nil durations", func() {
+				cfg.Controllers.ShootInPlaceUpdate.DrainTimeout = nil
+				cfg.Controllers.ShootInPlaceUpdate.UpdateTimeout = nil
+				cfg.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval = nil
+
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+			})
+
+			It("should forbid zero and negative durations", func() {
+				cfg.Controllers.ShootInPlaceUpdate.DrainTimeout = &metav1.Duration{Duration: 0}
+				cfg.Controllers.ShootInPlaceUpdate.UpdateTimeout = &metav1.Duration{Duration: -1 * time.Minute}
+				cfg.Controllers.ShootInPlaceUpdate.PodEvictionRetryInterval = &metav1.Duration{Duration: 0}
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootInPlaceUpdate.drainTimeout"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootInPlaceUpdate.updateTimeout"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootInPlaceUpdate.podEvictionRetryInterval"),
+					})),
+				))
+			})
+		})
+
 		Context("seed config", func() {
 			It("should not require a seedConfig", func() {
 				cfg.SeedConfig = nil

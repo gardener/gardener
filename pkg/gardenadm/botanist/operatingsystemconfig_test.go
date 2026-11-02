@@ -115,6 +115,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}),
 				MatchFields(IgnoreExtras, Fields{"Path": Equal(fmt.Sprintf("/var/lib/gardener-node-agent/config-%s.yaml", version.Get().GitVersion))}),
 			))
+			Expect(secretList.Items[0].Annotations).NotTo(HaveKey("reconciliation.osc.node-agent.gardener.cloud/serial"))
 		})
 	})
 

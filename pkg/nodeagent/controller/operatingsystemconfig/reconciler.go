@@ -189,7 +189,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, serialReconciliationLease.release(ctx)
 	}
 
-	if serialReconciliation(secret) {
+	osVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
+	}
+
+	// Serial reconciliation lease serializes control-plane pool node reconciliations. For in-place updates the
+	// lease is held throughout drain and update so that only one control-plane node gets updated at a time.
+	if serialReconciliation(secret) && r.LeaseClient != nil {
 		log.Info("OperatingSystemConfig reconciliation is serial")
 
 		if err := serialReconciliationLease.reload(ctx); err != nil {
@@ -206,7 +213,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
 		}
 
-		if err := serialReconciliationLease.tryAcquireOrRenew(ctx); err != nil {
+		// For control-plane nodes doing an in-place update the lease has no timeout and is only released on success.
+		// If a control-plane node fails to update, it keeps the lease and blocks others — operator intervention is required.
+		// In all other cases a 600s timeout ensures a crashed node does not block others.
+		leaseDurationSeconds := new(int32(600))
+		if isControlPlaneNode {
+			if inPlaceUpdate, err := r.isInPlaceUpdatePending(log, osc, oscChecksum, osVersion); err != nil {
+				return reconcile.Result{}, err
+			} else if inPlaceUpdate {
+				leaseDurationSeconds = nil
+			}
+		}
+
+		if err := serialReconciliationLease.tryAcquireOrRenew(ctx, leaseDurationSeconds); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed acquiring or renewing lease: %w", err)
 		}
 
@@ -237,11 +256,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if err := r.generateNodeSpecificETCDCertificates(ctx, secretsManager, osc); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed generating node-specific ETCD certificates: %w", err)
 		}
-	}
-
-	osVersion, err := GetOSVersion(osc.Spec.InPlaceUpdates, r.FS)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
 	}
 
 	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, r.SkipWritingStateFiles, r.HostName)
@@ -283,11 +297,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
 			if node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] != machinev1alpha1.LabelValueNodeUpdateFailed {
+				// GNA must signal the gardenlet to initiate drain because only GNA knows whether the
+				// node has already applied the current OSC (it tracks the last-applied checksum locally).
+				// If reconciliation fails and GNA restarts, it re-detects the mismatch and re-signals —
+				// making the flow self-healing. The gardenlet cannot autonomously determine this because
+				// once it deploys the OSC secret, subsequent reconciliations see no diff from its perspective.
+				if isControlPlaneNode {
+					if node.Annotations[v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain] != "true" {
+						log.Info("Requesting drain from gardenlet", "node", node.Name)
+						patch := client.MergeFrom(node.DeepCopy())
+						metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentInPlaceUpdateNeedsDrain, "true")
+						if err := r.Client.Patch(ctx, node, patch); err != nil {
+							return reconcile.Result{}, fmt.Errorf("failed to set needs-drain annotation on node %s: %w", node.Name, err)
+						}
+					}
+					log.Info("Waiting for gardenlet to drain node and set ReadyForUpdate condition before performing in-place update")
+					return reconcile.Result{}, nil
+				}
+
 				log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
 				return reconcile.Result{}, nil
 			}
 
 			log.Info("Node has label update-result with failed value, will continue retrying the update")
+		} else if kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful) {
+			// ReadyForUpdate condition is stale from the just-completed update. Gardenlet will cleanup the in-place update labels.
+			// Wait before starting the next update so the node is drained again first.
+			log.Info("Waiting for gardenlet to cleanup in-place update labels after successful in-place update")
+			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 
 		log.Info("In-place update is in progress", "osUpdate", oscChanges.InPlaceUpdates.OperatingSystem,
@@ -821,6 +858,19 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	return flow.Parallel(fns...)(ctx)
 }
 
+func (r *Reconciler) isInPlaceUpdatePending(log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscChecksum string, osVersion *string) (bool, error) {
+	if osc.Spec.InPlaceUpdates == nil {
+		return false, nil
+	}
+
+	preChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion, true, r.HostName)
+	if err != nil {
+		return false, fmt.Errorf("failed calculating the OSC changes: %w", err)
+	}
+
+	return isInPlaceUpdate(preChanges), nil
+}
+
 func isInPlaceUpdate(changes *operatingSystemConfigChanges) bool {
 	return changes.InPlaceUpdates.OperatingSystem ||
 		changes.InPlaceUpdates.Kubelet.MinorVersion ||
@@ -899,8 +949,6 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}
-
-		// If this point is reached, which means all the in-place updates are done, we can label the node with the update-successful label.
 		if err := r.patchNodeUpdateSuccessful(ctx, log, node); err != nil {
 			return err
 		}

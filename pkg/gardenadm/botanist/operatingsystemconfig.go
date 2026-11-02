@@ -41,20 +41,19 @@ func (b *GardenadmBotanist) DeployOperatingSystemConfigSecretForBootstrap(ctx co
 		return fmt.Errorf("failed deploying control plane deployments: %w", err)
 	}
 
-	oscData, controlPlaneWorkerPoolName, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, true, false, backupDataPath)
+	oscData, worker, err := b.DeployOperatingSystemConfigWithStaticPods(ctx, true, false, backupDataPath)
 	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 
-	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, oscData.Object, oscData.GardenerNodeAgentSecretName, controlPlaneWorkerPoolName)
+	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, oscData.Object, oscData.GardenerNodeAgentSecretName, *worker)
 }
 
-func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, secretName, poolName string) error {
+func (b *GardenadmBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, secretName string, worker gardencorev1beta1.Worker) error {
 	var err error
-
-	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, poolName, false)
+	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, worker, false)
 	if err != nil {
-		return fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", poolName, err)
+		return fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
 	}
 
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
@@ -92,8 +91,9 @@ func (b *GardenadmBotanist) ApplyOperatingSystemConfig(ctx context.Context) erro
 	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
 	_, err = (&operatingsystemconfigcontroller.Reconciler{
-		APIReader: b.SeedClientSet.APIReader(),
-		Client:    b.SeedClientSet.Client(),
+		APIReader:   b.SeedClientSet.APIReader(),
+		Client:      b.SeedClientSet.Client(),
+		LeaseClient: b.SeedClientSet.Client(),
 		Config: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 			SyncPeriod:        &metav1.Duration{Duration: time.Minute},
 			SecretName:        b.operatingSystemConfigSecret.Name,
@@ -133,7 +133,7 @@ func (b *GardenadmBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Con
 		return fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)
 	}
 
-	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, osc, secretName, "")
+	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, osc, secretName, gardencorev1beta1.Worker{})
 }
 
 func (b *GardenadmBotanist) generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken string, caBundle []byte, isControlPlaneNode bool) (*extensionsv1alpha1.OperatingSystemConfig, error) {

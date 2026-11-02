@@ -202,8 +202,10 @@ PRETTY_NAME="Garden Linux 1592Foo"
 	})
 
 	Context("#deleteRemainingPods", func() {
-		It("should delete all pods running on this node", func() {
-			pods := []*corev1.Pod{
+		var pods []*corev1.Pod
+
+		BeforeEach(func() {
+			pods = []*corev1.Pod{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "pod-1",
@@ -214,7 +216,7 @@ PRETTY_NAME="Garden Linux 1592Foo"
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "pod-2",
+						Name: "gardener-resource-manager",
 					},
 					Spec: corev1.PodSpec{
 						NodeName: "test-node",
@@ -237,13 +239,22 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			DeferCleanup(func() {
 				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
 			})
+		})
 
-			Expect(reconciler.deleteRemainingPods(ctx, log, node)).To(Succeed())
-
+		remainingPodNames := func() []string {
 			podList := &corev1.PodList{}
 			Expect(c.List(ctx, podList)).To(Succeed())
-			Expect(podList.Items).To(HaveLen(1))
-			Expect(podList.Items[0].Name).To(Equal("pod-3"))
+			names := make([]string, 0, len(podList.Items))
+			for _, pod := range podList.Items {
+				names = append(names, pod.Name)
+			}
+			return names
+		}
+
+		It("should delete all pods running on this node", func() {
+			Expect(reconciler.deleteRemainingPods(ctx, log, node)).To(Succeed())
+
+			Expect(remainingPodNames()).To(ConsistOf("pod-3"))
 		})
 	})
 

@@ -4,6 +4,8 @@ metadata:
   name: root
   namespace: garden
 spec:
+  kubernetes:
+    version: 1.36.0
   networking:
     # Must be within 172.18.0.0/24 (range of kind Docker network), generally same settings as used in a kind cluster
     nodes: 172.18.0.0/24
