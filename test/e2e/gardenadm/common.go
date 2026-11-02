@@ -67,7 +67,7 @@ func ItShouldCreateShootClient(shootClientSet *kubernetes.Interface) {
 	GinkgoHelper()
 	It("should create a client for the self-hosted shoot API server", func(ctx SpecContext) {
 		initClientSet(ctx, shootClientSet, ShootClusterKubeconfigPathOnHost, client.Options{Scheme: kubernetes.SeedScheme})
-	})
+	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldCreateGardenClient ensures that a client for the garden cluster is created.
@@ -75,7 +75,7 @@ func ItShouldCreateGardenClient(gardenClientSet *kubernetes.Interface) {
 	GinkgoHelper()
 	It("should create a client for garden cluster", func(ctx SpecContext) {
 		initClientSet(ctx, gardenClientSet, GardenClusterKubeconfigPathOnHost, client.Options{Scheme: kubernetes.GardenScheme})
-	})
+	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldPromoteSelfHostedShootToSeed verifies that the self-hosted shoot can be promoted to a seed.
