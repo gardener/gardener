@@ -68,7 +68,7 @@ var _ = Describe("ManagedResources", func() {
 		}
 	})
 
-	Describe("#DeleteManagedResourcesAndWait", func() {
+	Describe("#DeleteManagedResourcesWithoutForceDeletion", func() {
 		It("should delete all managed resources with origin=gardener", func() {
 			mr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -79,7 +79,7 @@ var _ = Describe("ManagedResources", func() {
 			}
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 
-			Expect(botanist.DeleteManagedResourcesAndWait(ctx)).To(Succeed())
+			Expect(botanist.DeleteManagedResourcesWithoutForceDeletion(ctx)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(BeNotFoundError())
 		})
 
@@ -93,7 +93,7 @@ var _ = Describe("ManagedResources", func() {
 			}
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 
-			Expect(botanist.DeleteManagedResourcesAndWait(ctx)).To(Succeed())
+			Expect(botanist.DeleteManagedResourcesWithoutForceDeletion(ctx)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
 		})
 
@@ -110,7 +110,7 @@ var _ = Describe("ManagedResources", func() {
 			}
 			Expect(fakeClient.Create(ctx, mrInOtherNamespace)).To(Succeed())
 
-			Expect(botanist.DeleteManagedResourcesAndWait(ctx)).To(Succeed())
+			Expect(botanist.DeleteManagedResourcesWithoutForceDeletion(ctx)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mrInOtherNamespace), mrInOtherNamespace)).To(Succeed())
 		})
 	})

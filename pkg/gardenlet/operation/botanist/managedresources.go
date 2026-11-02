@@ -20,12 +20,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// DeleteManagedResources deletes all managed resources labeled with `origin=gardener`
+// DeleteManagedResourcesWithForceDeletion deletes all managed resources labeled with `origin=gardener`
 // from the Shoot namespace in the Seed. If a managed resource is stuck in deletion for
 // longer than the configured grace period, it is annotated for force
 // deletion so that the gardener-resource-manager forcefully cleans up the underlying
 // resources.
-func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
+func (b *Botanist) DeleteManagedResourcesWithForceDeletion(ctx context.Context) error {
 	var (
 		c       = b.SeedClientSet.Client()
 		ensurer = utilclient.DefaultGoneEnsurer()
@@ -50,6 +50,25 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 		},
 		cleanOptions,
 	)(ctx)
+}
+
+// DeleteManagedResourcesWithoutForceDeletion deletes all managed resources labeled with `origin=gardener`
+// from the Shoot namespace in the Seed without applying force deletion.
+func (b *Botanist) DeleteManagedResourcesWithoutForceDeletion(ctx context.Context) error {
+	return b.SeedClientSet.Client().DeleteAllOf(
+		ctx,
+		&resourcesv1alpha1.ManagedResource{},
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
+		client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
+	)
+}
+
+// WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
+func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
+	return managedresources.WaitUntilListDeleted(ctx, b.SeedClientSet.Client(), &resourcesv1alpha1.ManagedResourceList{},
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
+		client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
+	)
 }
 
 // WaitUntilShootManagedResourcesDeleted waits until all managed resources that are describing shoot resources are deleted or the context is cancelled.
