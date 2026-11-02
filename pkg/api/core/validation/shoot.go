@@ -880,7 +880,7 @@ var domainChangeOperations = sets.New(
 	v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 )
 
-func domainChangeRequested(annotations map[string]string) bool {
+func domainChangeAllowed(annotations map[string]string) bool {
 	return slices.ContainsFunc(v1beta1helper.GetShootGardenerOperations(annotations), domainChangeOperations.Has)
 }
 
@@ -939,7 +939,7 @@ func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]strin
 	// the addon is enabled. If not, the reconciliation of the Shoot fails.
 	case nginxIngressEnabled:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported while the nginx-ingress addon is enabled"))
-	case !domainChangeRequested(annotations):
+	case !domainChangeAllowed(annotations):
 		allErrs = append(allErrs, field.Forbidden(domainPath, fmt.Sprintf("changing the domain is only allowed if the %s annotation requests one of the operations %v in the same request", v1beta1constants.GardenerOperation, sets.List(domainChangeOperations))))
 	}
 
