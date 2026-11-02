@@ -453,7 +453,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting managed resources",
-			Fn:           flow.TaskFn(botanist.DeleteManagedResources).Timeout(10 * time.Minute),
+			Fn:           flow.TaskFn(botanist.DeleteManagedResourcesWithForceDeletion).Timeout(10 * time.Minute),
 			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources, waitUntilWorkerDeleted),
 		})
 		deleteDWDResources = g.Add(flow.Task{

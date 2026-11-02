@@ -20,12 +20,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// DeleteManagedResources deletes all managed resources labeled with `origin=gardener`
+// DeleteManagedResourcesWithForceDeletion deletes all managed resources labeled with `origin=gardener`
 // from the Shoot namespace in the Seed. If a managed resource is stuck in deletion for
 // longer than the configured grace period, it is annotated for force
 // deletion so that the gardener-resource-manager forcefully cleans up the underlying
 // resources.
-func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
+func (b *Botanist) DeleteManagedResourcesWithForceDeletion(ctx context.Context) error {
 	var (
 		c       = b.SeedClientSet.Client()
 		ensurer = utilclient.DefaultGoneEnsurer()
@@ -52,9 +52,9 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 	)(ctx)
 }
 
-// DeleteManagedResourcesAndWait deletes all managed resources labeled with `origin=gardener`
+// DeleteManagedResourcesWithoutForceDeletion deletes all managed resources labeled with `origin=gardener`
 // from the Shoot namespace in the Seed without applying force deletion.
-func (b *Botanist) DeleteManagedResourcesAndWait(ctx context.Context) error {
+func (b *Botanist) DeleteManagedResourcesWithoutForceDeletion(ctx context.Context) error {
 	return b.SeedClientSet.Client().DeleteAllOf(
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
