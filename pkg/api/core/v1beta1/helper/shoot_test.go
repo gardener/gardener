@@ -1638,6 +1638,19 @@ var _ = Describe("Helper", func() {
 		Entry("workerKubernetes.kubelet != nil", sampleShootKubelet, &gardencorev1beta1.WorkerKubernetes{Kubelet: sampleWorkerKubelet}, sampleWorkerKubelet),
 	)
 
+	DescribeTable("#CalculateEffectiveSysctls",
+		func(globalSysctls, workerSysctls, expectedRes map[string]string) {
+			res := CalculateEffectiveSysctls(globalSysctls, workerSysctls)
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("both nil", nil, nil, nil),
+		Entry("only global set", map[string]string{"a": "1"}, nil, map[string]string{"a": "1"}),
+		Entry("only worker set", nil, map[string]string{"b": "2"}, map[string]string{"b": "2"}),
+		Entry("both set, worker overrides global (no merge)", map[string]string{"a": "1"}, map[string]string{"b": "2"}, map[string]string{"b": "2"}),
+		Entry("worker set to empty map overrides global (opt-out)", map[string]string{"a": "1"}, map[string]string{}, map[string]string{}),
+	)
+
 	DescribeTable("#SystemComponentsAllowed",
 		func(worker *gardencorev1beta1.Worker, allowsSystemComponents bool) {
 			Expect(SystemComponentsAllowed(worker)).To(Equal(allowsSystemComponents))

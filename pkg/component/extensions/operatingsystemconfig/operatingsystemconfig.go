@@ -124,6 +124,9 @@ type OriginalValues struct {
 	// KubeletConfig is the default kubelet configuration for all worker pools. Individual worker pools might overwrite
 	// this configuration.
 	KubeletConfig *gardencorev1beta1.KubeletConfig
+	// Sysctls is the default map of kernel settings for all worker pools. Individual worker pools might overwrite this
+	// configuration via `.spec.provider.workers[].sysctls` (the per-pool value fully replaces this value, no merge).
+	Sysctls map[string]string
 	// KubeProxyEnabled indicates whether kube-proxy is enabled or not.
 	KubeProxyEnabled bool
 	// MachineTypes is a list of machine types.
@@ -559,6 +562,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		return deployer{}, err
 	}
 	kubeletConfig := v1beta1helper.CalculateEffectiveKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes)
+	sysctls := v1beta1helper.CalculateEffectiveSysctls(o.values.Sysctls, worker.Sysctls)
 
 	images := make(map[string]*imagevectorutils.Image, len(o.values.Images))
 	maps.Copy(images, o.values.Images)
@@ -613,6 +617,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		kubeletCLIFlags:                         kubeletCLIFlags,
 		kubeletDataVolumeName:                   worker.KubeletDataVolumeName,
 		kubeProxyEnabled:                        o.values.KubeProxyEnabled,
+		sysctls:                                 sysctls,
 		kubernetesVersion:                       kubernetesVersion,
 		sshPublicKeys:                           o.values.SSHPublicKeys,
 		sshAccessEnabled:                        o.values.SSHAccessEnabled,
@@ -687,6 +692,7 @@ type deployer struct {
 	kubeletCLIFlags                             components.ConfigurableKubeletCLIFlags
 	kubeletDataVolumeName                       *string
 	kubeProxyEnabled                            bool
+	sysctls                                     map[string]string
 	kubernetesVersion                           *semver.Version
 	sshPublicKeys                               []string
 	sshAccessEnabled                            bool
@@ -742,7 +748,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		OpenTelemetryCollectorLogShipperEnabled: d.openTelemetryCollectorLogShipperEnabled,
 		OpenTelemetryCollectorIngressHostName:   d.openTelemetryCollectorIngressHostName,
 		APIServerURL:                            d.apiServerURL,
-		Sysctls:                                 d.worker.Sysctls,
+		Sysctls:                                 d.sysctls,
 		PreferIPv6:                              d.primaryIPFamily == gardencorev1beta1.IPFamilyIPv6,
 		Taints:                                  d.taints,
 		SyncControlPlaneAuthTokens:              d.syncControlPlaneAuthTokens && d.worker.ControlPlane != nil,

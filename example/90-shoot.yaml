@@ -180,6 +180,9 @@ spec:
   # workersSettings:
   #   sshAccess:
   #     enabled: false
+  #   sysctls: # optional, default kernel settings applied to all worker pools; a pool's own `sysctls` fully overrides this (no merge)
+  #     net.ipv4.tcp_wmem: "4096 131072 16777216"
+  #     net.ipv4.tcp_rmem: "4096 131072 16777216"
   kubernetes:
   # version: 1.36.0
   # etcd:

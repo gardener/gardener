@@ -93,6 +93,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 			sshPublicKeys                           = []string{"ssh-public-key", "ssh-public-key-b"}
 			kubernetesVersion                       = semver.MustParse("1.2.3")
 			workerKubernetesVersion                 = "4.5.6"
+			globalSysctls                           = map[string]string{"net.ipv4.tcp_wmem": "4096 131072 16777216"}
+			worker2Sysctls                          = map[string]string{"vm.swappiness": "10"}
 			valitailEnabled                         = false
 			openTelemetryCollectorLogShipperEnabled = false
 
@@ -132,6 +134,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						{Path: strconv.FormatBool(cctx.ValitailEnabled)},
 						{Path: strconv.FormatBool(cctx.OpenTelemetryCollectorLogShipperEnabled)},
 						{Path: fmt.Sprintf("%+v", cctx.Taints)},
+						{Path: fmt.Sprintf("%v", cctx.Sysctls)},
 					},
 					nil
 			}
@@ -216,6 +219,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 					SSHPublicKeys:                           sshPublicKeys,
 					ValitailEnabled:                         valitailEnabled,
 					OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
+					Sysctls:                                 globalSysctls,
+				}
+
+				if worker.Name == worker2Name {
+					componentsContext.Sysctls = worker2Sysctls
 				}
 
 				if worker.ControlPlane != nil {
@@ -393,6 +401,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
 						Version: &workerKubernetesVersion,
 					},
+					Sysctls: worker2Sysctls,
 				},
 			}
 			inPlaceUpdateWorkers = []gardencorev1beta1.Worker{
@@ -456,6 +465,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					SSHPublicKeys:                           sshPublicKeys,
 					ValitailEnabled:                         valitailEnabled,
 					OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
+					Sysctls:                                 globalSysctls,
 				},
 			}
 
@@ -583,6 +593,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							SSHPublicKeys:                           sshPublicKeys,
 							ValitailEnabled:                         valitailEnabled,
 							OpenTelemetryCollectorLogShipperEnabled: openTelemetryCollectorLogShipperEnabled,
+							Sysctls:                                 globalSysctls,
 						},
 						CredentialsRotationStatus: &gardencorev1beta1.ShootCredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{

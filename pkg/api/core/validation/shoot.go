@@ -2196,6 +2196,10 @@ func validateProvider(shootNamespace string, provider core.Provider, kubernetes 
 
 		allErrs = append(allErrs, ValidateWorkers(provider.Workers, hasManagedInfrastructure, fldPath.Child("workers"))...)
 		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, fldPath.Child("workers"))...)
+
+		if provider.WorkersSettings != nil && provider.WorkersSettings.Sysctls != nil {
+			allErrs = append(allErrs, ValidateSysctls(provider.WorkersSettings.Sysctls, fldPath.Child("workersSettings", "sysctls"))...)
+		}
 	}
 
 	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
