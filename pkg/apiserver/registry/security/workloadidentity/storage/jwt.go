@@ -10,6 +10,7 @@ import (
 	"slices"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -55,7 +57,7 @@ type contextObjects struct {
 
 // issueToken generates the JSON Web Token based on the provided configurations.
 func (r *TokenRequestREST) issueToken(user user.Info, tokenRequest *securityapi.TokenRequest, workloadIdentity *securityapi.WorkloadIdentity) (string, *time.Time, error) {
-	contextObjects, err := r.resolveContextObject(user, tokenRequest.Spec.ContextObject)
+	contextObjects, err := r.resolveContextObject(user, tokenRequest.Spec.ContextObject, workloadIdentity)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to resolve context object: %w", err)
 	}
@@ -128,7 +130,7 @@ func (r *TokenRequestREST) getGardenerClaims(workloadIdentity *securityapi.Workl
 	return gardenerClaims
 }
 
-func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *securityapi.ContextObject) (*contextObjects, error) {
+func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *securityapi.ContextObject, workloadIdentity *securityapi.WorkloadIdentity) (*contextObjects, error) {
 	if ctxObj == nil {
 		return nil, nil
 	}
@@ -149,6 +151,11 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 	}
 	isAssignedToRequester := func(seedNames ...*string) bool {
 		return slices.ContainsFunc(seedNames, func(s *string) bool { return ptr.Deref(s, "") == requesterSeedName })
+	}
+	// The context claims must not attribute a workload identity to an object which does not use it, e.g., to a shoot of
+	// another project which is scheduled to the same seed.
+	notReferencingWorkloadIdentity := func() error {
+		return apierrors.NewForbidden(securityapi.Resource("workloadidentities"), workloadIdentity.Name, fmt.Errorf("workload identity %s/%s is not referenced by context object %s", workloadIdentity.Namespace, workloadIdentity.Name, ctxObjectKey(ctxObj)))
 	}
 
 	var (
@@ -178,6 +185,21 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 			return nil, fmt.Errorf("uid of contextObject (%s) and real world Shoot resource (%s) differ", ctxObj.UID, shoot.UID)
 		}
 
+		// Shoots may also use workload identities provided by their seed, e.g., for the internal or default domain.
+		var referenced bool
+		if referenced, err = r.shootReferencesWorkloadIdentity(shoot, workloadIdentity); err != nil {
+			return nil, err
+		}
+		if !referenced {
+			var requesterSeed *gardencorev1beta1.Seed
+			if requesterSeed, err = r.seedLister.Get(requesterSeedName); err != nil {
+				return nil, err
+			}
+			if !seedReferencesWorkloadIdentity(requesterSeed, workloadIdentity) {
+				return nil, notReferencingWorkloadIdentity()
+			}
+		}
+
 		if shoot.Spec.SeedName != nil {
 			seedName := *shoot.Spec.SeedName
 			if seed, err = r.seedLister.Get(seedName); err != nil {
@@ -203,6 +225,10 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		if seed.UID != ctxObj.UID {
 			return nil, fmt.Errorf("uid of contextObject (%s) and real world Seed resource (%s) differ", ctxObj.UID, seed.UID)
 		}
+
+		if !seedReferencesWorkloadIdentity(seed, workloadIdentity) {
+			return nil, notReferencingWorkloadIdentity()
+		}
 		ctxObjects.seed = seed.GetObjectMeta()
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupBucket":
@@ -216,6 +242,10 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 		if backupBucket.UID != ctxObj.UID {
 			return nil, fmt.Errorf("uid of contextObject (%s) and real world BackupBucket resource (%s) differ", ctxObj.UID, backupBucket.UID)
+		}
+
+		if !isWorkloadIdentityObjectReference(backupBucket.Spec.CredentialsRef, workloadIdentity) {
+			return nil, notReferencingWorkloadIdentity()
 		}
 		ctxObjects.backupBucket = backupBucket.GetObjectMeta()
 
@@ -244,6 +274,11 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 		if backupBucket, err = r.backupBucketLister.Get(backupEntry.Spec.BucketName); err != nil {
 			return nil, err
+		}
+
+		// BackupEntries use the credentials of the BackupBucket they are stored in.
+		if !isWorkloadIdentityObjectReference(backupBucket.Spec.CredentialsRef, workloadIdentity) {
+			return nil, notReferencingWorkloadIdentity()
 		}
 		ctxObjects.backupBucket = backupBucket.GetObjectMeta()
 
@@ -284,4 +319,72 @@ func ctxObjectKey(ctxObj *securityapi.ContextObject) string {
 		return fmt.Sprintf("%s %s/%s", ctxObj.Kind, ns, ctxObj.Name)
 	}
 	return fmt.Sprintf("%s %s", ctxObj.Kind, ctxObj.Name)
+}
+
+func isWorkloadIdentityReference(apiVersion, kind, namespace, name string, workloadIdentity *securityapi.WorkloadIdentity) bool {
+	return apiVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+		kind == "WorkloadIdentity" &&
+		namespace == workloadIdentity.Namespace &&
+		name == workloadIdentity.Name
+}
+
+func isWorkloadIdentityObjectReference(ref *corev1.ObjectReference, workloadIdentity *securityapi.WorkloadIdentity) bool {
+	return ref != nil && isWorkloadIdentityReference(ref.APIVersion, ref.Kind, ref.Namespace, ref.Name, workloadIdentity)
+}
+
+// seedReferencesWorkloadIdentity mirrors the Seed -> WorkloadIdentity edges of the SeedAuthorizer graph
+// (pkg/utils/graph/eventhandler_seed.go). Keep both in sync when adding new credentials references to the Seed API.
+func seedReferencesWorkloadIdentity(seed *gardencorev1beta1.Seed, workloadIdentity *securityapi.WorkloadIdentity) bool {
+	if seed.Spec.Backup != nil && isWorkloadIdentityObjectReference(seed.Spec.Backup.CredentialsRef, workloadIdentity) {
+		return true
+	}
+
+	if provider := seed.Spec.DNS.Provider; provider != nil && isWorkloadIdentityObjectReference(provider.CredentialsRef, workloadIdentity) {
+		return true
+	}
+
+	if internal := seed.Spec.DNS.Internal; internal != nil && isWorkloadIdentityObjectReference(&internal.CredentialsRef, workloadIdentity) {
+		return true
+	}
+
+	if slices.ContainsFunc(seed.Spec.DNS.Defaults, func(d gardencorev1beta1.SeedDNSProviderConfig) bool {
+		return isWorkloadIdentityObjectReference(&d.CredentialsRef, workloadIdentity)
+	}) {
+		return true
+	}
+
+	return slices.ContainsFunc(seed.Spec.Resources, func(r gardencorev1beta1.NamedResourceReference) bool {
+		return isWorkloadIdentityReference(r.ResourceRef.APIVersion, r.ResourceRef.Kind, v1beta1constants.GardenNamespace, r.ResourceRef.Name, workloadIdentity)
+	})
+}
+
+// shootReferencesWorkloadIdentity mirrors the Shoot -> WorkloadIdentity edges of the SeedAuthorizer graph
+// (pkg/utils/graph/eventhandler_shoot.go and eventhandler_credentialsbinding.go). Keep both in sync when adding new
+// credentials references to the Shoot API.
+func (r *TokenRequestREST) shootReferencesWorkloadIdentity(shoot *gardencorev1beta1.Shoot, workloadIdentity *securityapi.WorkloadIdentity) (bool, error) {
+	if shoot.Spec.DNS != nil && slices.ContainsFunc(shoot.Spec.DNS.Providers, func(p gardencorev1beta1.DNSProvider) bool {
+		return p.CredentialsRef != nil && isWorkloadIdentityReference(p.CredentialsRef.APIVersion, p.CredentialsRef.Kind, shoot.Namespace, p.CredentialsRef.Name, workloadIdentity)
+	}) {
+		return true, nil
+	}
+
+	if slices.ContainsFunc(shoot.Spec.Resources, func(r gardencorev1beta1.NamedResourceReference) bool {
+		return isWorkloadIdentityReference(r.ResourceRef.APIVersion, r.ResourceRef.Kind, shoot.Namespace, r.ResourceRef.Name, workloadIdentity)
+	}) {
+		return true, nil
+	}
+
+	if shoot.Spec.CredentialsBindingName == nil {
+		return false, nil
+	}
+
+	credentialsBinding, err := r.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return isWorkloadIdentityObjectReference(&credentialsBinding.CredentialsRef, workloadIdentity), nil
 }

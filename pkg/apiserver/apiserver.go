@@ -22,6 +22,7 @@ import (
 	securityrest "github.com/gardener/gardener/pkg/apiserver/registry/security/rest"
 	seedmanagementrest "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/rest"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
@@ -39,11 +40,12 @@ type ExtraConfig struct {
 
 // Config contains Gardener API server configuration.
 type Config struct {
-	GenericConfig         *genericapiserver.RecommendedConfig
-	ExtraConfig           ExtraConfig
-	KubeInformerFactory   kubeinformers.SharedInformerFactory
-	CoreInformerFactory   gardencoreinformers.SharedInformerFactory
-	SubjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface
+	GenericConfig           *genericapiserver.RecommendedConfig
+	ExtraConfig             ExtraConfig
+	KubeInformerFactory     kubeinformers.SharedInformerFactory
+	CoreInformerFactory     gardencoreinformers.SharedInformerFactory
+	SecurityInformerFactory securityinformers.SharedInformerFactory
+	SubjectAccessReviewer   clientauthorizationv1.SubjectAccessReviewInterface
 }
 
 // GardenerServer contains state for a Gardener API server.
@@ -55,9 +57,10 @@ type completedConfig struct {
 	GenericConfig genericapiserver.CompletedConfig
 	ExtraConfig   *ExtraConfig
 
-	kubeInformerFactory   kubeinformers.SharedInformerFactory
-	coreInformerFactory   gardencoreinformers.SharedInformerFactory
-	subjectAccessReviewer clientauthorizationv1.SubjectAccessReviewInterface
+	kubeInformerFactory     kubeinformers.SharedInformerFactory
+	coreInformerFactory     gardencoreinformers.SharedInformerFactory
+	securityInformerFactory securityinformers.SharedInformerFactory
+	subjectAccessReviewer   clientauthorizationv1.SubjectAccessReviewInterface
 }
 
 // CompletedConfig contains completed Gardener API server configuration.
@@ -72,6 +75,7 @@ func (cfg *Config) Complete() CompletedConfig {
 		&cfg.ExtraConfig,
 		cfg.KubeInformerFactory,
 		cfg.CoreInformerFactory,
+		cfg.SecurityInformerFactory,
 		cfg.SubjectAccessReviewer,
 	}
 
@@ -111,8 +115,9 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		securityAPIGroupInfo       = (securityrest.StorageProvider{
-			TokenIssuer:         tokenIssuer,
-			CoreInformerFactory: c.coreInformerFactory,
+			TokenIssuer:             tokenIssuer,
+			CoreInformerFactory:     c.coreInformerFactory,
+			SecurityInformerFactory: c.securityInformerFactory,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 

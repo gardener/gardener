@@ -23,16 +23,18 @@ import (
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // TokenRequestREST implements a RESTStorage for a token request.
 type TokenRequestREST struct {
-	shootListers       gardencorev1beta1listers.ShootLister
-	seedLister         gardencorev1beta1listers.SeedLister
-	projectLister      gardencorev1beta1listers.ProjectLister
-	backupBucketLister gardencorev1beta1listers.BackupBucketLister
-	backupEntryLister  gardencorev1beta1listers.BackupEntryLister
+	shootListers             gardencorev1beta1listers.ShootLister
+	seedLister               gardencorev1beta1listers.SeedLister
+	projectLister            gardencorev1beta1listers.ProjectLister
+	backupBucketLister       gardencorev1beta1listers.BackupBucketLister
+	backupEntryLister        gardencorev1beta1listers.BackupEntryLister
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
 
 	workloadIdentityGetter getter
 	tokenIssuer            workloadidentity.TokenIssuer
@@ -175,15 +177,17 @@ func NewTokenRequestREST(
 	projectLister gardencorev1beta1listers.ProjectLister,
 	backupBucketLister gardencorev1beta1listers.BackupBucketLister,
 	backupEntryLister gardencorev1beta1listers.BackupEntryLister,
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister,
 ) *TokenRequestREST {
 	return &TokenRequestREST{
 		workloadIdentityGetter: storage,
 
-		tokenIssuer:        tokenIssuer,
-		shootListers:       shootListers,
-		seedLister:         seedLister,
-		projectLister:      projectLister,
-		backupBucketLister: backupBucketLister,
-		backupEntryLister:  backupEntryLister,
+		tokenIssuer:              tokenIssuer,
+		shootListers:             shootListers,
+		seedLister:               seedLister,
+		projectLister:            projectLister,
+		backupBucketLister:       backupBucketLister,
+		backupEntryLister:        backupEntryLister,
+		credentialsBindingLister: credentialsBindingLister,
 	}
 }
