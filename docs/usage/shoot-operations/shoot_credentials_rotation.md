@@ -240,7 +240,7 @@ kubectl -n <shoot-namespace> patch shoot <shoot-name> --type=merge \
 Besides `rotate-ca-start`, the operations `rotate-ca-start-without-workers-rollout`, `rotate-credentials-start`, and `rotate-credentials-start-without-workers-rollout` are accepted as well.
 A domain change without one of these operations is rejected.
 
-While the CA rotation is in the phases `Preparing` (or `PreparingWithoutWorkersRollout` and `WaitingForWorkersRollout`) and `Prepared`, the `Shoot` is reachable under both the old and the new domain:
+While the CA rotation is in one of the phases `Preparing`, `PreparingWithoutWorkersRollout`, `WaitingForWorkersRollout`, or `Prepared`, the `Shoot` is reachable under both the old and the new domain:
 
 - DNS records exist for both domains.
 - The server certificate of the `kube-apiserver` is valid for both domains.
