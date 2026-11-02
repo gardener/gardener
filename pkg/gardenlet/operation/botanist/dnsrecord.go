@@ -20,115 +20,70 @@ import (
 
 // DefaultExternalDNSRecord creates the default deployer for the external DNSRecord resource.
 func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
-	values := &extensionsdnsrecord.Values{
-		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		Namespace:         b.Shoot.ControlPlaneNamespace,
-		TTL:               b.dnsRecordTTLSeconds(),
-		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.Shoot.IsRestorePhase(),
-		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
-		Labels: map[string]string{
-			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordExternal,
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		},
-	}
-
-	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
-
-	if b.NeedsExternalDNS() {
-		values.Type = b.Shoot.ExternalDomain.Provider
-		if b.Shoot.ExternalDomain.Zone != "" {
-			values.Zone = &b.Shoot.ExternalDomain.Zone
-		}
-		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.ExternalDomain.Credentials, b.Shoot.GetInfo())
-		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
-	}
-
-	return extensionsdnsrecord.New(
-		b.Logger,
-		b.SeedClientSet.Client(),
-		values,
-		extensionsdnsrecord.DefaultInterval,
-		extensionsdnsrecord.DefaultSevereThreshold,
-		extensionsdnsrecord.DefaultTimeout,
-		credentialsDeployer,
-	)
+	values := b.dnsRecordValues(v1beta1constants.DNSRecordExternalName, v1beta1constants.LabelDNSRecordExternal, b.annotateExternalDNSRecordOperation())
+	return b.newDNSRecord(values, b.NeedsExternalDNS(), b.Shoot.ExternalDomain, apiServerDomain(b.Shoot.ExternalClusterDomain))
 }
 
 // DefaultPriorExternalDNSRecord creates the default deployer for the DNSRecord resource of the prior external domain.
 func (b *Botanist) DefaultPriorExternalDNSRecord() extensionsdnsrecord.Interface {
-	values := &extensionsdnsrecord.Values{
-		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorExternalName,
-		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorExternalName,
-		Namespace:         b.Shoot.ControlPlaneNamespace,
-		TTL:               b.dnsRecordTTLSeconds(),
-		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.Shoot.IsRestorePhase(),
-		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
-		Labels: map[string]string{
-			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordPriorExternal,
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		},
-	}
-
-	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
-
-	if b.NeedsPriorExternalDNS() {
-		values.Type = b.Shoot.PriorExternalDomain.Provider
-		if b.Shoot.PriorExternalDomain.Zone != "" {
-			values.Zone = &b.Shoot.PriorExternalDomain.Zone
-		}
-		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.PriorExternalDomain.Credentials, b.Shoot.GetInfo())
-		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorExternalClusterDomain)
-	}
-
-	return extensionsdnsrecord.New(
-		b.Logger,
-		b.SeedClientSet.Client(),
-		values,
-		extensionsdnsrecord.DefaultInterval,
-		extensionsdnsrecord.DefaultSevereThreshold,
-		extensionsdnsrecord.DefaultTimeout,
-		credentialsDeployer,
-	)
+	values := b.dnsRecordValues(v1beta1constants.DNSRecordPriorExternalName, v1beta1constants.LabelDNSRecordPriorExternal, b.annotateExternalDNSRecordOperation())
+	return b.newDNSRecord(values, b.NeedsPriorExternalDNS(), b.Shoot.PriorExternalDomain, apiServerDomain(b.Shoot.PriorExternalClusterDomain))
 }
 
 // DefaultInternalDNSRecord creates the default deployer for the internal DNSRecord resource.
 func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
-	values := &extensionsdnsrecord.Values{
-		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		Namespace:                    b.Shoot.ControlPlaneNamespace,
-		TTL:                          b.dnsRecordTTLSeconds(),
-		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
-		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
-			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
-			b.Shoot.IsRestorePhase(),
-		IPStack: gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
-		Labels: map[string]string{
-			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordInternal,
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		},
-	}
+	deleting := b.Shoot.GetInfo().DeletionTimestamp != nil
+	values := b.dnsRecordValues(v1beta1constants.DNSRecordInternalName, v1beta1constants.LabelDNSRecordInternal,
+		deleting || controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) || b.Shoot.IsRestorePhase())
+	values.ReconcileOnlyOnChangeOrError = deleting
 
-	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
-
-	if b.NeedsInternalDNS() {
-		values.Type = b.Garden.InternalDomain.Provider
-		if b.Garden.InternalDomain.Zone != "" {
-			values.Zone = &b.Garden.InternalDomain.Zone
-		}
-		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Garden.InternalDomain.Credentials, b.Shoot.GetInfo())
-		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.InternalClusterDomain)
-	} else if internalDomain := b.Shoot.SelfHostedShootInternalAPIServerDomain(); internalDomain != nil && b.NeedsExternalDNS() {
+	internalDomain := b.Shoot.SelfHostedShootInternalAPIServerDomain()
+	if !b.NeedsInternalDNS() && internalDomain != nil && b.NeedsExternalDNS() {
 		// Self-hosted shoots don't have an internal domain configured by the operator. Instead, the internal DNSRecord
 		// is a sibling of the external DNSRecord (using the same provider and credentials), which points to the internal
 		// IPs of the control plane nodes instead of the control plane exposure.
-		values.Type = b.Shoot.ExternalDomain.Provider
-		if b.Shoot.ExternalDomain.Zone != "" {
-			values.Zone = &b.Shoot.ExternalDomain.Zone
+		return b.newDNSRecord(values, true, b.Shoot.ExternalDomain, *internalDomain)
+	}
+
+	return b.newDNSRecord(values, b.NeedsInternalDNS(), b.Garden.InternalDomain, apiServerDomain(b.Shoot.InternalClusterDomain))
+}
+
+func (b *Botanist) annotateExternalDNSRecordOperation() bool {
+	return controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.Shoot.IsRestorePhase()
+}
+
+func apiServerDomain(clusterDomain *string) string {
+	if clusterDomain == nil {
+		return ""
+	}
+	return v1beta1helper.GetAPIServerDomain(*clusterDomain)
+}
+
+func (b *Botanist) dnsRecordValues(name, role string, annotateOperation bool) *extensionsdnsrecord.Values {
+	return &extensionsdnsrecord.Values{
+		Name:              b.Shoot.GetInfo().Name + "-" + name,
+		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + name,
+		Namespace:         b.Shoot.ControlPlaneNamespace,
+		TTL:               b.dnsRecordTTLSeconds(),
+		AnnotateOperation: annotateOperation,
+		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
+		Labels: map[string]string{
+			v1beta1constants.LabelRole:  role,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		},
+	}
+}
+
+func (b *Botanist) newDNSRecord(values *extensionsdnsrecord.Values, needed bool, domain *gardenerutils.Domain, clusterAPIServerDomain string) extensionsdnsrecord.Interface {
+	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
+
+	if needed {
+		values.Type = domain.Provider
+		if domain.Zone != "" {
+			values.Zone = &domain.Zone
 		}
-		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.ExternalDomain.Credentials, b.Shoot.GetInfo())
-		values.DNSName = *internalDomain
+		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(domain.Credentials, b.Shoot.GetInfo())
+		values.DNSName = clusterAPIServerDomain
 	}
 
 	return extensionsdnsrecord.New(
