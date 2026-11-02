@@ -80,7 +80,7 @@ var _ = Describe("#Wait", func() {
 			&retry.UntilTimeout, waiter.UntilTimeout,
 		)
 
-		etcd = New(log, c, testNamespace, sm, Values{
+		etcd = New(log, c, c, testNamespace, sm, Values{
 			Replicas:        new(int32(3)),
 			Role:            testRole,
 			Class:           ClassNormal,

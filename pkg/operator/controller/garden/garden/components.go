@@ -601,6 +601,7 @@ func (r *Reconciler) newEtcd(
 
 	return etcd.New(
 		log,
+		r.RuntimeClientSet.APIReader(),
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,
