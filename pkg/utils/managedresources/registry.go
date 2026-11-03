@@ -109,15 +109,14 @@ func (r *Registry) Add(objs ...client.Object) error {
 				return err
 			}
 
-			buf := bytes.Buffer{}
-			encoder := yaml.NewEncoder(&buf)
-			encoder.SetIndent(2)
-			encoder.CompactSeqIndent()
-
-			if err := encoder.Encode(anyObj); err != nil {
+			if serializationYAML, err = yaml.Dump(anyObj,
+				yaml.WithV3Defaults(),
+				yaml.WithLineWidth(-1),
+				yaml.WithIndent(2),
+				yaml.WithCompactSeqIndent(true),
+			); err != nil {
 				return err
 			}
-			serializationYAML = buf.Bytes()
 		}
 
 		r.nameToObject[filename] = &object{

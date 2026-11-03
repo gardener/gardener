@@ -60,7 +60,7 @@ require (
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0
 	go.yaml.in/yaml/v2 v2.4.4
-	go.yaml.in/yaml/v4 v4.0.0-rc.6
+	go.yaml.in/yaml/v4 v4.0.0-rc.7
 	golang.org/x/crypto v0.58.0
 	golang.org/x/text v0.43.0
 	golang.org/x/time v0.16.0
@@ -98,9 +98,6 @@ require (
 )
 
 replace github.com/gardener/gardener/pkg/apis => ./pkg/apis
-
-// TODO(marc1404): Drop this line once test fixtures have been updated to match the new serialization behavior past v4.0.0-rc.2
-replace go.yaml.in/yaml/v4 => go.yaml.in/yaml/v4 v4.0.0-rc.2
 
 // TODO(MartinWeindel) drop this line as soon as `github.com/gardener/dependency-watchdog` has been updated and does not have an indirect dependency to `github.com/gardener/cert-management` anymore
 exclude github.com/gardener/cert-management v0.22.0

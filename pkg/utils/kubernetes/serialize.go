@@ -5,7 +5,6 @@
 package kubernetes
 
 import (
-	"bytes"
 	"fmt"
 
 	"go.yaml.in/yaml/v4"
@@ -40,12 +39,12 @@ func Serialize(obj client.Object, scheme *runtime.Scheme) (string, error) {
 		return "", fmt.Errorf("failed unmarshalling the object: %w", err)
 	}
 
-	buf := bytes.Buffer{}
-	encoder := yaml.NewEncoder(&buf)
-	encoder.SetIndent(2)
-	encoder.CompactSeqIndent()
-
-	if err := encoder.Encode(anyObj); err != nil {
+	if serializationYAML, err = yaml.Dump(anyObj,
+		yaml.WithV3Defaults(),
+		yaml.WithLineWidth(-1),
+		yaml.WithIndent(2),
+		yaml.WithCompactSeqIndent(true),
+	); err != nil {
 		return "", fmt.Errorf("failed marshalling the object to YAML: %w", err)
 	}
 
