@@ -359,7 +359,7 @@ func (b *Botanist) mergeExistingSecretRefsOfOtherWorkerPoolsIntoNodeAgentManaged
 ) error {
 	isExistingRefForDesiredWorkerPool := func(secretRefName string) bool {
 		for _, pool := range workerPools {
-			if strings.HasPrefix(secretRefName, managedresources.SecretPrefix+managedResourceSecretName(pool.Name)) {
+			if prefix := managedresources.SecretPrefix + managedResourceSecretName(pool.Name) + "-"; strings.HasPrefix(secretRefName, prefix) && len(secretRefName) == len(prefix)+8 {
 				return true
 			}
 		}
