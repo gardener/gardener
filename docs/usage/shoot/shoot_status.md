@@ -163,6 +163,7 @@ Known error codes and their classification are:
 | `ERR_CONFIGURATION_PROBLEM`           | true       | Indicates that the last error occurred due to a configuration problem. It is classified as a non-retryable error code. |
 | `ERR_RETRYABLE_CONFIGURATION_PROBLEM` | true       | Indicates that the last error occurred due to a retryable configuration problem. "Retryable" means that the occurred error is likely to be resolved in a ungraceful manner after given period of time. |
 | `ERR_PROBLEMATIC_WEBHOOK`             | true       | Indicates that the last error occurred due to a webhook not following the [Kubernetes best practices](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings). |
+| `ERR_LIVE_MIGRATION_SEED_VERSION_MISMATCH` | false  | Indicates that a live control plane migration is blocked because the source and destination seeds run different gardenlet versions. The operation is retried automatically and proceeds once the versions align. |
 
 **Please note:** Errors classified as `User error: true` do not require a Gardener operator to resolve but can be remediated by the user (e.g. by refreshing expired infrastructure credentials).
 Even though `ERR_INFRA_RATE_LIMITS_EXCEEDED` and `ERR_RETRYABLE_INFRA_DEPENDENCIES` is mentioned as User error: false` operator can't provide any resolution because it is related to cloud provider issue.
