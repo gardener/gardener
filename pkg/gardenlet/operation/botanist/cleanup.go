@@ -83,6 +83,9 @@ var (
 	// ValidatingWebhookConfigurationCleanOption is the delete selector for ValidatingWebhookConfigurations.
 	ValidatingWebhookConfigurationCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
 
+	// ValidatingAdmissionPolicyBindingCleanOption is the delete selector for ValidatingAdmissionPolicyBindings.
+	ValidatingAdmissionPolicyBindingCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
+
 	// CustomResourceDefinitionCleanOption is the delete selector for CustomResources.
 	CustomResourceDefinitionCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
 
@@ -158,7 +161,8 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, log logr.Logger, c client.Cli
 	}
 }
 
-// CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
+// CleanWebhooks deletes all Webhooks and ValidatingAdmissionPolicyBindings in the Shoot cluster that are not being
+// managed by the addon manager. Without bindings, ValidatingAdmissionPolicies are not enforced.
 func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
 		c       = b.ShootClientSet.Client()
@@ -174,6 +178,7 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	return flow.Parallel(
 		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
 		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
+		cleanResourceFn(ops, b.Logger, c, &admissionregistrationv1.ValidatingAdmissionPolicyBindingList{}, ValidatingAdmissionPolicyBindingCleanOption, cleanOptions),
 	)(ctx)
 }
 
