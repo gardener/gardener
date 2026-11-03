@@ -125,10 +125,13 @@ var _ = Describe("KubeProxy", func() {
 
 			ctx     = context.TODO()
 			fakeErr = errors.New("fake err")
+
+			expectedServer string
 		)
 
 		BeforeEach(func() {
 			kubeProxy = mockkubeproxy.NewMockInterface(ctrl)
+			expectedServer = "api." + internalClusterDomain
 
 			botanist.Shoot.Components = &shootpkg.Components{
 				SystemComponents: &shootpkg.SystemComponents{
@@ -139,11 +142,13 @@ var _ = Describe("KubeProxy", func() {
 				Pods: []net.IPNet{{IP: net.ParseIP("22.23.24.25")}},
 			}
 			kubeProxy.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
+		})
 
+		JustBeforeEach(func() {
 			kubeProxy.EXPECT().SetKubeconfig([]byte(`apiVersion: v1
 clusters:
 - cluster:
-    server: https://api.` + internalClusterDomain + `
+    server: https://` + expectedServer + `
   name: ` + namespace + `
 contexts:
 - context:
@@ -164,6 +169,30 @@ users:
 			kubeProxy.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.DeployKubeProxy(ctx)).To(MatchError(fakeErr))
+		})
+
+		Context("self-hosted shoot with exposed control plane", func() {
+			BeforeEach(func() {
+				externalClusterDomain := "external.example.com"
+				botanist.Shoot.InternalClusterDomain = nil
+				botanist.Shoot.ExternalClusterDomain = &externalClusterDomain
+				expectedServer = "api.internal." + externalClusterDomain
+
+				shoot := botanist.Shoot.GetInfo()
+				shoot.Spec.CredentialsBindingName = new("credentials")
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: &externalClusterDomain}
+				shoot.Spec.Provider.Workers[0].ControlPlane = &gardencorev1beta1.WorkerControlPlane{
+					Exposure: &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}},
+				}
+				botanist.Shoot.SetInfo(shoot)
+			})
+
+			It("should use the internal domain pointing to the control plane nodes", func() {
+				kubeProxy.EXPECT().SetWorkerPools(gomock.Any())
+				kubeProxy.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeProxy(ctx)).To(Succeed())
+			})
 		})
 
 		Context("successful deployment", func() {

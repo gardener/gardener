@@ -339,6 +339,70 @@ var _ = Describe("shoot", func() {
 			})
 		})
 
+		Describe("#SelfHostedShootInternalAPIServerDomain, #ComputeAPIServerAddressForNodes", func() {
+			var (
+				externalDomain = "foo.bar.com"
+				s              *Shoot
+				shootObj       *gardencorev1beta1.Shoot
+			)
+
+			BeforeEach(func() {
+				s = &Shoot{ExternalClusterDomain: &externalDomain}
+				shootObj = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						CredentialsBindingName: new("credentials"),
+						DNS:                    &gardencorev1beta1.DNS{Domain: &externalDomain},
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{
+								Name:         "control-plane",
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							}},
+						},
+					},
+				}
+			})
+
+			It("should use the external domain for shoots that are not self-hosted", func() {
+				shootObj.Spec.Provider.Workers[0].ControlPlane = nil
+				s.SetInfo(shootObj)
+
+				Expect(s.SelfHostedShootInternalAPIServerDomain()).To(BeNil())
+				Expect(s.ComputeAPIServerAddressForNodes()).To(Equal("api." + externalDomain))
+			})
+
+			It("should use the external domain for self-hosted shoots without control plane exposure", func() {
+				s.SetInfo(shootObj)
+
+				Expect(s.SelfHostedShootInternalAPIServerDomain()).To(BeNil())
+				Expect(s.ComputeAPIServerAddressForNodes()).To(Equal("api." + externalDomain))
+			})
+
+			It("should use the external domain for self-hosted shoots with unmanaged infrastructure", func() {
+				shootObj.Spec.CredentialsBindingName = nil
+				shootObj.Spec.Provider.Workers[0].ControlPlane.Exposure = &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}}
+				s.SetInfo(shootObj)
+
+				Expect(s.SelfHostedShootInternalAPIServerDomain()).To(BeNil())
+				Expect(s.ComputeAPIServerAddressForNodes()).To(Equal("api." + externalDomain))
+			})
+
+			It("should use the internal domain for self-hosted shoots with DNS exposure", func() {
+				shootObj.Spec.Provider.Workers[0].ControlPlane.Exposure = &gardencorev1beta1.Exposure{DNS: &gardencorev1beta1.DNSExposure{}}
+				s.SetInfo(shootObj)
+
+				Expect(s.SelfHostedShootInternalAPIServerDomain()).To(PointTo(Equal("api.internal." + externalDomain)))
+				Expect(s.ComputeAPIServerAddressForNodes()).To(Equal("api.internal." + externalDomain))
+			})
+
+			It("should use the internal domain for self-hosted shoots with extension exposure", func() {
+				shootObj.Spec.Provider.Workers[0].ControlPlane.Exposure = &gardencorev1beta1.Exposure{Extension: &gardencorev1beta1.ExtensionExposure{}}
+				s.SetInfo(shootObj)
+
+				Expect(s.SelfHostedShootInternalAPIServerDomain()).To(PointTo(Equal("api.internal." + externalDomain)))
+				Expect(s.ComputeAPIServerAddressForNodes()).To(Equal("api.internal." + externalDomain))
+			})
+		})
+
 		Describe("#IsSelfHosted", func() {
 			It("should return true", func() {
 				shoot.SetInfo(&gardencorev1beta1.Shoot{

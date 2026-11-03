@@ -528,6 +528,54 @@ users:
 		})
 	})
 
+	Describe("#computeKubeAPIServerServerCertificateConfig", func() {
+		It("should compute the expected server certificate config", func() {
+			Expect(botanist.computeKubeAPIServerServerCertificateConfig()).To(Equal(kubeapiserver.ServerCertificateConfig{
+				ExtraIPAddresses: apiServerNetwork,
+				ExtraDNSNames: []string{
+					controlPlaneNamespace,
+					"api." + internalClusterDomain,
+					externalClusterDomain,
+					"api." + externalClusterDomain,
+				},
+			}))
+		})
+
+		It("should add the internal domain of self-hosted shoots with managed infrastructure", func() {
+			botanist.Shoot.InternalClusterDomain = nil
+			shoot := botanist.Shoot.GetInfo()
+			shoot.Spec.CredentialsBindingName = new("credentials")
+			shoot.Spec.Provider.Workers[0].ControlPlane = &gardencorev1beta1.WorkerControlPlane{}
+			botanist.Shoot.SetInfo(shoot)
+
+			Expect(botanist.computeKubeAPIServerServerCertificateConfig()).To(Equal(kubeapiserver.ServerCertificateConfig{
+				ExtraIPAddresses: apiServerNetwork,
+				ExtraDNSNames: []string{
+					controlPlaneNamespace,
+					externalClusterDomain,
+					"api." + externalClusterDomain,
+					"api.internal." + externalClusterDomain,
+				},
+			}))
+		})
+
+		It("should not add the internal domain of self-hosted shoots with unmanaged infrastructure", func() {
+			botanist.Shoot.InternalClusterDomain = nil
+			shoot := botanist.Shoot.GetInfo()
+			shoot.Spec.Provider.Workers[0].ControlPlane = &gardencorev1beta1.WorkerControlPlane{}
+			botanist.Shoot.SetInfo(shoot)
+
+			Expect(botanist.computeKubeAPIServerServerCertificateConfig()).To(Equal(kubeapiserver.ServerCertificateConfig{
+				ExtraIPAddresses: apiServerNetwork,
+				ExtraDNSNames: []string{
+					controlPlaneNamespace,
+					externalClusterDomain,
+					"api." + externalClusterDomain,
+				},
+			}))
+		})
+	})
+
 	Describe("#DeleteKubeAPIServer", func() {
 		It("should properly invalidate the client and destroy the component", func() {
 			clientMap := fakeclientmap.NewClientMap().AddClient(keys.ForShoot(botanist.Shoot.GetInfo()), seedClientSet)

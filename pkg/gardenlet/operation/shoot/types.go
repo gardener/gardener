@@ -87,7 +87,13 @@ type Shoot struct {
 	// KubernetesVersion is the Kubernetes version of the cluster that runs the shoot system components.
 	KubernetesVersion *semver.Version
 
-	// InternalClusterDomain is empty for self-hosted shoots, which only have an external domain (Shoot.spec.dns.domain).
+	// InternalClusterDomain is the shoot's domain under the seed's internal domain. It is nil for self-hosted shoots,
+	// which only have Shoot.spec.dns.domain. The internal domain of self-hosted shoots for traffic from the nodes is a
+	// different concept, see SelfHostedShootInternalAPIServerDomain. It must not be set as InternalClusterDomain:
+	// The shoot's internal domain points to the same endpoint as the external domain and is reachable from anywhere, so
+	// it is preferred for out-of-cluster access (see ComputeOutOfClusterAPIServerAddress), e.g., for the default
+	// service account issuer, the `gardener` kubeconfig, and the advertised addresses. In contrast, the internal domain
+	// of self-hosted shoots points to the internal IPs of the control plane nodes and is only reachable from the nodes.
 	InternalClusterDomain *string
 	// ExternalClusterDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalClusterDomain *string
