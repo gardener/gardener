@@ -24,6 +24,7 @@ func (r *Reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
 	extension *operatorv1alpha1.Extension,
+	conditions Conditions,
 ) (
 	reconcile.Result,
 	error,
@@ -56,12 +57,10 @@ func (r *Reconciler) delete(
 		})
 	)
 
-	conditions := NewConditions(r.Clock, extension.Status)
-
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log: log,
 	}); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonDeleteFailed, err.Error())
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionProgressing, ReasonDeleteFailed, err.Error())
 		if updateErr := r.updateExtensionStatus(ctx, log, extension, conditions); updateErr != nil {
 			return reconcile.Result{}, errors.Join(err, fmt.Errorf("failed to update extension status: %w", updateErr))
 		}

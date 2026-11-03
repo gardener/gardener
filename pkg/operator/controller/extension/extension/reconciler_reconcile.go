@@ -33,12 +33,11 @@ func (r *Reconciler) reconcile(
 	log logr.Logger,
 	garden *gardenInfo,
 	extension *operatorv1alpha1.Extension,
+	conditions Conditions,
 ) (
 	reconcile.Result,
 	error,
 ) {
-	conditions := NewConditions(r.Clock, extension.Status)
-
 	if garden.garden == nil {
 		if conditions.installed.Status == gardencorev1beta1.ConditionFalse && conditions.installed.Reason == ReasonDeleteSuccessful {
 			// Retain condition if the extension was previously uninstalled due to a garden deletion
