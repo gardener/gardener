@@ -39,21 +39,28 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	victorialogsConstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
 )
 
 const (
-	pvcAutoscalerTestTimeout           = 60 * time.Minute
-	pvcAutoscalerCleanupTimeout        = 5 * time.Minute
-	pvcAutoscalerInitializationTimeout = 5 * time.Minute
+	pvcAutoscalerTestTimeout           = 30 * time.Minute
+	pvcAutoscalerCleanupTimeout        = 2 * time.Minute
+	pvcAutoscalerInitializationTimeout = 2 * time.Minute
 	pvcGrowthWaitInterval              = 30 * time.Second
 	pvcGrowthWaitTimeout               = 10 * time.Minute
 
 	pvcFillUtilizationPercent = 75
+
+	debugContainerNamePrefix = "pvc-autoscaler-test-debug"
+	// A custom agnhost image (europe-docker.pkg.dev/gardener-project/releases/3rd/agnhost) is used instead of the upstream one (registry.k8s.io/e2e-test-images/agnhost)
+	// because this Deployment is created in a Seed cluster and the image needs to be signed with particular keys.
+	debugContainerImage = "europe-docker.pkg.dev/gardener-project/releases/3rd/agnhost:2.40"
 )
 
 type logBackend struct {
@@ -69,10 +76,14 @@ type logBackend struct {
 var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 	shootFramework := framework.NewShootFramework(nil)
 
-	var test = func(backend logBackend, fillFunc func(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace string, pvcSize resource.Quantity) error) {
+	var test = func(backend logBackend, fillFunc func(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace, debugContainerName string, pvcSize resource.Quantity) error) {
+		var debugContainerName string
+
 		shootFramework.Beta().Serial().CIt(fmt.Sprintf("should scale %s PVC when capacity threshold is exceeded", backend.name), func(ctx context.Context) {
 			seedClient := shootFramework.SeedClient.Client()
 			shootNamespace := shootFramework.ShootSeedNamespace()
+
+			debugContainerName = debugContainerNamePrefix + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:5]
 
 			By(fmt.Sprintf("Check whether %s is deployed", backend.name))
 			deployed, err := backend.isDeployed(ctx, seedClient, shootNamespace)
@@ -90,30 +101,27 @@ var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 			shootFramework.Logger.Info("Initial PVC size", "backend", backend.name, "pvc", pvcName, "size", initialPVCSize.String())
 
 			By(fmt.Sprintf("Fill %s PVC to %d%% utilization to trigger pvc-autoscaler", backend.name, pvcFillUtilizationPercent))
-			Eventually(func() error {
-				return fillFunc(ctx, shootFramework, backend, shootNamespace, initialPVCSize)
-			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+			Eventually(ctx, func() error {
+				return fillFunc(ctx, shootFramework, backend, shootNamespace, debugContainerName, initialPVCSize)
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).Should(Succeed())
 
 			By(fmt.Sprintf("Wait for pvc-autoscaler to grow the %s PVC", backend.name))
 			waitUntilPVCGrows(ctx, seedClient, shootNamespace, backend.pvcLabels, initialPVCSize)
 
 			By(fmt.Sprintf("Wait until %s pod's filesystem reflects the new PVC size", backend.name))
-			waitUntilFilesystemExpands(ctx, shootFramework, backend, shootNamespace, initialPVCSize)
+			waitUntilFilesystemExpands(ctx, shootFramework, backend, shootNamespace, debugContainerName, initialPVCSize)
 
 			By("Clean up fill files")
-			Eventually(func() error {
-				_, _, err = framework.PodExecByLabel(ctx, shootFramework.SeedClient, shootNamespace, labels.SelectorFromSet(backend.podLabels), backend.containerName,
-					"sh", "-c", fmt.Sprintf("rm -rf %s/fill-capacity", backend.dataDir),
-				)
-				return err
-			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+			Eventually(ctx, func() error {
+				return cleanupFillFiles(ctx, shootFramework, backend, shootNamespace, debugContainerName)
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).Should(Succeed())
 		}, pvcAutoscalerTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
-			Eventually(func() error {
-				_, _, err := framework.PodExecByLabel(ctx, shootFramework.SeedClient, shootFramework.ShootSeedNamespace(), labels.SelectorFromSet(backend.podLabels), backend.containerName,
-					"sh", "-c", fmt.Sprintf("rm -rf %s/fill-capacity", backend.dataDir),
-				)
-				return err
-			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).WithContext(ctx).Should(Succeed())
+			if debugContainerName == "" {
+				return
+			}
+			Eventually(ctx, func() error {
+				return cleanupFillFiles(ctx, shootFramework, backend, shootFramework.ShootSeedNamespace(), debugContainerName)
+			}).WithTimeout(time.Minute * 1).WithPolling(time.Second * 10).Should(Succeed())
 		}, pvcAutoscalerCleanupTimeout))
 	}
 
@@ -134,7 +142,14 @@ var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 	test(victoriaLogsBackend(), fillCapacity)
 })
 
-func fillCapacity(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace string, pvcSize resource.Quantity) error {
+// fillCapacity fills the backend's PVC past the autoscaler threshold to trigger pvc-autoscaler.
+func fillCapacity(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace, debugContainerName string, pvcSize resource.Quantity) error {
+	// Ensure the debug container as vpa can restart the backend pod.
+	podName, err := ensureDebugContainer(ctx, f, backend, shootNamespace, debugContainerName)
+	if err != nil {
+		return err
+	}
+
 	fillMiB := pvcSize.Value() * int64(pvcFillUtilizationPercent) / 100 / (1024 * 1024)
 	f.Logger.Info("Filling PVC capacity via dd", "backend", backend.name, "pvcSize", pvcSize.String(), "fillMiB", fillMiB)
 	script := fmt.Sprintf(
@@ -142,11 +157,98 @@ func fillCapacity(ctx context.Context, f *framework.ShootFramework, backend logB
 		backend.dataDir, backend.dataDir, fillMiB,
 	)
 
-	_, _, err := framework.PodExecByLabel(ctx, f.SeedClient, shootNamespace,
-		labels.SelectorFromSet(backend.podLabels), backend.containerName,
-		"sh", "-c", script,
+	_, _, err = f.SeedClient.PodExecutor().Execute(ctx, shootNamespace, podName, debugContainerName, "sh", "-c", script)
+	return err
+}
+
+// cleanupFillFiles removes the files written by fillCapacity from the backend's PVC.
+func cleanupFillFiles(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace, debugContainerName string) error {
+	// Ensure the debug container as vpa can restart the backend pod.
+	podName, err := ensureDebugContainer(ctx, f, backend, shootNamespace, debugContainerName)
+	if err != nil {
+		return err
+	}
+	f.Logger.Info("Cleaning up test files that were used to fill capacity", "backend", backend.name)
+	_, _, err = f.SeedClient.PodExecutor().Execute(ctx, shootNamespace, podName, debugContainerName,
+		"sh", "-c", fmt.Sprintf("rm -rf %s/fill-capacity", backend.dataDir),
 	)
 	return err
+}
+
+// ensureDebugContainer makes sure an ephemeral debug container with the given name is running in the backend
+// pod, mounting the same data volume as the backend container.
+func ensureDebugContainer(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace, debugContainerName string) (string, error) {
+	pod, err := framework.GetFirstRunningPodWithLabels(ctx, labels.SelectorFromSet(backend.podLabels), shootNamespace, f.SeedClient)
+	if err != nil {
+		return "", fmt.Errorf("failed to find running pod for backend %q in namespace %q: %w", backend.name, shootNamespace, err)
+	}
+
+	if hasEphemeralContainer(pod, debugContainerName) {
+		return pod.Name, ephemeralContainerRunning(pod, debugContainerName)
+	}
+
+	dataVolumeName, err := findDataVolumeName(pod, backend)
+	if err != nil {
+		return "", err
+	}
+
+	f.Logger.Info("Ensuring ephemeral debug container in backend pod", "backend", backend.name, "pod", pod.Name, "container", debugContainerName, "dataVolume", dataVolumeName)
+
+	patch := client.StrategicMergeFrom(pod.DeepCopy())
+	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, corev1.EphemeralContainer{
+		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+			Name:            debugContainerName,
+			Image:           debugContainerImage,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command:         []string{"sleep", "3600"},
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      dataVolumeName,
+				MountPath: backend.dataDir,
+			}},
+		},
+	})
+	if err := f.SeedClient.Client().SubResource("ephemeralcontainers").Patch(ctx, pod, patch); err != nil {
+		return "", fmt.Errorf("failed to add ephemeral debug container to pod %s/%s: %w", shootNamespace, pod.Name, err)
+	}
+
+	return pod.Name, ephemeralContainerRunning(pod, debugContainerName)
+}
+
+// findDataVolumeName returns the name of the pod volume that the backend container mounts at backend.dataDir, i.e. the
+// data PVC that pvc-autoscaler watches.
+func findDataVolumeName(pod *corev1.Pod, backend logBackend) (string, error) {
+	for _, container := range pod.Spec.Containers {
+		if container.Name != backend.containerName {
+			continue
+		}
+		for _, volumeMount := range container.VolumeMounts {
+			if volumeMount.MountPath == backend.dataDir {
+				return volumeMount.Name, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("could not find a volume mounted at %q in container %q of pod %s/%s", backend.dataDir, backend.containerName, pod.Namespace, pod.Name)
+}
+
+// hasEphemeralContainer reports whether the pod spec already contains an ephemeral container with the given name.
+func hasEphemeralContainer(pod *corev1.Pod, containerName string) bool {
+	for _, ephemeralContainer := range pod.Spec.EphemeralContainers {
+		if ephemeralContainer.Name == containerName {
+			return true
+		}
+	}
+	return false
+}
+
+// ephemeralContainerRunning returns nil if the ephemeral container with the given name reports a running state, or an
+// error otherwise so that the caller's Eventually can retry.
+func ephemeralContainerRunning(pod *corev1.Pod, containerName string) error {
+	for _, status := range pod.Status.EphemeralContainerStatuses {
+		if status.Name == containerName && status.State.Running != nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("ephemeral container %q in pod %s/%s is not running yet", containerName, pod.Namespace, pod.Name)
 }
 
 func valiBackend() logBackend {
@@ -212,9 +314,13 @@ func getSizeOfFirstPVC(ctx context.Context, c client.Client, namespace string, m
 	return storageRequest, pvc.Name, nil
 }
 
-func waitUntilFilesystemExpands(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace string, initialPVCSize resource.Quantity) {
-	Eventually(func(g Gomega) {
-		stdout, _, err := framework.PodExecByLabel(ctx, f.SeedClient, shootNamespace, labels.SelectorFromSet(backend.podLabels), backend.containerName,
+func waitUntilFilesystemExpands(ctx context.Context, f *framework.ShootFramework, backend logBackend, shootNamespace, debugContainerName string, initialPVCSize resource.Quantity) {
+	Eventually(ctx, func(g Gomega) {
+		// Ensure the debug container as vpa can restart the backend pod.
+		podName, err := ensureDebugContainer(ctx, f, backend, shootNamespace, debugContainerName)
+		g.Expect(err).NotTo(HaveOccurred(), "ensuring debug container failed")
+
+		stdout, _, err := f.SeedClient.PodExecutor().Execute(ctx, shootNamespace, podName, debugContainerName,
 			"df", "-B1", backend.dataDir,
 		)
 		g.Expect(err).NotTo(HaveOccurred(), "df failed")
@@ -236,13 +342,13 @@ func waitUntilFilesystemExpands(ctx context.Context, f *framework.ShootFramework
 		initialBytes := initialPVCSize.Value()
 		f.Logger.Info("Filesystem size observed in pod", "backend", backend.name, "fsBytes", fsBytes, "initialBytes", initialBytes)
 		g.Expect(fsBytes).To(BeNumerically(">", initialBytes), "filesystem not yet expanded (observed: %d B, initial: %d B)", fsBytes, initialBytes)
-	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).WithContext(ctx).Should(Succeed())
+	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).Should(Succeed())
 }
 
 func waitUntilPVCGrows(ctx context.Context, c client.Client, namespace string, matchLabels map[string]string, initialSize resource.Quantity) {
-	Eventually(func(g Gomega) {
+	Eventually(ctx, func(g Gomega) {
 		currentSize, _, err := getSizeOfFirstPVC(ctx, c, namespace, matchLabels)
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(currentSize.Value()).To(BeNumerically(">", initialSize.Value()), "PVC has not grown yet (current: %s, initial: %s)", currentSize.String(), initialSize.String())
-	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).WithContext(ctx).Should(Succeed())
+	}).WithPolling(pvcGrowthWaitInterval).WithTimeout(pvcGrowthWaitTimeout).Should(Succeed())
 }
