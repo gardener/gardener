@@ -10,6 +10,27 @@ If you want to get an overview of the what and why of admission plugins then [th
 
 This document lists all existing admission plugins with a short explanation of what it is responsible for.
 
+## Admission Plugins and `gardenadm`
+
+`gardenadm init` runs a subset of the `gardener-apiserver` admission chain in-process before executing its bootstrap flow (see `pkg/gardenadm/admission/`).
+This ensures the `Shoot` read from the config directory is mutated and validated exactly as it would be by the real `gardener-apiserver`.
+
+**Which plugins run:** Only plugins that are enabled by default (`DefaultOnPlugins` in `plugin/pkg/plugins.go`) and not listed in `GardenadmSkipPlugins` are executed.
+`GardenadmSkipPlugins` excludes plugins that are inapplicable in the offline `gardenadm` context: non-`Shoot` plugins, `DELETE`-only plugins, webhook plugins, and plugins requiring infrastructure that does not exist during bootstrap (namespace lifecycle, RBAC, resource quotas).
+
+**When adding or changing a plugin, check the following:**
+
+- **New default-on plugin** — it will be picked up by `gardenadm` automatically.
+  Verify that running the plugin offline (fake client, no real API server, `CREATE`-only) is safe.
+  If it is not applicable in the `gardenadm` context, add it to `GardenadmSkipPlugins` with a comment explaining why.
+- **New non-default plugin** — no action needed; `gardenadm` only runs default-on plugins.
+- **Plugin changed from non-default to default-on** — treat it as a new default-on plugin (see above).
+- **Plugin produces a non-reproducible mutation** — add it to `GardenadmSkipPlugins`.
+  `gardenadm init` runs the admission chain in-memory only; nothing is written back to the config directory.
+  `gardenadm connect` later registers the unmodified on-disk `Shoot` in the garden cluster, where the real `gardener-apiserver` re-runs the same admission chain on it.
+  A mutation is therefore safe as long as the real `gardener-apiserver` re-derives the identical result from the on-disk manifest (e.g. `kubeReserved` defaulting by `ShootResourceReservation` — deterministic, so `gardenadm init` and the gardenlet compute the same worker pool hash and no Node is rolled).
+  It is _not_ safe if the mutation depends on state that is unavailable or different at `gardenadm connect` time (transient in-memory data, randomness, ordering), because then what `gardenadm init` deployed to the Nodes diverges from what the gardenlet later reconciles.
+
 <!-- Keep the list of admission plugins in (case-sensitive) lexicographical order. -->
 
 ## `BackupBucketValidator`

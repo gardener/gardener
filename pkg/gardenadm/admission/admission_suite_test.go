@@ -2,16 +2,19 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package secretnamechange_test
+package gardenadmadmission_test
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/gardenadm/features"
 )
 
-func TestSecretNameChange(t *testing.T) {
+func TestAdmission(t *testing.T) {
+	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "NodeAgent Controller SecretNameChange Suite")
+	RunSpecs(t, "Gardenadm Admission Suite")
 }

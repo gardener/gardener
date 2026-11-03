@@ -65,9 +65,6 @@ rules:
   verbs:
   - list
   - watch
-  {{- if eq .Release.Namespace "kube-system" }}
-  - patch
-  {{- end }}
 - apiGroups:
   - ""
   resources:

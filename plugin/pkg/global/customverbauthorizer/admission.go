@@ -58,7 +58,7 @@ func Register(plugins *admission.Plugins) {
 
 // NewFactory creates a new PluginFactory.
 func NewFactory(_ io.Reader) (admission.Interface, error) {
-	return New()
+	return New(), nil
 }
 
 // CustomVerbAuthorizer contains an admission handler and listers.
@@ -76,10 +76,10 @@ var (
 )
 
 // New creates a new CustomVerbAuthorizer admission plugin.
-func New() (*CustomVerbAuthorizer, error) {
+func New() *CustomVerbAuthorizer {
 	return &CustomVerbAuthorizer{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

@@ -58,8 +58,7 @@ var _ = Describe("dns", func() {
 
 	Describe("#New", func() {
 		It("should handle CREATE and UPDATE operations", func() {
-			admissionHandler, err := New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler := New()
 			Expect(admissionHandler.Handles(admission.Create)).To(BeTrue())
 			Expect(admissionHandler.Handles(admission.Update)).To(BeTrue())
 			Expect(admissionHandler.Handles(admission.Connect)).To(BeFalse())
@@ -69,16 +68,14 @@ var _ = Describe("dns", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should return error if a lister is missing", func() {
-			admissionHandler, err := New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler := New()
 
-			err = admissionHandler.ValidateInitialization()
+			err := admissionHandler.ValidateInitialization()
 			Expect(err).To(MatchError("missing secret lister"))
 		})
 
 		It("should not return error if all listers are set", func() {
-			admissionHandler, err := New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler := New()
 			kubeInformerFactory := kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			coreInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
@@ -177,7 +174,7 @@ var _ = Describe("dns", func() {
 				},
 			}
 
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
@@ -627,9 +624,7 @@ var _ = Describe("dns", func() {
 				},
 			}
 
-			var err error
-			admissionHandler, err = New()
-			Expect(err).ToNot(HaveOccurred())
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)

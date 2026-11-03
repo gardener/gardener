@@ -47,7 +47,7 @@ var _ = Describe("customverbauthorizer", func() {
 		)
 
 		BeforeEach(func() {
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.SetAuthorizer(auth)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
@@ -911,9 +911,8 @@ var _ = Describe("customverbauthorizer", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE and UPDATE operations", func() {
-			dr, err := New()
+			dr := New()
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).NotTo(BeTrue())
@@ -923,7 +922,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should not return error", func() {
-			cva, _ := New()
+			cva := New()
 			cva.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			Expect(cva.ValidateInitialization()).To(Succeed())
 		})

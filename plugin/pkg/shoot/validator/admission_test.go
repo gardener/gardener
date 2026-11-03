@@ -347,7 +347,7 @@ var _ = Describe("validator", func() {
 			shootWithoutSeed = *shootBase.DeepCopy()
 			shootWithoutSeed.Spec.SeedName = nil
 
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.SetAuthorizer(auth)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)

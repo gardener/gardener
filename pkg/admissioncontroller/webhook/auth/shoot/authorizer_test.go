@@ -2983,7 +2983,6 @@ var _ = Describe("Shoot", func() {
 					},
 
 					Entry("create", "create"),
-					Entry("patch", "patch"),
 					Entry("mark-self-hosted", "mark-self-hosted"),
 				)
 

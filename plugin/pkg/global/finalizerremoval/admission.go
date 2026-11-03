@@ -31,7 +31,7 @@ import (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameFinalizerRemoval, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -50,10 +50,10 @@ var (
 )
 
 // New creates a new FinalizerRemoval admission plugin.
-func New() (*FinalizerRemoval, error) {
+func New() *FinalizerRemoval {
 	return &FinalizerRemoval{
 		Handler: admission.NewHandler(admission.Update),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

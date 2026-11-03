@@ -21,7 +21,7 @@ import (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameProjectMutator, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -30,10 +30,10 @@ type handler struct {
 }
 
 // New creates a new handler admission plugin.
-func New() (*handler, error) {
+func New() *handler {
 	return &handler{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-	}, nil
+	}
 }
 
 var _ admission.MutationInterface = (*handler)(nil)

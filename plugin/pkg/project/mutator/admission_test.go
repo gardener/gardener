@@ -21,7 +21,6 @@ import (
 var _ = Describe("Admission", func() {
 	Describe("#Admit", func() {
 		var (
-			err              error
 			project          core.Project
 			admissionHandler admission.MutationInterface
 			attrs            admission.Attributes
@@ -37,8 +36,7 @@ var _ = Describe("Admission", func() {
 		)
 
 		BeforeEach(func() {
-			admissionHandler, err = New()
-			Expect(err).NotTo(HaveOccurred())
+			admissionHandler = New()
 
 			project = projectBase
 
@@ -168,8 +166,7 @@ var _ = Describe("Admission", func() {
 
 	Describe("#New", func() {
 		It("should handle CREATE and UPDATE operations", func() {
-			dr, err := New()
-			Expect(err).ToNot(HaveOccurred())
+			dr := New()
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
 			Expect(dr.Handles(admission.Update)).To(BeTrue())
 			Expect(dr.Handles(admission.Connect)).To(BeFalse())

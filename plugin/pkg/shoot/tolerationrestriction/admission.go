@@ -39,7 +39,7 @@ func Register(plugins *admission.Plugins) {
 			return nil, fmt.Errorf("invalid config: %+v", err)
 		}
 
-		return New(config)
+		return New(config), nil
 	})
 }
 
@@ -61,12 +61,12 @@ var (
 )
 
 // New creates a new TolerationRestriction admission plugin.
-func New(config *shoottolerationrestriction.Configuration) (*TolerationRestriction, error) {
+func New(config *shoottolerationrestriction.Configuration) *TolerationRestriction {
 	return &TolerationRestriction{
 		Handler:   admission.NewHandler(admission.Create, admission.Update),
 		defaults:  config.Defaults,
 		allowlist: config.Whitelist,
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

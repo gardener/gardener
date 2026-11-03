@@ -49,6 +49,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	admissionplugins "github.com/gardener/gardener/pkg/apiserver/admission/plugins"
 	"github.com/gardener/gardener/pkg/apiserver/openapi"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -131,7 +132,7 @@ func NewOptions() *Options {
 		gardencorev1beta1.SchemeGroupVersion,
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
-	apiserver.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
+	admissionplugins.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
 	o.Recommended.Admission.DefaultOffPlugins = sets.New(sets.List(sets.New(plugin.AllOrderedPluginNames()...).Difference(plugin.DefaultOnPlugins()))...)
 	o.Recommended.Admission.RecommendedPluginOrder = plugin.AllOrderedPluginNames()
 

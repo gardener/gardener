@@ -30,7 +30,7 @@ import (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameShootManagedSeed, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -51,10 +51,10 @@ var (
 )
 
 // New creates a new ManagedSeed admission plugin.
-func New() (*ManagedSeed, error) {
+func New() *ManagedSeed {
 	return &ManagedSeed{
 		Handler: admission.NewHandler(admission.Update, admission.Delete),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

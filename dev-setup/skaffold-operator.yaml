@@ -443,6 +443,7 @@ build:
             - pkg/apis/utils/timewindow
             - pkg/apiserver
             - pkg/apiserver/admission/initializer
+            - pkg/apiserver/admission/plugins
             - pkg/apiserver/features
             - pkg/apiserver/openapi
             - pkg/apiserver/registry/core/backupbucket

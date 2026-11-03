@@ -29,7 +29,7 @@ import (
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
 	plugins.Register(plugin.PluginNameBastion, func(_ io.Reader) (admission.Interface, error) {
-		return New()
+		return New(), nil
 	})
 }
 
@@ -48,10 +48,10 @@ var (
 )
 
 // New creates a new Bastion admission plugin.
-func New() (*Bastion, error) {
+func New() *Bastion {
 	return &Bastion{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
-	}, nil
+	}
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.

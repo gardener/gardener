@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/testing"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -112,7 +113,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 			}
 
-			controllerDeployment = gardencorev1beta1.ControllerDeployment{
+			controllerDeployment = gardencorev1.ControllerDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controllerDeploymentName,
 				},
@@ -432,7 +433,7 @@ var _ = Describe("resourcereferencemanager", func() {
 		)
 
 		BeforeEach(func() {
-			admissionHandler, _ = New()
+			admissionHandler = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
@@ -493,7 +494,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		Context("tests for ControllerRegistration objects", func() {
 			It("should accept because all referenced objects have been found (controller deployment found in cache)", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().ControllerDeployments().Informer().GetStore().Add(&controllerDeployment)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1().ControllerDeployments().Informer().GetStore().Add(&controllerDeployment)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
@@ -4331,9 +4332,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 	Describe("#New", func() {
 		It("should only handle CREATE, UPDATE and DELETE operations", func() {
-			rm, err := New()
+			rm := New()
 
-			Expect(err).ToNot(HaveOccurred())
 			Expect(rm.Handles(admission.Create)).To(BeTrue())
 			Expect(rm.Handles(admission.Update)).To(BeTrue())
 			Expect(rm.Handles(admission.Connect)).NotTo(BeTrue())
@@ -4343,7 +4343,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 	Describe("#ValidateInitialization", func() {
 		It("should not return error if everything is set", func() {
-			rm, _ := New()
+			rm := New()
 
 			internalGardenClient := &internalclientset.Clientset{}
 			rm.SetCoreClientSet(internalGardenClient)
