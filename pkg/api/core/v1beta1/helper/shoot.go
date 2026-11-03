@@ -684,6 +684,33 @@ func GetLiveMigrationRole(shoot *gardencorev1beta1.Shoot, seedName string) LiveM
 	}
 }
 
+// GetLiveMigrationPeerRole returns the role of the peer seed with respect to the given live migration role. It
+// returns LiveMigrationRoleNone when the given role is not a source or destination role.
+func GetLiveMigrationPeerRole(role LiveMigrationRole) LiveMigrationRole {
+	switch role {
+	case LiveMigrationRoleSource:
+		return LiveMigrationRoleDestination
+	case LiveMigrationRoleDestination:
+		return LiveMigrationRoleSource
+	default:
+		return LiveMigrationRoleNone
+	}
+}
+
+// GetLiveMigrationPeerSeedName returns the name of the peer seed of the seed with the given name in the live control
+// plane migration of the shoot. It returns false when the shoot is not undergoing a live control plane migration or
+// the seed is not involved.
+func GetLiveMigrationPeerSeedName(shoot *gardencorev1beta1.Shoot, seedName string) (string, bool) {
+	switch GetLiveMigrationRole(shoot, seedName) {
+	case LiveMigrationRoleSource:
+		return ptr.Deref(shoot.Spec.SeedName, ""), true
+	case LiveMigrationRoleDestination:
+		return ptr.Deref(shoot.Status.SeedName, ""), true
+	default:
+		return "", false
+	}
+}
+
 // GetLiveMigrationConditions returns the conditions tracking the progress of a live control plane migration, or nil if
 // no live migration is in progress.
 func GetLiveMigrationConditions(shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.Condition {
