@@ -348,6 +348,7 @@ spec:
             kubectl apply -f example/provider-local/shoot.yaml
           EOF
           new_pane "Access the shoot cluster" <<"EOF"
+            export KUBECONFIG=$PWD/dev-setup/kubeconfigs/virtual-garden/kubeconfig
             KUBECONFIG=<(generate-kubeconfig.sh) kubectl get pods -A
           EOF
           new_pane "Run simple e2e test (create and delete shoot)" <<"EOF"
