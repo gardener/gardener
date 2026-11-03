@@ -29,6 +29,8 @@ The binary artifact is extracted from an [OCI artifact](https://github.com/openc
 
 Along with the init script, a configuration for the `gardener-node-agent` is carried over to the worker node at `/var/lib/gardener-node-agent/config.yaml`.
 This configuration contains things like the shoot's `kube-apiserver` endpoint, the according certificates to communicate with it, and controller configuration.
+On its first start, the `gardener-node-agent` requests a client certificate and stores it in a kubeconfig at `/var/lib/gardener-node-agent/credentials/kubeconfig`.
+On every start, it ensures that this kubeconfig uses the `kube-apiserver` endpoint from its configuration (`.apiServer.server`), so that a changed endpoint is picked up without requesting a new client certificate.
 
 In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd service.
 It also executes tasks that need to be executed before any other components are installed, e.g. formatting the data device for the `kubelet`.
