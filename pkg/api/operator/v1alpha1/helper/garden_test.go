@@ -244,17 +244,6 @@ var _ = Describe("helper", func() {
 		),
 	)
 
-	DescribeTable("#GetETCDMainBackup",
-		func(garden *operatorv1alpha1.Garden, expected *operatorv1alpha1.Backup) {
-			Expect(GetETCDMainBackup(garden)).To(Equal(expected))
-		},
-		Entry("no garden", nil, nil),
-		Entry("no ETCD config", &operatorv1alpha1.Garden{}, nil),
-		Entry("no ETCD Main config", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{VirtualCluster: operatorv1alpha1.VirtualCluster{ETCD: &operatorv1alpha1.ETCD{}}}}, nil),
-		Entry("no backup config", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{VirtualCluster: operatorv1alpha1.VirtualCluster{ETCD: &operatorv1alpha1.ETCD{Main: &operatorv1alpha1.ETCDMain{}}}}}, nil),
-		Entry("with backup config", &operatorv1alpha1.Garden{Spec: operatorv1alpha1.GardenSpec{VirtualCluster: operatorv1alpha1.VirtualCluster{ETCD: &operatorv1alpha1.ETCD{Main: &operatorv1alpha1.ETCDMain{Backup: &operatorv1alpha1.Backup{Provider: "test"}}}}}}, &operatorv1alpha1.Backup{Provider: "test"}),
-	)
-
 	DescribeTable("#GetDNSProviders",
 		func(garden *operatorv1alpha1.Garden, expected []operatorv1alpha1.DNSProvider) {
 			Expect(GetDNSProviders(garden)).To(Equal(expected))

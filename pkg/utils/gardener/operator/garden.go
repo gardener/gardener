@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	corehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	operatorv1alpha1helper "github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/apis/authentication"
@@ -52,7 +53,7 @@ func IsServedByKubeAPIServer(resource string) bool {
 func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden, extensionList *operatorv1alpha1.ExtensionList) sets.Set[string] {
 	requiredExtensions := sets.New[string]()
 
-	if operatorv1alpha1helper.GetETCDMainBackup(garden) != nil {
+	if corehelper.GetETCDMainBackup(garden) != nil {
 		requiredExtensions.Insert(gardener.ExtensionsID(extensionsv1alpha1.BackupBucketResource, garden.Spec.VirtualCluster.ETCD.Main.Backup.Provider))
 		requiredExtensions.Insert(gardener.ExtensionsID(extensionsv1alpha1.BackupEntryResource, garden.Spec.VirtualCluster.ETCD.Main.Backup.Provider))
 	}

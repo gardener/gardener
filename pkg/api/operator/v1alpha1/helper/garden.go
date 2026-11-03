@@ -199,14 +199,6 @@ func VerticalPodAutoscalerMaxAllowed(settings *operatorv1alpha1.Settings) corev1
 	return settings.VerticalPodAutoscaler.MaxAllowed
 }
 
-// GetETCDMainBackup returns the backup configuration for etcd main of the given garden object or nil if not configured.
-func GetETCDMainBackup(garden *operatorv1alpha1.Garden) *operatorv1alpha1.Backup {
-	if garden != nil && garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil {
-		return garden.Spec.VirtualCluster.ETCD.Main.Backup
-	}
-	return nil
-}
-
 // GetDNSProviders returns the DNS providers for the given garden object or nil if non are configured.
 func GetDNSProviders(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSProvider {
 	if garden != nil && garden.Spec.DNS != nil {

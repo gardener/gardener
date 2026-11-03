@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	corehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -302,7 +302,7 @@ func (r *Reconciler) delete(
 		destroyMainETCDBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying main ETCD backup entry",
 			Fn:           component.OpDestroyAndWait(c.etcdMainBackupEntry).Destroy,
-			SkipIf:       helper.GetETCDMainBackup(garden) == nil,
+			SkipIf:       corehelper.GetETCDMainBackup(garden) == nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyMainETCDBackupBucket = g.Add(flow.Task{
@@ -339,7 +339,7 @@ func (r *Reconciler) delete(
 
 				return flow.Parallel(waitFns...)(ctx)
 			},
-			SkipIf:       helper.GetETCDMainBackup(garden) == nil,
+			SkipIf:       corehelper.GetETCDMainBackup(garden) == nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed, destroyMainETCDBackupEntry),
 		})
 		destroyEtcdDruid = g.Add(flow.Task{
