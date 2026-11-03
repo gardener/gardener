@@ -688,7 +688,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					})
 
 					It("should not keep existing secret refs of the control plane worker pool itself", func() {
-						staleControlPlaneSecretName := "managedresource-shoot-gardener-node-agent-" + worker1Name + "-stale"
+						staleControlPlaneSecretName := "managedresource-shoot-gardener-node-agent-" + worker1Name + "-ab12cd34"
 
 						By("Create existing ManagedResource referencing a stale secret of the control plane worker pool")
 						existingMR := &resourcesv1alpha1.ManagedResource{
@@ -718,6 +718,39 @@ var _ = Describe("operatingsystemconfig", func() {
 						Expect(secretRefNames).NotTo(ContainElement(staleControlPlaneSecretName))
 						Expect(secretRefNames).To(ContainElement(ContainSubstring(worker1Name)))
 						Expect(secretRefNames).To(ContainElement(ContainSubstring("rbac")))
+					})
+
+					It("should not drop existing secret refs of a non-control-plane worker pool whose name has the control plane pool name as a prefix", func() {
+						// Simulate a pool whose name starts with the CP pool name, e.g. "worker1-extra" when CP pool is "worker1".
+						// A naive HasPrefix check would incorrectly treat a ref for "worker1-extra" as belonging to the "worker1" pool.
+						existingPoolWithCPPrefixSecretName := "managedresource-shoot-gardener-node-agent-" + worker1Name + "-extra-abcd1234"
+
+						By("Create existing ManagedResource referencing a pool whose name has the CP pool name as a prefix")
+						existingMR := &resourcesv1alpha1.ManagedResource{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot-gardener-node-agent",
+								Namespace: namespace,
+							},
+							Spec: resourcesv1alpha1.ManagedResourceSpec{
+								SecretRefs: []corev1.LocalObjectReference{
+									{Name: existingPoolWithCPPrefixSecretName},
+								},
+							},
+						}
+						Expect(fakeClient.Create(ctx, existingMR)).To(Succeed())
+
+						By("Execute DeployManagedResourceForGardenerNodeAgent function")
+						Expect(botanist.DeployManagedResourceForGardenerNodeAgent(ctx, true)).To(Succeed())
+
+						By("Assert the ref for the pool with the CP-pool-name prefix was preserved")
+						managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-gardener-node-agent", Namespace: namespace}}
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+
+						secretRefNames := make([]string, 0, len(managedResource.Spec.SecretRefs))
+						for _, ref := range managedResource.Spec.SecretRefs {
+							secretRefNames = append(secretRefNames, ref.Name)
+						}
+						Expect(secretRefNames).To(ContainElement(existingPoolWithCPPrefixSecretName))
 					})
 				})
 			})
