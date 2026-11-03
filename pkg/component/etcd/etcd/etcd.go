@@ -118,6 +118,7 @@ type Interface interface {
 // New creates a new instance of DeployWaiter for the Etcd.
 func New(
 	log logr.Logger,
+	apiReader client.Reader,
 	c client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
@@ -127,6 +128,7 @@ func New(
 	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
 
 	return &etcd{
+		apiReader:      apiReader,
 		client:         c,
 		log:            log,
 		namespace:      namespace,
@@ -142,6 +144,7 @@ func New(
 }
 
 type etcd struct {
+	apiReader      client.Reader
 	client         client.Client
 	log            logr.Logger
 	namespace      string
@@ -1040,7 +1043,9 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 }
 
 func (e *etcd) IsPeerCARolledOut(ctx context.Context) (bool, error) {
-	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
+	// We read via the API reader (and not the cached client) because the annotation might have been written by us in a
+	// previous reconciliation, and the cache might not have caught up yet.
+	if err := e.apiReader.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
 		}
