@@ -143,5 +143,3 @@ global:
         enabled: false
       # machineNamespace: shoot--foo--bar
       # authorizeWithSelectors: false
-      vpaInPlaceUpdates:
-        enabled: false

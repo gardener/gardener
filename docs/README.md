@@ -230,7 +230,6 @@
 * [Gardener Upgrade Guide](operations/upgrade-gardener.md)
 * [`CloudProfile` Capabilities](operations/cloudprofile_capabilities.md)
 * [Control Plane Migration](operations/control_plane_migration.md)
-* [Enabling In-place Resource Updates](operations/enabling-in-place-resource-updates.md)
 * [Immutable Backup Buckets](operations/immutable-backup-buckets.md)
 * [Istio](operations/istio.md)
 * [Kube API server load balancing](operations/kube_apiserver_loadbalancing.md)

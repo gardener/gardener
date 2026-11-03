@@ -445,7 +445,6 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 				},
 			},
 		},
-		VPAInPlaceUpdatesEnabled:             true,
 		SystemComponentsConfigWebhookEnabled: runtimeIsSelfHostedShoot,
 	})
 }
