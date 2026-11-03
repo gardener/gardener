@@ -4410,7 +4410,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("ClusterAutoscaler validation", func() {
 			DescribeTable("cluster autoscaler values",
 				func(clusterAutoscaler core.ClusterAutoscaler, version string, matcher gomegatypes.GomegaMatcher) {
-					Expect(ValidateClusterAutoscaler(clusterAutoscaler, version, nil)).To(matcher)
+					Expect(ValidateClusterAutoscaler(clusterAutoscaler, nil, version, nil)).To(matcher)
 				},
 				Entry("valid", core.ClusterAutoscaler{}, version_1_31, BeEmpty()),
 				Entry("valid", core.ClusterAutoscaler{}, version_1_32, BeEmpty()),
@@ -4674,6 +4674,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("autoscaling.minAllowed.memory"),
 				})))),
+				Entry("valid with okTotalUnreadyCount", core.ClusterAutoscaler{
+					OkTotalUnreadyCount: new(int32(5)),
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative okTotalUnreadyCount", core.ClusterAutoscaler{
+					OkTotalUnreadyCount: new(int32(-2)),
+				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("okTotalUnreadyCount"),
+					"Detail": Equal("must be greater than or equal to 0"),
+				})))),
+				Entry("valid with maxTotalUnreadyPercentage", core.ClusterAutoscaler{
+					MaxTotalUnreadyPercentage: new(50.0),
+				}, version_1_32, BeEmpty()),
 				Entry("valid with maxTotalUnreadyPercentage", core.ClusterAutoscaler{
 					MaxTotalUnreadyPercentage: new(50.0),
 				}, version_1_32, BeEmpty()),
@@ -4708,7 +4721,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				)
 
 				It("should allow empty ignore taints list", func() {
-					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, nil, version, fldPath)
 
 					Expect(errList).To(BeEmpty())
 				})
@@ -4719,7 +4732,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"allowed-2",
 					}
 
-					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, nil, version, fldPath)
 
 					Expect(errList).To(BeEmpty())
 				})
@@ -4729,8 +4742,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"node.gardener.cloud/critical-components-not-ready",
 						"allowed-1",
 					}
-
-					errList := ValidateClusterAutoscaler(clusterAutoscaler, version, fldPath)
+					errList := ValidateClusterAutoscaler(clusterAutoscaler, nil, version, fldPath)
 
 					Expect(errList).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -9497,13 +9509,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				fldPath = field.NewPath("spec", "kubernetes")
+				fldPath = field.NewPath("spec", "kubernetes", "clusterAutoscaler", "maxTotalUnreadyPercentage")
 			)
 
 			It("should not allow to set clusterAutoscaler maxTotalUnreadyPercentage to a smaller value than both worker's autoPreserveMax/Maximum", func() {
 				shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage = new(40.000)
 
-				Expect(ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler, fldPath)).To(ConsistOf(
+				Expect(ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage, fldPath)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.clusterAutoscaler.maxTotalUnreadyPercentage"),
@@ -9520,7 +9532,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should not allow to set clusterAutoscaler maxTotalUnreadyPercentage to a smaller value than a worker's autoPreserveMax/Maximum", func() {
 				shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage = new(60.000)
 
-				Expect(ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler, fldPath)).To(ConsistOf(
+				Expect(ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage, fldPath)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.clusterAutoscaler.maxTotalUnreadyPercentage"),
@@ -9532,7 +9544,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should allow setting clusterAutoscaler maxTotalUnreadyPercentage to a larger value than all worker's autoPreserveMax/Maximum", func() {
 				shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage = new(80.000)
 
-				errList := ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler, fldPath)
+				errList := ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage, fldPath)
 				Expect(errList).To(BeEmpty())
 			})
 		})

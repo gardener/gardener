@@ -344,7 +344,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	allErrs = append(allErrs, validateDNS(spec.DNS, spec.Kubernetes.Version, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, opts, workerless, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, spec.Provider.Workers, opts, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -352,10 +352,6 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
-	}
-
-	if !workerless {
-		allErrs = append(allErrs, ValidateAutoPreservationParameters(spec.Provider.Workers, spec.Kubernetes.ClusterAutoscaler, fldPath.Child("kubernetes"))...)
 	}
 
 	if workerless {
@@ -430,12 +426,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 
 // ValidateAutoPreservationParameters validates the workers' autoPreserveFailedMax values from machineControllerManager
 // settings to ensure that the percentage of those machines doesn't breach the clusterAutoscaler maxTotalUnreadyPercentage.
-func ValidateAutoPreservationParameters(workers []core.Worker, clusterAutoscaler *core.ClusterAutoscaler, fldPath *field.Path) field.ErrorList {
-	if clusterAutoscaler == nil || clusterAutoscaler.MaxTotalUnreadyPercentage == nil {
-		return nil
-	}
-
-	caFldPath := fldPath.Child("clusterAutoscaler")
+func ValidateAutoPreservationParameters(workers []core.Worker, maxTotalUnreadyPercentage *float64, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for _, worker := range workers {
@@ -445,9 +436,8 @@ func ValidateAutoPreservationParameters(workers []core.Worker, clusterAutoscaler
 		autoPreserveFailedMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0)
 		autoPreserveMaxPercentage := 100 * float64(autoPreserveFailedMax) / float64(worker.Maximum)
 
-		if autoPreserveFailedMax > 0 && (autoPreserveMaxPercentage > *clusterAutoscaler.MaxTotalUnreadyPercentage) {
-			allErrs = append(allErrs, field.Invalid(caFldPath.Child("maxTotalUnreadyPercentage"),
-				*clusterAutoscaler.MaxTotalUnreadyPercentage,
+		if autoPreserveFailedMax > 0 && (autoPreserveMaxPercentage > *maxTotalUnreadyPercentage) {
+			allErrs = append(allErrs, field.Invalid(fldPath, *maxTotalUnreadyPercentage,
 				fmt.Sprintf("cannot be less than autoPreserveFailedMax/Maximum for worker %s", worker.Name),
 			))
 		}
@@ -1216,7 +1206,7 @@ func validateDNS(dns *core.DNS, kubernetesVersion string, fldPath *field.Path) f
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, opts shootValidationOptions, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, workers []core.Worker, opts shootValidationOptions, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubernetes.Version == "" {
@@ -1239,7 +1229,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		}
 
 		if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
-			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
+			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, workers, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
 		}
 
 		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
@@ -1568,7 +1558,7 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEn
 }
 
 // ValidateClusterAutoscaler validates the given ClusterAutoscaler fields.
-func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
+func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, workers []core.Worker, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.ScaleDownDelayAfterAdd, fldPath.Child("scaleDownDelayAfterAdd"))...)
@@ -1624,6 +1614,10 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.MaxDrainParallelism), fldPath.Child("maxDrainParallelism"))...)
 	}
 
+	if autoScaler.OkTotalUnreadyCount != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*autoScaler.OkTotalUnreadyCount), fldPath.Child("okTotalUnreadyCount"))...)
+	}
+
 	if percentage := autoScaler.MaxTotalUnreadyPercentage; percentage != nil {
 		if *percentage <= 0.0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxTotalUnreadyPercentage"), *percentage, "has to be a positive non-zero value"))
@@ -1631,6 +1625,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, kubernetesVers
 		if *percentage > 100.0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxTotalUnreadyPercentage"), *percentage, "cannot be greater than 100.0"))
 		}
+		allErrs = append(allErrs, ValidateAutoPreservationParameters(workers, autoScaler.MaxTotalUnreadyPercentage, fldPath.Child("maxTotalUnreadyPercentage"))...)
 	}
 
 	if autoScaler.Verbosity != nil {
