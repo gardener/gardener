@@ -4695,14 +4695,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("maxTotalUnreadyPercentage"),
-					"Detail": Equal("has to be a positive non-zero value"),
+					"Detail": Equal("must be greater than zero"),
 				})))),
 				Entry("invalid with negative maxTotalUnreadyPercentage", core.ClusterAutoscaler{
 					MaxTotalUnreadyPercentage: new(-0.09),
 				}, version_1_32, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("maxTotalUnreadyPercentage"),
-					"Detail": Equal("has to be a positive non-zero value"),
+					"Detail": Equal("must be greater than zero"),
 				})))),
 				Entry("invalid with maxTotalUnreadyPercentage more than 100.0", core.ClusterAutoscaler{
 					MaxTotalUnreadyPercentage: new(120.0),
@@ -9512,36 +9512,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 				fldPath = field.NewPath("spec", "kubernetes", "clusterAutoscaler", "maxTotalUnreadyPercentage")
 			)
 
-			It("should not allow to set clusterAutoscaler maxTotalUnreadyPercentage to a smaller value than both worker's autoPreserveMax/Maximum", func() {
+			It("should not allow to set clusterAutoscaler maxTotalUnreadyPercentage to a smaller value than both worker's autoPreserveFailedMachineMax/Maximum", func() {
 				shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage = new(40.000)
 
 				Expect(ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage, fldPath)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.clusterAutoscaler.maxTotalUnreadyPercentage"),
-						"Detail": Equal("cannot be less than autoPreserveFailedMax/Maximum for worker worker-1"),
+						"Detail": Equal("cannot be less than autoPreserveFailedMachineMax/Maximum for worker worker-1"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.clusterAutoscaler.maxTotalUnreadyPercentage"),
-						"Detail": Equal("cannot be less than autoPreserveFailedMax/Maximum for worker worker-2"),
+						"Detail": Equal("cannot be less than autoPreserveFailedMachineMax/Maximum for worker worker-2"),
 					})),
 				))
 			})
 
-			It("should not allow to set clusterAutoscaler maxTotalUnreadyPercentage to a smaller value than a worker's autoPreserveMax/Maximum", func() {
+			It("should not allow to set clusterAutoscaler maxTotalUnreadyPercentage to a smaller value than a worker's autoPreserveFailedMachineMax/Maximum", func() {
 				shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage = new(60.000)
 
 				Expect(ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage, fldPath)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.clusterAutoscaler.maxTotalUnreadyPercentage"),
-						"Detail": Equal("cannot be less than autoPreserveFailedMax/Maximum for worker worker-2"),
+						"Detail": Equal("cannot be less than autoPreserveFailedMachineMax/Maximum for worker worker-2"),
 					})),
 				))
 			})
 
-			It("should allow setting clusterAutoscaler maxTotalUnreadyPercentage to a larger value than all worker's autoPreserveMax/Maximum", func() {
+			It("should allow setting clusterAutoscaler maxTotalUnreadyPercentage to a larger value than all worker's autoPreserveFailedMachineMax/Maximum", func() {
 				shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage = new(80.000)
 
 				errList := ValidateAutoPreservationParameters(shoot.Spec.Provider.Workers, shoot.Spec.Kubernetes.ClusterAutoscaler.MaxTotalUnreadyPercentage, fldPath)

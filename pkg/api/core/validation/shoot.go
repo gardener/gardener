@@ -424,7 +424,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 	return allErrs
 }
 
-// ValidateAutoPreservationParameters validates the workers' autoPreserveFailedMax values from machineControllerManager
+// ValidateAutoPreservationParameters validates the workers' autoPreserveFailedMachineMax values from machineControllerManager
 // settings to ensure that the percentage of those machines doesn't breach the clusterAutoscaler maxTotalUnreadyPercentage.
 func ValidateAutoPreservationParameters(workers []core.Worker, maxTotalUnreadyPercentage *float64, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -433,12 +433,12 @@ func ValidateAutoPreservationParameters(workers []core.Worker, maxTotalUnreadyPe
 		if worker.MachineControllerManagerSettings == nil {
 			continue
 		}
-		autoPreserveFailedMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0)
-		autoPreserveMaxPercentage := 100 * float64(autoPreserveFailedMax) / float64(worker.Maximum)
+		autoPreserveMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0)
+		autoPreserveMaxPercentage := 100 * float64(autoPreserveMax) / float64(worker.Maximum)
 
-		if autoPreserveFailedMax > 0 && (autoPreserveMaxPercentage > *maxTotalUnreadyPercentage) {
+		if autoPreserveMax > 0 && (autoPreserveMaxPercentage > *maxTotalUnreadyPercentage) {
 			allErrs = append(allErrs, field.Invalid(fldPath, *maxTotalUnreadyPercentage,
-				fmt.Sprintf("cannot be less than autoPreserveFailedMax/Maximum for worker %s", worker.Name),
+				fmt.Sprintf("cannot be less than autoPreserveFailedMachineMax/Maximum for worker %s", worker.Name),
 			))
 		}
 	}
@@ -1620,7 +1620,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, workers []core
 
 	if percentage := autoScaler.MaxTotalUnreadyPercentage; percentage != nil {
 		if *percentage <= 0.0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxTotalUnreadyPercentage"), *percentage, "has to be a positive non-zero value"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxTotalUnreadyPercentage"), *percentage, "must be greater than zero"))
 		}
 		if *percentage > 100.0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxTotalUnreadyPercentage"), *percentage, "cannot be greater than 100.0"))
