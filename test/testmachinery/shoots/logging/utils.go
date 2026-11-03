@@ -21,7 +21,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 )
@@ -42,6 +45,26 @@ func getFluentBitDaemonSet(ctx context.Context, k8sSeedClient kubernetes.Interfa
 		return nil, fmt.Errorf("fluent-bit daemonset not found")
 	}
 	return daemonSetList.Items[0].DeepCopy(), nil
+}
+
+// isRemoveValiEnabled reports whether the RemoveVali feature gate is enabled for the gardenlet.
+// It reads the Gardenlet from the garden cluster if the key is absent the default from features.AllFeatureGates is used.
+func isRemoveValiEnabled(ctx context.Context, gardenClient client.Client, seedName string) bool {
+	gardenlet := &seedmanagementv1alpha1.Gardenlet{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: seedName}, gardenlet); err != nil {
+		return false
+	}
+
+	cfg, err := encoding.DecodeGardenletConfiguration(&gardenlet.Spec.Config, false)
+	if err != nil {
+		return false
+	}
+
+	if val, ok := cfg.FeatureGates[string(features.RemoveVali)]; ok {
+		return val
+	}
+
+	return features.AllFeatureGates[features.RemoveVali].Default
 }
 
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>

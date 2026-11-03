@@ -82,13 +82,12 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		shootValiPriorityClass = &schedulingv1.PriorityClass{}
 		shootValiConfMap       = &corev1.ConfigMap{}
 
-		otelCollectorDeployment         = &appsv1.Deployment{}
-		otelCollectorService            = &corev1.Service{}
-		otelCollectorServiceAccount     = &corev1.ServiceAccount{}
-		otelCollectorPriorityClass      = &schedulingv1.PriorityClass{}
-		otelCollectorConfMap            = &corev1.ConfigMap{}
-		otelCollectorCABundleSecret     = &corev1.Secret{}
-		otelCollectorCASeedBundleSecret = &corev1.Secret{}
+		otelCollectorDeployment     = &appsv1.Deployment{}
+		otelCollectorService        = &corev1.Service{}
+		otelCollectorServiceAccount = &corev1.ServiceAccount{}
+		otelCollectorPriorityClass  = &schedulingv1.PriorityClass{}
+		otelCollectorConfMap        = &corev1.ConfigMap{}
+		otelCollectorCABundleSecret = &corev1.Secret{}
 
 		otelPresent bool
 
@@ -112,7 +111,12 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		// It is used to fetch the resource definitions deployed later in the test cluster
 		seedClient := shootFramework.SeedClient.Client()
 
-		// Fetch Vali StatefulSet
+		// Fetch Vali StatefulSet - skip if RemoveVali is enabled
+		removeVali := isRemoveValiEnabled(ctx, shootFramework.GardenClient.Client(), shootFramework.Seed.Name)
+		if removeVali {
+			ginkgo.Skip(fmt.Sprintf("RemoveVali feature gate is enabled for seed %s — skipping", shootFramework.Seed.Name))
+		}
+
 		err = seedClient.Get(ctx,
 			client.ObjectKey{
 				Namespace: v1beta1constants.GardenNamespace,
@@ -136,6 +140,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				Name:      otelCollectorDeploymentName},
 			otelCollectorDeployment,
 		)
+
+		// If error is NotFound we assume the feature gate is off and we test without deploying the otelcol
 		if client.IgnoreNotFound(err) != nil {
 			ginkgo.Fail(fmt.Sprintf("Error occurred checking for OpenTelemetry Collector in the seed %s namespace: %s", garden, err.Error()))
 		}
@@ -167,20 +173,13 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 					otelCollectorConfMap),
 			)
 
+			// We copy the exact secret into each simulated shoot namespace so the cloned deployment can mount it.
 			caBundleSecretName := getSecretNameFromVolume(otelCollectorDeployment.Spec.Template.Spec.Volumes, "ca-bundle")
 			framework.ExpectNoError(
 				seedClient.Get(ctx,
 					types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: caBundleSecretName},
 					otelCollectorCABundleSecret),
 			)
-
-			caSeedBundleSecretList := &corev1.SecretList{}
-			framework.ExpectNoError(
-				seedClient.List(ctx, caSeedBundleSecretList,
-					client.InNamespace(v1beta1constants.GardenNamespace),
-					client.MatchingLabels{"name": "ca-seed-bundle", "managed-by": "secrets-manager"}),
-			)
-			*otelCollectorCASeedBundleSecret = caSeedBundleSecretList.Items[0]
 		}
 
 		// Create seedClient.Client for the shoots
@@ -480,7 +479,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				ginkgo.By(fmt.Sprintf("Deploy the OpenTelemetry Collector in shoot namespace %s", shootNamespace.Name))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorServiceAccount(otelCollectorServiceAccount, shootNamespace.Name)))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorService(otelCollectorService, shootNamespace.Name)))
-				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorCASeedBundleSecret(otelCollectorCASeedBundleSecret, shootNamespace.Name)))
+				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorCABundleSecret(otelCollectorCABundleSecret, shootNamespace.Name)))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorConfigMap(otelCollectorConfMap, shootNamespace.Name)))
 				framework.ExpectNoError(create(ctx, client, prepareShootOtelCollectorDeployment(otelCollectorDeployment, shootNamespace.Name)))
 			}
@@ -572,7 +571,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorDeployment(otelCollectorDeployment, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorService(otelCollectorService, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorServiceAccount(otelCollectorServiceAccount, shootNamespace.Name)))
-				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorCASeedBundleSecret(otelCollectorCASeedBundleSecret, shootNamespace.Name)))
+				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorCABundleSecret(otelCollectorCABundleSecret, shootNamespace.Name)))
 				framework.ExpectNoError(kubernetesutils.DeleteObject(ctx, shootFramework.ShootClient.Client(), prepareShootOtelCollectorConfigMap(otelCollectorConfMap, shootNamespace.Name)))
 			}
 
@@ -631,7 +630,7 @@ func prepareShootOtelCollectorServiceAccount(sa *corev1.ServiceAccount, namespac
 	return obj
 }
 
-func prepareShootOtelCollectorCASeedBundleSecret(secret *corev1.Secret, namespace string) *corev1.Secret {
+func prepareShootOtelCollectorCABundleSecret(secret *corev1.Secret, namespace string) *corev1.Secret {
 	obj := secret.DeepCopy()
 	obj.Namespace = namespace
 	return obj
