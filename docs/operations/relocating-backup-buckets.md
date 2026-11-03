@@ -41,9 +41,13 @@ Deleting the old bucket is an operator-driven decision and is done only when the
 ## Risks and Recovery
 
 > [!WARNING]
-> Relocation triggers a roll of the etcd pod. If the etcd data volume gets corrupted while detaching from the old node or attaching to a new one, the backup sidecar may detect the corruption and restore from the new bucket - which is still empty - resulting in an empty etcd and an unusable shoot/garden cluster.
+> Relocation rolls the etcd Pod. If its data becomes corrupted in the process and the new backup location contains no snapshots, recovery may bootstrap an empty database, leaving the Shoot or Garden unusable.
 >
-> To recover, revert `bucketName` to the old bucket, delete and recreate the etcd data volume to force a restore from the old bucket, and retry the relocation.
+> Before reverting the backup configuration, it may be advisable to manually save a separate copy of the known-good snapshots from the old location to a safe place.
+>
+> After that, restore the complete old backup configuration, including the bucket, provider, region, credentials, and prefix. For single-member etcd, startup validation can automatically restore the old backup if the local database revision is behind the backup revision. If automatic recovery does not restore the expected data, follow the [manual etcd restoration procedure](https://github.com/gardener/etcd-backup-restore/blob/master/docs/operations/manual_restoration.md).
+>
+> Retry relocation only after the expected data is restored, the cluster is healthy, and a fresh backup of the recovered database has succeeded.
 >
 > This corruption scenario is rare, but the risk is highest for standalone (non-HA) etcd. Running etcd in an HA setup makes the operation considerably safer, since a single member's volume corruption does not brick the cluster.
 
