@@ -12,6 +12,9 @@ function parse_envoy_access_log_to_record(tag, timestamp, record)
     end
     local method, path, proto = string.match(line, '"(%S+)%s+(%S+)%s+([^"]-)"')
     local resp_code, resp_flags, bytes_rcvd, bytes_sent, duration, upstream_time = string.match(line, '"%s+(%d+)%s+(%S+)%s+%S+%s+%S+%s+"[^"]*"%s+(%d+)%s+(%d+)%s+(%S+)%s+(%S+)')
+    if resp_code == nil then
+        return 0, timestamp, record
+    end
     local x_forwarded_for, user_agent, request_id, authority, upstream_host, upstream_cluster = string.match(line, '"([^"]*)"%s+"([^"]*)"%s+"([^"]*)"%s+"([^"]*)"%s+"([^"]*)"%s+(%S+)')
 
     local is_http = method ~= nil and method ~= "-"
