@@ -80,14 +80,10 @@ static_resources:
                 # resolved IP, so it covers IP-literal targets and resists DNS rebinding).
                 resolved_address_filter:
                   invert_match: true
-                  {{- if .allowedDestinationCIDRs }}
                   ranges:
                   {{- range .allowedDestinationCIDRs }}
                   - address_prefix: "{{ .Address }}"
                     prefix_len: {{ .PrefixLen }}
-                  {{- end }}
-                  {{- else }}
-                  ranges: []
                   {{- end }}
           - name: envoy.filters.http.router
             typed_config:
@@ -148,14 +144,10 @@ static_resources:
           max_hosts: 8192
           resolved_address_filter:
             invert_match: true
-            {{- if .allowedDestinationCIDRs }}
             ranges:
             {{- range .allowedDestinationCIDRs }}
             - address_prefix: "{{ .Address }}"
               prefix_len: {{ .PrefixLen }}
-            {{- end }}
-            {{- else }}
-            ranges: []
             {{- end }}
   - name: prometheus_stats
     connect_timeout: 0.25s

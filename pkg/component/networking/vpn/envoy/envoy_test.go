@@ -39,15 +39,9 @@ var _ = Describe("Envoy", func() {
 			Expect(strings.Count(config, "prefix_len: 48")).To(Equal(2))
 		})
 
-		It("should fail closed (deny all) when no CIDRs are configured", func() {
-			config, err := envoy.GetEnvoyConfig(nil)
-			Expect(err).NotTo(HaveOccurred())
-
-			// invert_match with an empty allow-list removes every resolved address => deny all.
-			Expect(strings.Count(config, "resolved_address_filter:")).To(Equal(2))
-			Expect(strings.Count(config, "invert_match: true")).To(Equal(2))
-			Expect(strings.Count(config, "ranges: []")).To(Equal(2))
-			Expect(config).NotTo(ContainSubstring("address_prefix:"))
+		It("should return an error when no CIDRs are configured", func() {
+			_, err := envoy.GetEnvoyConfig(nil)
+			Expect(err).To(MatchError(ContainSubstring("allowedDestinationCIDRs must not be empty")))
 		})
 	})
 })

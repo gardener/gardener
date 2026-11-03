@@ -56,8 +56,11 @@ type cidrPrefix struct {
 
 // GetEnvoyConfig returns the Envoy configuration for the VPN proxy, shared by HA and non-HA mode.
 // allowedDestinationCIDRs restricts the CONNECT proxy to the shoot's own node, pod, and service
-// networks. An empty slice renders a fail-closed config that denies all destinations.
+// networks. An empty slice is an error — callers must ensure CIDRs are available before calling.
 func GetEnvoyConfig(allowedDestinationCIDRs []net.IPNet) (string, error) {
+	if len(allowedDestinationCIDRs) == 0 {
+		return "", fmt.Errorf("allowedDestinationCIDRs must not be empty")
+	}
 	prefixes := make([]cidrPrefix, 0, len(allowedDestinationCIDRs))
 	for _, cidr := range allowedDestinationCIDRs {
 		prefixLen, _ := cidr.Mask.Size()
