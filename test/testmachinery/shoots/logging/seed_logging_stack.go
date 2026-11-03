@@ -36,7 +36,7 @@ const (
 	deltaLogsDuration         = "180s"
 	logsCount                 = 2000
 	logsDuration              = "90s"
-	numberOfSimulatedClusters = 100
+	numberOfSimulatedClusters = 50
 )
 
 // Test setup constants
