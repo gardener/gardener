@@ -724,8 +724,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 
 				deleteOptions := &client.DeleteOptions{}
 				if isForceDeletion {
-					gracePeriodSeconds := int64(0)
-					deleteOptions.GracePeriodSeconds = &gracePeriodSeconds
+					deleteOptions.GracePeriodSeconds = new(int64(0))
 				}
 
 				// only delete resources in specific API groups with foreground deletion propagation
