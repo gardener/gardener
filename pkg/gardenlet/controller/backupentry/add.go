@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -31,6 +32,7 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
 // ControllerName is the name of this controller.
@@ -134,7 +136,8 @@ func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(log logr.Logger) h
 		}
 
 		shootTechnicalID, _ := gardenerutils.ExtractShootDetailsFromBackupEntryName(obj.GetName())
-		if !strings.HasPrefix(shootTechnicalID, v1beta1constants.TechnicalIDPrefix) {
+		isSelfHostedEntry := shootTechnicalID == metav1.NamespaceSystem
+		if !strings.HasPrefix(shootTechnicalID, v1beta1constants.TechnicalIDPrefix) && (!isSelfHostedEntry || !gardenletutils.IsResponsibleForSelfHostedShoot()) {
 			return nil
 		}
 
