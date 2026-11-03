@@ -113,6 +113,7 @@ message GardenletDeployment {
 // GardenletHelm is the Helm deployment configuration for gardenlet.
 message GardenletHelm {
   // OCIRepository defines where to pull the chart.
+  // +required
   optional .github.com.gardener.gardener.pkg.apis.core.v1.OCIRepository ociRepository = 1;
 }
 
@@ -134,6 +135,7 @@ message GardenletSelfDeployment {
   optional GardenletDeployment gardenletDeployment = 1;
 
   // Helm is the Helm deployment configuration.
+  // +required
   optional GardenletHelm helm = 2;
 
   // ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.
@@ -154,6 +156,7 @@ message GardenletSelfDeployment {
 message GardenletSpec {
   // Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
   // the image, etc.
+  // +required
   optional GardenletSelfDeployment deployment = 1;
 
   // Config is the GardenletConfiguration used to configure gardenlet.
@@ -261,14 +264,17 @@ message ManagedSeedSetSpec {
 
   // Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
   // It must match the ManagedSeeds and Shoots template's labels. This field is immutable.
+  // +required
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
 
   // Template describes the ManagedSeed that will be created if insufficient replicas are detected.
   // Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
+  // +required
   optional ManagedSeedTemplate template = 3;
 
   // ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed.
   // Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
+  // +required
   optional .github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate shootTemplate = 4;
 
   // UpdateStrategy specifies the UpdateStrategy that will be
@@ -287,31 +293,39 @@ message ManagedSeedSetSpec {
 message ManagedSeedSetStatus {
   // ObservedGeneration is the most recent generation observed for this ManagedSeedSet. It corresponds to the
   // ManagedSeedSet's generation, which is updated on mutation by the API Server.
+  // +optional
   optional int64 observedGeneration = 1;
 
   // Replicas is the number of replicas (ManagedSeeds and their corresponding Shoots) created by the ManagedSeedSet controller.
+  // +required
   optional int32 replicas = 2;
 
   // ReadyReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller that have a Ready Condition.
+  // +optional
   optional int32 readyReplicas = 3;
 
   // NextReplicaNumber is the ordinal number that will be assigned to the next replica of the ManagedSeedSet.
+  // +optional
   optional int32 nextReplicaNumber = 4;
 
   // CurrentReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
   // indicated by CurrentRevision.
+  // +optional
   optional int32 currentReplicas = 5;
 
   // UpdatedReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
   // indicated by UpdateRevision.
+  // +optional
   optional int32 updatedReplicas = 6;
 
   // CurrentRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with smaller
   // ordinal numbers during updates.
+  // +optional
   optional string currentRevision = 7;
 
   // UpdateRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with larger
   // ordinal numbers during updates
+  // +optional
   optional string updateRevision = 8;
 
   // CollisionCount is the count of hash collisions for the ManagedSeedSet. The ManagedSeedSet controller
@@ -341,6 +355,7 @@ message ManagedSeedSpec {
 
   // Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
   // with the given deployment parameters and GardenletConfiguration.
+  // +required
   optional GardenletConfig gardenlet = 3;
 }
 
@@ -354,6 +369,7 @@ message ManagedSeedStatus {
 
   // ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
   // ManagedSeed's generation, which is updated on mutation by the API Server.
+  // +optional
   optional int64 observedGeneration = 2;
 }
 
@@ -371,12 +387,15 @@ message ManagedSeedTemplate {
 // PendingReplica contains information about a replica that is currently pending creation, update, or deletion.
 message PendingReplica {
   // Name is the replica name.
+  // +required
   optional string name = 1;
 
   // Reason is the reason for the replica to be pending.
+  // +required
   optional string reason = 2;
 
   // Since is the moment in time since the replica is pending with the specified reason.
+  // +required
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 3;
 
   // Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
@@ -395,6 +414,7 @@ message RollingUpdateStrategy {
 // Shoot identifies the Shoot that should be registered as Seed.
 message Shoot {
   // Name is the name of the Shoot that will be registered as Seed.
+  // +required
   optional string name = 1;
 }
 

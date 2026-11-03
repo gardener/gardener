@@ -36,21 +36,26 @@ type SchedulerConfiguration struct {
 
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.
+	// +optional
 	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	// +optional
 	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// +optional
 	LogLevel string `json:"logLevel,omitempty"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
+	// +optional
 	LogFormat string `json:"logFormat,omitempty"`
 	// Server defines the configuration of the HTTP server. This is deprecated in favor of
 	// HealthServer.
+	// +required
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
 	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
 	// Scheduler defines the configuration of the schedulers.
+	// +required
 	Schedulers SchedulerControllerConfiguration `json:"schedulers"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
@@ -75,6 +80,7 @@ type SchedulerControllerConfiguration struct {
 type BackupBucketSchedulerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
+	// +required
 	ConcurrentSyncs int32 `json:"concurrentSyncs"`
 }
 
@@ -83,8 +89,10 @@ type BackupBucketSchedulerConfiguration struct {
 type ShootSchedulerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
+	// +required
 	ConcurrentSyncs int32 `json:"concurrentSyncs"`
 	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
+	// +required
 	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
 }
 
@@ -101,7 +109,9 @@ type ServerConfiguration struct {
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
+	// +required
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
+	// +required
 	Port int32 `json:"port"`
 }

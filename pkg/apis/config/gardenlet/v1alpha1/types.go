@@ -54,10 +54,13 @@ type GardenletConfiguration struct {
 	// +optional
 	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// +required
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
+	// +required
 	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
+	// +required
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
@@ -430,6 +433,7 @@ type ShootInPlaceUpdateControllerConfiguration struct {
 type StaleExtensionHealthChecks struct {
 	// Enabled specifies whether the check for stale extensions health checks is enabled.
 	// Defaults to true.
+	// +required
 	Enabled bool `json:"enabled"`
 	// Threshold configures the threshold when gardenlet considers a health check report of an extension CRD as outdated.
 	// The threshold should have some leeway in case a Gardener extension is temporarily unavailable.
@@ -441,8 +445,10 @@ type StaleExtensionHealthChecks struct {
 // ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
 type ConditionThreshold struct {
 	// Type is the type of the condition to define the threshold for.
+	// +required
 	Type string `json:"type"`
 	// Duration is the duration how long the condition can stay in the progressing state.
+	// +required
 	Duration metav1.Duration `json:"duration"`
 }
 
@@ -616,8 +622,10 @@ type ServerConfiguration struct {
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
+	// +required
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
+	// +required
 	Port int32 `json:"port"`
 }
 
@@ -728,9 +736,11 @@ type ETCDBackupLeaderElection struct {
 // ExposureClassHandler contains configuration for an exposure class handler.
 type ExposureClassHandler struct {
 	// Name is the name of the exposure class handler.
+	// +required
 	Name string `json:"name"`
 	// LoadBalancerService contains configuration which is used to configure the underlying
 	// load balancer to apply the control plane endpoint exposure strategy.
+	// +required
 	LoadBalancerService LoadBalancerServiceConfig `json:"loadBalancerService"`
 	// SNI contains optional configuration for a dedicated ingressgateway belonging to
 	// an exposure class handler.
@@ -742,6 +752,7 @@ type ExposureClassHandler struct {
 // load balancer to apply the control plane endpoint exposure strategy.
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
+	// +required
 	Annotations map[string]string `json:"annotations"`
 	// Class configures the Service.spec.loadBalancerClass field for the load balancer services of the exposure class
 	// handler. This setting in independent from Seed.spec.settings.loadBalancerServices.class.
@@ -774,6 +785,7 @@ type ShootMonitoringConfig struct {
 // RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
 type RemoteWriteMonitoringConfig struct {
 	// URL contains an Url for remote write setting in prometheus.
+	// +required
 	URL string `json:"url"`
 	// Keep contains a list of metrics that will be remote written
 	// +optional

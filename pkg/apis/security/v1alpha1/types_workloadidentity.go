@@ -25,8 +25,10 @@ type WorkloadIdentity struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec configures the JSON Web Token issued by the Gardener API server.
+	// +required
 	Spec WorkloadIdentitySpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status contain the latest observed status of the WorkloadIdentity.
+	// +required
 	Status WorkloadIdentityStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -34,14 +36,17 @@ type WorkloadIdentity struct {
 type WorkloadIdentitySpec struct {
 	// Audiences specify the list of recipients that the JWT is intended for.
 	// The values of this field will be set in the 'aud' claim.
+	// +required
 	Audiences []string `json:"audiences" protobuf:"bytes,1,opt,name=audiences"`
 	// TargetSystem represents specific configurations for the system that will accept the JWTs.
+	// +required
 	TargetSystem TargetSystem `json:"targetSystem" protobuf:"bytes,2,opt,name=targetSystem"`
 }
 
 // TargetSystem represents specific configurations for the system that will accept the JWTs.
 type TargetSystem struct {
 	// Type is the type of the target system.
+	// +required
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
@@ -51,6 +56,7 @@ type TargetSystem struct {
 // WorkloadIdentityStatus contain the latest observed status of the WorkloadIdentity.
 type WorkloadIdentityStatus struct {
 	// Sub contains the computed value of the subject that is going to be set in JWTs 'sub' claim.
+	// +required
 	Sub string `json:"sub" protobuf:"bytes,1,opt,name=sub"`
 }
 

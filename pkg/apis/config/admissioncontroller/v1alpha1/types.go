@@ -19,14 +19,18 @@ type AdmissionControllerConfiguration struct {
 
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
 	// when communicating with the garden apiserver.
+	// +required
 	GardenClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"gardenClientConnection"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	// Defaults to "info".
+	// +required
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the format for the logs. Must be one of [json,text].
 	// Defaults to "json".
+	// +required
 	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
+	// +required
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
@@ -42,6 +46,7 @@ type AdmissionControllerConfiguration struct {
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
 	// Webhooks is the configuration for the HTTPS webhook server.
+	// +required
 	Webhooks HTTPSServer `json:"webhooks"`
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
 	// +optional
@@ -60,6 +65,7 @@ type ServerConfiguration struct {
 // ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.
 type ResourceAdmissionConfiguration struct {
 	// Limits contains configuration for resources which are subjected to size limitations.
+	// +required
 	Limits []ResourceLimit `json:"limits"`
 	// UnrestrictedSubjects contains references to users, groups, or service accounts which aren't subjected to any resource size limit.
 	// +optional
@@ -84,6 +90,7 @@ type ResourceLimit struct {
 	// +optional
 	APIVersions []string `json:"apiVersions,omitempty"`
 	// Resources is the name of the resource this rule applies to. WildcardAll represents all resources.
+	// +required
 	Resources []string `json:"resources"`
 	// Size specifies the imposed limit.
 	// +optional
@@ -96,8 +103,10 @@ type ResourceLimit struct {
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
+	// +required
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
+	// +required
 	Port int32 `json:"port"`
 }
 
@@ -107,6 +116,7 @@ type HTTPSServer struct {
 	Server `json:",inline"`
 
 	// TLSServer contains information about the TLS configuration for a HTTPS server.
+	// +required
 	TLS TLSServer `json:"tls"`
 }
 
@@ -114,6 +124,7 @@ type HTTPSServer struct {
 type TLSServer struct {
 	// ServerCertDir is the path to a directory containing the server's TLS certificate and key (the files must be
 	// named tls.crt and tls.key respectively).
+	// +required
 	ServerCertDir string `json:"serverCertDir"`
 }
 
