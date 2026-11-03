@@ -164,6 +164,10 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false`, you can dis
 
 ⚠️ In any case, there must be a VPA available for your seed cluster. Using a seed without VPA is not supported.
 
+> [!NOTE]
+> Gardener deploys its `VerticalPodAutoscaler` resources with `updateMode: InPlaceOrRecreate`.
+> If you manage the VPA yourself, make sure your installation supports in-place resource updates (VPA >= 1.4.0 with the `InPlaceOrRecreate` feature enabled; GA since 1.6.0).
+
 ### VPA Pitfall: Excessive Resource Requests Making Pod Unschedulable
 
 VPA is unaware of node capacity, and can increase the resource requests of a pod beyond the capacity of any single node.

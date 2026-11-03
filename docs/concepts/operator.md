@@ -53,6 +53,10 @@ By setting the `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=fals
 ⚠️ In any case, there must be a VPA available for your runtime cluster.
 Using a runtime cluster without VPA is not supported.
 
+> [!NOTE]
+> Gardener deploys its `VerticalPodAutoscaler` resources with `updateMode: InPlaceOrRecreate`.
+> If you manage the VPA yourself, make sure your installation supports in-place resource updates (VPA >= 1.4.0 with the `InPlaceOrRecreate` feature enabled; GA since 1.6.0).
+
 ##### Topology-Aware Traffic Routing
 
 Refer to the [Topology-Aware Traffic Routing documentation](../operations/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.

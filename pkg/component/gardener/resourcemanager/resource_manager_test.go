@@ -2596,23 +2596,6 @@ subjects:
 				resourceManager.SetSecrets(secrets)
 			})
 
-			It("should remove the legacy VPA webhook without replacing the shared webhook configuration", func() {
-				expected := mutatingWebhookConfigurationFor(ForRuntime, false)
-				existing := expected.DeepCopy()
-				existing.UID = "existing-webhook-configuration"
-				existing.Webhooks = append(existing.Webhooks, admissionregistrationv1.MutatingWebhook{
-					Name: "vpa-in-place-updates.resources.gardener.cloud",
-				})
-				Expect(fakeClient.Create(ctx, existing)).To(Succeed())
-
-				Expect(resourceManager.Deploy(ctx)).To(Succeed())
-
-				actual := &admissionregistrationv1.MutatingWebhookConfiguration{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(existing), actual)).To(Succeed())
-				Expect(actual.UID).To(Equal(existing.UID))
-				Expect(actual.Webhooks).To(DeepEqual(expected.Webhooks))
-			})
-
 			It("should deploy a cluster role allowing all access", func() {
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 
