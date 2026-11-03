@@ -220,6 +220,7 @@ func NewKubeAPIServer(
 // DeployKubeAPIServer deploys the Kubernetes API server.
 func DeployKubeAPIServer(
 	ctx context.Context,
+	runtimeAPIReader client.Reader,
 	runtimeClient client.Client,
 	runtimeNamespace string,
 	kubeAPIServer kubeapiserver.Interface,
@@ -278,7 +279,7 @@ func DeployKubeAPIServer(
 
 	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
 		ctx,
-		runtimeClient,
+		runtimeAPIReader,
 		runtimeNamespace,
 		deploymentName,
 		etcdEncryptionKeyRotationPhase,
