@@ -7,6 +7,9 @@ function parse_envoy_access_log_to_record(tag, timestamp, record)
     if line == nil or type(line) ~= "string" then
         return 0, timestamp, record
     end
+    if string.match(line, '^%[[^%]]*%]%s+"') == nil then
+        return 0, timestamp, record
+    end
     local method, path, proto = string.match(line, '"(%S+)%s+(%S+)%s+([^"]-)"')
     local resp_code, resp_flags, bytes_rcvd, bytes_sent, duration, upstream_time = string.match(line, '"%s+(%d+)%s+(%S+)%s+%S+%s+%S+%s+"[^"]*"%s+(%d+)%s+(%d+)%s+(%S+)%s+(%S+)')
     local x_forwarded_for, user_agent, request_id, authority, upstream_host, upstream_cluster = string.match(line, '"([^"]*)"%s+"([^"]*)"%s+"([^"]*)"%s+"([^"]*)"%s+"([^"]*)"%s+(%S+)')
