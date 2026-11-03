@@ -120,13 +120,13 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			gardenValiSts,
 		)
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for Vali in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
 		}
 
 		// Fetch the daemon set in the garden namespace
 		fluentBit, err = getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for fluent-bit in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
 		}
 
 		// Fetch otelcol deployment

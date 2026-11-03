@@ -59,12 +59,12 @@ var _ = ginkgo.Describe("Shoot logging testing", func() {
 
 		_, err := getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for fluent-bit in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
 		}
 
 		err = shootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, &appsv1.StatefulSet{})
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for Vali in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
 		}
 
 		// Get shoot namespace name

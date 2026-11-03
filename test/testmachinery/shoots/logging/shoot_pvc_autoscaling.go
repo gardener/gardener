@@ -125,7 +125,7 @@ var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 
 		_, err := getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
 		if err != nil {
-			Fail(fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
+			Fail(fmt.Sprintf("Error occurred checking for fluent-bit in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: "+err.Error(), garden))
 		}
 
 
