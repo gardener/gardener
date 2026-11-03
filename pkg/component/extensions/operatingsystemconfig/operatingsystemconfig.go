@@ -850,6 +850,12 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	return d.osc, err
 }
 
+// KeyForWorker returns the name of the secret storing the gardener-node-agent configuration of the given worker pool
+// (see Data.GardenerNodeAgentSecretName) without deploying the OperatingSystemConfig.
+func KeyForWorker(values *Values, worker *gardencorev1beta1.Worker) (string, error) {
+	return calculateKeyForValues(values, worker)
+}
+
 func calculateKeyForValues(values *Values, worker *gardencorev1beta1.Worker) (string, error) {
 	if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
 		return fmt.Sprintf("gardener-node-agent-%s", worker.Name), nil

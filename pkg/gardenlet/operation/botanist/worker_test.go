@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -24,6 +26,7 @@ import (
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -160,6 +163,63 @@ var _ = Describe("Worker", func() {
 				Expect(WorkerPoolsForWorkerResource(botanist)).NotTo(BeEmpty())
 				Expect(botanist.Shoot.GetInfo().Spec.Provider.Workers).To(Equal([]gardencorev1beta1.Worker{controlPlanePool, workerPool, workerPool2}))
 			})
+		})
+	})
+
+	Describe("#WorkerWithAllPools", func() {
+		It("should deploy a Worker with all worker pools when the self-hosted shoot is bootstrapped", func() {
+			controlPlanePool := gardencorev1beta1.Worker{
+				Name:         "control-plane",
+				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				Minimum:      3,
+				Maximum:      3,
+				Zones:        []string{"a", "b", "c"},
+			}
+			workerPool := gardencorev1beta1.Worker{Name: "worker", Minimum: 1, Maximum: 2}
+			for _, pool := range []*gardencorev1beta1.Worker{&controlPlanePool, &workerPool} {
+				pool.Machine.Image = &gardencorev1beta1.ShootMachineImage{Name: "image", Version: new("1.0.0")}
+			}
+			setWorkers(botanist, controlPlanePool, workerPool)
+
+			shoot := botanist.Shoot.GetInfo()
+			shoot.Name = "shoot"
+			shoot.Spec.Kubernetes.KubeControllerManager = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &metav1.Duration{Duration: 40 * time.Second}}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}}
+			botanist.Shoot.SetInfo(shoot)
+			botanist.Shoot.ControlPlaneNamespace = namespace
+			botanist.Shoot.KubernetesVersion = semver.MustParse("1.35.0")
+			botanist.Shoot.CloudProfile = &gardencorev1beta1.CloudProfile{}
+			botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
+			botanist.Logger = logr.Discard()
+
+			w, err := botanist.WorkerWithAllPools()
+			Expect(err).NotTo(HaveOccurred())
+
+			values, err := botanist.OperatingSystemConfigValues()
+			Expect(err).NotTo(HaveOccurred())
+			controlPlaneSecretName, err := operatingsystemconfig.KeyForWorker(values, &controlPlanePool)
+			Expect(err).NotTo(HaveOccurred())
+			workerSecretName, err := operatingsystemconfig.KeyForWorker(values, &workerPool)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(workerSecretName).NotTo(Equal(controlPlaneSecretName))
+
+			// When the self-hosted shoot is bootstrapped, there is only an OperatingSystemConfig for the control plane pool.
+			w.SetWorkerPoolNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs{
+				"control-plane": {Init: operatingsystemconfig.Data{SecretName: new("osc-control-plane"), GardenerNodeAgentSecretName: controlPlaneSecretName}},
+			})
+			Expect(w.Deploy(ctx)).To(Succeed())
+
+			workerObj := &extensionsv1alpha1.Worker{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot"}, workerObj)).To(Succeed())
+			Expect(workerObj.Spec.Pools).To(ConsistOf(
+				And(HaveField("Name", "control-plane"), HaveField("Minimum", int32(3)), HaveField("Maximum", int32(3)), HaveField("Zones", ConsistOf("a", "b", "c")),
+					HaveField("NodeAgentSecretName", HaveValue(Equal(controlPlaneSecretName)))),
+				// The worker pool uses the user data of the control plane pool, but its own gardener-node-agent secret name,
+				// which determines the names of its MachineClasses.
+				And(HaveField("Name", "worker"), HaveField("Minimum", int32(1)), HaveField("Maximum", int32(2)),
+					HaveField("UserDataSecretRef.Name", "osc-control-plane"),
+					HaveField("NodeAgentSecretName", HaveValue(Equal(workerSecretName)))),
+			))
 		})
 	})
 

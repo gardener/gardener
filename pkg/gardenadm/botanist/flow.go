@@ -97,3 +97,36 @@ func (b *GardenadmBotanist) ReconcileNetworkPoliciesTaskGroup() flow.TaskGroup {
 		Fn:   b.ApplyNetworkPolicies,
 	}).WithDependencies(botanist.TaskGroupReconcileGardenerResourceManager, TaskGroupReconcileExtensionControllers)
 }
+
+// AddBootstrapClusterTasks adds the tasks for preparing the bootstrap cluster to the given graph: the control plane
+// namespace, CRDs, secrets management, gardener-resource-manager, the extension controllers and network policies. It
+// is used by `gardenadm bootstrap` and `gardenadm destroy`. The returned flow.TaskIDs are the sync point that the tasks
+// deploying the extension resources must depend on.
+func (b *GardenadmBotanist) AddBootstrapClusterTasks(g *flow.Graph) flow.TaskIDs {
+	var (
+		deployNamespaces            = g.AddGroup(b.DeployNamespacesTaskGroup())
+		_                           = g.AddGroup(b.DeployCloudProviderSecretTaskGroup())
+		_                           = g.AddGroup(b.ReconcileCustomResourceDefinitionsTaskGroup())
+		_                           = g.AddGroup(b.ReconcileClusterResourceTaskGroup())
+		initializeSecretsManagement = g.AddGroup(b.InitializeSecretsManagementTaskGroup())
+		deployPriorityClassCritical = g.Add(flow.Task{
+			Name:         "Deploying PriorityClass for gardener-resource-manager",
+			Fn:           b.DeployPriorityClassCritical,
+			Dependencies: flow.NewTaskIDs(deployNamespaces, initializeSecretsManagement),
+		})
+		_ = g.AddGroup(
+			b.ReconcileRuntimeGardenerResourceManagerTaskGroup(true, false, false).
+				WithDependencies(deployPriorityClassCritical),
+		)
+		_ = g.AddGroup(
+			b.ReconcileGardenerResourceManagerTaskGroup(true, false).
+				WithDependencies(deployPriorityClassCritical),
+		)
+		_                             = g.AddGroup(b.ReconcileReferencedResourcesTaskGroup())
+		_                             = g.AddGroup(b.ReconcileSystemResourcesTaskGroup())
+		reconcileExtensionControllers = g.AddGroup(b.ReconcileExtensionControllersTaskGroup(true))
+		reconcileNetworkPolicies      = g.AddGroup(b.ReconcileNetworkPoliciesTaskGroup())
+	)
+
+	return flow.NewTaskIDs(reconcileNetworkPolicies, reconcileExtensionControllers)
+}

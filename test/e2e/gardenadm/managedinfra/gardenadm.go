@@ -15,8 +15,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -24,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	. "sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -421,4 +425,197 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 
 	gardenadm.ItShouldPromoteSelfHostedShootToSeed(&gardenClientSet, &shootClientSet, shoot)
 	gardenadm.ItShouldCreateHostedShootOnPromotedSeed(&gardenClientSet)
+
+	Context("gardenadm destroy", Ordered, Label("destroy"), func() {
+		const workloadNamespace = "gardenadm-destroy"
+
+		var (
+			session     *gexec.Session
+			shootKomega Komega
+
+			shootKubeconfigFile string
+			workload            []client.Object
+			controlPlanePods    []corev1.Pod
+		)
+
+		BeforeAll(func() {
+			DeferCleanup(test.WithTempFile("", "kubeconfig", nil, &shootKubeconfigFile))
+		})
+
+		AfterAll(func(ctx SpecContext) {
+			// Ensure that the gardenadm process is stopped at the end of the test, even in case it didn't finish successfully.
+			if session != nil {
+				Eventually(ctx, session.Interrupt()).Should(gexec.Exit())
+			}
+		}, NodeTimeout(time.Minute))
+
+		It("should connect to the shoot with the kubeconfig stored in the bootstrap cluster", func(ctx SpecContext) {
+			kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig", Namespace: technicalID}}
+			Eventually(ctx, Object(kubeconfigSecret)).Should(HaveField("Data", HaveKey("kubeconfig")))
+			Expect(os.WriteFile(shootKubeconfigFile, kubeconfigSecret.Data["kubeconfig"], 0600)).To(Succeed())
+
+			Eventually(ctx, func() error {
+				var err error
+				shootClientSet, err = kubernetes.NewClientFromBytes(kubeconfigSecret.Data["kubeconfig"],
+					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+					kubernetes.WithDisabledCachedClient(),
+				)
+				return err
+			}).Should(Succeed())
+			shootKomega = New(shootClientSet.Client())
+		}, SpecTimeout(time.Minute))
+
+		It("should deploy a workload to the shoot", func(ctx SpecContext) {
+			// Use a container image that is already cached on the nodes.
+			image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
+			Expect(err).NotTo(HaveOccurred())
+
+			labels := map[string]string{"app": "gardenadm-destroy"}
+			workload = []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{Name: "workload", Namespace: workloadNamespace},
+					Spec: corev1.ServiceSpec{
+						Type:     corev1.ServiceTypeLoadBalancer,
+						Selector: labels,
+						Ports:    []corev1.ServicePort{{Port: 80}},
+					},
+				},
+				&corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: "workload", Namespace: workloadNamespace},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+						Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")}},
+					},
+				},
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{Name: "workload", Namespace: workloadNamespace},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: new(int32(1)),
+						Selector: &metav1.LabelSelector{MatchLabels: labels},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{Labels: labels},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:         "pause",
+									Image:        image.String(),
+									VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}},
+								}},
+								Tolerations: []corev1.Toleration{{Operator: corev1.TolerationOpExists}},
+								Volumes: []corev1.Volume{{
+									Name:         "data",
+									VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "workload"}},
+								}},
+							},
+						},
+					},
+				},
+				&admissionregistrationv1.ValidatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{Name: "gardenadm-destroy"},
+					Webhooks: []admissionregistrationv1.ValidatingWebhook{{
+						Name: "gardenadm-destroy.example.com",
+						ClientConfig: admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{Name: "workload", Namespace: workloadNamespace},
+						},
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+							Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"configmaps"}},
+						}},
+						// Never call the webhook.
+						ObjectSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"gardenadm-destroy": "never-matches"}},
+						FailurePolicy:           new(admissionregistrationv1.Ignore),
+						SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
+						AdmissionReviewVersions: []string{"v1"},
+					}},
+				},
+				&apiextensionsv1.CustomResourceDefinition{
+					ObjectMeta: metav1.ObjectMeta{Name: "widgets.gardenadm-destroy.example.com"},
+					Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+						Group: "gardenadm-destroy.example.com",
+						Names: apiextensionsv1.CustomResourceDefinitionNames{Kind: "Widget", ListKind: "WidgetList", Plural: "widgets", Singular: "widget"},
+						Scope: apiextensionsv1.NamespaceScoped,
+						Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
+							Name:    "v1",
+							Served:  true,
+							Storage: true,
+							Schema: &apiextensionsv1.CustomResourceValidation{OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+								Type:                   "object",
+								XPreserveUnknownFields: new(true),
+							}},
+						}},
+					},
+				},
+			}
+
+			Expect(shootClientSet.Client().Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: workloadNamespace}})).To(Succeed())
+			for _, obj := range workload {
+				Expect(shootClientSet.Client().Create(ctx, obj)).To(Succeed())
+			}
+
+			Eventually(ctx, shootKomega.Object(&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "workload", Namespace: workloadNamespace}})).
+				Should(HaveField("Status.Phase", corev1.ClaimBound))
+			Eventually(ctx, shootKomega.Object(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "workload", Namespace: workloadNamespace}})).
+				Should(BeHealthy(health.CheckDeployment))
+		}, SpecTimeout(5*time.Minute))
+
+		It("should remember the pods of control plane components", func(ctx SpecContext) {
+			// The cleanup must not delete the control plane components of the self-hosted shoot, e.g., cloud-controller-manager
+			// (deployed via a ManagedResource for the seed) and gardener-resource-manager (deployed directly by gardenadm).
+			for _, selector := range []struct {
+				namespace string
+				labels    client.MatchingLabels
+			}{
+				{namespace: "kube-system", labels: client.MatchingLabels{"role": "cloud-controller-manager"}},
+				{namespace: "garden", labels: client.MatchingLabels{"app": "gardener-resource-manager"}},
+			} {
+				podList := &corev1.PodList{}
+				Eventually(ctx, shootKomega.ObjectList(podList, client.InNamespace(selector.namespace), selector.labels)).
+					Should(HaveField("Items", Not(BeEmpty())))
+				controlPlanePods = append(controlPlanePods, podList.Items...)
+			}
+		}, SpecTimeout(time.Minute))
+
+		It("should start the destroy flow", func() {
+			// Start the gardenadm process but don't wait for it to complete so that we can asynchronously perform assertions
+			// on individual steps in the test specs below.
+			session = Run("destroy", "-d", configDir, "--shoot-kubeconfig", shootKubeconfigFile)
+		})
+
+		It("should stop machine-controller-manager in the shoot", func(ctx SpecContext) {
+			Eventually(ctx, shootKomega.Object(&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager, Namespace: "kube-system"}})).
+				Should(HaveField("Spec.Replicas", HaveValue(BeZero())))
+		}, SpecTimeout(time.Minute))
+
+		It("should clean up the workload in the shoot", func(ctx SpecContext) {
+			for _, obj := range workload {
+				Eventually(ctx, shootKomega.Get(obj)).Should(BeNotFoundError(), "%T %s should be deleted", obj, client.ObjectKeyFromObject(obj))
+			}
+		}, SpecTimeout(5*time.Minute))
+
+		It("should not delete the pods of control plane components", func(ctx SpecContext) {
+			for _, pod := range controlPlanePods {
+				currentPod := &corev1.Pod{}
+				Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(&pod), currentPod)).To(Succeed(), "pod %s should not be deleted", client.ObjectKeyFromObject(&pod))
+				Expect(currentPod.UID).To(Equal(pod.UID), "pod %s should not be recreated", client.ObjectKeyFromObject(&pod))
+			}
+		}, SpecTimeout(time.Minute))
+
+		It("should finish successfully", func(ctx SpecContext) {
+			Wait(ctx, session)
+			Eventually(ctx, session.Out).Should(gbytes.Say("The machines and the infrastructure of the self-hosted shoot cluster have been destroyed"))
+		}, SpecTimeout(15*time.Minute))
+
+		It("should delete all machines", func(ctx SpecContext) {
+			Eventually(ctx, ObjectList(&machinev1alpha1.MachineList{}, client.InNamespace(technicalID))).Should(HaveField("Items", BeEmpty()))
+			Eventually(ctx, ObjectList(&corev1.PodList{}, client.InNamespace(infrastructure.NamespaceName(technicalID)), client.MatchingLabels{"app": "machine"})).
+				Should(HaveField("Items", BeEmpty()))
+		}, SpecTimeout(time.Minute))
+
+		It("should delete the infrastructure", func(ctx SpecContext) {
+			Eventually(ctx, Get(&extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}})).Should(BeNotFoundError())
+			Eventually(ctx, Get(&extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: technicalID}})).Should(BeNotFoundError())
+
+			ipPool := &metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{APIVersion: "crd.projectcalico.org/v1", Kind: "IPPool"}, ObjectMeta: metav1.ObjectMeta{Name: infrastructure.IPPoolName(technicalID, string(gardencorev1beta1.IPFamilyIPv4))}}
+			Eventually(ctx, Get(ipPool)).Should(BeNotFoundError())
+		}, SpecTimeout(time.Minute))
+	})
 })
