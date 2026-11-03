@@ -750,17 +750,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 				var err error
 				if isForceDeletion {
 					// Forcefully remove all finalizers to unblock deletion of resources because shoot is being deleted anyways.
-					if hasFinalizers, _ := utilclient.NewFinalizer().HasFinalizers(obj); hasFinalizers {
-						if err = utilclient.NewFinalizer().Finalize(ctx, r.TargetClient, obj); err != nil {
-							logger.Error(err, "Error when removing metadata.finalizers")
-							results <- &output{obj, true, err}
-							return
-						}
-					}
-					// Namespace resources additionally have spec.finalizers which must be cleared.
-					if obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace" {
-						err = clearNamespaceSpecFinalizers(ctx, r.TargetClient, obj)
-					}
+					err = finalizeResource(ctx, r.TargetClient, obj)
 				} else {
 					err = finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj)
 				}
@@ -1058,25 +1048,32 @@ func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client
 
 	log.Info("Found resources.gardener.cloud/finalize-deletion-after annotation", "gracePeriod", finalizeDeletionAfter)
 
-	finalizer := utilclient.NewFinalizer()
-
 	if obj.GetDeletionTimestamp() == nil || obj.GetDeletionTimestamp().Time.UTC().Add(finalizeDeletionAfter).After(clock.Now().UTC()) {
 		log.Info("Cannot finalize resource yet since grace period has not yet elapsed", "deletionTimestamp", obj.GetDeletionTimestamp(), "gracePeriod", finalizeDeletionAfter)
 		return nil
 	}
 
-	if hasFinalizers, err := finalizer.HasFinalizers(obj); err != nil {
+	if hasFinalizers, err := utilclient.NewFinalizer().HasFinalizers(obj); err != nil {
 		return fmt.Errorf("failed checking whether resource has finalizers: %w", err)
 	} else if !hasFinalizers {
 		return nil
 	}
 
 	log.Info("Removing finalizers from resource since grace period has elapsed", "deletionTimestamp", obj.GetDeletionTimestamp(), "gracePeriod", finalizeDeletionAfter)
-	if err := finalizer.Finalize(ctx, cl, obj); err != nil {
+	return finalizeResource(ctx, cl, obj)
+}
+
+// finalizeResource removes metadata.finalizers from the given resource and, for namespace resources,
+// additionally clears spec.finalizers via the /finalize subresource.
+func finalizeResource(ctx context.Context, cl client.Client, obj *unstructured.Unstructured) error {
+	if hasFinalizers, _ := utilclient.NewFinalizer().HasFinalizers(obj); !hasFinalizers {
+		return nil
+	}
+
+	if err := utilclient.NewFinalizer().Finalize(ctx, cl, obj); err != nil {
 		return err
 	}
 
-	// Namespace resources additionally have spec.finalizers which must be cleared via the /finalize subresource.
 	if obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace" {
 		return clearNamespaceSpecFinalizers(ctx, cl, obj)
 	}
