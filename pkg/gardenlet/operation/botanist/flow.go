@@ -887,6 +887,11 @@ func (b *Botanist) ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, skipRead
 			Fn:     b.DeployKubeProxy,
 			SkipIf: b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || !kubeProxyEnabled,
 		})
+		// For self-hosted shoots, the init flow redeploys gardener-resource-manager into the Pod network after this
+		// task group. Its Pods might be scheduled to worker Nodes, so the kube-apiserver (running in the host network of
+		// the control plane Node) can only reach its webhooks once kube-proxy runs on the control plane Node. Otherwise,
+		// the webhooks would be unreachable, blocking the flow (e.g., during `gardenadm restore`). Only the control plane
+		// worker pool is waited for since the other worker Nodes might not be healthy (e.g., after a disaster event).
 		_ = g.Add(flow.Task{
 			Name: "Waiting until kube-proxy for the control plane worker pool is ready",
 			Fn: func(ctx context.Context) error {

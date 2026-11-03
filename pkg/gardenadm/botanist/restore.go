@@ -226,7 +226,7 @@ func (b *GardenadmBotanist) DeleteGardenerResourceManagers(ctx context.Context, 
 	return nil
 }
 
-// DeleteExtensionWorkloads deletes the extension controller workloads (Deployments, ReplicaSets and Pods) restored from
+// DeleteExtensions deletes the extension controller workloads (Deployments, ReplicaSets and Pods) restored from
 // the etcd snapshot in every extension namespace (identified by the gardener.cloud/role=extension label). These are
 // orphaned mid-restore: finalizeManagedResources removes the extension ManagedResources, but with the
 // gardener-resource-manager (ManagedResource controller) torn down nothing cascades that deletion to the underlying
@@ -237,7 +237,7 @@ func (b *GardenadmBotanist) DeleteGardenerResourceManagers(ctx context.Context, 
 // The deletion is intentionally unscoped (no label selector): an extension namespace hosts only its own extension
 // controller's workloads, so clearing all of them targets exactly the right set without enumerating per-extension
 // labels. This relies on extension namespaces not colocating unrelated workloads.
-func (b *GardenadmBotanist) DeleteExtensionWorkloads(ctx context.Context, realClient client.Client) error {
+func (b *GardenadmBotanist) DeleteExtensions(ctx context.Context, realClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := realClient.List(ctx, namespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}); err != nil {
 		return fmt.Errorf("failed listing extension namespaces: %w", err)
