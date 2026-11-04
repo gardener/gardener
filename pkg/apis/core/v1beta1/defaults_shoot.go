@@ -420,6 +420,12 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 	if obj.MaxBinpackingTime == nil {
 		obj.MaxBinpackingTime = &metav1.Duration{Duration: 5 * time.Minute}
 	}
+	if obj.MaxTotalUnreadyPercentage == nil {
+		obj.MaxTotalUnreadyPercentage = new(float64(45))
+	}
+	if obj.OkTotalUnreadyCount == nil {
+		obj.OkTotalUnreadyCount = new(int32(3))
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.

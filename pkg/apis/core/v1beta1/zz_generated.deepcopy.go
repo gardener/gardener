@@ -1130,6 +1130,16 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(ControlPlaneAutoscaling)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.MaxTotalUnreadyPercentage != nil {
+		in, out := &in.MaxTotalUnreadyPercentage, &out.MaxTotalUnreadyPercentage
+		*out = new(float64)
+		**out = **in
+	}
+	if in.OkTotalUnreadyCount != nil {
+		in, out := &in.OkTotalUnreadyCount, &out.OkTotalUnreadyCount
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

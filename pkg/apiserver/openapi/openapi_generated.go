@@ -2697,6 +2697,20 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
 						},
 					},
+					"maxTotalUnreadyPercentage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Maximum percentage of unready nodes in total. (default: 45) If the unready nodes percentage crosses this and the number of unready nodes is higher than OkTotalUnreadyCount, autoscaling activities are stopped.",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"okTotalUnreadyCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Minimum number of nodes that must be unready for MaxTotalUnreadyPercentage to apply. (default: 3)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
