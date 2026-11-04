@@ -1343,6 +1343,59 @@ func (b *Botanist) MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResourc
 
 	return g
 }
+// TaskGroupDestroyExtensionAndMachineResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupDestroyExtensionAndMachineResources flow.TaskID = "TaskGroupDestroyExtensionAndMachineResources"
+
+// DestroyExtensionAndMachineResourcesTaskGroup deletes extension resources, machine resources, extensions before
+// kube-apiserver, and stale extensions in parallel. This group follows the migration of extensions before
+// kube-apiserver and prepares for the deletion of the control plane.
+func (b *Botanist) DestroyExtensionAndMachineResourcesTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupDestroyExtensionAndMachineResources)
+
+		deleteExtensionResources = g.Add(flow.Task{
+			Name: "Deleting extension resources from the Shoot namespace",
+			Fn:   b.DestroyExtensionResourcesInParallel,
+		})
+		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been deleted",
+			Fn:           b.WaitUntilExtensionResourcesDeleted,
+			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
+		})
+		deleteMachineResources = g.Add(flow.Task{
+			Name: "Shallow-deleting machine resources from the Shoot namespace",
+			Fn:   b.ShallowDeleteMachineResources,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until machine resources have been deleted",
+			Fn: func(ctx context.Context) error {
+				return gardenerutils.WaitUntilMachineResourcesDeleted(ctx, b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+			},
+			Dependencies: flow.NewTaskIDs(deleteMachineResources),
+		})
+		deleteExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extensions before kube-apiserver",
+			Fn:           b.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled before kube-apiserver have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionsBeforeKubeAPIServer),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name: "Deleting stale extensions",
+			Fn:   b.Shoot.Components.Extensions.Extension.DeleteStaleResources,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until all stale extensions have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
+		})
+	)
+
+	return g
+}
 func (b *Botanist) isGardenadmBootstrap() bool {
 	return b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
 }
