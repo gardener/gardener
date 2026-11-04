@@ -232,7 +232,7 @@ func ValidateShootWithOpts(shoot *core.Shoot, opts shootValidationOptions) field
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, opts, field.NewPath("spec"), false)...)
+	allErrs = append(allErrs, ValidateShootSpec(shoot, opts, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
 	return allErrs
@@ -307,7 +307,7 @@ func ValidateShootTemplate(shootTemplate *core.ShootTemplate, opts KubeAPIServer
 
 	allErrs = append(allErrs, metav1validation.ValidateLabels(shootTemplate.Labels, fldPath.Child("metadata", "labels"))...)
 	allErrs = append(allErrs, apivalidation.ValidateAnnotations(shootTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, shootValidationOptions, fldPath.Child("spec"), true)...)
+	allErrs = append(allErrs, ValidateShootSpec(&core.Shoot{ObjectMeta: shootTemplate.ObjectMeta, Spec: shootTemplate.Spec}, shootValidationOptions, fldPath.Child("spec"), true)...)
 
 	return allErrs
 }
@@ -332,59 +332,59 @@ func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.
 }
 
 // ValidateShootSpec validates the specification of a Shoot object.
-func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootValidationOptions, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateShootSpec(shoot *core.Shoot, opts shootValidationOptions, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
 		allErrs    = field.ErrorList{}
-		workerless = len(spec.Provider.Workers) == 0
+		workerless = len(shoot.Spec.Provider.Workers) == 0
 	)
 
-	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, spec.Kubernetes.Version, fldPath)...)
-	allErrs = append(allErrs, validateProvider(meta.Namespace, spec.Provider, spec.Kubernetes, spec.Networking, workerless, spec.CredentialsBindingName != nil || spec.SecretBindingName != nil, fldPath.Child("provider"), inTemplate)...)
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, spec.Kubernetes.Version, opts, fldPath.Child("addons"))...)
-	allErrs = append(allErrs, validateDNS(spec.DNS, spec.Kubernetes.Version, fldPath.Child("dns"))...)
-	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
-	allErrs = append(allErrs, ValidateResources(spec.Resources, fldPath.Child("resources"), true)...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, spec.Provider.Workers, opts, workerless, fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
-	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
-	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
-	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, helper.IsShootSelfHosted(spec.Provider.Workers), fldPath.Child("hibernation"))...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Spec.Kubernetes.Version, fldPath)...)
+	allErrs = append(allErrs, validateProvider(shoot.Namespace, shoot.Spec.Provider, shoot.Spec.Kubernetes, shoot.Spec.Networking, workerless, shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil, fldPath.Child("provider"), inTemplate)...)
+	allErrs = append(allErrs, validateAddons(shoot.Spec.Addons, shoot.Spec.Purpose, workerless, shoot.Spec.Kubernetes.Version, opts, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateDNS(shoot.Spec.DNS, shoot.Spec.Kubernetes.Version, fldPath.Child("dns"))...)
+	allErrs = append(allErrs, validateExtensions(shoot.Spec.Extensions, fldPath.Child("extensions"))...)
+	allErrs = append(allErrs, ValidateResources(shoot.Spec.Resources, fldPath.Child("resources"), true)...)
+	allErrs = append(allErrs, validateKubernetes(shoot.Spec.Kubernetes, shoot.Spec.Networking, shoot.Spec.Provider.Workers, opts, workerless, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateNetworking(shoot.Spec.Networking, workerless, fldPath.Child("networking"))...)
+	allErrs = append(allErrs, validateMaintenance(shoot.Spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
+	allErrs = append(allErrs, validateMonitoring(shoot.Spec.Monitoring, fldPath.Child("monitoring"))...)
+	allErrs = append(allErrs, ValidateHibernation(shoot.Annotations, shoot.Spec.Hibernation, helper.IsShootSelfHosted(shoot.Spec.Provider.Workers), fldPath.Child("hibernation"))...)
 
-	if len(spec.Region) == 0 {
+	if len(shoot.Spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
 	}
 
 	if workerless {
-		if spec.SecretBindingName != nil {
+		if shoot.Spec.SecretBindingName != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), workerlessErrorMsg))
 		}
-		if spec.CredentialsBindingName != nil {
+		if shoot.Spec.CredentialsBindingName != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), workerlessErrorMsg))
 		}
-	} else if !helper.IsShootSelfHosted(spec.Provider.Workers) {
-		if len(ptr.Deref(spec.SecretBindingName, "")) == 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) == 0 {
+	} else if !helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		if len(ptr.Deref(shoot.Spec.SecretBindingName, "")) == 0 && len(ptr.Deref(shoot.Spec.CredentialsBindingName, "")) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must be set when credentialsBindingName is not"))
-		} else if len(ptr.Deref(spec.SecretBindingName, "")) != 0 && len(ptr.Deref(spec.CredentialsBindingName, "")) != 0 {
+		} else if len(ptr.Deref(shoot.Spec.SecretBindingName, "")) != 0 && len(ptr.Deref(shoot.Spec.CredentialsBindingName, "")) != 0 {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "is incompatible with credentialsBindingName"))
 		}
 
 		// TODO(dimityrmirchev) Remove once we drop support for Kubernetes <= 1.33
 		// Forbid secretBindingName for Kubernetes versions >= 1.34
-		if spec.SecretBindingName != nil && len(*spec.SecretBindingName) > 0 &&
-			spec.Kubernetes.Version != "" && versionutils.ConstraintK8sGreaterEqual134.CheckVersion(spec.Kubernetes.Version) {
+		if shoot.Spec.SecretBindingName != nil && len(*shoot.Spec.SecretBindingName) > 0 &&
+			shoot.Spec.Kubernetes.Version != "" && versionutils.ConstraintK8sGreaterEqual134.CheckVersion(shoot.Spec.Kubernetes.Version) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), "for Kubernetes versions >= 1.34, secretBindingName field is no longer supported, use spec.credentialsBindingName instead"))
 		}
 	}
 
-	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), spec.SeedName, "seed name must not be empty when providing the key"))
+	if shoot.Spec.SeedName != nil && len(*shoot.Spec.SeedName) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), shoot.Spec.SeedName, "seed name must not be empty when providing the key"))
 	}
-	if spec.SeedSelector != nil {
-		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("seedSelector"))...)
+	if shoot.Spec.SeedSelector != nil {
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&shoot.Spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("seedSelector"))...)
 	}
-	if purpose := spec.Purpose; purpose != nil {
+	if purpose := shoot.Spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
-		if meta.Namespace == v1beta1constants.GardenNamespace || inTemplate {
+		if shoot.Namespace == v1beta1constants.GardenNamespace || inTemplate {
 			allowedShootPurposes = sets.New(append(sets.List(availableShootPurposes), string(core.ShootPurposeInfrastructure))...)
 		}
 
@@ -392,34 +392,34 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, opts shootV
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), *purpose, sets.List(allowedShootPurposes)))
 		}
 	}
-	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
-	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"), workerless)...)
+	allErrs = append(allErrs, ValidateTolerations(shoot.Spec.Tolerations, fldPath.Child("tolerations"))...)
+	allErrs = append(allErrs, ValidateSystemComponents(shoot.Spec.SystemComponents, fldPath.Child("systemComponents"), workerless)...)
 
-	if spec.ExposureClassName != nil {
-		for _, err := range validation.IsDNS1123Subdomain(*spec.ExposureClassName) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposureClassName"), *spec.ExposureClassName, fmt.Sprintf("exposureClassName is not a valid DNS subdomain: %q", err)))
+	if shoot.Spec.ExposureClassName != nil {
+		for _, err := range validation.IsDNS1123Subdomain(*shoot.Spec.ExposureClassName) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("exposureClassName"), *shoot.Spec.ExposureClassName, fmt.Sprintf("exposureClassName is not a valid DNS subdomain: %q", err)))
 		}
 	}
 
-	if helper.IsShootSelfHosted(spec.Provider.Workers) {
-		if spec.SeedName != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *spec.SeedName, "cannot set seedName for self-hosted shoots"))
+	if helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+		if shoot.Spec.SeedName != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("seedName"), *shoot.Spec.SeedName, "cannot set seedName for self-hosted shoots"))
 		}
 
 		// Self-hosted shoots must reside in the garden namespace so that the corresponding Seed object (if the cluster
 		// is also registered as a seed) can be unambiguously identified by name alone.
-		if meta.Namespace != v1beta1constants.GardenNamespace {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), meta.Namespace, fmt.Sprintf("self-hosted shoots must be in the %q namespace", v1beta1constants.GardenNamespace)))
+		if shoot.Namespace != v1beta1constants.GardenNamespace {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), shoot.Namespace, fmt.Sprintf("self-hosted shoots must be in the %q namespace", v1beta1constants.GardenNamespace)))
 		}
 
-		allErrs = append(allErrs, validateSelfHostedShootControlPlane(spec, fldPath)...)
+		allErrs = append(allErrs, validateSelfHostedShootControlPlane(shoot, fldPath)...)
 	}
 
-	if spec.SchedulerName != nil {
-		allErrs = append(allErrs, validateDNS1123Label(*spec.SchedulerName, fldPath.Child("schedulerName"))...)
+	if shoot.Spec.SchedulerName != nil {
+		allErrs = append(allErrs, validateDNS1123Label(*shoot.Spec.SchedulerName, fldPath.Child("schedulerName"))...)
 	}
 
-	allErrs = append(allErrs, validateControlPlaneZones(spec.ControlPlane, fldPath.Child("controlPlane"))...)
+	allErrs = append(allErrs, validateControlPlaneZones(shoot.Spec.ControlPlane, fldPath.Child("controlPlane"))...)
 
 	return allErrs
 }
@@ -3850,38 +3850,43 @@ func controlPlaneZones(controlPlane *core.ControlPlane) []string {
 	return controlPlane.Zones
 }
 
-func validateSelfHostedShootControlPlane(spec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
+func validateSelfHostedShootControlPlane(shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	controlPlaneWorker := helper.ControlPlaneWorkerPoolForShoot(spec.Provider.Workers)
+	controlPlaneWorker := helper.ControlPlaneWorkerPoolForShoot(shoot.Spec.Provider.Workers)
 	if controlPlaneWorker == nil {
 		return allErrs
 	}
 
-	controlPlaneWorkerIdx := slices.IndexFunc(spec.Provider.Workers, func(w core.Worker) bool { return w.ControlPlane != nil })
-	workerPath := fldPath.Child("provider", "workers").Index(controlPlaneWorkerIdx)
+	var (
+		controlPlaneWorkerIdx = slices.IndexFunc(shoot.Spec.Provider.Workers, func(w core.Worker) bool { return w.ControlPlane != nil })
+		workerPath            = fldPath.Child("provider", "workers").Index(controlPlaneWorkerIdx)
+	)
 
-
-	if spec.ControlPlane == nil || spec.ControlPlane.HighAvailability == nil {
+	if shoot.Spec.ControlPlane == nil || shoot.Spec.ControlPlane.HighAvailability == nil {
 		if controlPlaneWorker.Maximum != 1 {
 			allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have maximum=1 when high availability is not configured"))
 		}
 		return allErrs
 	}
 
-	if controlPlaneWorker.Maximum != 3 {
-		allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have maximum=3 when high availability is configured"))
+	if controlPlaneWorker.Minimum != 3 || controlPlaneWorker.Maximum != 3 {
+		allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have minimum=maximum=3 when high availability is configured"))
 	}
 
-	if controlPlaneWorker.MaxSurge == nil || controlPlaneWorker.MaxSurge.IntValue() != 1 {
-		allErrs = append(allErrs, field.Invalid(workerPath.Child("maxSurge"), controlPlaneWorker.MaxSurge, "control plane worker pool must have maxSurge=1 when high availability is configured"))
+	neededMaxSurge := 1
+	if helper.HasManagedInfrastructure(shoot) {
+		neededMaxSurge = max(neededMaxSurge, len(shoot.Spec.Provider.Workers[controlPlaneWorkerIdx].Zones))
+	}
+	if controlPlaneWorker.MaxSurge == nil || controlPlaneWorker.MaxSurge.IntValue() != neededMaxSurge {
+		allErrs = append(allErrs, field.Invalid(workerPath.Child("maxSurge"), controlPlaneWorker.MaxSurge, fmt.Sprintf("control plane worker pool must have maxSurge=%d when high availability is configured", neededMaxSurge)))
 	}
 
 	if controlPlaneWorker.MaxUnavailable == nil || controlPlaneWorker.MaxUnavailable.IntValue() != 0 {
 		allErrs = append(allErrs, field.Invalid(workerPath.Child("maxUnavailable"), controlPlaneWorker.MaxUnavailable, "control plane worker pool must have maxUnavailable=0 when high availability is configured"))
 	}
 
-	if spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone && len(controlPlaneWorker.Zones) != 3 {
+	if shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone && len(controlPlaneWorker.Zones) != 3 {
 		allErrs = append(allErrs, field.Invalid(workerPath.Child("zones"), controlPlaneWorker.Zones, "control plane worker pool must have exactly 3 zones when failure tolerance type is zone"))
 	}
 
