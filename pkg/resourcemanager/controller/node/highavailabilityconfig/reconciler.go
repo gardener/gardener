@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -34,16 +35,22 @@ func init() {
 	notSkippedSelector = labels.NewSelector().Add(*notSkipped)
 }
 
-// Reconciler patches HA-relevant Deployments and StatefulSets when the number of nodes in the cluster crosses the
-// single-node threshold. This re-triggers the HA config webhook which adjusts the topology spread constraints based on
-// the current node count.
+// Reconciler patches HA-relevant Deployments and StatefulSets when the number of nodes or the number of distinct zones
+// with schedulable system-component nodes in the cluster crosses the respective single-domain threshold. This
+// re-triggers the HA config webhook which adjusts the topology spread constraints and node affinity based on the current
+// node and zone count.
 type Reconciler struct {
-	TargetClient         client.Client
+	TargetClient client.Client
+	// ZoneCapNodeSelector, when non-nil, enables zone-set-change tracking. Must match the corresponding field on the
+	// HA config webhook Handler — when the webhook does not cap zones, the controller must not re-patch on zone changes.
+	ZoneCapNodeSelector  client.MatchingLabels
 	lastHasMultipleNodes *bool
+	lastHasMultipleZones *bool
 }
 
-// Reconcile checks the current node count and, if it changed across the >1 threshold, patches HA-relevant Deployments
-// and StatefulSets whose hostname topology spread constraint requires adaptation to re-trigger the HA config webhook.
+// Reconcile checks the current node and zone count and, if either changed across its single-domain threshold, patches
+// HA-relevant Deployments and StatefulSets whose topology spread constraints require adaptation to re-trigger the HA
+// config webhook.
 func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -52,13 +59,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		return reconcile.Result{}, fmt.Errorf("failed to check whether cluster has more than one node: %w", err)
 	}
 
-	if r.lastHasMultipleNodes != nil && *r.lastHasMultipleNodes == hasMultipleNodes {
-		log.V(1).Info("Node count did not cross the single-node threshold, nothing to do", "hasMultipleNodes", hasMultipleNodes)
+	var hasMultipleZones bool
+	if r.ZoneCapNodeSelector != nil {
+		availableZones, err := kubernetesutils.AvailableZones(ctx, r.TargetClient, r.ZoneCapNodeSelector)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to determine available zones: %w", err)
+		}
+		hasMultipleZones = availableZones.Len() > 1
+	}
+
+	if ptr.Deref(r.lastHasMultipleNodes, false) == hasMultipleNodes && ptr.Deref(r.lastHasMultipleZones, false) == hasMultipleZones {
+		log.V(1).Info("Neither node nor zone count crossed their threshold, nothing to do",
+			"hasMultipleNodes", hasMultipleNodes,
+			"hasMultipleZones", hasMultipleZones,
+		)
 		return reconcile.Result{}, nil
 	}
-	r.lastHasMultipleNodes = &hasMultipleNodes
+	r.lastHasMultipleNodes, r.lastHasMultipleZones = &hasMultipleNodes, &hasMultipleZones
 
-	log.Info("Re-triggering HA webhook for objects requiring adaptation", "multipleNodesAvailable", hasMultipleNodes)
+	log.Info("Re-triggering HA webhook for objects requiring adaptation",
+		"multipleNodesAvailable", hasMultipleNodes,
+		"multipleZonesAvailable", hasMultipleZones,
+	)
 
 	namespaceList := &metav1.PartialObjectMetadataList{}
 	namespaceList.SetGroupVersionKind(schema.GroupVersionKind{Version: "v1", Kind: "NamespaceList"})
@@ -76,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			}
 
 			if err := meta.EachListItem(objectList, func(o runtime.Object) error {
-				if !needsHostSpreadUpdate(topologySpreadConstraintsForObject(o), hasMultipleNodes) {
+				if constraints := topologySpreadConstraintsForObject(o); !needsHostSpreadUpdate(constraints, hasMultipleNodes) && !needsZoneSpreadUpdate(constraints, hasMultipleZones) {
 					return nil
 				}
 
@@ -116,4 +138,25 @@ func needsHostSpreadUpdate(constraints []corev1.TopologySpreadConstraint, hasMul
 		return constraint.WhenUnsatisfiable == corev1.DoNotSchedule
 	}
 	return false
+}
+
+// needsZoneSpreadUpdate returns true if the presence of a zone topology spread constraint doesn't match what the HA
+// webhook would set given the current zone count. Only objects that already carry a hostname constraint are considered
+// as those are the ones managed by the webhook. The webhook caps the zones to the available ones when less than two are
+// available, so a zone constraint must exist if and only if multiple zones are available.
+func needsZoneSpreadUpdate(constraints []corev1.TopologySpreadConstraint, hasMultipleZones bool) bool {
+	var hasHostConstraint, hasZoneConstraint bool
+	for _, constraint := range constraints {
+		switch constraint.TopologyKey {
+		case corev1.LabelHostname:
+			hasHostConstraint = true
+		case corev1.LabelTopologyZone:
+			hasZoneConstraint = true
+		}
+	}
+
+	if !hasHostConstraint {
+		return false
+	}
+	return hasZoneConstraint != hasMultipleZones
 }
