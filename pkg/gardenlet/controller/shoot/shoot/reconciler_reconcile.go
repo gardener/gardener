@@ -582,66 +582,15 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
-		deployAlertmanager = g.Add(flow.Task{
-			Name:         "Reconciling Shoot Alertmanager",
-			Fn:           flow.TaskFn(b.DeployAlertManager).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!flowCtx.hasNodesCIDR, waitUntilInfrastructureReady),
-		})
-		waitUntilAlertmanagerReconciled = g.Add(flow.Task{
-			Name:         "Waiting until Shoot Alertmanager is reconciled",
-			Fn:           b.WaitForAlertManager,
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployAlertmanager),
-		})
-		deployPrometheus = g.Add(flow.Task{
-			Name:         "Reconciling Shoot Prometheus",
-			Fn:           flow.TaskFn(b.DeployPrometheus).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!flowCtx.hasNodesCIDR, waitUntilInfrastructureReady),
-		})
-		waitUntilPrometheusReconciled = g.Add(flow.Task{
-			Name:         "Waiting until Shoot Prometheus is reconciled",
-			Fn:           b.WaitForPrometheus,
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployPrometheus),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying control plane blackbox-exporter",
-			Fn:           flow.TaskFn(b.ReconcileBlackboxExporterControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!flowCtx.hasNodesCIDR, waitUntilInfrastructureReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Reconciling kube-state-metrics for Shoot in Seed for the monitoring stack",
-			Fn:           flow.TaskFn(b.DeployKubeStateMetrics).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployPrometheus, deployAlertmanager),
-		})
-		deployPlutonoForMonitoring = g.Add(flow.Task{
-			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
-			Fn:           flow.TaskFn(b.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployPrometheus, deployAlertmanager),
-		})
-		waitUntilPlutonoReconciled = g.Add(flow.Task{
-			Name:         "Waiting until Plutono for Shoot in Seed is reconciled",
-			Fn:           b.WaitForPlutono,
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(deployPlutonoForLogging, deployPlutonoForMonitoring),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying istio-basic-auth-server",
-			Fn:           flow.TaskFn(b.Shoot.Components.ControlPlane.IstioBasicAuthServer.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReconciled, waitUntilPrometheusReconciled, waitUntilPlutonoReconciled),
-		})
+		reconcileObservabilityComponents = g.AddGroup(
+			b.ReconcileObservabilityTaskGroup().
+				WithDependencies(deploySeedLogging, deployPlutonoForLogging, initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).
+				WithDependenciesIf(!flowCtx.hasNodesCIDR, waitUntilInfrastructureReady),
+		)
 
 		_ = g.AddGroup(b.HibernateControlPlaneTaskGroup(flowCtx.skipReadiness).WithDependencies(
 			initializeShootClients,
-			deployPrometheus,
-			deployAlertmanager,
-			deploySeedLogging,
+			reconcileObservabilityComponents,
 			waitUntilEtcdScaledAfterRestore,
 			// Hibernating the control plane destroys the kube-apiserver SNI resources, so it must not run concurrently
 			// with the task deploying and waiting for them. Otherwise, the deploy task fails waiting for the
