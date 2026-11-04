@@ -79,7 +79,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		values.StaticPodConfig = &etcd.StaticPodConfig{}
 	}
 
-	return NewEtcd(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, values), nil
+	return NewEtcd(b.Logger, b.SeedClientSet.APIReader(), b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, values), nil
 }
 
 func getEvictionRequirement(c etcd.Class, s *shoot.Shoot) *string {

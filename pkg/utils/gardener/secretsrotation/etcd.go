@@ -36,6 +36,7 @@ import (
 func RewriteEncryptedDataAddLabel(
 	ctx context.Context,
 	log logr.Logger,
+	runtimeAPIReader client.Reader,
 	runtimeClient client.Client,
 	clientSet kubernetes.Interface,
 	secretsManager secretsmanager.Interface,
@@ -46,9 +47,11 @@ func RewriteEncryptedDataAddLabel(
 	defaultGVKs []schema.GroupVersionKind,
 ) error {
 	// Check if we have to label the resources to rewrite the data.
-	meta := &metav1.PartialObjectMetadata{}
+	// We read via the API reader (and not the cached client) because the annotation might have been
+	// written by us in a previous reconciliation, and the cache might not have caught up yet.
+	meta := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, meta); err != nil {
+	if err := runtimeAPIReader.Get(ctx, client.ObjectKeyFromObject(meta), meta); err != nil {
 		return err
 	}
 
@@ -199,15 +202,18 @@ func rewriteEncryptedData(
 // after it's done so that it does not take another snapshot again after it succeeded once.
 func SnapshotETCDAfterRewritingEncryptedData(
 	ctx context.Context,
+	runtimeAPIReader client.Reader,
 	runtimeClient client.Client,
 	snapshotEtcd func(ctx context.Context) error,
 	namespace string,
 	name string,
 ) error {
 	// Check if we have to snapshot ETCD now that we have rewritten all encrypted data.
-	meta := &metav1.PartialObjectMetadata{}
+	// We read via the API reader (and not the cached client) because the annotation might have been
+	// written by us in a previous reconciliation, and the cache might not have caught up yet.
+	meta := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, meta); err != nil {
+	if err := runtimeAPIReader.Get(ctx, client.ObjectKeyFromObject(meta), meta); err != nil {
 		return err
 	}
 

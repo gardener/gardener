@@ -214,6 +214,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	if err := shared.DeployKubeAPIServer(
 		ctx,
+		b.SeedClientSet.APIReader(),
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
