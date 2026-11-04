@@ -1235,6 +1235,44 @@ func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 	return g
 }
 
+// TaskGroupMigrateExtensionResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateExtensionResources flow.TaskID = "TaskGroupMigrateExtensionResources"
+
+// MigrateExtensionResourcesTaskGroup stops the machine-controller-manager and then migrates all extension resources
+// so the destination seed can restore them.
+func (b *Botanist) MigrateExtensionResourcesTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateExtensionResources)
+
+		deleteMachineControllerManager = g.Add(flow.Task{
+			Name: "Deleting machine-controller-manager",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.MachineControllerManager.Destroy(ctx)
+			}),
+			SkipIf: b.Shoot.IsWorkerless,
+		})
+		waitUntilMachineControllerManagerDeleted = g.Add(flow.Task{
+			Name: "Waiting until machine-controller-manager has been deleted",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.MachineControllerManager.WaitCleanup(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
+		})
+		migrateExtensionResources = g.Add(flow.Task{
+			Name:         "Migrating extension resources",
+			Fn:           b.MigrateExtensionResourcesInParallel,
+			Dependencies: flow.NewTaskIDs(waitUntilMachineControllerManagerDeleted),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been migrated",
+			Fn:           b.WaitUntilExtensionResourcesMigrated,
+			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
+		})
+	)
+
+	return g
+}
 // TaskGroupMigrateAndDeleteManagedResources is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupMigrateAndDeleteManagedResources flow.TaskID = "TaskGroupMigrateAndDeleteManagedResources"
 
