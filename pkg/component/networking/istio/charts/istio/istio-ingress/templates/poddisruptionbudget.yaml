@@ -6,7 +6,7 @@ metadata:
   labels:
 {{ .Values.labels | toYaml | trim | indent 4 }}
 spec:
-  minAvailable: 1
+  maxUnavailable: 20%
   selector:
     matchLabels:
 {{ .Values.labels | toYaml | trim | indent 6 }}
