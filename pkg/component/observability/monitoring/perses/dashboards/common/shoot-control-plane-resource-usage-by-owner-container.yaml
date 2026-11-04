@@ -106,7 +106,7 @@ spec:
                     kind: PrometheusDatasource
                   minStep: ""
                   query: metering:memory_usage_seconds{shoot_uid!="",namespace=~"$namespace"}
-                  seriesNameFormat: CPU, Memory, Network usage time in {{year}}/{{month}} 
+                  seriesNameFormat: CPU, Memory, Network usage time in {{year}}/{{month}}
           - kind: TimeSeriesQuery
             spec:
               plugin:
@@ -116,7 +116,7 @@ spec:
                     kind: PrometheusDatasource
                   minStep: ""
                   query: metering:disk_usage_seconds{shoot_uid!="",namespace=~"$namespace"}
-                  seriesNameFormat: Disk usage time in {{year}}/{{month}} 
+                  seriesNameFormat: Disk usage time in {{year}}/{{month}}
     "0_2":
       kind: Panel
       spec:
