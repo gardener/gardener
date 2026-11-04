@@ -309,19 +309,19 @@ func (r *Reconciler) delete(
 			Name: "Destroying main ETCD backup buckets",
 			Fn: func(ctx context.Context) error {
 				backupBucketList := &extensionsv1alpha1.BackupBucketList{}
-				if err := r.RuntimeClientSet.Client().List(ctx, backupBuckets); err != nil {
+				if err := r.RuntimeClientSet.Client().List(ctx, backupBucketList); err != nil {
 					return fmt.Errorf("failed to determine backup buckets associated to this garden: %w", err)
 				}
 
 				var waitFns []flow.TaskFn
-				for _, backupBucket := range backupBuckets.Items {
+				for _, backupBucket := range backupBucketList.Items {
 					if backupBucket.Spec.Class == nil || *backupBucket.Spec.Class != extensionsv1alpha1.ExtensionClassGarden ||
 						backupBucket.Spec.SecretRef.Namespace != r.GardenNamespace {
 						continue
 					}
 
-					if err := extensions.DeleteExtensionObject(ctx, r.RuntimeClientSet.Client(), backupBucket); err != nil {
-						return fmt.Errorf("failed deleting backup bucket %s: %w", client.ObjectKeyFromObject(backupBucket), err)
+					if err := extensions.DeleteExtensionObject(ctx, r.RuntimeClientSet.Client(), &backupBucket); err != nil {
+						return fmt.Errorf("failed deleting backup bucket %s: %w", client.ObjectKeyFromObject(&backupBucket), err)
 					}
 
 					waitFns = append(waitFns, func(ctx context.Context) error {
@@ -329,7 +329,7 @@ func (r *Reconciler) delete(
 							ctx,
 							r.RuntimeClientSet.Client(),
 							log,
-							backupBucket,
+							&backupBucket,
 							extensionsv1alpha1.BackupBucketResource,
 							2*time.Second,
 							time.Minute,
