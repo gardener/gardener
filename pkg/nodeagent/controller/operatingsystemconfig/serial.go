@@ -136,6 +136,12 @@ func (l *leaderElector) renewedInTime() bool {
 // on every reconciliation, so crossing this threshold without a renewal is already anomalous and warrants checking
 // whether the holder node still exists.
 func (l *leaderElector) renewedRecently() bool {
+	// An indefinite Lease (no duration) is intentionally held throughout an in-place update and never goes stale by
+	// timeout, so it is always considered renewed recently and the holder node existence is never checked.
+	if l.lease != nil && l.lease.Spec.LeaseDurationSeconds == nil {
+		return true
+	}
+
 	return l.durationUntilNotRenewedRecently() > 0
 }
 

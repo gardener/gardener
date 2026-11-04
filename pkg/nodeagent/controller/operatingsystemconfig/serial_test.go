@@ -239,9 +239,9 @@ var _ = Describe("leaderElector", func() {
 	})
 
 	Describe("#renewedRecently", func() {
-		It("should return false when LeaseDurationSeconds is nil", func() {
+		It("should return true when LeaseDurationSeconds is nil", func() {
 			le.lease.Spec.RenewTime = &metav1.MicroTime{Time: now}
-			Expect(le.renewedRecently()).To(BeFalse())
+			Expect(le.renewedRecently()).To(BeTrue())
 		})
 
 		It("should return false when LeaseDurationSeconds is negative", func() {
