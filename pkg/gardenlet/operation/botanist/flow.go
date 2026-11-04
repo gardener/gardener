@@ -1343,6 +1343,42 @@ func (b *Botanist) MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResourc
 
 	return g
 }
+// TaskGroupMigrateAndDeleteControlPlane is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateAndDeleteControlPlane flow.TaskID = "TaskGroupMigrateAndDeleteControlPlane"
+
+// MigrateAndDeleteControlPlaneTaskGroup handles the migration and deletion of the shoot control plane.
+func (b *Botanist) MigrateAndDeleteControlPlaneTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteControlPlane)
+
+		migrateControlPlane = g.Add(flow.Task{
+			Name: "Migrating shoot control plane",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ControlPlane.Migrate(ctx)
+			}),
+			SkipIf: b.Shoot.IsWorkerless,
+		})
+		deleteControlPlane = g.Add(flow.Task{
+			Name: "Deleting shoot control plane",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ControlPlane.Destroy(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(migrateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until shoot control plane has been deleted",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.ControlPlane.WaitCleanup(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deleteControlPlane),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupDestroyExtensionAndMachineResources is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupDestroyExtensionAndMachineResources flow.TaskID = "TaskGroupDestroyExtensionAndMachineResources"
 

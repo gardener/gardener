@@ -157,40 +157,17 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		migrateExtensionResourcesGroup            = g.AddGroup(botanist.MigrateExtensionResourcesTaskGroup().WithDependencies(migrateManagedResources))
 		migrateExtensionsBeforeKubeAPIServerGroup = g.AddGroup(botanist.MigrateExtensionsBeforeKubeAPIServerTaskGroup().WithDependencies(migrateExtensionResourcesGroup))
 		destroyExtensionAndMachineResourcesGroup  = g.AddGroup(botanist.DestroyExtensionAndMachineResourcesTaskGroup().WithDependencies(migrateExtensionsBeforeKubeAPIServerGroup))
-		migrateControlPlane = g.Add(flow.Task{
-			Name: "Migrating shoot control plane",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlane.Migrate(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted, waitUntilExtensionsBeforeKubeAPIServerDeleted, waitUntilStaleExtensionResourcesDeleted),
-		})
-		deleteControlPlane = g.Add(flow.Task{
-			Name: "Deleting shoot control plane",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlane.Destroy(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(migrateControlPlane),
-		})
-		waitUntilControlPlaneDeleted = g.Add(flow.Task{
-			Name: "Waiting until shoot control plane has been deleted",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deleteControlPlane),
-		})
-		waitUntilShootManagedResourcesDeleted = g.Add(flow.Task{
+		migrateControlPlane                       = g.AddGroup(botanist.MigrateAndDeleteControlPlaneTaskGroup().WithDependencies(destroyExtensionAndMachineResourcesGroup))
+		waitUntilShootManagedResourcesDeleted     = g.Add(flow.Task{
 			Name:         "Waiting until shoot managed resources have been deleted",
 			Fn:           flow.TaskFn(botanist.WaitUntilShootManagedResourcesDeleted).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneDeleted),
+			Dependencies: flow.NewTaskIDs(migrateControlPlane),
 		})
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting kube-apiserver deployment",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady, waitUntilControlPlaneDeleted, waitUntilShootManagedResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(migrateManagedResources, waitUntilEtcdReady, migrateControlPlane, waitUntilShootManagedResourcesDeleted),
 		})
 		waitUntilKubeAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until kube-apiserver has been deleted",
