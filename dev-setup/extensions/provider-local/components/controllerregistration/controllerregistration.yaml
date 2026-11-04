@@ -24,6 +24,8 @@ spec:
       type: local
     - kind: OperatingSystemConfig
       type: local
+    - kind: OperatingSystemConfig
+      type: local2
     - kind: SelfHostedShootExposure
       type: local
       continuousEndpointUpdate: true

@@ -14,6 +14,7 @@ const (
 	Name = "provider-local"
 	// Type is the type of resources managed by the local actuators.
 	Type = "local"
+	Type2 = "local2"
 
 	// GardenRoleInfra is the value of the GardenRole key indicating type 'infra'.
 	GardenRoleInfra = "infra"
