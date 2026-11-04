@@ -580,6 +580,48 @@ func (b *Botanist) ReconcileKubeAPIServerTaskGroup(skipReadiness bool, deployTim
 
 	return g
 }
+
+// TaskGroupReconcileControlPlaneComponents is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileControlPlaneComponents flow.TaskID = "TaskGroupReconcileControlPlaneComponents"
+
+// ReconcileControlPlaneComponentsTaskGroup deploys kube-controller-manager, kube-scheduler,
+// vertical-pod-autoscaler, and dependency-watchdog.
+func (b *Botanist) ReconcileControlPlaneComponentsTaskGroup(shootIsGarden bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileControlPlaneComponents).
+			WithDependencies(
+				TaskGroupInitializeSecretsManagement,
+				TaskGroupReconcileGardenerResourceManager,
+			)
+
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes controller manager",
+			Fn:           flow.TaskFn(b.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(TaskGroupDeployCloudProviderSecret),
+			SkipIf:       b.Shoot.IsSelfHosted(),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying Kubernetes scheduler",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.ControlPlane.KubeScheduler.Deploy(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf: b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted(),
+		})
+		_ = g.Add(flow.Task{
+			Name:   "Reconciling Kubernetes vertical pod autoscaler",
+			Fn:     flow.TaskFn(b.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf: b.Shoot.IsWorkerless || shootIsGarden,
+		})
+		_ = g.Add(flow.Task{
+			Name:   "Deploying dependency-watchdog shoot access resources",
+			Fn:     flow.TaskFn(b.DeployDependencyWatchdogAccess).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf: b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted(),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileExtensionsAfterKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileExtensionsAfterKubeAPIServer flow.TaskID = "TaskGroupReconcileExtensionsAfterKubeAPIServer"
 
