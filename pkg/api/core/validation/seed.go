@@ -80,7 +80,7 @@ func ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *core.SeedTempl
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, fldPath.Child("spec"))...)
-	allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newSeedTemplate.Spec.Backup, oldSeedTemplate.Spec.Backup, newSeedTemplate.Annotations, "", field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newSeedTemplate.Spec.Backup, oldSeedTemplate.Spec.Backup, newSeedTemplate.Annotations, "", fldPath.Child("spec"))...)
 
 	return allErrs
 }
