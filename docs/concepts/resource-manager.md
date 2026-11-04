@@ -1025,12 +1025,13 @@ The controller adds the `node-agent.gardener.cloud/reconciliation-delay` annotat
 
 #### [High Availability Config Controller](../../pkg/resourcemanager/controller/node/highavailabilityconfig)
 
-The [high availability config webhook](#high-availability-config) uses `ScheduleAnyway` instead of `DoNotSchedule` for the hostname topology spread constraint when there is at most one node in the cluster.
-This prevents multi-replica pods from being stuck `Pending` during initial bootstrapping before additional nodes have joined.
+The [high availability config webhook](#high-availability-config) adapts the topology spread constraints to the cluster's current topology:
+It uses `ScheduleAnyway` instead of `DoNotSchedule` for the hostname topology spread constraint when there is at most one node in the cluster, and it caps the zones to those of the currently schedulable system components nodes (see the webhook description for the rationale).
+This prevents multi-replica pods from being stuck `Pending` during initial bootstrapping before additional nodes have joined, or after enabling the `zone` failure tolerance before worker nodes have rolled out across all configured zones.
 
-However, when additional nodes join later, nothing re-triggers the webhook to tighten the constraint.
-This controller watches `Node` `create` and `delete` events and, when the node count crosses the single-node threshold (in either direction), empty-patches HA-relevant `Deployment`s and `StatefulSet`s whose hostname topology spread constraint requires adaptation.
-This re-triggers the webhook, which then applies the correct topology spread constraints based on the current node count.
+However, when nodes join or leave later, nothing re-triggers the webhook to adapt the constraints.
+This controller watches `Node` `create` and `delete` events and, when either the node count crosses the single-node threshold or the set of zones of schedulable system components nodes changes from/to multiple zones, empty-patches HA-relevant `Deployment`s and `StatefulSet`s whose hostname or zone topology spread constraint requires adaptation.
+This re-triggers the webhook, which then applies the correct topology spread constraints based on the current cluster topology.
 
 The controller is enabled automatically when the high availability config webhook is enabled.
 
@@ -1077,6 +1078,13 @@ The webhook performs the following actions:
    ```
 
    This ensures that all pods are pinned to only nodes in exactly those concrete zones.
+
+   > [!NOTE]
+   > The `high-availability-config.resources.gardener.cloud/zones` annotation is the configured ceiling of zones that _may_ eventually host system components.
+   > The actual nodes can live in a subset of those zones - during (self-hosted shoot) bootstrapping, or after enabling the `zone` failure tolerance before worker nodes have rolled out across all zones.
+   > Hence, the webhook caps the zones to those of the currently schedulable nodes that can host system components (i.e., nodes labeled `worker.gardener.cloud/system-components=true` and not `.spec.unschedulable`) whenever less than two such zones are available.
+   > This affects both the node affinity above and the zone topology spread constraint below, so that pods are neither pinned to an empty zone nor forced to spread across zones that have no nodes yet.
+   > Node readiness is deliberately _not_ considered: it flaps on reboots and kubelet restarts, which must not shuffle the hard zone affinity. The [high availability config controller](#high-availability-config-controller) re-triggers the webhook once the available zones change.
 
 3. [Topology Spread Constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) are added to the pod template spec when the `.spec.replicas` are greater than `1`. When the `high-availability-config.resources.gardener.cloud/zones` annotation ...
 
