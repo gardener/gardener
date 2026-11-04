@@ -19,7 +19,7 @@ spec:
       foo: bar
   strategy:
     rollingUpdate:
-      maxSurge: 1
+      maxSurge: 20%
       maxUnavailable: 0
   template:
     metadata:
