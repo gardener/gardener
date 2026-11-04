@@ -1379,6 +1379,44 @@ func (b *Botanist) MigrateAndDeleteControlPlaneTaskGroup() flow.TaskGroup {
 	return g
 }
 
+// TaskMigrateAndDeleteExtensionsAfterKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
+const TaskMigrateAndDeleteExtensionsAfterKubeAPIServer flow.TaskID = "TaskMigrateAndDeleteExtensionsAfterKubeAPIServer"
+
+// MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup handles the migration and deletion of extensions that should be applied after the kube-apiserver.
+func (b *Botanist) MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskMigrateAndDeleteExtensionsAfterKubeAPIServer)
+
+		migrateExtensionsAfterKubeAPIServer = g.Add(flow.Task{
+			Name: "Migrating extensions after kube-apiserver",
+			Fn:   b.Shoot.Components.Extensions.Extension.MigrateAfterKubeAPIServer,
+		})
+		waitUntilExtensionsAfterKubeAPIServerMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled after kube-apiserver have been migrated",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitMigrateAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(migrateExtensionsAfterKubeAPIServer),
+		})
+		deleteExtensionsAfterKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting extensions after kube-apiserver",
+			Fn:           b.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extensions that should be handled after kube-apiserver have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionsAfterKubeAPIServer),
+		})
+		// Add this step in interest of completeness. All extension deletions should have already been triggered by previous steps.
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until all extensions have been deleted",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupDestroyExtensionAndMachineResources is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupDestroyExtensionAndMachineResources flow.TaskID = "TaskGroupDestroyExtensionAndMachineResources"
 
