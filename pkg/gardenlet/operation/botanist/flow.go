@@ -1273,6 +1273,35 @@ func (b *Botanist) MigrateExtensionResourcesTaskGroup() flow.TaskGroup {
 
 	return g
 }
+
+// TaskGroupMigrateExtensionsBeforeKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateExtensionsBeforeKubeAPIServer flow.TaskID = "TaskGroupMigrateExtensionsBeforeKubeAPIServer"
+
+// MigrateExtensionsBeforeKubeAPIServerTaskGroup migrates the source extensions needed before the kube-apiserver and
+// persists the resulting shoot state so the destination can restore them.
+func (b *Botanist) MigrateExtensionsBeforeKubeAPIServerTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateExtensionsBeforeKubeAPIServer)
+
+		migrateExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
+			Name: "Migrating extensions before kube-apiserver",
+			Fn:   b.Shoot.Components.Extensions.Extension.MigrateBeforeKubeAPIServer,
+		})
+		waitUntilExtensionsBeforeKubeAPIServerMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extensions before kube-apiserver have been migrated",
+			Fn:           b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Persisting shoot state",
+			Fn:           b.PersistShootState,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionsBeforeKubeAPIServerMigrated),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupMigrateAndDeleteManagedResources is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupMigrateAndDeleteManagedResources flow.TaskID = "TaskGroupMigrateAndDeleteManagedResources"
 
