@@ -46,7 +46,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
 		Predicates:        operatingsystemconfig.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
-		Types:             []string{local.Type, local.Type2},
+		Types:             []string{local.Type},
 		ExtensionClasses:  classes,
 	})
 }

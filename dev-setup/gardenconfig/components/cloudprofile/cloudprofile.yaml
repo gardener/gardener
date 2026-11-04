@@ -15,29 +15,11 @@ spec:
     # When a specific patch version is needed for a bug fix or similar reason, keep the previous patch version for at least one more release.
     versions:
     - version: 1.37.0
-      lifecycle:
-        - classification: deprecated
-          startTime: 2024-06-01T00:00:00Z
     - version: 1.36.0
-      lifecycle:
-        - classification: supported
-          startTime: 2024-06-01T00:00:00Z
     - version: 1.35.4
-      lifecycle:
-        - classification: preview
-          startTime: 2024-06-01T00:00:00Z
     - version: 1.34.3
-      lifecycle:
-        - classification: expired
-          startTime: 2024-06-01T00:00:00Z
     - version: 1.33.0
-      lifecycle:
-        - classification: deprecated
-          startTime: 2028-06-01T00:00:00Z
     - version: 1.32.0
-      lifecycle:
-        - classification: supported
-          startTime: 2028-06-01T00:00:00Z
   # These values do not represent the actual machine capacity. The actual
   # capacity of the machine depends on your docker resource allocation.
   machineTypes:
@@ -50,46 +32,13 @@ spec:
     versions:
     # This version is just used for in-place update e2e tests.
     - version: 2.0.0
-      lifecycle:
-        - classification: preview
-          startTime: 2024-06-01T00:00:00Z
+      classification: preview
       cri:
       - name: containerd
       inPlaceUpdates:
         supported: true
         minVersionForUpdate: 1.0.0
     - version: 1.0.0
-      lifecycle:
-        - classification: supported
-          startTime: 2024-06-01T00:00:00Z
-      cri:
-      - name: containerd
-      inPlaceUpdates:
-        supported: true
-  - name: local2
-    versions:
-    # This version is just used for in-place update e2e tests.
-    - version: 2.0.0
-      lifecycle:
-        - classification: supported
-          startTime: 2024-06-01T00:00:00Z
-      cri:
-      - name: containerd
-      inPlaceUpdates:
-        supported: true
-        minVersionForUpdate: 1.0.0
-    - version: 1.0.0
-      lifecycle:
-        - classification: deprecated
-          startTime: 2024-06-01T00:00:00Z
-      cri:
-      - name: containerd
-      inPlaceUpdates:
-        supported: true
-    - version: 0.5.0
-      lifecycle:
-        - classification: expired
-          startTime: 2028-06-01T00:00:00Z
       cri:
       - name: containerd
       inPlaceUpdates:
@@ -103,14 +52,6 @@ spec:
       - version: 1.0.0
         image: local-skaffold/gardener-extension-provider-local/node:v1.0.0
       # This version is just used for in-place update e2e tests.
-      - version: 2.0.0
-        image: local-skaffold/gardener-extension-provider-local/node:v1.0.0
-    - name: local2
-      versions:
-      - version: 0.5.0
-        image: local-skaffold/gardener-extension-provider-local/node:v1.0.0
-      - version: 1.0.0
-        image: local-skaffold/gardener-extension-provider-local/node:v1.0.0
       - version: 2.0.0
         image: local-skaffold/gardener-extension-provider-local/node:v1.0.0
     loadBalancer:
