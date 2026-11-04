@@ -519,6 +519,14 @@ type Gardener struct {
 	// ResourceManager contains configuration settings for the gardener-resource-manager.
 	// +optional
 	ResourceManager *GardenerResourceManagerConfig `json:"gardenerResourceManager,omitempty"`
+	// TrustBundleSecretRef is a reference to a Secret in the same namespace as the Garden resource that holds a custom
+	// CA trust bundle under the key `ca-certificates.crt`. When set, the bundle is mounted into the Gardener control
+	// plane pods (gardener-apiserver, gardener-controller-manager, gardener-admission-controller, gardener-scheduler,
+	// gardener-dashboard, gardener-discovery-server, gardener-resource-manager) at
+	// `/etc/ssl/certs/ca-certificates.crt` (via subPath), making the supplied CAs trusted for outbound TLS connections
+	// that honour the system trust store.
+	// +optional
+	TrustBundleSecretRef *corev1.LocalObjectReference `json:"trustBundleSecretRef,omitempty"`
 }
 
 // GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
