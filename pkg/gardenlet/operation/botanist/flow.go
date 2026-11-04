@@ -542,6 +542,44 @@ func (b *Botanist) ReconcileExtensionsBeforeKubeAPIServerTaskGroup(skipReadiness
 	return g
 }
 
+// TaskGroupReconcileKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupReconcileKubeAPIServer flow.TaskID = "TaskGroupReconcileKubeAPIServer"
+
+// ReconcileKubeAPIServerTaskGroup returns the flow.TaskGroup for deploying the kube-apiserver,
+// SNI resources, and cleaning up stale load-balancing services.
+func (b *Botanist) ReconcileKubeAPIServerTaskGroup(skipReadiness bool, deployTimeout time.Duration) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupReconcileKubeAPIServer)
+
+		deployKubeAPIServer = g.Add(flow.Task{
+			Name: "Deploying Kubernetes API server",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.DeployKubeAPIServer(ctx)
+			}).RetryUntilTimeout(defaultInterval, deployTimeout),
+			SkipIf: b.Shoot.IsSelfHosted(),
+		})
+		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server rolled out",
+			Fn:           b.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness || b.Shoot.IsSelfHosted(),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+		})
+		deployKubeAPIServerServiceSNISettings = g.Add(flow.Task{
+			Name:         "Deploying and waiting for Kubernetes API server service SNI settings in the Seed cluster",
+			Fn:           flow.TaskFn(b.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.Shoot.IsSelfHosted(),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up stale Kubernetes API server services in the Seed cluster",
+			Fn:           flow.TaskFn(b.CleanupKubeAPIServerLoadBalancingServices).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       b.ShootUsesIstioTLSTermination(),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerServiceSNISettings),
+		})
+	)
+
+	return g
+}
 // TaskGroupReconcileExtensionsAfterKubeAPIServer is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileExtensionsAfterKubeAPIServer flow.TaskID = "TaskGroupReconcileExtensionsAfterKubeAPIServer"
 
