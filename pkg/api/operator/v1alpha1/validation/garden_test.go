@@ -1569,6 +1569,7 @@ var _ = Describe("Validation Tests", func() {
 							Backup: &operatorv1alpha1.Backup{
 								BucketName: new("foo"),
 								Provider:   "foo-provider",
+								SecretRef:  corev1.LocalObjectReference{Name: "backup-secret"},
 								ProviderConfig: &runtime.RawExtension{
 									Raw: []byte(`{"foo":"bar"}`),
 								},
@@ -3105,7 +3106,7 @@ var _ = Describe("Validation Tests", func() {
 					}
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
+						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup"),
 					}))))
 				})
@@ -3153,6 +3154,7 @@ var _ = Describe("Validation Tests", func() {
 								Provider:   "foo-provider",
 								BucketName: new("foo-bucket"),
 								Region:     new("foo-region"),
+								SecretRef:  corev1.LocalObjectReference{Name: "backup-secret"},
 							},
 						},
 					}
@@ -3162,6 +3164,7 @@ var _ = Describe("Validation Tests", func() {
 								Provider:   "bar-provider",
 								BucketName: new("bar-bucket"),
 								Region:     new("bar-region"),
+								SecretRef:  corev1.LocalObjectReference{Name: "backup-secret"},
 							},
 						},
 					}
