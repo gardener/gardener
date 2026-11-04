@@ -316,6 +316,16 @@ type SeedSettings struct {
 	// PersistentVolumeClaimAutoscaler controls certain settings for the persistent volume claim autoscaler components deployed in the seed.
 	// +optional
 	PersistentVolumeClaimAutoscaler *SeedSettingPersistentVolumeClaimAutoscaler `json:"persistentVolumeClaimAutoscaler,omitempty" protobuf:"bytes,10,opt,name=persistentVolumeClaimAutoscaler"`
+	// TrustBundle controls the mounting of a custom CA trust bundle into gardenlet-managed seed-system components.
+	// +optional
+	TrustBundle *SeedSettingTrustBundle `json:"trustBundle,omitempty" protobuf:"bytes,11,opt,name=trustBundle"`
+}
+
+// SeedSettingTrustBundle controls the mounting of a custom CA trust bundle into seed-system components.
+type SeedSettingTrustBundle struct {
+	// SecretRef is a reference to a Secret in the `garden` namespace of the seed cluster. It must contain the
+	// concatenated PEM-encoded CA certificates under the key `ca-certificates.crt`.
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // SeedSettingZoneSelection controls whether shoot control plane zone placement is derived
