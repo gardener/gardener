@@ -285,29 +285,6 @@ var _ = Describe("Helper", func() {
 		Entry("no live migration in progress", liveMigratingShoot("source", "destination", false), "source", LiveMigrationRoleNone),
 	)
 
-	DescribeTable("#GetLiveMigrationPeerRole",
-		func(role, expected LiveMigrationRole) {
-			Expect(GetLiveMigrationPeerRole(role)).To(Equal(expected))
-		},
-
-		Entry("peer of source", LiveMigrationRoleSource, LiveMigrationRoleDestination),
-		Entry("peer of destination", LiveMigrationRoleDestination, LiveMigrationRoleSource),
-		Entry("peer of none", LiveMigrationRoleNone, LiveMigrationRoleNone),
-	)
-
-	DescribeTable("#GetLiveMigrationPeerSeedName",
-		func(shoot *gardencorev1beta1.Shoot, seedName, expectedName string, expectedOK bool) {
-			name, ok := GetLiveMigrationPeerSeedName(shoot, seedName)
-			Expect(name).To(Equal(expectedName))
-			Expect(ok).To(Equal(expectedOK))
-		},
-
-		Entry("seed is source", liveMigratingShoot("source", "destination", true), "source", "destination", true),
-		Entry("seed is destination", liveMigratingShoot("source", "destination", true), "destination", "source", true),
-		Entry("seed not involved", liveMigratingShoot("source", "destination", true), "other", "", false),
-		Entry("no live migration in progress", liveMigratingShoot("source", "destination", false), "source", "", false),
-	)
-
 	Describe("live migration conditions", func() {
 		var (
 			condition = gardencorev1beta1.Condition{

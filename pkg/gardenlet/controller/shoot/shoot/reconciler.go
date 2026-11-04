@@ -208,12 +208,10 @@ func (r *Reconciler) migrateShoot(ctx context.Context, log logr.Logger, shoot *g
 
 func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, role v1beta1helper.LiveMigrationRole) (reconcile.Result, error) {
 	log = log.WithValues("operation", "live-migrate", "liveMigrationRole", role)
-	if err := r.checkLiveMigrationVersionParity(ctx, log, shoot, role); err != nil {
-		codes := v1beta1helper.ExtractErrorCodes(err)
-		if !slices.Contains(codes, gardencorev1beta1.ErrorLiveMigrationSeedVersionMismatch) {
-			return reconcile.Result{}, err
-		}
-		return r.blockLiveMigrationOnParityError(ctx, shoot, gardencorev1beta1.LastError{Description: err.Error(), Codes: codes})
+
+	if err := r.checkGardenletVersionParity(ctx, shoot, role); err != nil {
+		updateErr := r.patchShootStatusOperationError(ctx, shoot, err.Error(), gardencorev1beta1.LastOperationTypeLiveMigrate, false)
+		return reconcile.Result{}, errorsutils.WithSuppressed(err, updateErr)
 	}
 
 	o, result, err := r.prepareOperation(ctx, log, shoot)
@@ -222,11 +220,6 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 	}
 
 	if flowErr := r.runLiveMigrateShootFlow(ctx, o, role); flowErr != nil {
-		if i := slices.IndexFunc(flowErr.LastErrors, func(lastError gardencorev1beta1.LastError) bool {
-			return slices.Contains(lastError.Codes, gardencorev1beta1.ErrorLiveMigrationSeedVersionMismatch)
-		}); i >= 0 {
-			return r.blockLiveMigrationOnParityError(ctx, shoot, flowErr.LastErrors[i])
-		}
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeLiveMigrate, false, flowErr.LastErrors...)
 		return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
@@ -1031,14 +1024,6 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	}
 
 	return r.GardenClient.Status().Patch(ctx, shoot, patch)
-}
-
-// blockLiveMigrationOnParityError records the version mismatch as a retryable error and schedules a retry.
-func (r *Reconciler) blockLiveMigrationOnParityError(ctx context.Context, shoot *gardencorev1beta1.Shoot, parityError gardencorev1beta1.LastError) (reconcile.Result, error) {
-	if patchErr := r.patchShootStatusOperationError(ctx, shoot, parityError.Description, gardencorev1beta1.LastOperationTypeLiveMigrate, true, parityError); patchErr != nil {
-		return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(parityError.Description), patchErr)
-	}
-	return reconcile.Result{RequeueAfter: liveMigrationVersionParityRequeueInterval}, nil
 }
 
 func (r *Reconciler) patchShootStatusOperationError(

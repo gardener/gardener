@@ -41,10 +41,6 @@ const (
 	// best practices (https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings).
 	// It is classified as a non-retryable error code.
 	ErrorProblematicWebhook ErrorCode = "ERR_PROBLEMATIC_WEBHOOK"
-	// ErrorLiveMigrationSeedVersionMismatch indicates that a live control plane migration is blocked because the
-	// source and destination seeds run different gardenlet versions. It is retryable: the migration proceeds once
-	// the versions align.
-	ErrorLiveMigrationSeedVersionMismatch ErrorCode = "ERR_LIVE_MIGRATION_SEED_VERSION_MISMATCH"
 )
 
 // LastError indicates the last occurred error for an operation on a resource.
