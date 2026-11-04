@@ -22,10 +22,20 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func runMigrations(ctx context.Context, c client.Client, log logr.Logger) manager.RunnableFunc {
+func runMigrations(ctx context.Context, reader client.Reader, c client.Client, log logr.Logger) manager.RunnableFunc {
 	return func(context.Context) error {
 		// TODO(timuthy): Remove migration after Gardener v1.155 has been released.
-		return DeleteStaleShootAccessSecrets(ctx, c, log)
+		if err := DeleteStaleShootAccessSecrets(ctx, c, log); err != nil {
+			return err
+		}
+
+		// TODO(DobromirNPeev): Remove this migration once a release containing it has been published and clusters have been
+		// upgraded past it.
+		if err := gardenerutils.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, reader, c); err != nil {
+			return fmt.Errorf("failed removing vpa-in-place-updates mutated label from VerticalPodAutoscalers: %w", err)
+		}
+
+		return nil
 	}
 }
 

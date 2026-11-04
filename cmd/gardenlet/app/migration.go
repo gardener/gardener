@@ -25,6 +25,12 @@ func (g *garden) runMigrations(ctx context.Context, gardenClient client.Client) 
 		}
 	}
 
+	// TODO(DobromirNPeev): Remove this migration once a release containing it has been published and clusters have been
+	// upgraded past it.
+	if err := gardenerutils.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, g.mgr.GetAPIReader(), g.mgr.GetClient()); err != nil {
+		return fmt.Errorf("failed removing vpa-in-place-updates mutated label from VerticalPodAutoscalers: %w", err)
+	}
+
 	return nil
 }
 
