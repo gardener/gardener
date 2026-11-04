@@ -204,14 +204,14 @@ func (c *Constraint) constraintsChecks(
 		constraints.crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.crdsWithProblematicConversionWebhooks, status, reason, message)
 	}
 
-	status, reason, message, err = c.checkIfKubernetesVersionIsSupported()
+	status, reason, message, err = c.CheckIfKubernetesVersionIsSupported()
 	if err != nil {
 		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.kubernetesVersionSupported, err)
 	} else {
 		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.kubernetesVersionSupported, status, reason, message)
 	}
 
-	status, reason, message, err = c.checkIfmachineImageVersionIsSupported()
+	status, reason, message, err = c.CheckIfMachineImageVersionIsSupported()
 	if err != nil {
 		constraints.machineImagesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.machineImagesVersionSupported, err)
 	} else {
@@ -351,10 +351,11 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 		nil
 }
 
-func (c *Constraint) checkIfKubernetesVersionIsSupported() (gardencorev1beta1.ConditionStatus, string, string, error) {
+// CheckIfKubernetesVersionIsSupported checks if the Shoot's Kubernetes version is is classified as supported in the CloudProfile.
+func (c *Constraint) CheckIfKubernetesVersionIsSupported() (gardencorev1beta1.ConditionStatus, string, string, error) {
 	cloudProfile := c.shoot.CloudProfile
 	if cloudProfile == nil {
-		return "", "", "", fmt.Errorf("could not get cloud profile of shoot to check for supported kubernetes version")
+		return "", "", "", fmt.Errorf("could not get CloudProfile of shoot to check for supported kubernetes version")
 	}
 
 	versionFromShoot := c.shoot.GetInfo().Spec.Kubernetes.Version
@@ -372,12 +373,12 @@ func (c *Constraint) checkIfKubernetesVersionIsSupported() (gardencorev1beta1.Co
 	case gardencorev1beta1.ClassificationSupported:
 		return gardencorev1beta1.ConditionTrue,
 			fmt.Sprintf("KubernetesVersionLifecycleStatus%s", classification),
-			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the cloud profile.", classification),
+			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", classification),
 			nil
 	case gardencorev1beta1.ClassificationDeprecated, gardencorev1beta1.ClassificationExpired, gardencorev1beta1.ClassificationPreview, gardencorev1beta1.ClassificationUnavailable:
 		return gardencorev1beta1.ConditionFalse,
 			fmt.Sprintf("KubernetesVersionLifecycleStatus%s", classification),
-			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the cloud profile.", classification),
+			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", classification),
 			nil
 	default: // either someone added a status to the VersionClassification constants or _notFound
 		return gardencorev1beta1.ConditionFalse,
@@ -387,10 +388,11 @@ func (c *Constraint) checkIfKubernetesVersionIsSupported() (gardencorev1beta1.Co
 	}
 }
 
-func (c *Constraint) checkIfmachineImageVersionIsSupported() (gardencorev1beta1.ConditionStatus, string, string, error) {
+// CheckIfMachineImageVersionIsSupported checks if all machine image versions in the worker pool of the shoot are classified as supported in the CloudProfile.
+func (c *Constraint) CheckIfMachineImageVersionIsSupported() (gardencorev1beta1.ConditionStatus, string, string, error) {
 	cloudProfile := c.shoot.CloudProfile
 	if cloudProfile == nil {
-		return "", "", "", fmt.Errorf("could not get cloud profile of shoot to check for supported kubernetes version")
+		return "", "", "", fmt.Errorf("could not get CloudProfile of shoot to check for supported kubernetes version")
 	}
 
 	// Convert CloudProfile MachineImageVersions to a map so we don't have to iterate the whole structure for every worker.
