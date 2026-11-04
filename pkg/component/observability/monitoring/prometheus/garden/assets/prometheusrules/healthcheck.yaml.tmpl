@@ -20,8 +20,12 @@ spec:
             task: scrape_pool:empty
 
         # healthcheck{task="scrape:empty"} is present for each scrape job that yields no samples after metric relabeling.
+        #
+        # The gardener-metrics job is excluded: it scrapes the gardener-metrics-collector, whose output depends on the
+        # garden's content (e.g. shoots, seeds). An empty scrape is a valid state (e.g. a freshly created garden), so it
+        # must not render the garden unhealthy. The target:down and scrape_pool:empty checks still apply to this job.
         - record: healthcheck
-          expr: sum by (job) (scrape_samples_post_metric_relabeling) == 0
+          expr: sum by (job) (scrape_samples_post_metric_relabeling{job!="gardener-metrics"}) == 0
           labels:
             task: scrape:empty
 
