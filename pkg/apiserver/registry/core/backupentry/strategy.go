@@ -72,10 +72,8 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 			return true
 		}
 		if oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRestore {
-			// A restore was newly requested (old operation =! restore, new operation = restore)
 			return true
 		}
-		//else: annotation is "restore" in both old and new, fall through to see if anything else changed
 	}
 
 	// The BackupEntry specification changes.
