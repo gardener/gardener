@@ -6,10 +6,13 @@ package nodeagent_test
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/component-base/version"
 
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
@@ -68,6 +71,78 @@ kind: NodeAgentConfiguration
 			Expect(config).NotTo(BeNil())
 			Expect(config.CAFile).To(Equal(nodeAgentConfig.APIServer.CAFile))
 			Expect(config.Server).To(Equal(nodeAgentConfig.APIServer.Server))
+		})
+	})
+
+	Describe("#EnsureServerInKubeconfig", func() {
+		var (
+			fs         afero.Afero
+			kubeconfig []byte
+		)
+
+		BeforeEach(func() {
+			fs = afero.Afero{Fs: afero.NewMemMapFs()}
+			kubeconfig = []byte(`apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: /var/lib/gardener-node-agent/cluster-ca.crt
+    server: https://localhost
+  name: node-agent
+contexts:
+- context:
+    cluster: node-agent
+    user: node-agent
+  name: node-agent
+current-context: node-agent
+kind: Config
+users:
+- name: node-agent
+  user:
+    client-certificate-data: Y2VydA==
+    client-key-data: a2V5
+`)
+		})
+
+		It("should return an error if the kubeconfig file does not exist", func() {
+			Expect(EnsureServerInKubeconfig(logr.Discard(), fs, "https://api.internal.foo.bar")).To(MatchError(ContainSubstring("failed reading kubeconfig file")))
+		})
+
+		It("should return an error if the kubeconfig file is invalid", func() {
+			Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte("invalid"), 0600)).To(Succeed())
+
+			Expect(EnsureServerInKubeconfig(logr.Discard(), fs, "https://api.internal.foo.bar")).To(MatchError(ContainSubstring("failed loading kubeconfig file")))
+		})
+
+		It("should update the API server address and keep the credentials", func() {
+			Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, kubeconfig, 0600)).To(Succeed())
+
+			Expect(EnsureServerInKubeconfig(logr.Discard(), fs, "https://api.internal.foo.bar")).To(Succeed())
+
+			kubeconfigRaw, err := fs.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			updatedKubeconfig, err := clientcmd.Load(kubeconfigRaw)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updatedKubeconfig.Clusters).To(HaveKeyWithValue("node-agent", And(
+				HaveField("Server", "https://api.internal.foo.bar"),
+				HaveField("CertificateAuthority", "/var/lib/gardener-node-agent/cluster-ca.crt"),
+			)))
+			Expect(updatedKubeconfig.AuthInfos).To(HaveKeyWithValue("node-agent", And(
+				HaveField("ClientCertificateData", []byte("cert")),
+				HaveField("ClientKeyData", []byte("key")),
+			)))
+			Expect(updatedKubeconfig.CurrentContext).To(Equal("node-agent"))
+
+			fileInfo, err := fs.Stat(nodeagentconfigv1alpha1.KubeconfigFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fileInfo.Mode().Perm()).To(Equal(os.FileMode(0600)))
+		})
+
+		It("should not rewrite the kubeconfig if the API server address is up-to-date", func() {
+			Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, kubeconfig, 0600)).To(Succeed())
+
+			Expect(EnsureServerInKubeconfig(logr.Discard(), fs, "https://localhost")).To(Succeed())
+
+			Expect(fs.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)).To(Equal(kubeconfig))
 		})
 	})
 })

@@ -27,6 +27,7 @@ import (
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/api/indexer"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -277,7 +278,8 @@ func ItShouldVerifyAfterConnect(
 }
 
 // ItShouldUseExpectedAPIServerAddressOnNodes verifies that kubelet and kube-proxy talk to the control plane via
-// workerNodeHost on the worker nodes and via localhost on the control plane nodes.
+// workerNodeHost on the worker nodes and via localhost on the control plane nodes, and that gardener-node-agent talks to
+// the control plane via workerNodeHost on all nodes.
 func ItShouldUseExpectedAPIServerAddressOnNodes(
 	shootClientSetPtr *kubernetes.Interface,
 	runInNode func(ctx context.Context, nodeName string, cmd ...string) (*gbytes.Buffer, *gbytes.Buffer, error),
@@ -285,7 +287,7 @@ func ItShouldUseExpectedAPIServerAddressOnNodes(
 ) {
 	GinkgoHelper()
 
-	It("should let kubelet and kube-proxy talk to the control plane via the expected address", func(ctx SpecContext) {
+	It("should let gardener-node-agent, kubelet, and kube-proxy talk to the control plane via the expected address", func(ctx SpecContext) {
 		shootClient := (*shootClientSetPtr).Client()
 
 		nodeList := &corev1.NodeList{}
@@ -294,6 +296,15 @@ func ItShouldUseExpectedAPIServerAddressOnNodes(
 		Expect(nodeList.Items).To(ContainElement(HaveField("ObjectMeta.Labels", Not(HaveKey(v1beta1constants.LabelNodeRoleControlPlane)))), "there should be a worker node")
 
 		for _, node := range nodeList.Items {
+			// gardener-node-agent switches to the expected address on all nodes once its config has been updated, which
+			// is why it might still use localhost on the first control plane node for a short moment.
+			By("Verify that gardener-node-agent on node " + node.Name + " uses " + workerNodeHost)
+			Eventually(ctx, func(g Gomega) []string {
+				stdOut, _, err := runInNode(ctx, node.Name, "cat", nodeagentconfigv1alpha1.KubeconfigFilePath)
+				g.Expect(err).NotTo(HaveOccurred())
+				return serverHostsOfKubeconfig(g, stdOut.Contents())
+			}).Should(HaveEach(workerNodeHost), "gardener-node-agent on node %s should use the expected address", node.Name)
+
 			expectedHost := workerNodeHost
 			if _, isControlPlaneNode := node.Labels[v1beta1constants.LabelNodeRoleControlPlane]; isControlPlaneNode {
 				expectedHost = "localhost"
@@ -302,7 +313,7 @@ func ItShouldUseExpectedAPIServerAddressOnNodes(
 			By("Verify that kubelet on node " + node.Name + " uses " + expectedHost)
 			stdOut, _, err := runInNode(ctx, node.Name, "cat", kubeletcomponent.PathKubeconfigReal)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(serverHostsOfKubeconfig(stdOut.Contents())).To(HaveEach(expectedHost), "kubelet on node %s should use the expected address", node.Name)
+			Expect(serverHostsOfKubeconfig(Default, stdOut.Contents())).To(HaveEach(expectedHost), "kubelet on node %s should use the expected address", node.Name)
 
 			By("Verify that kube-proxy on node " + node.Name + " uses " + expectedHost)
 			Eventually(ctx, func(g Gomega) []string {
@@ -313,17 +324,17 @@ func ItShouldUseExpectedAPIServerAddressOnNodes(
 }
 
 // serverHostsOfKubeconfig returns the hosts of the servers of all clusters in the given kubeconfig.
-func serverHostsOfKubeconfig(rawKubeconfig []byte) []string {
+func serverHostsOfKubeconfig(g Gomega, rawKubeconfig []byte) []string {
 	GinkgoHelper()
 
 	kubeconfig, err := clientcmd.Load(rawKubeconfig)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(kubeconfig.Clusters).NotTo(BeEmpty())
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(kubeconfig.Clusters).NotTo(BeEmpty())
 
 	var hosts []string
 	for _, cluster := range kubeconfig.Clusters {
 		serverURL, err := url.Parse(cluster.Server)
-		Expect(err).NotTo(HaveOccurred())
+		g.Expect(err).NotTo(HaveOccurred())
 		hosts = append(hosts, serverURL.Hostname())
 	}
 	return hosts
@@ -356,7 +367,7 @@ func kubeProxyServerHosts(ctx context.Context, g Gomega, c client.Client, nodeNa
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: pod.Spec.Volumes[volumeIdx].Secret.SecretName, Namespace: metav1.NamespaceSystem}}
 	g.Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
-	return serverHostsOfKubeconfig(secret.Data["kubeconfig"])
+	return serverHostsOfKubeconfig(g, secret.Data["kubeconfig"])
 }
 
 // ItShouldBeReconciledByGardenlet verifies that the initial reconcile of the `gardenlet` for the self-hosted shoot is successful.

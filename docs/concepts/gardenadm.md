@@ -58,6 +58,7 @@ In this case, the internal domain is used as follows:
 - On the control plane nodes, `kubelet` and `kube-proxy` talk to the local API server via `localhost` instead.
 - If the shoot disables `kube-proxy` and the network plugin provides the service network, the corresponding network components should use the internal domain on worker nodes and `localhost` on control plane nodes (same configuration as `kube-proxy` would use) instead of `kubernetes.default.svc`.
 - `gardener-node-agent` uses the internal domain on both control plane and worker nodes.
+  On the first control plane node, it talks to the local API server via `localhost` while `gardenadm init` bootstraps the control plane, and switches to the internal domain once the internal `DNSRecord` exists.
 - `gardenadm token create --print-join-command` prints the internal domain for joining nodes.
 
 This reduces the risk of ending up in a split-brain scenario if the exposure (e.g., a load balancer) breaks: the worker nodes could no longer talk to the control plane while the control plane components still can, which might lead to the termination of the worker nodes.

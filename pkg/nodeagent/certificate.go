@@ -21,6 +21,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
@@ -84,6 +85,43 @@ func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Af
 	}
 
 	return fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, kubeconfig, 0600)
+}
+
+// EnsureServerInKubeconfig ensures that the kubeconfig stored on the disk uses the given API server address. The
+// kubeconfig is only written once when requesting the client certificate, but the API server address in the
+// gardener-node-agent config might change afterward. For example, on the first control plane node of a self-hosted
+// shoot, gardener-node-agent talks to the API server via localhost while bootstrapping the control plane and switches to
+// the internal domain afterward.
+func EnsureServerInKubeconfig(log logr.Logger, fs afero.Afero, server string) error {
+	kubeconfigRaw, err := fs.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)
+	if err != nil {
+		return fmt.Errorf("failed reading kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
+	}
+
+	kubeconfig, err := clientcmd.Load(kubeconfigRaw)
+	if err != nil {
+		return fmt.Errorf("failed loading kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
+	}
+
+	var changed bool
+	for name, cluster := range kubeconfig.Clusters {
+		if cluster.Server != server {
+			log.Info("Updating API server address in kubeconfig", "cluster", name, "oldServer", cluster.Server, "newServer", server)
+			cluster.Server = server
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	kubeconfigRaw, err = clientcmd.Write(*kubeconfig)
+	if err != nil {
+		return fmt.Errorf("failed encoding kubeconfig: %w", err)
+	}
+
+	return fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, kubeconfigRaw, 0600)
 }
 
 // GetAPIServerConfig reads the gardener-node-agent config file and returns the APIServer configuration.

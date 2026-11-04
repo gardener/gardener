@@ -327,6 +327,10 @@ func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs a
 		}
 	}
 
+	if err := nodeagent.EnsureServerInKubeconfig(log, fs, cfg.APIServer.Server); err != nil {
+		return nil, fmt.Errorf("failed ensuring API server address in kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
+	}
+
 	kubeconfig, err := fs.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
