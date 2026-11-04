@@ -711,7 +711,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>The name of the backup bucket used at the provider. Defaults to the seed's UID.<br />Through a subresource call this field can be altered in order to relocate a bucket location.</p>
+<p>BucketName is the name of the backup bucket at the provider. Defaults to the seed's UID.<br />This field can be altered in order to relocate a bucket location.</p>
 </td>
 </tr>
 

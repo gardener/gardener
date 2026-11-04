@@ -1531,7 +1531,7 @@ func schema_pkg_apis_core_v1beta1_Backup(ref common.ReferenceCallback) common.Op
 					},
 					"bucketName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The name of the backup bucket used at the provider. Defaults to the seed's UID. Through a subresource call this field can be altered in order to relocate a bucket location.",
+							Description: "BucketName is the name of the backup bucket at the provider. Defaults to the seed's UID. This field can be altered in order to relocate a bucket location.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
 // GetETCDMainBackup returns the backup configuration for etcd main of the given garden object or nil if not configured.

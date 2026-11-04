@@ -169,8 +169,8 @@ message Backup {
   // +optional
   optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 5;
 
-  // The name of the backup bucket used at the provider. Defaults to the seed's UID.
-  // Through a subresource call this field can be altered in order to relocate a bucket location.
+  // BucketName is the name of the backup bucket at the provider. Defaults to the seed's UID.
+  // This field can be altered in order to relocate a bucket location.
   // +optional
   optional string bucketName = 6;
 }

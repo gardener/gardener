@@ -39,11 +39,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/imagevector"
+	corehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
-
-	corehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
