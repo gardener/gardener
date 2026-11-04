@@ -296,6 +296,10 @@ func validateSeedBackup(seedBackup *core.Backup, seedProviderType string, fldPat
 		allErrs = append(allErrs, ValidateCredentialsRef(*seedBackup.CredentialsRef, SecretWorkloadIdentityGVKs, fldPath.Child("credentialsRef"))...)
 	}
 
+	if seedBackup.BucketName != nil && *seedBackup.BucketName == "" {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("bucketName"), seedBackup.BucketName, "bucketName must not be an empty string"))
+	}
+
 	return allErrs
 }
 

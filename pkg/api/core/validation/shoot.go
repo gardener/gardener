@@ -2953,6 +2953,10 @@ func ValidateWorkerControlPlane(controlPlane *core.WorkerControlPlane, shootName
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet implemented"))
 			}
 		}
+
+		if backup.BucketName != nil && *backup.BucketName == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("bucketName"), backup.BucketName, "bucketName must not be an empty string"))
+		}
 	}
 
 	if controlPlane.Exposure != nil {

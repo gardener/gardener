@@ -392,6 +392,20 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil {
 		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("etcd", "main", "autoscaling"))...)
+
+		if virtualCluster.ETCD.Main.Backup != nil {
+			if len(virtualCluster.ETCD.Main.Backup.Provider) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("etcd", "main", "backup", "provider"), "must provide a backup cloud provider name"))
+			}
+
+			if len(virtualCluster.ETCD.Main.Backup.SecretRef.Name) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("etcd", "main", "backup", "secretRef", "name"), "must provide a backup secreref name"))
+			}
+
+			if virtualCluster.ETCD.Main.Backup.BucketName != nil && *virtualCluster.ETCD.Main.Backup.BucketName == "" {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("etcd", "main", "backup", "bucketName"), virtualCluster.ETCD.Main.Backup.BucketName, "bucketName must not be an empty string"))
+			}
+		}
 	}
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Events != nil {
