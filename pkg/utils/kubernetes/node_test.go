@@ -5,12 +5,17 @@
 package kubernetes_test
 
 import (
+	"context"
 	"net"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -135,6 +140,129 @@ var _ = Describe("Node", func() {
 		It("should return an error when the node has no addresses at all", func() {
 			_, err := NodeInternalIP(node, false)
 			Expect(err).To(MatchError(ContainSubstring("node1")))
+		})
+	})
+
+	Describe("#AvailableZones", func() {
+		var (
+			ctx        = context.Background()
+			fakeClient client.Client
+			nodes      []client.Object
+
+			node = func(name, zone string, systemComponents, unschedulable bool) *corev1.Node {
+				labels := map[string]string{}
+				if systemComponents {
+					labels["worker.gardener.cloud/system-components"] = "true"
+				}
+				if zone != "" {
+					labels[corev1.LabelTopologyZone] = zone
+				}
+
+				return &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels},
+					Spec:       corev1.NodeSpec{Unschedulable: unschedulable},
+				}
+			}
+
+			systemComponentsSelector = client.MatchingLabels{"worker.gardener.cloud/system-components": "true"}
+		)
+
+		JustBeforeEach(func() {
+			scheme := runtime.NewScheme()
+			Expect(corev1.AddToScheme(scheme)).To(Succeed())
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(nodes...).Build()
+		})
+
+		When("nodes span multiple zones", func() {
+			BeforeEach(func() {
+				nodes = []client.Object{
+					node("node1", "zone-a", true, false),
+					node("node2", "zone-b", true, false),
+					node("node3", "zone-a", true, false),
+				}
+			})
+
+			It("should return the distinct zones", func() {
+				Expect(AvailableZones(ctx, fakeClient, systemComponentsSelector)).To(Equal(sets.New("zone-a", "zone-b")))
+			})
+		})
+
+		When("all nodes are in a single zone", func() {
+			BeforeEach(func() {
+				nodes = []client.Object{node("node1", "zone-a", true, false)}
+			})
+
+			It("should return the single zone", func() {
+				Expect(AvailableZones(ctx, fakeClient, systemComponentsSelector)).To(Equal(sets.New("zone-a")))
+			})
+		})
+
+		When("a zone's only node is cordoned", func() {
+			BeforeEach(func() {
+				nodes = []client.Object{
+					node("node1", "zone-a", true, false),
+					node("node2", "zone-b", true, true),
+				}
+			})
+
+			It("should exclude the cordoned node's zone", func() {
+				Expect(AvailableZones(ctx, fakeClient, systemComponentsSelector)).To(Equal(sets.New("zone-a")))
+			})
+		})
+
+		When("a node cannot host system components", func() {
+			BeforeEach(func() {
+				nodes = []client.Object{
+					node("node1", "zone-a", true, false),
+					node("node2", "zone-b", false, false),
+				}
+			})
+
+			It("should exclude the non-system-components node's zone when filtered by label", func() {
+				Expect(AvailableZones(ctx, fakeClient, systemComponentsSelector)).To(Equal(sets.New("zone-a")))
+			})
+		})
+
+		When("a node has no zone label", func() {
+			BeforeEach(func() {
+				nodes = []client.Object{
+					node("node1", "zone-a", true, false),
+					node("node2", "", true, false),
+				}
+			})
+
+			It("should ignore the node without a zone label", func() {
+				Expect(AvailableZones(ctx, fakeClient, systemComponentsSelector)).To(Equal(sets.New("zone-a")))
+			})
+		})
+
+		When("a schedulable node is not ready", func() {
+			BeforeEach(func() {
+				notReadyNode := node("node2", "zone-b", true, false)
+				notReadyNode.Status.Conditions = []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}
+
+				nodes = []client.Object{
+					node("node1", "zone-a", true, false),
+					notReadyNode,
+				}
+			})
+
+			It("should still count the not-ready but schedulable node's zone", func() {
+				Expect(AvailableZones(ctx, fakeClient, systemComponentsSelector)).To(Equal(sets.New("zone-a", "zone-b")))
+			})
+		})
+
+		When("no label selector is passed", func() {
+			BeforeEach(func() {
+				nodes = []client.Object{
+					node("node1", "zone-a", true, false),
+					node("node2", "zone-b", false, false),
+				}
+			})
+
+			It("should include all schedulable nodes regardless of labels", func() {
+				Expect(AvailableZones(ctx, fakeClient)).To(Equal(sets.New("zone-a", "zone-b")))
+			})
 		})
 	})
 })
