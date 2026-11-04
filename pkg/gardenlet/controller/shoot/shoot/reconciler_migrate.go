@@ -155,36 +155,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
 		})
-		// Deploy gardener-resource-manager to re-run the bootstrap logic if needed (e.g. when the token is expired because of hibernation).
-		// This fixes https://github.com/gardener/gardener/issues/7606
-		deployGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Deploying gardener-resource-manager",
-			Fn:           botanist.DeployGardenerResourceManager,
-			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
-		})
-		ensureResourceManagerScaledUp = g.Add(flow.Task{
-			Name:         "Ensuring that the gardener-resource-manager is scaled to 1",
-			Fn:           botanist.ScaleGardenerResourceManagerToOne,
-			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
-		})
-		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
-			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
-			Fn:           botanist.KeepObjectsForManagedResources,
-			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
-		})
-		deleteManagedResources = g.Add(flow.Task{
-			Name:         "Deleting all Managed Resources from the Shoot's namespace",
-			Fn:           botanist.DeleteManagedResources,
-			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
-		})
-		waitForManagedResourcesDeletion = g.Add(flow.Task{
-			Name:         "Waiting until ManagedResources are deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
-			Dependencies: flow.NewTaskIDs(deleteManagedResources),
-		})
+		migrateManagedResources        = g.AddGroup(botanist.MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResources).WithDependencies(wakeUpKubeAPIServer))
 		deleteMachineControllerManager = g.Add(flow.Task{
 			Name: "Deleting machine-controller-manager",
 			Fn: flow.TaskFn(func(ctx context.Context) error {

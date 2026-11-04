@@ -1235,6 +1235,47 @@ func (b *Botanist) HibernateControlPlaneTaskGroup(skipReadiness bool) flow.TaskG
 	return g
 }
 
+// TaskGroupMigrateAndDeleteManagedResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateAndDeleteManagedResources flow.TaskID = "TaskGroupMigrateAndDeleteManagedResources"
+
+// MigrateAndDeleteManagedResourcesTaskGroup handles the migration and deletion of managed resources.
+func (b *Botanist) MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResources bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteManagedResources)
+
+		// Deploy gardener-resource-manager to re-run the bootstrap logic if needed (e.g. when the token is expired because of hibernation).
+		// This fixes https://github.com/gardener/gardener/issues/7606
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:   "Deploying gardener-resource-manager",
+			Fn:     b.DeployGardenerResourceManager,
+			SkipIf: !cleanupShootResources,
+		})
+		ensureResourceManagerScaledUp = g.Add(flow.Task{
+			Name:         "Ensuring that the gardener-resource-manager is scaled to 1",
+			Fn:           b.ScaleGardenerResourceManagerToOne,
+			SkipIf:       !cleanupShootResources,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
+			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
+			Fn:           b.KeepObjectsForManagedResources,
+			SkipIf:       !cleanupShootResources,
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
+		})
+		deleteManagedResources = g.Add(flow.Task{
+			Name:         "Deleting all Managed Resources from the Shoot's namespace",
+			Fn:           b.DeleteManagedResources,
+			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until ManagedResources are deleted",
+			Fn:           flow.TaskFn(b.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
+			Dependencies: flow.NewTaskIDs(deleteManagedResources),
+		})
+	)
+
+	return g
+}
 func (b *Botanist) isGardenadmBootstrap() bool {
 	return b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()
 }
