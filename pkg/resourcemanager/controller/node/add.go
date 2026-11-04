@@ -7,6 +7,7 @@ package node
 import (
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -17,7 +18,7 @@ import (
 )
 
 // AddToManager adds all node controllers to the given manager.
-func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg resourcemanagerconfigv1alpha1.ResourceManagerConfiguration, zoneCapNodeSelector client.MatchingLabels) error {
 	if cfg.Controllers.NodeCriticalComponents.Enabled {
 		if err := (&criticalcomponents.Reconciler{
 			Config: cfg.Controllers.NodeCriticalComponents,
@@ -35,7 +36,9 @@ func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg resour
 	}
 
 	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
-		if err := (&highavailabilityconfig.Reconciler{}).AddToManager(mgr, targetCluster); err != nil {
+		if err := (&highavailabilityconfig.Reconciler{
+			ZoneCapNodeSelector: zoneCapNodeSelector,
+		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding node-high-availability-config controller: %w", err)
 		}
 	}
