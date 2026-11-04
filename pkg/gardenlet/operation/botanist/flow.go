@@ -1343,6 +1343,51 @@ func (b *Botanist) MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResourc
 
 	return g
 }
+
+// TaskGroupMigrateAndDeleteInfrastructure is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateAndDeleteInfrastructure flow.TaskID = "TaskGroupMigrateAndDeleteInfrastructure"
+
+// MigrateAndDeleteInfrastructureTaskGroup handles the migration and deletion of the shoot infrastructure.
+func (b *Botanist) MigrateAndDeleteInfrastructureTaskGroup() flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteInfrastructure)
+
+		migrateInfrastructure = g.Add(flow.Task{
+			Name: "Migrating shoot infrastructure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.Migrate(ctx)
+			}),
+			SkipIf: b.Shoot.IsWorkerless,
+		})
+		waitUntilInfrastructureMigrated = g.Add(flow.Task{
+			Name: "Waiting until shoot infrastructure has been migrated",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.WaitMigrate(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(migrateInfrastructure),
+		})
+		deleteInfrastructure = g.Add(flow.Task{
+			Name: "Deleting shoot infrastructure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.Destroy(ctx)
+			}),
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureMigrated),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until shoot infrastructure has been deleted",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)
+			},
+			SkipIf:       b.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deleteInfrastructure),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupMigrateAndDeleteControlPlane is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupMigrateAndDeleteControlPlane flow.TaskID = "TaskGroupMigrateAndDeleteControlPlane"
 

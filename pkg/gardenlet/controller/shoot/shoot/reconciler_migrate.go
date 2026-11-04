@@ -175,39 +175,8 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
 		})
 		migrateExtensionsAfterKubeAPIServer = g.AddGroup(botanist.MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup().WithDependencies(waitUntilKubeAPIServerDeleted))
-		migrateInfrastructure               = g.Add(flow.Task{
-			Name: "Migrating shoot infrastructure",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.Infrastructure.Migrate(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
-		})
-		waitUntilInfrastructureMigrated = g.Add(flow.Task{
-			Name: "Waiting until shoot infrastructure has been migrated",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.Infrastructure.WaitMigrate(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(migrateInfrastructure),
-		})
-		deleteInfrastructure = g.Add(flow.Task{
-			Name: "Deleting shoot infrastructure",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.Infrastructure.Destroy(ctx)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureMigrated),
-		})
-		waitUntilInfrastructureDeleted = g.Add(flow.Task{
-			Name: "Waiting until shoot infrastructure has been deleted",
-			Fn: func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)
-			},
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deleteInfrastructure),
-		})
-		migrateIngressDNSRecord = g.Add(flow.Task{
+		migrateInfrastructure               = g.AddGroup(botanist.MigrateAndDeleteInfrastructureTaskGroup().WithDependencies(waitUntilKubeAPIServerDeleted))
+		migrateIngressDNSRecord             = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
 			Fn:           botanist.MigrateIngressDNSRecord,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
@@ -223,9 +192,9 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		syncPoint = flow.NewTaskIDs(
-			waitUntilInfrastructureDeleted,
 			migrateExtensionsAfterKubeAPIServer,
 			destroyExtensionAndMachineResourcesGroup,
+			migrateInfrastructure,
 		)
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
