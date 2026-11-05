@@ -80,6 +80,7 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 
 		DeferCleanup(test.WithVars(
 			&operatingsystemconfig.RequeueAfterRestart, time.Second,
+			&operatingsystemconfig.RequeueAfterLeaseAcquisitionSkipped, time.Second,
 			&operatingsystemconfig.Exec, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
 				return []byte(""), nil
 			},
@@ -223,6 +224,51 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 			return lease.Spec.HolderIdentity
 		}).To(BeNil())
 	})
+
+	It("should not update other nodes in the pool while one node has unhealthy critical control plane pods", func() {
+		By("Mark the critical control plane pods of one node as unhealthy")
+		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: hostName1}}
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+		node.Status.Conditions = []corev1.NodeCondition{{
+			Type:   nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
+			Status: corev1.ConditionTrue,
+		}}
+		Expect(testClient.Status().Update(ctx, node)).To(Succeed())
+
+		By("Create Secret containing the operating system config")
+		Expect(testClient.Create(ctx, oscSecret)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, oscSecret)).To(Succeed())
+		})
+
+		// The gating only blocks a node when a *different* node in the pool is unhealthy, so the unhealthy
+		// node itself may still reconcile. The other two nodes must back off to protect the ETCD quorum.
+		By("Ensure the other nodes do not reconcile while the condition is True")
+		Consistently(func(g Gomega) {
+			for _, remainder := range remainingHosts(hostName1) {
+				exists, err := fakeFS.Exists("/example/file/" + remainder)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(exists).To(BeFalse())
+			}
+		}).Should(Succeed())
+
+		By("Mark the critical control plane pods as healthy again")
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+		node.Status.Conditions = []corev1.NodeCondition{{
+			Type:   nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
+			Status: corev1.ConditionFalse,
+		}}
+		Expect(testClient.Status().Update(ctx, node)).To(Succeed())
+
+		By("Ensure all nodes reconcile once the condition is False")
+		for _, hostName := range []string{hostName1, hostName2, hostName3} {
+			Eventually(func(g Gomega) bool {
+				exists, err := fakeFS.Exists("/example/file/" + hostName)
+				g.Expect(err).NotTo(HaveOccurred())
+				return exists
+			}).Should(BeTrue())
+		}
+	})
 })
 
 var _ = Describe("OperatingSystemConfig controller serial reconciliation stale Lease tests", func() {
@@ -364,8 +410,9 @@ func startNewOperatingSystemConfigControllerInstance(hostName, oscSecretName str
 		ObjectMeta: metav1.ObjectMeta{
 			Name: hostName,
 			Labels: map[string]string{
-				testID:                   testRunID,
-				"kubernetes.io/hostname": hostName,
+				testID:                       testRunID,
+				"kubernetes.io/hostname":     hostName,
+				"worker.gardener.cloud/pool": "control-plane",
 			},
 		},
 	}
