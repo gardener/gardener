@@ -57,6 +57,9 @@ const (
 
 	// ConditionTypeSystemdUnitsReady is the node condition type indicating whether all managed systemd units are healthy.
 	ConditionTypeSystemdUnitsReady corev1.NodeConditionType = "SystemdUnitsReady"
+
+	// ConditionTypeCriticalControlPlanePodsUnhealthy is the node condition type indicating whether any critical control plane pod is unhealthy.
+	ConditionTypeCriticalControlPlanePodsUnhealthy corev1.NodeConditionType = "CriticalControlPlanePodsUnhealthy"
 )
 
 // OSVersionRegex is a regular expression to match operating system versions.
