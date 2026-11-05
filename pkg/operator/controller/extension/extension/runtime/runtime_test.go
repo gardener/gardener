@@ -264,7 +264,7 @@ spec:
 				namespace = fmt.Sprintf("runtime-extension-%s", extensionName)
 				gardenAccessSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "garden-access-extension", Namespace: namespace}}
 
-				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = new(true)
+				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfigInRuntimeCluster = new(true)
 				ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRef}, []byte("extension-chart"))
 
 				DeferCleanup(test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
@@ -326,8 +326,8 @@ spec:
 				Expect(manifest).NotTo(ContainSubstring("GARDEN_KUBECONFIG"))
 			})
 
-			It("should not inject when InjectGardenKubeconfig is disabled", func() {
-				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = new(false)
+			It("should not inject when InjectGardenKubeconfigInRuntimeCluster is disabled", func() {
+				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfigInRuntimeCluster = new(false)
 				chartRenderer.EXPECT().RenderArchive([]byte("extension-chart"), extension.Name, namespace, gomock.Any()).Return(deploymentManifest("true"), nil)
 
 				_, err := runtime.Reconcile(ctx, log, virtualClientSet, extension)
@@ -343,8 +343,8 @@ spec:
 				Expect(manifest).NotTo(ContainSubstring("GARDEN_KUBECONFIG"))
 			})
 
-			It("should not inject when InjectGardenKubeconfig when the clientSet is nil", func() {
-				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = new(true)
+			It("should not inject when InjectGardenKubeconfigInRuntimeCluster is enabled but the clientSet is nil", func() {
+				extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfigInRuntimeCluster = new(true)
 				chartRenderer.EXPECT().RenderArchive([]byte("extension-chart"), extension.Name, namespace, gomock.Any()).Return(deploymentManifest("true"), nil)
 
 				_, err := runtime.Reconcile(ctx, log, nil, extension)

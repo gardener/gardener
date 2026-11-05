@@ -128,7 +128,7 @@ var _ = Describe("Extension controller tests", func() {
 								OCIRepository: &ociRepositoryProviderLocalChart,
 							},
 						},
-						InjectGardenKubeconfig: new(true),
+						InjectGardenKubeconfigInRuntimeCluster: new(true),
 					},
 				},
 			},

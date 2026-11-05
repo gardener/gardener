@@ -706,6 +706,11 @@ func (in *ExtensionDeploymentSpec) DeepCopyInto(out *ExtensionDeploymentSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.InjectGardenKubeconfigInRuntimeCluster != nil {
+		in, out := &in.InjectGardenKubeconfigInRuntimeCluster, &out.InjectGardenKubeconfigInRuntimeCluster
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

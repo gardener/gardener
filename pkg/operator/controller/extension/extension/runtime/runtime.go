@@ -139,7 +139,7 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger,
 		return fmt.Errorf("failed ensuring namespace %q: %w", namespace, err)
 	}
 
-	gardenKubeconfigRequired := ptr.Deref(extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig, false)
+	gardenKubeconfigRequired := ptr.Deref(extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfigInRuntimeCluster, false)
 	injectGardenKubeconfig := true
 	// The virtual garden client is only available during reconciliation (e.g. not while the garden is being deleted).
 	// Without it, the generic garden kubeconfig cannot be built, so injection is skipped.
