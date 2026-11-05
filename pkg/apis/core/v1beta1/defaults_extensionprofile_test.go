@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -46,7 +45,7 @@ var _ = Describe("ExtensionProfile defaulting", func() {
 		})
 
 		It("should not overwrite an already-set Default and append it to Supported if absent", func() {
-			obj.Spec.UpdateStrategy.Default = ptr.To(UpdateStrategyMinor)
+			obj.Spec.UpdateStrategy.Default = new(UpdateStrategyMinor)
 			obj.Spec.UpdateStrategy.Supported = []UpdateStrategy{UpdateStrategyPatch}
 
 			SetDefaults_ExtensionProfile(obj)
@@ -56,7 +55,7 @@ var _ = Describe("ExtensionProfile defaulting", func() {
 		})
 
 		It("should not append a duplicate when Default is already contained in Supported", func() {
-			obj.Spec.UpdateStrategy.Default = ptr.To(UpdateStrategyPatch)
+			obj.Spec.UpdateStrategy.Default = new(UpdateStrategyPatch)
 			obj.Spec.UpdateStrategy.Supported = []UpdateStrategy{UpdateStrategyPatch, UpdateStrategyMinor}
 
 			SetDefaults_ExtensionProfile(obj)

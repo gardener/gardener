@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -28,7 +27,7 @@ var _ = Describe("ExtensionProfile Validation Tests", func() {
 			},
 			Spec: core.ExtensionProfileSpec{
 				UpdateStrategy: core.ExtensionUpdateStrategy{
-					Default:   ptr.To(core.UpdateStrategyPatch),
+					Default:   new(core.UpdateStrategyPatch),
 					Supported: []core.MachineImageUpdateStrategy{core.UpdateStrategyPatch, core.UpdateStrategyMinor},
 				},
 				Components: []core.ExtensionProfileComponent{
@@ -74,7 +73,7 @@ var _ = Describe("ExtensionProfile Validation Tests", func() {
 		})
 
 		It("should reject an unsupported update strategy value for both default and supported", func() {
-			extensionProfile.Spec.UpdateStrategy.Default = ptr.To[core.UpdateStrategy]("weekly")
+			extensionProfile.Spec.UpdateStrategy.Default = new(core.UpdateStrategy("weekly"))
 			extensionProfile.Spec.UpdateStrategy.Supported = []core.MachineImageUpdateStrategy{"weekly"}
 
 			Expect(ValidateExtensionProfile(extensionProfile)).To(ConsistOf(
@@ -114,7 +113,7 @@ var _ = Describe("ExtensionProfile Validation Tests", func() {
 		It("should reject an invalid CEL compatibility rule", func() {
 			extensionProfile.Spec.Components[0].Versions[0].Compatibility = &core.ExtensionCompatibility{
 				Validations: []core.ExtensionCompatibilityValidation{
-					{Rule: "shoot.spec.kubernetes.version ===", Message: ptr.To("bad")},
+					{Rule: "shoot.spec.kubernetes.version ===", Message: new("bad")},
 				},
 			}
 
@@ -128,7 +127,7 @@ var _ = Describe("ExtensionProfile Validation Tests", func() {
 		It("should accept a valid CEL compatibility rule", func() {
 			extensionProfile.Spec.Components[0].Versions[0].Compatibility = &core.ExtensionCompatibility{
 				Validations: []core.ExtensionCompatibilityValidation{
-					{Rule: "shoot.spec.kubernetes.version.matches('^1\\\\.3[2-9]')", Message: ptr.To("needs 1.32+")},
+					{Rule: "shoot.spec.kubernetes.version.matches('^1\\\\.3[2-9]')", Message: new("needs 1.32+")},
 				},
 			}
 
