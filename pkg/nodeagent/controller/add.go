@@ -27,7 +27,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Manager, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration, hostName, machineName, nodeName, configDir string) error {
+func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Manager, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration, hostName, machineName, nodeName, configDir string, isControlPlaneNode bool) error {
 	nodePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelHostname: hostName}})
 	if err != nil {
 		return fmt.Errorf("failed computing label selector predicate for node: %w", err)
@@ -79,7 +79,7 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 		}
 	}
 
-	if err := (&healthcheck.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
+	if err := (&healthcheck.Reconciler{}).AddToManager(mgr, nodePredicate, isControlPlaneNode && nodeName != ""); err != nil {
 		return fmt.Errorf("failed adding health-check controller: %w", err)
 	}
 

@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -21,6 +22,7 @@ import (
 // Reconciler checks for containerd and kubelet health and restarts them if required.
 type Reconciler struct {
 	Client                     client.Client
+	Clock                      clock.Clock
 	Recorder                   events.EventRecorder
 	DBus                       dbus.DBus
 	HealthCheckers             []HealthChecker
