@@ -1512,7 +1512,7 @@ message ExtensionVersion {
   optional string version = 1;
 
   // Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
-  // CloudProfile versions, see GEP-0032). At least one stage must be provided.
+  // CloudProfile versions). At least one stage must be provided.
   // +required
   repeated LifecycleStage lifecycle = 2;
 

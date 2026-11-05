@@ -5231,7 +5231,7 @@ string
 </em>
 </td>
 <td>
-<p>Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of<br />CloudProfile versions, see GEP-0032). At least one stage must be provided.</p>
+<p>Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of<br />CloudProfile versions). At least one stage must be provided.</p>
 </td>
 </tr>
 <tr>
@@ -14255,7 +14255,7 @@ string
 
 <p>
 UpdateStrategy is the update strategy to use for versioned entities. It shares the vocabulary
-(patch/minor/major) with MachineImageUpdateStrategy and is used for extension components (GEP-0078).
+(patch/minor/major) with MachineImageUpdateStrategy and is used for extension components.
 </p>
 
 

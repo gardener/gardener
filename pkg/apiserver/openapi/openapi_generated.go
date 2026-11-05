@@ -4924,7 +4924,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionVersion(ref common.ReferenceCallback)
 					},
 					"lifecycle": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of CloudProfile versions, see GEP-0032). At least one stage must be provided.",
+							Description: "Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of CloudProfile versions). At least one stage must be provided.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

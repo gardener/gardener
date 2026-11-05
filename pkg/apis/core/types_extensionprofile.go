@@ -53,7 +53,7 @@ type ExtensionUpdateStrategy struct {
 	// Default is the update strategy applied when a shoot does not request an explicit strategy. Required
 	// at the profile level; at the component level it may be omitted and is then inherited from the profile.
 	// Possible values are: patch, minor, major.
-	Default UpdateStrategy
+	Default *UpdateStrategy
 	// Supported is the allow-list of update strategies this extension implements. Admission rejects any
 	// shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
 	Supported []UpdateStrategy
@@ -74,7 +74,7 @@ type ExtensionVersion struct {
 	// Version is the version identifier. Must be a valid semantic version.
 	Version string
 	// Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
-	// CloudProfile versions, see GEP-0032). At least one stage must be provided.
+	// CloudProfile versions). At least one stage must be provided.
 	Lifecycle []LifecycleStage
 	// Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
 	Compatibility *ExtensionCompatibility
@@ -95,7 +95,7 @@ type ExtensionCompatibilityValidation struct {
 	// Rule is a CEL expression evaluated against the shoot, bound to the variable `shoot`. It must return a boolean.
 	Rule string
 	// Message is the message surfaced when the rule evaluates to false.
-	Message string
+	Message *string
 }
 
 // ExtensionProfileStatus is the computed status of an ExtensionProfile.

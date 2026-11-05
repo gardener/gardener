@@ -62,7 +62,7 @@ type ExtensionUpdateStrategy struct {
 	// at the profile level; at the component level it may be omitted and is then inherited from the profile.
 	// Possible values are: patch, minor, major.
 	// +optional
-	Default UpdateStrategy `json:"default,omitempty" protobuf:"bytes,1,opt,name=default,casttype=MachineImageUpdateStrategy"`
+	Default *UpdateStrategy `json:"default,omitempty" protobuf:"bytes,1,opt,name=default,casttype=MachineImageUpdateStrategy"`
 	// Supported is the allow-list of update strategies this extension implements. Admission rejects any
 	// shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
 	// +required
@@ -90,7 +90,7 @@ type ExtensionVersion struct {
 	// +required
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
-	// CloudProfile versions, see GEP-0032). At least one stage must be provided.
+	// CloudProfile versions). At least one stage must be provided.
 	// +required
 	Lifecycle []LifecycleStage `json:"lifecycle" protobuf:"bytes,2,rep,name=lifecycle"`
 	// Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
@@ -117,7 +117,7 @@ type ExtensionCompatibilityValidation struct {
 	Rule string `json:"rule" protobuf:"bytes,1,opt,name=rule"`
 	// Message is the message surfaced when the rule evaluates to false.
 	// +optional
-	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
+	Message *string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
 }
 
 // ExtensionProfileStatus is the computed status of an ExtensionProfile.

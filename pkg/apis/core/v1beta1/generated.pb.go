@@ -4773,11 +4773,13 @@ func (m *ExtensionCompatibilityValidation) MarshalToSizedBuffer(dAtA []byte) (in
 	_ = i
 	var l int
 	_ = l
-	i -= len(m.Message)
-	copy(dAtA[i:], m.Message)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Message)))
-	i--
-	dAtA[i] = 0x12
+	if m.Message != nil {
+		i -= len(*m.Message)
+		copy(dAtA[i:], *m.Message)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Message)))
+		i--
+		dAtA[i] = 0x12
+	}
 	i -= len(m.Rule)
 	copy(dAtA[i:], m.Rule)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Rule)))
@@ -5205,11 +5207,13 @@ func (m *ExtensionUpdateStrategy) MarshalToSizedBuffer(dAtA []byte) (int, error)
 			dAtA[i] = 0x12
 		}
 	}
-	i -= len(m.Default)
-	copy(dAtA[i:], m.Default)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Default)))
-	i--
-	dAtA[i] = 0xa
+	if m.Default != nil {
+		i -= len(*m.Default)
+		copy(dAtA[i:], *m.Default)
+		i = encodeVarintGenerated(dAtA, i, uint64(len(*m.Default)))
+		i--
+		dAtA[i] = 0xa
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -16018,8 +16022,10 @@ func (m *ExtensionCompatibilityValidation) Size() (n int) {
 	_ = l
 	l = len(m.Rule)
 	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Message)
-	n += 1 + l + sovGenerated(uint64(l))
+	if m.Message != nil {
+		l = len(*m.Message)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -16177,8 +16183,10 @@ func (m *ExtensionUpdateStrategy) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Default)
-	n += 1 + l + sovGenerated(uint64(l))
+	if m.Default != nil {
+		l = len(*m.Default)
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	if len(m.Supported) > 0 {
 		for _, s := range m.Supported {
 			l = len(s)
@@ -20716,7 +20724,7 @@ func (this *ExtensionCompatibilityValidation) String() string {
 	}
 	s := strings.Join([]string{`&ExtensionCompatibilityValidation{`,
 		`Rule:` + fmt.Sprintf("%v", this.Rule) + `,`,
-		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
+		`Message:` + valueToStringGenerated(this.Message) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -20848,7 +20856,7 @@ func (this *ExtensionUpdateStrategy) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&ExtensionUpdateStrategy{`,
-		`Default:` + fmt.Sprintf("%v", this.Default) + `,`,
+		`Default:` + valueToStringGenerated(this.Default) + `,`,
 		`Supported:` + fmt.Sprintf("%v", this.Supported) + `,`,
 		`}`,
 	}, "")
@@ -35405,7 +35413,8 @@ func (m *ExtensionCompatibilityValidation) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Message = string(dAtA[iNdEx:postIndex])
+			s := string(dAtA[iNdEx:postIndex])
+			m.Message = &s
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -36559,7 +36568,8 @@ func (m *ExtensionUpdateStrategy) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Default = MachineImageUpdateStrategy(dAtA[iNdEx:postIndex])
+			s := MachineImageUpdateStrategy(dAtA[iNdEx:postIndex])
+			m.Default = &s
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {

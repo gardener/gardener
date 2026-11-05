@@ -6,6 +6,8 @@ package v1beta1
 
 import (
 	"slices"
+
+	"k8s.io/utils/ptr"
 )
 
 // SetDefaults_ExtensionProfile sets default values for ExtensionProfile objects.
@@ -21,12 +23,12 @@ func SetDefaults_ExtensionProfile(extensionProfile *ExtensionProfile) {
 }
 
 // defaultExtensionUpdateStrategy defaults the strategy's Default to "patch" (the least-surprising
-// automatic policy, per GEP-0078) and ensures Default is contained in Supported.
+// automatic policy) and ensures Default is contained in Supported.
 func defaultExtensionUpdateStrategy(updateStrategy *ExtensionUpdateStrategy) {
-	if len(updateStrategy.Default) == 0 {
-		updateStrategy.Default = UpdateStrategyPatch
+	if updateStrategy.Default == nil {
+		updateStrategy.Default = ptr.To(UpdateStrategyPatch)
 	}
-	if !slices.Contains(updateStrategy.Supported, updateStrategy.Default) {
-		updateStrategy.Supported = append(updateStrategy.Supported, updateStrategy.Default)
+	if !slices.Contains(updateStrategy.Supported, *updateStrategy.Default) {
+		updateStrategy.Supported = append(updateStrategy.Supported, *updateStrategy.Default)
 	}
 }
