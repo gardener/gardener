@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
@@ -112,7 +113,8 @@ var _ = BeforeSuite(func() {
 			DefaultNotReadyTolerationSeconds:    new(defaultNotReadyTolerationSeconds),
 			DefaultUnreachableTolerationSeconds: new(defaultUnreachableTolerationSeconds),
 		},
-		Decoder: admission.NewDecoder(mgr.GetScheme()),
+		Decoder:             admission.NewDecoder(mgr.GetScheme()),
+		ZoneCapNodeSelector: client.MatchingLabels{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
@@ -129,9 +131,12 @@ var _ = BeforeSuite(func() {
 		return checker(&http.Request{})
 	}).Should(Succeed())
 
-	By("Create nodes so that hasMoreThanOneNode returns true")
-	for _, name := range []string{"node1", "node2"} {
-		Expect(testClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}})).To(Succeed())
+	By("Create nodes so that hasMoreThanOneNode returns true and multiple zones are available")
+	for name, zone := range map[string]string{"node1": "a", "node2": "b"} {
+		Expect(testClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+			"worker.gardener.cloud/system-components": "true",
+			"topology.kubernetes.io/zone":             zone,
+		}}})).To(Succeed())
 		DeferCleanup(func(name string) {
 			Expect(testClient.Delete(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}})).To(Succeed())
 		}, name)

@@ -230,4 +230,89 @@ var _ = Describe("Node HighAvailabilityConfig controller", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(noTSCDeployment), noTSCDeployment)).To(Succeed())
 		Expect(noTSCDeployment.ResourceVersion).To(Equal(resourceVersionBefore))
 	})
+
+	When("the namespace requests zone spreading", func() {
+		BeforeEach(func() {
+			namespace.Annotations = map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType: "zone",
+				resourcesv1alpha1.HighAvailabilityConfigZones:                "a,b",
+			}
+		})
+
+		It("should add the zone spread constraint once a second zone becomes available", func() {
+			By("Create first node in zone a")
+			node1 := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+				Name: testIDPrefix + "-node-1-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+				Labels: map[string]string{
+					"worker.gardener.cloud/system-components": "true",
+					"topology.kubernetes.io/zone":             "a",
+				},
+			}}
+			Expect(testClient.Create(ctx, node1)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(testClient.Delete(ctx, node1)).To(Succeed())
+			})
+
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "deploy-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+					Namespace: namespace.Name,
+					Labels: map[string]string{
+						resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{MatchLabels: labels},
+					Replicas: new(int32(2)),
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{Labels: labels},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:  "test",
+								Image: "test",
+							}},
+						},
+					},
+				},
+			}
+
+			By("Create object with a single available zone (expect no zone spread constraint)")
+			Expect(testClient.Create(ctx, deployment)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(testClient.Delete(ctx, deployment)).To(Succeed())
+			})
+
+			getTSC := func() []corev1.TopologySpreadConstraint {
+				deploy := &appsv1.Deployment{}
+				ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deploy)).To(Succeed())
+				return deploy.Spec.Template.Spec.TopologySpreadConstraints
+			}
+
+			Expect(getTSC()).NotTo(ContainElement(HaveField("TopologyKey", corev1.LabelTopologyZone)))
+
+			By("Create second node in zone b (controller should patch, webhook adds the zone spread constraint)")
+			node2 := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+				Name: testIDPrefix + "-node-2-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
+				Labels: map[string]string{
+					"worker.gardener.cloud/system-components": "true",
+					"topology.kubernetes.io/zone":             "b",
+				},
+			}}
+			Expect(testClient.Create(ctx, node2)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, node2))).To(Succeed())
+			})
+
+			Eventually(func(g Gomega) {
+				g.Expect(getTSC()).To(ContainElement(HaveField("TopologyKey", corev1.LabelTopologyZone)))
+			}).Should(Succeed())
+
+			By("Delete second node (controller should patch, webhook removes the zone spread constraint again)")
+			Expect(testClient.Delete(ctx, node2)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(getTSC()).NotTo(ContainElement(HaveField("TopologyKey", corev1.LabelTopologyZone)))
+			}).Should(Succeed())
+		})
+	})
 })
