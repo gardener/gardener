@@ -306,6 +306,31 @@ var _ = Describe("ActuatorReconcile", func() {
 			)
 		})
 
+		When("shoot has a control plane worker pool", func() {
+			BeforeEach(func() {
+				cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+					Name:         "pool1",
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				}}
+			})
+
+			It("should append the critical control plane pods node condition to the control plane pool's MachineDeployment", func() {
+				wantedMachineDeployments = append(wantedMachineDeployments,
+					buildWantedMachineDeployment("2", machinev1alpha1.RollingUpdateMachineDeploymentStrategyType, nil),
+				)
+
+				expectedControlPlaneMachineDeployment := buildExpectedMachineDeployment("namespace", 2, "1", wantedMachineDeployments[0])
+				expectedControlPlaneMachineDeployment.Spec.Template.Spec.MachineConfiguration = &machinev1alpha1.MachineConfiguration{
+					NodeConditions: new("CriticalControlPlanePodsUnhealthy"),
+				}
+
+				testMachineDeployments(wantedMachineDeployments, []*machinev1alpha1.MachineDeployment{
+					expectedControlPlaneMachineDeployment,
+					buildExpectedMachineDeployment("namespace", 2, "1", wantedMachineDeployments[1]),
+				})
+			})
+		})
+
 		When("there are existing MachineDeployments", func() {
 			BeforeEach(func() {
 				testDeployment = &machinev1alpha1.MachineDeployment{
