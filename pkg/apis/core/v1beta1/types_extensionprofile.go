@@ -47,6 +47,7 @@ type ExtensionProfileList struct {
 type ExtensionProfileSpec struct {
 	// UpdateStrategy is the default auto-update policy for this extension type. It is applied to a
 	// component that does not define its own updateStrategy.
+	// +required
 	UpdateStrategy ExtensionUpdateStrategy `json:"updateStrategy" protobuf:"bytes,1,opt,name=updateStrategy"`
 	// Components is the list of named components offered by this extension, each versioned independently.
 	// +optional
@@ -64,12 +65,14 @@ type ExtensionUpdateStrategy struct {
 	Default UpdateStrategy `json:"default,omitempty" protobuf:"bytes,1,opt,name=default,casttype=MachineImageUpdateStrategy"`
 	// Supported is the allow-list of update strategies this extension implements. Admission rejects any
 	// shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
+	// +required
 	Supported []UpdateStrategy `json:"supported" protobuf:"bytes,2,rep,name=supported,casttype=MachineImageUpdateStrategy"`
 }
 
 // ExtensionProfileComponent is a named component of an extension with an independently versioned lifecycle.
 type ExtensionProfileComponent struct {
 	// Name is the name of the component.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// UpdateStrategy overrides the profile-level update strategy for this component.
 	// +optional
@@ -84,9 +87,11 @@ type ExtensionProfileComponent struct {
 // ExtensionVersion is a single offered version of a component with its lifecycle and compatibility envelope.
 type ExtensionVersion struct {
 	// Version is the version identifier. Must be a valid semantic version.
+	// +required
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 	// Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
 	// CloudProfile versions, see GEP-0032). At least one stage must be provided.
+	// +required
 	Lifecycle []LifecycleStage `json:"lifecycle" protobuf:"bytes,2,rep,name=lifecycle"`
 	// Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
 	// +optional
@@ -108,6 +113,7 @@ type ExtensionCompatibility struct {
 // ExtensionCompatibilityValidation is a single CEL compatibility rule.
 type ExtensionCompatibilityValidation struct {
 	// Rule is a CEL expression evaluated against the shoot, bound to the variable `shoot`. It must return a boolean.
+	// +required
 	Rule string `json:"rule" protobuf:"bytes,1,opt,name=rule"`
 	// Message is the message surfaced when the rule evaluates to false.
 	// +optional
@@ -124,6 +130,7 @@ type ExtensionProfileStatus struct {
 // ExtensionProfileComponentStatus is the computed status for a single component.
 type ExtensionProfileComponentStatus struct {
 	// Name is the name of the component.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Versions is the list of offered versions with their currently computed classification.
 	// +optional

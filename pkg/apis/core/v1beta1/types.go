@@ -104,6 +104,7 @@ type Extension struct {
 type ExtensionAutoUpdate struct {
 	// Enabled indicates whether components are automatically upgraded within the configured update strategy.
 	// When disabled, a component only moves off its pinned version once that version expires (force-upgrade).
+	// +required
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 	// UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.
 	// +optional
@@ -113,6 +114,7 @@ type ExtensionAutoUpdate struct {
 // ShootExtensionComponent pins the version of a single component managed by an extension.
 type ShootExtensionComponent struct {
 	// Name is the name of the component as listed in the ExtensionProfile.
+	// +required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Version pins the component version. A partial version is resolved to the highest matching supported
 	// version at admission. When omitted, the extension behaves as before this field existed.
