@@ -551,20 +551,18 @@ func (b *Botanist) ReconcileKubeAPIServerTaskGroup(skipReadiness bool, deployTim
 		g = flow.NewTaskGroup(TaskGroupReconcileKubeAPIServer)
 
 		deployKubeAPIServer = g.Add(flow.Task{
-			Name:   "Deploying Kubernetes API server",
-			Fn:     flow.TaskFn(b.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, deployTimeout),
-			SkipIf: b.Shoot.IsSelfHosted(),
+			Name: "Deploying Kubernetes API server",
+			Fn:   flow.TaskFn(b.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, deployTimeout),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server rolled out",
 			Fn:           b.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
-			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness || b.Shoot.IsSelfHosted(),
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployKubeAPIServerServiceSNISettings = g.Add(flow.Task{
 			Name:         "Deploying and waiting for Kubernetes API server service SNI settings in the Seed cluster",
 			Fn:           flow.TaskFn(b.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
@@ -575,7 +573,7 @@ func (b *Botanist) ReconcileKubeAPIServerTaskGroup(skipReadiness bool, deployTim
 		})
 	)
 
-	return g
+	return g.SkipIf(b.Shoot.IsSelfHosted())
 }
 
 // TaskGroupReconcileControlPlaneComponents is a flow.TaskID for a logical flow.TaskGroup.
