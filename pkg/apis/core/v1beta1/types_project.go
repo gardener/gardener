@@ -87,6 +87,7 @@ type ProjectStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 	// Phase is the current phase of the project.
+	// +optional
 	Phase ProjectPhase `json:"phase,omitempty" protobuf:"bytes,2,opt,name=phase,casttype=ProjectPhase"`
 	// StaleSinceTimestamp contains the timestamp when the project was first discovered to be stale/unused.
 	// +optional
@@ -115,6 +116,7 @@ type ProjectMember struct {
 	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`
 	// list.
 	// TODO: Remove this field in favor of the `roles` list in `v1`.
+	// +required
 	Role string `json:"role" protobuf:"bytes,2,opt,name=role"`
 	// Roles represents the list of roles of this member.
 	// +optional
@@ -139,6 +141,7 @@ type ProjectTolerations struct {
 // Toleration is a toleration for a seed taint.
 type Toleration struct {
 	// Key is the toleration key to be applied to a project or shoot.
+	// +required
 	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
 	// Value is the toleration value corresponding to the toleration key.
 	// +optional
@@ -148,8 +151,10 @@ type Toleration struct {
 // DualApprovalForDeletion contains configuration for the dual approval concept for resource deletion.
 type DualApprovalForDeletion struct {
 	// Resource is the name of the resource this applies to.
+	// +required
 	Resource string `json:"resource" protobuf:"bytes,1,opt,name=resource"`
 	// Selector is the label selector for the resources.
+	// +required
 	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 	// IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts.
 	// Defaults to true.

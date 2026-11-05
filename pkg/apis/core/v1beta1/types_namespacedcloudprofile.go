@@ -16,11 +16,14 @@ import (
 type NamespacedCloudProfile struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec defines the provider environment properties.
+	// +optional
 	Spec NamespacedCloudProfileSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the NamespacedCloudProfile.
+	// +optional
 	Status NamespacedCloudProfileStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -61,6 +64,7 @@ type NamespacedCloudProfileSpec struct {
 	// +optional
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchMergeKey:"name" patchStrategy:"merge" protobuf:"bytes,6,opt,name=volumeTypes"`
 	// Parent contains a reference to a CloudProfile it inherits from.
+	// +required
 	Parent CloudProfileReference `json:"parent" protobuf:"bytes,7,req,name=parent"`
 	// ProviderConfig contains provider-specific configuration for the profile.
 	// +optional
@@ -75,6 +79,7 @@ type NamespacedCloudProfileSpec struct {
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
 type NamespacedCloudProfileStatus struct {
 	// CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
+	// +optional
 	CloudProfileSpec CloudProfileSpec `json:"cloudProfileSpec,omitempty" protobuf:"bytes,1,req,name=cloudProfileSpec"`
 	// ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
 	// +optional
@@ -84,7 +89,9 @@ type NamespacedCloudProfileStatus struct {
 // CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
 type CloudProfileReference struct {
 	// Kind contains a CloudProfile kind.
+	// +required
 	Kind string `json:"kind" protobuf:"bytes,1,req,name=kind"`
 	// Name contains the name of the referenced CloudProfile.
+	// +required
 	Name string `json:"name" protobuf:"bytes,2,req,name=name"`
 }

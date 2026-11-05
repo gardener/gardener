@@ -21,6 +21,7 @@ const (
 type BackupEntry struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +required
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec contains the specification of the Backup Entry.
@@ -47,6 +48,7 @@ type BackupEntryList struct {
 // BackupEntrySpec is the specification of a Backup Entry.
 type BackupEntrySpec struct {
 	// BucketName is the name of backup bucket for this Backup Entry.
+	// +required
 	BucketName string `json:"bucketName" protobuf:"bytes,1,opt,name=bucketName"`
 	// SeedName is the name of the Seed this BackupEntry is associated with. Mutually exclusive with ShootRef.
 	// +optional

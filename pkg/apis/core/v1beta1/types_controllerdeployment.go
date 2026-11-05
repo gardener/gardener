@@ -19,11 +19,14 @@ import (
 type ControllerDeployment struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Type is the deployment type.
+	// +required
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
+	// +required
 	ProviderConfig runtime.RawExtension `json:"providerConfig" protobuf:"bytes,3,opt,name=providerConfig"`
 	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
 	// resources.
@@ -57,8 +60,10 @@ const (
 // to the internal API version in the new representation.
 type HelmControllerDeployment struct {
 	// Chart is a Helm chart tarball.
+	// +optional
 	Chart []byte `json:"chart,omitempty" protobuf:"bytes,1,opt,name=chart"`
 	// Values is a map of values for the given chart.
+	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty" protobuf:"bytes,2,opt,name=values"`
 	// OCIRepository defines where to pull the chart.
 	// +optional
