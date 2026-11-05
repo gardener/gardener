@@ -73,6 +73,21 @@ func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1bet
 			}
 			continue
 		}
+
+		if cond.Type == gardencorev1beta1.ShootKubernetesVersionSupported {
+			if cond.Status != gardencorev1beta1.ConditionTrue {
+				hibernationConditions = append(hibernationConditions, cond)
+			}
+			continue
+		}
+
+		if cond.Type == gardencorev1beta1.ShootMachineImagesVersionSupported {
+			if cond.Status != gardencorev1beta1.ConditionTrue {
+				hibernationConditions = append(hibernationConditions, cond)
+			}
+			continue
+		}
+
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
@@ -147,6 +162,20 @@ func (c *Constraint) constraintsChecks(
 		constraints.preservedFailedMachinesAbsent = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.preservedFailedMachinesAbsent, status, reason, message)
 	}
 
+	status, reason, message, err = c.CheckIfKubernetesVersionIsSupported()
+	if err != nil {
+		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.kubernetesVersionSupported, err)
+	} else {
+		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.kubernetesVersionSupported, status, reason, message)
+	}
+
+	status, reason, message, err = c.CheckIfMachineImageVersionIsSupported()
+	if err != nil {
+		constraints.machineImagesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.machineImagesVersionSupported, err)
+	} else {
+		constraints.machineImagesVersionSupported = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.machineImagesVersionSupported, status, reason, message)
+	}
+
 	status, reason, message = c.checkIfAutomaticCredentialsRotationPossible()
 	constraints.automaticCredentialsRotationPossible = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.automaticCredentialsRotationPossible, status, reason, message)
 
@@ -176,14 +205,14 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.kubernetesVersionSupported, constraints.machineImagesVersionSupported},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.kubernetesVersionSupported, constraints.machineImagesVersionSupported},
 		)
 	}
 	c.shootClient = shootClient.Client()
@@ -202,20 +231,6 @@ func (c *Constraint) constraintsChecks(
 		constraints.crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.crdsWithProblematicConversionWebhooks, err)
 	} else {
 		constraints.crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.crdsWithProblematicConversionWebhooks, status, reason, message)
-	}
-
-	status, reason, message, err = c.CheckIfKubernetesVersionIsSupported()
-	if err != nil {
-		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.kubernetesVersionSupported, err)
-	} else {
-		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.kubernetesVersionSupported, status, reason, message)
-	}
-
-	status, reason, message, err = c.CheckIfMachineImageVersionIsSupported()
-	if err != nil {
-		constraints.machineImagesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.machineImagesVersionSupported, err)
-	} else {
-		constraints.machineImagesVersionSupported = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.machineImagesVersionSupported, status, reason, message)
 	}
 
 	return filterOptionalConstraints(
