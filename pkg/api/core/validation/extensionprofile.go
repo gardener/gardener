@@ -96,12 +96,12 @@ func validateExtensionProfileSpec(spec *core.ExtensionProfileSpec, fldPath *fiel
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "component name must not be empty"))
 		} else {
 			allErrs = append(allErrs, validateDNS1123Label(component.Name, idxPath.Child("name"))...)
-		}
 
-		if componentNames.Has(component.Name) {
-			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), component.Name))
+			if componentNames.Has(component.Name) {
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), component.Name))
+			}
+			componentNames.Insert(component.Name)
 		}
-		componentNames.Insert(component.Name)
 
 		if component.UpdateStrategy != nil {
 			// The component-level override may adjust the supported strategies without repeating the
@@ -121,12 +121,12 @@ func validateExtensionUpdateStrategy(updateStrategy *core.ExtensionUpdateStrateg
 	allErrs := field.ErrorList{}
 
 	switch {
-	case updateStrategy.Default == "":
+	case updateStrategy.Default == nil:
 		if !defaultOptional {
 			allErrs = append(allErrs, field.Required(fldPath.Child("default"), "must provide a default update strategy"))
 		}
-	case !availableExtensionUpdateStrategies.Has(string(updateStrategy.Default)):
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("default"), updateStrategy.Default, sets.List(availableExtensionUpdateStrategies)))
+	case !availableExtensionUpdateStrategies.Has(string(*updateStrategy.Default)):
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("default"), *updateStrategy.Default, sets.List(availableExtensionUpdateStrategies)))
 	}
 
 	if len(updateStrategy.Supported) == 0 {
@@ -141,8 +141,8 @@ func validateExtensionUpdateStrategy(updateStrategy *core.ExtensionUpdateStrateg
 		supported.Insert(string(strategy))
 	}
 
-	if updateStrategy.Default != "" && !supported.Has(string(updateStrategy.Default)) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("default"), updateStrategy.Default, "default update strategy must be contained in the supported strategies"))
+	if updateStrategy.Default != nil && !supported.Has(string(*updateStrategy.Default)) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("default"), *updateStrategy.Default, "default update strategy must be present in the supported strategies"))
 	}
 
 	return allErrs
@@ -157,14 +157,16 @@ func validateExtensionVersions(versions []core.ExtensionVersion, fldPath *field.
 
 		if version.Version == "" {
 			allErrs = append(allErrs, field.Required(idxPath.Child("version"), "version must not be empty"))
-		} else if _, err := semver.NewVersion(version.Version); err != nil {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("version"), version.Version, "could not parse version: "+err.Error()))
-		}
+		} else {
+			if _, err := semver.NewVersion(version.Version); err != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("version"), version.Version, "could not parse version: "+err.Error()))
+			}
 
-		if seenVersions.Has(version.Version) {
-			allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
+			if seenVersions.Has(version.Version) {
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
+			}
+			seenVersions.Insert(version.Version)
 		}
-		seenVersions.Insert(version.Version)
 
 		// An empty lifecycle leaves the version without any classification, so it can never be selected.
 		if len(version.Lifecycle) == 0 {

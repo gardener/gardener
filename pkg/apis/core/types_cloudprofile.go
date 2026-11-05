@@ -365,7 +365,7 @@ const (
 type MachineImageUpdateStrategy string
 
 // UpdateStrategy is the update strategy to use for versioned entities. It shares the vocabulary
-// (patch/minor/major) with MachineImageUpdateStrategy and is used for extension components (GEP-0078).
+// (patch/minor/major) with MachineImageUpdateStrategy and is used for extension components.
 type UpdateStrategy = MachineImageUpdateStrategy
 
 const (

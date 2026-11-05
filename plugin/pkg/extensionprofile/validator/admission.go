@@ -135,16 +135,16 @@ func (v *ExtensionProfileValidator) validateExtensionProfile(a admission.Attribu
 	}
 
 	// Determine which (component, version) pairs still exist after this request.
-	remaining := map[string]map[string]struct{}{}
+	remaining := map[string]map[string]bool{}
 	if a.GetOperation() == admission.Update {
 		newProfile, ok := a.GetObject().(*gardencore.ExtensionProfile)
 		if !ok {
 			return apierrors.NewInternalError(errors.New("could not convert resource into ExtensionProfile object"))
 		}
 		for _, component := range newProfile.Spec.Components {
-			versions := map[string]struct{}{}
+			versions := map[string]bool{}
 			for _, version := range component.Versions {
-				versions[version.Version] = struct{}{}
+				versions[version.Version] = true
 			}
 			remaining[component.Name] = versions
 		}
@@ -176,7 +176,7 @@ func formatShootList(shoots []string) string {
 // no longer present in the `remaining` set. The informer lister only supports label selectors, so all
 // shoots are listed and filtered in memory (as other admission plugins do); listing stops once the
 // reported cap is reached, since the exact total is not surfaced.
-func (v *ExtensionProfileValidator) shootsPinningRemovedVersions(profile *gardencore.ExtensionProfile, remaining map[string]map[string]struct{}) ([]string, error) {
+func (v *ExtensionProfileValidator) shootsPinningRemovedVersions(profile *gardencore.ExtensionProfile, remaining map[string]map[string]bool) ([]string, error) {
 	shoots, err := v.shootLister.List(labels.Everything())
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not list shoots: %w", err))
@@ -193,7 +193,7 @@ func (v *ExtensionProfileValidator) shootsPinningRemovedVersions(profile *garden
 					continue
 				}
 				versions, componentRemains := remaining[component.Name]
-				if _, versionRemains := versions[*component.Version]; componentRemains && versionRemains {
+				if componentRemains && versions[*component.Version] {
 					continue
 				}
 				pinningShoots = append(pinningShoots, shoot.Namespace+"/"+shoot.Name)
@@ -331,8 +331,8 @@ func (v *ExtensionProfileValidator) validateCompatibility(ctx context.Context, a
 		}
 
 		message := fmt.Sprintf("compatibility rule %q is not satisfied", rule.Rule)
-		if rule.Message != "" {
-			message = fmt.Sprintf("%s (rule %q)", rule.Message, rule.Rule)
+		if rule.Message != nil && *rule.Message != "" {
+			message = fmt.Sprintf("%s (rule %q)", *rule.Message, rule.Rule)
 		}
 		return admission.NewForbidden(a, fmt.Errorf("extension %q component %q: %s", extensionType, componentName, message))
 	}
