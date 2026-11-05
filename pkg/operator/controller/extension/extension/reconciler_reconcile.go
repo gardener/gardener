@@ -114,17 +114,12 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Deploying Admission Controller",
 			Fn: func(ctx context.Context) error {
-				if virtualClusterClientSet == nil && !apiServerDeploymentsFound {
-					log.Info("Virtual cluster client not yet available")
-					reconcileResult = reconcile.Result{RequeueAfter: RequeueGardenAPIServerNotAvailable}
-					return nil
-				}
 				if garden.genericTokenKubeconfigSecretName == nil {
 					return fmt.Errorf("generic kubeconfig secret name is not set for garden")
 				}
 				return r.admission.Reconcile(ctx, log, virtualClusterClientSet, *garden.genericTokenKubeconfigSecretName, extension)
 			},
-			Dependencies: flow.NewTaskIDs(createVirtualGardenClientSet),
+			Dependencies: flow.NewTaskIDs(checkGarden),
 		})
 
 		_ = g.Add(flow.Task{

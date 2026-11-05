@@ -198,6 +198,10 @@ func (d *deployment) deleteAdmissionRuntimeClusterResources(ctx context.Context,
 }
 
 func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.Context, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
+	if virtualClusterClientSet == nil {
+		return fmt.Errorf("virtual cluster client set is not available")
+	}
+
 	archive, err := d.helmRegistry.Pull(ctx, extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository)
 	if err != nil {
 		return fmt.Errorf("failed pulling Helm chart from OCI repository %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)

@@ -77,12 +77,9 @@ func (d *deployer) Reconcile(ctx context.Context, log logr.Logger, virtualCluste
 		return reconcile.Result{}, fmt.Errorf("failed checking if priority class %q exists: %w", priorityClassName, err)
 	}
 
-	requeue, err := d.createOrUpdateResources(ctx, log, virtualClusterClientSet, extension)
+	err := d.createOrUpdateResources(ctx, log, virtualClusterClientSet, extension)
 	if err != nil {
 		return reconcile.Result{}, err
-	}
-	if requeue {
-		return reconcile.Result{RequeueAfter: 2 * time.Second}, nil
 	}
 
 	d.recorder.Eventf(extension, nil, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, gardencorev1beta1.EventActionReconcile, "Extension applied successfully in runtime cluster")
@@ -100,15 +97,15 @@ func (d *deployer) Delete(ctx context.Context, log logr.Logger, extension *opera
 	return reconcile.Result{}, nil
 }
 
-func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) (bool, error) {
+func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
 	archive, err := d.helmRegistry.Pull(ctx, extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository)
 	if err != nil {
-		return false, fmt.Errorf("failed pulling Helm chart from OCI repository %q: %w", extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.GetURL(), err)
+		return fmt.Errorf("failed pulling Helm chart from OCI repository %q: %w", extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.GetURL(), err)
 	}
 
 	isSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, d.runtimeClientSet.Client())
 	if err != nil {
-		return false, fmt.Errorf("failed checking whether the runtime cluster is a self-hosted shoot: %w", err)
+		return fmt.Errorf("failed checking whether the runtime cluster is a self-hosted shoot: %w", err)
 	}
 
 	gardenerValues := map[string]any{
@@ -128,18 +125,18 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger,
 	var helmValues map[string]any
 	if extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues != nil {
 		if err := json.Unmarshal(extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues.Raw, &helmValues); err != nil {
-			return false, err
+			return fmt.Errorf("failed unmarshalling runtime cluster values: %w", err)
 		}
 	}
 
 	helmValues, err = chartutils.RenderHelmValues(ctx, d.runtimeClientSet.Client(), helmValues, d.gardenNamespace, extension.Spec.Deployment.Resources)
 	if err != nil {
-		return false, fmt.Errorf("failed rendering Helm values for extension deployment: %w", err)
+		return fmt.Errorf("failed rendering Helm values for extension deployment: %w", err)
 	}
 
 	namespace := operator.ExtensionRuntimeNamespaceName(extension.Name)
 	if err := d.ensureNamespace(ctx, namespace, extension); err != nil {
-		return false, fmt.Errorf("failed ensuring namespace %q: %w", namespace, err)
+		return fmt.Errorf("failed ensuring namespace %q: %w", namespace, err)
 	}
 
 	gardenKubeconfigRequired := ptr.Deref(extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig, false)
@@ -147,7 +144,7 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger,
 	// The virtual garden client is only available during reconciliation (e.g. not while the garden is being deleted).
 	// Without it, the generic garden kubeconfig cannot be built, so injection is skipped.
 	if !gardenKubeconfigRequired || virtualClusterClientSet == nil {
-		log.Info("Skipping garden kubeconfig injection because the virtual garden client is not available yet")
+		log.Info("Skipping garden kubeconfig injection", "gardenKubeconfigRequired", gardenKubeconfigRequired, "virtualClusterClientSetAvailable", virtualClusterClientSet != nil)
 		injectGardenKubeconfig = false
 	}
 
@@ -155,20 +152,20 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger,
 	if injectGardenKubeconfig {
 		genericGardenKubeconfigSecretName, err = d.reconcileGenericGardenKubeconfig(ctx, virtualClusterClientSet, namespace)
 		if err != nil {
-			return false, fmt.Errorf("failed reconciling generic garden kubeconfig: %w", err)
+			return fmt.Errorf("failed reconciling generic garden kubeconfig: %w", err)
 		}
 	}
 
 	renderedChart, err := d.runtimeClientSet.ChartRenderer().RenderArchive(archive, extension.Name, namespace, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
-		return false, fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.GetURL(), err)
+		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.GetURL(), err)
 	}
 
 	secretData := renderedChart.AsSecretData()
 
 	mustInjectGardenKubeconfig, err := gardenerutils.NeedsGardenKubeconfig(injectGardenKubeconfig, secretData)
 	if err != nil {
-		return false, fmt.Errorf("failed checking whether garden kubeconfig injection is needed: %w", err)
+		return fmt.Errorf("failed checking whether garden kubeconfig injection is needed: %w", err)
 	}
 
 	gardenAccessSecret := gardenerutils.NewGardenAccessSecret("extension", namespace).
@@ -177,7 +174,7 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger,
 	if mustInjectGardenKubeconfig {
 		log.Info("Reconciling garden access secret")
 		if err := gardenAccessSecret.Reconcile(ctx, d.runtimeClientSet.Client()); err != nil {
-			return false, fmt.Errorf("failed reconciling garden access secret: %w", err)
+			return fmt.Errorf("failed reconciling garden access secret: %w", err)
 		}
 
 		if err := gardenerutils.MutateObjectsInSecretData(
@@ -192,12 +189,12 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger,
 				return gardenerutils.InjectGenericGardenKubeconfig(obj, genericGardenKubeconfigSecretName, gardenAccessSecret.Secret.Name, gardenerutils.VolumeMountPathGenericGardenKubeconfig)
 			},
 		); err != nil {
-			return false, fmt.Errorf("failed injecting garden access secrets: %w", err)
+			return fmt.Errorf("failed injecting garden access secrets: %w", err)
 		}
 	} else {
 		log.Info("Deleting garden access secret")
 		if err := client.IgnoreNotFound(d.runtimeClientSet.Client().Delete(ctx, gardenAccessSecret.Secret)); err != nil {
-			return false, fmt.Errorf("failed deleting garden access secret: %w", err)
+			return fmt.Errorf("failed deleting garden access secret: %w", err)
 		}
 	}
 
@@ -214,15 +211,14 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, log logr.Logger,
 		},
 		secretData,
 	); err != nil {
-		return false, fmt.Errorf("failed creating ManagedResource: %w", err)
+		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
 	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName); err != nil {
-		return false, fmt.Errorf("failed waiting for ManagedResource to be healthy: %w", err)
+		return fmt.Errorf("failed waiting for ManagedResource to be healthy: %w", err)
 	}
 
-	// Request a requeue if the garden kubeconfig is required but not injected yet, so that the next reconciliation can inject it.
-	return gardenKubeconfigRequired && !injectGardenKubeconfig, nil
+	return nil
 }
 
 // reconcileGenericGardenKubeconfig creates a generic kubeconfig secret in the given namespace that points at the
