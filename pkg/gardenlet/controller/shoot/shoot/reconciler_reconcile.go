@@ -264,11 +264,6 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       b.Shoot.HibernationEnabled || b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Ensuring advertised addresses for the Shoot",
-			Fn:           b.UpdateAdvertisedAddresses,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
-		})
 		reconcileDNSRecords      = g.AddGroup(b.ReconcileDNSRecordsTaskGroup().WithDependencies(waitUntilKubeAPIServerServiceIsReady))
 		_                        = g.AddGroup(b.ReconcileBackupResourcesTaskGroup(flowCtx.allowBackup, flowCtx.isCopyOfBackupsRequired, flowCtx.skipReadiness))
 		waitUntilEtcdReady       = g.AddGroup(b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness))
@@ -309,6 +304,14 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn:           flow.TaskFn(b.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       b.Shoot.IsSelfHosted(),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Ensuring advertised addresses for the Shoot",
+			Fn:   b.UpdateAdvertisedAddresses,
+			// During a domain migration, the new domain is advertised (and used in new kubeconfigs) only after it resolves
+			// and the kube-apiserver serves it.
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady).
+				InsertIf(b.Shoot.PriorExternalClusterDomain != nil, reconcileDNSRecords, deployKubeAPIServerServiceSNISettings),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Cleaning up stale Istio ingress namespaces of Kubernetes API server services in the Seed cluster",
