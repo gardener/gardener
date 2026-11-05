@@ -122,7 +122,7 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 	}
 
 	switch a.GetKind().GroupKind() {
-	case core.Kind("BackupBucket"), core.Kind("BackupEntry"), core.Kind("Seed"), core.Kind("Shoot"), seedmanagement.Kind("ManagedSeed"):
+	case core.Kind("BackupBucket"), core.Kind("BackupEntry"), core.Kind("Seed"), core.Kind("Shoot"), seedmanagement.Kind("ManagedSeed"), seedmanagement.Kind("Gardenlet"):
 	default:
 		return nil
 	}
@@ -217,6 +217,29 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 
 		if seedSpec != nil {
 			validationError = e.validateSeed(kindToExtensions, *seedSpec, "ManagedSeed", field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec"))
+		}
+
+	case seedmanagement.Kind("Gardenlet"):
+		gardenlet, ok := a.GetObject().(*seedmanagement.Gardenlet)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert object into Gardenlet object")
+		}
+
+		oldGardenlet := &seedmanagement.Gardenlet{}
+		if oldObj := a.GetOldObject(); oldObj != nil {
+			oldGardenlet, ok = oldObj.(*seedmanagement.Gardenlet)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old object into Gardenlet object")
+			}
+		}
+
+		seedSpec, err := changedSeedSpec(gardenlet.Spec.Config, oldGardenlet.Spec.Config)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		if seedSpec != nil {
+			validationError = e.validateSeed(kindToExtensions, *seedSpec, "Gardenlet", field.NewPath("spec", "config", "seedConfig", "spec"))
 		}
 
 	case core.Kind("Shoot"):
