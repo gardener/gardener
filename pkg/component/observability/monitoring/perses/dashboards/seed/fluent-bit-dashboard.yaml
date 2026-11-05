@@ -1269,7 +1269,7 @@ spec:
                   minStep: ""
                   query: sum by (server_address) (  rate(output_plugin_otel_sdk_exporter_log_exported_total{server_address=~".+$host.+"}[$__rate_interval]))
                   seriesNameFormat: '{{server_address}}'
-    "3_4":
+    "3_3":
       kind: Panel
       spec:
         display:
@@ -1304,7 +1304,7 @@ spec:
                   minStep: ""
                   query: rate(output_plugin_rpc_client_request_size_bytes_sum{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - request bytes/sec'
-    "3_5":
+    "3_4":
       kind: Panel
       spec:
         display:
@@ -1339,7 +1339,7 @@ spec:
                   minStep: ""
                   query: sum by (rpc_response_status_code,server_address) (rate(output_plugin_otel_sdk_exporter_operation_duration_seconds_count{server_address=~".+$host.+"}[$__rate_interval]))
                   seriesNameFormat: '{{server_address}} - {{rpc_response_status_code}}'
-    "3_6":
+    "3_5":
       kind: Panel
       spec:
         display:
@@ -1376,7 +1376,7 @@ spec:
                   minStep: ""
                   query: rate(output_plugin_rpc_client_call_duration_seconds_count{pod=~"$pod"}[$__rate_interval])
                   seriesNameFormat: '{{pod}} - {{rpc_method}}'
-    "3_7":
+    "3_6":
       kind: Panel
       spec:
         display:
@@ -1656,24 +1656,24 @@ spec:
             width: 12
             height: 8
             content:
-              $ref: '#/spec/panels/3_4'
+              $ref: '#/spec/panels/3_3'
           - x: 0
             "y": 20
             width: 12
             height: 8
             content:
-              $ref: '#/spec/panels/3_5'
+              $ref: '#/spec/panels/3_4'
           - x: 12
             "y": 20
             width: 12
             height: 8
             content:
-              $ref: '#/spec/panels/3_6'
+              $ref: '#/spec/panels/3_5'
           - x: 0
             "y": 28
             width: 12
             height: 8
             content:
-              $ref: '#/spec/panels/3_7'
+              $ref: '#/spec/panels/3_6'
   duration: 1h
   refreshInterval: 5s
