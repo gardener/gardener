@@ -771,6 +771,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>APIURL is the URL to the GitHub API.</p>
 </td>
 </tr>

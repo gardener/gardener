@@ -1266,7 +1266,6 @@ spec:
                                 type: object
                                 x-kubernetes-map-type: atomic
                             required:
-                            - apiURL
                             - organisation
                             - repository
                             - secretRef

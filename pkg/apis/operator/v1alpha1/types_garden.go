@@ -776,8 +776,8 @@ type DashboardGitHub struct {
 	// APIURL is the URL to the GitHub API.
 	// +kubebuilder:default=`https://api.github.com`
 	// +kubebuilder:validation:MinLength=1
-	// +required
-	APIURL string `json:"apiURL"` //nolint:kubeapilinter // defaulted field; omitempty would change serialization
+	// +optional
+	APIURL string `json:"apiURL,omitempty"`
 	// Organisation is the name of the GitHub organisation.
 	// +kubebuilder:validation:MinLength=1
 	// +required
