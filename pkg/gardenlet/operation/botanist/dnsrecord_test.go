@@ -630,7 +630,7 @@ var _ = Describe("dnsrecord", func() {
 				b.Shoot.PriorExternalDomain = &gardenerutils.Domain{Domain: priorExternalDomain, Provider: priorExternalProvider}
 			})
 
-			It("should hand over the record of the old domain before it deploys the record of the new domain", func() {
+			It("should destroy the record of the old domain, keeping its DNS entry, before it deploys the record of the new domain", func() {
 				createExternalDNSRecord("api." + priorExternalDomain)
 
 				gomock.InOrder(

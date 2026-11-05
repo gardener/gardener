@@ -125,7 +125,7 @@ func (b *Botanist) DeployOrDestroyInternalDNSRecord(ctx context.Context) error {
 // deployExternalDNSRecord deploys or restores the external DNSRecord and waits for the operation to complete.
 func (b *Botanist) deployExternalDNSRecord(ctx context.Context) error {
 	if b.NeedsPriorExternalDNS() {
-		if err := b.handOverExternalDNSRecord(ctx); err != nil {
+		if err := b.destroyOutdatedExternalDNSRecordKeepingDNSEntry(ctx); err != nil {
 			return err
 		}
 	}
@@ -136,7 +136,7 @@ func (b *Botanist) deployExternalDNSRecord(ctx context.Context) error {
 	return b.Shoot.Components.Extensions.ExternalDNSRecord.Wait(ctx)
 }
 
-func (b *Botanist) handOverExternalDNSRecord(ctx context.Context) error {
+func (b *Botanist) destroyOutdatedExternalDNSRecordKeepingDNSEntry(ctx context.Context) error {
 	dnsRecord := &extensionsv1alpha1.DNSRecord{}
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName}, dnsRecord); err != nil {
 		return client.IgnoreNotFound(err)
