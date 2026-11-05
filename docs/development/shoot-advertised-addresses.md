@@ -27,7 +27,7 @@ e.g. observability-related components such as `plutono`, `vali`, `prometheus`,
 etc.
 
 While the external domain of the shoot is migrated (see [Changing the External Domain](../usage/shoot-operations/shoot_credentials_rotation.md#changing-the-external-domain)), the list additionally contains a `prior-external` endpoint with the old external domain, directly after the `external` endpoint.
-It is only present while the CA rotation is in the phases `Preparing` to `Prepared`, and it is not used for the `kubeconfig`s handed out by Gardener.
+It is only present while the CA rotation is in the phases `Preparing` to `Prepared`. The `kubeconfig`s handed out by Gardener contain it as an additional context, while the current context stays on the `external` endpoint.
 
 > [!NOTE]
 > As of now, only `Ingress` and `VirtualService` resources support to be advertised using this label.

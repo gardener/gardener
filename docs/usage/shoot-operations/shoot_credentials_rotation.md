@@ -245,7 +245,7 @@ While the CA rotation is in one of the phases `Preparing`, `PreparingWithoutWork
 - DNS records exist for both domains.
 - The server certificate of the `kube-apiserver` is valid for both domains.
 - `.status.advertisedAddresses` contains the new domain as `external` and the old domain as `prior-external`.
-- `kubeconfig`s issued in this phase (e.g., via the `shoots/adminkubeconfig` subresource) contain the new domain.
+- `kubeconfig`s issued in this phase (e.g., via the `shoots/adminkubeconfig` subresource) use the new domain in their current context. They also contain a context `<namespace>--<shoot-name>-prior-external` for the old domain, which can be used as a fallback if the new domain is not reachable yet.
 
 Update all API clients to the new domain together with the new CA bundle (see above).
 When you complete the rotation with `rotate-ca-complete`, the old domain is removed: its DNS record is deleted, and it is dropped from the server certificate and from `.status.advertisedAddresses`.
