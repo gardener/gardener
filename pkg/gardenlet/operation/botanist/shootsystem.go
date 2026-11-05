@@ -39,7 +39,7 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 		values.RegistryCABundle = b.RegistryCABundle
 	}
 
-	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, values)
+	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, values)
 }
 
 // DeployShootSystem deploys the shoot system resources.

@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // ManagedResourceName is the name of the ManagedResource containing the resource specifications.
@@ -87,19 +88,22 @@ type Values struct {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
 	return &shootSystem{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type shootSystem struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 func (s *shootSystem) Deploy(ctx context.Context) error {
@@ -337,12 +341,27 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 			}
 		)
+		caKubeletSecret, found := s.secretsManager.Get(v1beta1constants.SecretNameCAKubelet)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
+		}
+
+		caKubeletConfigMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.SecretNameCAKubelet,
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: map[string]string{
+				secretsutils.DataKeyCertificateCA: string(caKubeletSecret.Data[secretsutils.DataKeyCertificateBundle]),
+			},
+		}
 
 		if err := registry.Add(
 			networkPolicyAllowToShootAPIServer,
 			networkPolicyAllowToDNS,
 			networkPolicyAllowToKubelet,
 			networkPolicyAllowToPublicNetworks,
+			caKubeletConfigMap,
 		); err != nil {
 			return nil, err
 		}
