@@ -6,6 +6,7 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"strconv"
@@ -1239,6 +1240,66 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("OperatingSystemConfig test-namespace/new-name is still present")))
 			})
+		})
+	})
+
+	Describe("#DeduplicateOSCErrors", func() {
+		It("should return nil when err is nil", func() {
+			Expect(DeduplicateOSCErrors(nil)).To(Succeed())
+		})
+
+		It("should return a plain error unchanged", func() {
+			err := fmt.Errorf("plain error")
+			Expect(DeduplicateOSCErrors(err)).To(Equal(err))
+		})
+
+		It("should return a single-entry multierror unchanged", func() {
+			err := multierror.Append(nil, fmt.Errorf("outer: %w", fmt.Errorf("cause")))
+			Expect(DeduplicateOSCErrors(err)).To(Equal(err))
+		})
+
+		It("should leave a multierror with all unique causes unchanged", func() {
+			err := multierror.Append(nil,
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-init for worker pool1: %w", fmt.Errorf("cause A")),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", fmt.Errorf("cause B")),
+			)
+			result := DeduplicateOSCErrors(err)
+			Expect(result.Error()).To(ContainSubstring("cause A"))
+			Expect(result.Error()).To(ContainSubstring("cause B"))
+			var multiErr *multierror.Error
+			Expect(errors.As(result, &multiErr)).To(BeTrue())
+			Expect(multiErr.Errors).To(HaveLen(2))
+		})
+
+		It("should collapse multiple errors sharing the same cause into one", func() {
+			cause := fmt.Errorf("extension not installed")
+			err := multierror.Append(nil,
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-init for worker pool1: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-reconcile for worker pool1: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-reconcile for worker pool2: %w", cause),
+			)
+			result := DeduplicateOSCErrors(err)
+			var multiErr *multierror.Error
+			Expect(errors.As(result, &multiErr)).To(BeTrue())
+			Expect(multiErr.Errors).To(HaveLen(1))
+			Expect(multiErr.Errors[0].Error()).To(ContainSubstring("[4] occurrences of: extension not installed"))
+		})
+
+		It("should group errors by cause and emit one entry per unique cause", func() {
+			causeA := fmt.Errorf("cause A")
+			causeB := fmt.Errorf("cause B")
+			err := multierror.Append(nil,
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-init for worker pool1: %w", causeA),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", causeA),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-init for worker pool3: %w", causeB),
+			)
+			result := DeduplicateOSCErrors(err)
+			var multiErr *multierror.Error
+			Expect(errors.As(result, &multiErr)).To(BeTrue())
+			Expect(multiErr.Errors).To(HaveLen(2))
+			Expect(multiErr.Errors[0].Error()).To(ContainSubstring("cause A"))
+			Expect(multiErr.Errors[1].Error()).To(ContainSubstring("cause B"))
 		})
 	})
 
