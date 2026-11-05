@@ -366,7 +366,7 @@ func (r *Reconciler) checkGardenletVersionParity(ctx context.Context, shoot *gar
 		return newGardenletVersionNotReportedError(role, ownSeedName)
 	}
 
-	peerSeedName, ok := liveMigratePeerSeedName(shoot, ownSeedName)
+	peerSeedName, peerRole, ok := liveMigratePeer(shoot, ownSeedName)
 	if !ok {
 		// The shoot is no longer undergoing a live migration (e.g. it was aborted). Returning nil is safe: the
 		// next reconcile's dispatcher routes away from liveMigrateShoot, ending the in-flight flow.
@@ -380,7 +380,7 @@ func (r *Reconciler) checkGardenletVersionParity(ctx context.Context, shoot *gar
 
 	peerVersion := ptr.Deref(peerSeed.Status.Gardener, gardencorev1beta1.Gardener{}).Version
 	if peerVersion == "" {
-		return newGardenletVersionNotReportedError(liveMigratePeerRole(role), peerSeedName)
+		return newGardenletVersionNotReportedError(peerRole, peerSeedName)
 	}
 
 	if localVersion != peerVersion {
@@ -388,7 +388,7 @@ func (r *Reconciler) checkGardenletVersionParity(ctx context.Context, shoot *gar
 		if role == v1beta1helper.LiveMigrationRoleDestination {
 			sourceVersion, destinationVersion = destinationVersion, sourceVersion
 		}
-		return fmt.Errorf("source and destination seeds must run the same gardenlet version (source: %s, destination: %s)", sourceVersion, destinationVersion)
+		return fmt.Errorf("source and destination seeds must run the same gardenlet version (source: %q, destination: %q)", sourceVersion, destinationVersion)
 	}
 
 	return nil
@@ -399,24 +399,13 @@ func newGardenletVersionNotReportedError(role v1beta1helper.LiveMigrationRole, s
 	return fmt.Errorf("gardenlet version not reported for %s seed %q", strings.ToLower(string(role)), seedName)
 }
 
-func liveMigratePeerRole(role v1beta1helper.LiveMigrationRole) v1beta1helper.LiveMigrationRole {
-	switch role {
+func liveMigratePeer(shoot *gardencorev1beta1.Shoot, ownSeedName string) (seedName string, role v1beta1helper.LiveMigrationRole, ok bool) {
+	switch v1beta1helper.GetLiveMigrationRole(shoot, ownSeedName) {
 	case v1beta1helper.LiveMigrationRoleSource:
-		return v1beta1helper.LiveMigrationRoleDestination
+		return ptr.Deref(shoot.Spec.SeedName, ""), v1beta1helper.LiveMigrationRoleDestination, true
 	case v1beta1helper.LiveMigrationRoleDestination:
-		return v1beta1helper.LiveMigrationRoleSource
+		return ptr.Deref(shoot.Status.SeedName, ""), v1beta1helper.LiveMigrationRoleSource, true
 	default:
-		return v1beta1helper.LiveMigrationRoleNone
-	}
-}
-
-func liveMigratePeerSeedName(shoot *gardencorev1beta1.Shoot, seedName string) (string, bool) {
-	switch v1beta1helper.GetLiveMigrationRole(shoot, seedName) {
-	case v1beta1helper.LiveMigrationRoleSource:
-		return ptr.Deref(shoot.Spec.SeedName, ""), true
-	case v1beta1helper.LiveMigrationRoleDestination:
-		return ptr.Deref(shoot.Status.SeedName, ""), true
-	default:
-		return "", false
+		return "", v1beta1helper.LiveMigrationRoleNone, false
 	}
 }

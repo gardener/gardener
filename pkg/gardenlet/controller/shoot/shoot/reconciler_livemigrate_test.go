@@ -21,10 +21,9 @@ import (
 
 var _ = Describe("#checkGardenletVersionParity", func() {
 	var (
-		ctx        = context.TODO()
-		sourceSeed *gardencorev1beta1.Seed
-		destSeed   *gardencorev1beta1.Seed
-		shoot      *gardencorev1beta1.Shoot
+		ctx                = context.TODO()
+		sourceSeed, destSeed *gardencorev1beta1.Seed
+		shoot              *gardencorev1beta1.Shoot
 	)
 
 	BeforeEach(func() {
@@ -58,10 +57,6 @@ var _ = Describe("#checkGardenletVersionParity", func() {
 		return r
 	}
 
-	setPeerVersion := func(seed *gardencorev1beta1.Seed, version string) {
-		seed.Status.Gardener = &gardencorev1beta1.Gardener{Version: version}
-	}
-
 	It("returns nil when the shoot is no longer undergoing a live migration", func() {
 		shoot.SetAnnotations(nil)
 		r := newReconciler("source-seed", "1.2.3", destSeed)
@@ -77,16 +72,16 @@ var _ = Describe("#checkGardenletVersionParity", func() {
 
 	Describe("source role", func() {
 		It("returns nil when both versions match", func() {
-			setPeerVersion(destSeed, "1.2.3")
+			destSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 			r := newReconciler("source-seed", "1.2.3", destSeed)
 			Expect(r.checkGardenletVersionParity(ctx, shoot, v1beta1helper.LiveMigrationRoleSource)).To(Succeed())
 		})
 
 		It("returns error when versions differ", func() {
-			setPeerVersion(destSeed, "1.2.4")
+			destSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "1.2.4"}
 			r := newReconciler("source-seed", "1.2.3", destSeed)
 			err := r.checkGardenletVersionParity(ctx, shoot, v1beta1helper.LiveMigrationRoleSource)
-			Expect(err).To(MatchError(ContainSubstring("source: 1.2.3, destination: 1.2.4")))
+			Expect(err).To(MatchError(ContainSubstring(`source: "1.2.3", destination: "1.2.4"`)))
 		})
 
 		It("returns error when local version is empty", func() {
@@ -108,10 +103,10 @@ var _ = Describe("#checkGardenletVersionParity", func() {
 		})
 
 		It("returns error when versions differ only by prerelease suffix (v1.155.0 vs v1.155.0-rc1)", func() {
-			setPeerVersion(destSeed, "v1.155.0-rc1")
+			destSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "v1.155.0-rc1"}
 			r := newReconciler("source-seed", "v1.155.0", destSeed)
 			err := r.checkGardenletVersionParity(ctx, shoot, v1beta1helper.LiveMigrationRoleSource)
-			Expect(err).To(MatchError(ContainSubstring("source: v1.155.0, destination: v1.155.0-rc1")))
+			Expect(err).To(MatchError(ContainSubstring(`source: "v1.155.0", destination: "v1.155.0-rc1"`)))
 		})
 	})
 
@@ -123,16 +118,16 @@ var _ = Describe("#checkGardenletVersionParity", func() {
 		})
 
 		It("returns nil when both versions match", func() {
-			setPeerVersion(sourceSeed, "1.2.3")
+			sourceSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 			r := newReconciler("dest-seed", "1.2.3", sourceSeed)
 			Expect(r.checkGardenletVersionParity(ctx, shoot, v1beta1helper.LiveMigrationRoleDestination)).To(Succeed())
 		})
 
 		It("returns error with source/destination labelled correctly", func() {
-			setPeerVersion(sourceSeed, "1.2.3")
+			sourceSeed.Status.Gardener = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 			r := newReconciler("dest-seed", "1.2.4", sourceSeed)
 			err := r.checkGardenletVersionParity(ctx, shoot, v1beta1helper.LiveMigrationRoleDestination)
-			Expect(err).To(MatchError(ContainSubstring("source: 1.2.3, destination: 1.2.4")))
+			Expect(err).To(MatchError(ContainSubstring(`source: "1.2.3", destination: "1.2.4"`)))
 		})
 
 		It("returns error when peer (source) version is empty", func() {
