@@ -1352,6 +1352,7 @@ message Extension {
 message ExtensionAutoUpdate {
   // Enabled indicates whether components are automatically upgraded within the configured update strategy.
   // When disabled, a component only moves off its pinned version once that version expires (force-upgrade).
+  // +required
   optional bool enabled = 1;
 
   // UpdateStrategy is the auto-update strategy to use while enabled. Possible values are: patch, minor, major.
@@ -1370,6 +1371,7 @@ message ExtensionCompatibility {
 // ExtensionCompatibilityValidation is a single CEL compatibility rule.
 message ExtensionCompatibilityValidation {
   // Rule is a CEL expression evaluated against the shoot, bound to the variable `shoot`. It must return a boolean.
+  // +required
   optional string rule = 1;
 
   // Message is the message surfaced when the rule evaluates to false.
@@ -1409,6 +1411,7 @@ message ExtensionProfile {
 // ExtensionProfileComponent is a named component of an extension with an independently versioned lifecycle.
 message ExtensionProfileComponent {
   // Name is the name of the component.
+  // +required
   optional string name = 1;
 
   // UpdateStrategy overrides the profile-level update strategy for this component.
@@ -1425,6 +1428,7 @@ message ExtensionProfileComponent {
 // ExtensionProfileComponentStatus is the computed status for a single component.
 message ExtensionProfileComponentStatus {
   // Name is the name of the component.
+  // +required
   optional string name = 1;
 
   // Versions is the list of offered versions with their currently computed classification.
@@ -1446,6 +1450,7 @@ message ExtensionProfileList {
 message ExtensionProfileSpec {
   // UpdateStrategy is the default auto-update policy for this extension type. It is applied to a
   // component that does not define its own updateStrategy.
+  // +required
   optional ExtensionUpdateStrategy updateStrategy = 1;
 
   // Components is the list of named components offered by this extension, each versioned independently.
@@ -1496,16 +1501,19 @@ message ExtensionUpdateStrategy {
 
   // Supported is the allow-list of update strategies this extension implements. Admission rejects any
   // shoot (or default) requesting a strategy not listed here. Default must be contained in Supported.
+  // +required
   repeated string supported = 2;
 }
 
 // ExtensionVersion is a single offered version of a component with its lifecycle and compatibility envelope.
 message ExtensionVersion {
   // Version is the version identifier. Must be a valid semantic version.
+  // +required
   optional string version = 1;
 
   // Lifecycle defines the lifecycle stages for this version (reusing the classification semantics of
   // CloudProfile versions, see GEP-0032). At least one stage must be provided.
+  // +required
   repeated LifecycleStage lifecycle = 2;
 
   // Compatibility is an optional compatibility envelope evaluated against the shoot on admission.
@@ -3804,6 +3812,7 @@ message ShootCredentialsRotation {
 // ShootExtensionComponent pins the version of a single component managed by an extension.
 message ShootExtensionComponent {
   // Name is the name of the component as listed in the ExtensionProfile.
+  // +required
   optional string name = 1;
 
   // Version pins the component version. A partial version is resolved to the highest matching supported
