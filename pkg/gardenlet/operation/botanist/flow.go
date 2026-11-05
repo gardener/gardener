@@ -1319,7 +1319,7 @@ const TaskGroupDeleteMachineControllerManager flow.TaskID = "TaskGroupDeleteMach
 // waiting until it is gone. It is skipped for workerless shoots.
 func (b *Botanist) DeleteMachineControllerManagerTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupDeleteMachineControllerManager)
+		g = flow.NewTaskGroup(TaskGroupDeleteMachineControllerManager).WithDependencies(TaskGroupMigrateAndDeleteManagedResources)
 
 		deleteMachineControllerManager = g.Add(flow.Task{
 			Name: "Deleting machine-controller-manager",
@@ -1345,7 +1345,7 @@ const TaskGroupMigrateExtensionResources flow.TaskID = "TaskGroupMigrateExtensio
 // MigrateExtensionResourcesTaskGroup migrates all extension resources so the destination seed can restore them.
 func (b *Botanist) MigrateExtensionResourcesTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupMigrateExtensionResources)
+		g = flow.NewTaskGroup(TaskGroupMigrateExtensionResources).WithDependencies(TaskGroupDeleteMachineControllerManager)
 
 		migrateExtensionResources = g.Add(flow.Task{
 			Name: "Migrating extension resources",
@@ -1368,7 +1368,7 @@ const TaskGroupMigrateExtensionsBeforeKubeAPIServer flow.TaskID = "TaskGroupMigr
 // persists the resulting shoot state so the destination can restore them.
 func (b *Botanist) MigrateExtensionsBeforeKubeAPIServerTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupMigrateExtensionsBeforeKubeAPIServer)
+		g = flow.NewTaskGroup(TaskGroupMigrateExtensionsBeforeKubeAPIServer).WithDependencies(TaskGroupMigrateAndDeleteManagedResources)
 
 		migrateExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
 			Name: "Migrating extensions before kube-apiserver",
@@ -1472,7 +1472,7 @@ const TaskGroupMigrateAndDeleteControlPlane flow.TaskID = "TaskGroupMigrateAndDe
 // MigrateAndDeleteControlPlaneTaskGroup handles the migration and deletion of the shoot control plane.
 func (b *Botanist) MigrateAndDeleteControlPlaneTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteControlPlane)
+		g = flow.NewTaskGroup(TaskGroupMigrateAndDeleteControlPlane).WithDependencies(TaskGroupDestroyExtensionsAndMachineResources)
 
 		migrateControlPlane = g.Add(flow.Task{
 			Name: "Migrating shoot control plane",
@@ -1545,7 +1545,7 @@ const TaskGroupDestroyExtensionsAndMachineResources flow.TaskID = "TaskGroupDest
 // kube-apiserver and prepares for the deletion of the control plane.
 func (b *Botanist) DestroyExtensionsAndMachineResourcesTaskGroup() flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupDestroyExtensionsAndMachineResources)
+		g = flow.NewTaskGroup(TaskGroupDestroyExtensionsAndMachineResources).WithDependencies(TaskGroupMigrateExtensionsBeforeKubeAPIServer)
 
 		deleteExtensionResources = g.Add(flow.Task{
 			Name: "Deleting extension resources from the Shoot namespace",
