@@ -20,6 +20,7 @@ import (
 type ControllerDeployment struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Helm configures that an extension controller is deployed using helm.

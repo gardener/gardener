@@ -576,6 +576,7 @@ DNS holds information about DNS settings.
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Domains are the external domains of the virtual garden cluster.<br />The first given domain in this list is immutable.</p>
 </td>
 </tr>
@@ -770,6 +771,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>APIURL is the URL to the GitHub API.</p>
 </td>
 </tr>
@@ -1148,6 +1150,7 @@ DeploymentSpec is the specification for the deployment of a component.
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Helm contains the specification for a Helm deployment.</p>
 </td>
 </tr>
@@ -1440,6 +1443,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Spec contains the specification of this extension.</p>
 </td>
 </tr>
@@ -1451,6 +1455,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Status contains the status of this extension.</p>
 </td>
 </tr>
@@ -1490,6 +1495,7 @@ ExtensionDeploymentSpec specifies how to install the extension in a gardener lan
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Helm contains the specification for a Helm deployment.</p>
 </td>
 </tr>
@@ -1744,6 +1750,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Spec contains the specification of this garden.</p>
 </td>
 </tr>
@@ -1755,6 +1762,7 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Status contains the status of this garden.</p>
 </td>
 </tr>
@@ -1937,6 +1945,7 @@ Condition array
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Conditions is a list of conditions based on health checks.</p>
 </td>
 </tr>
@@ -1972,6 +1981,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this resource.</p>
 </td>
 </tr>
@@ -1995,6 +2005,7 @@ integer
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>List of addresses that are relevant to the Garden.<br />These include the Kube API server address of the virtual garden cluster.</p>
 </td>
 </tr>
@@ -2792,6 +2803,7 @@ Ingress configures the Ingress specific settings of the runtime cluster.
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used<br />to construct ingress URLs for system applications running in runtime cluster.</p>
 </td>
 </tr>
