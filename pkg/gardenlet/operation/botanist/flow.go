@@ -588,14 +588,14 @@ func (b *Botanist) ReconcileControlPlaneComponentsTaskGroup(shootIsGarden bool) 
 		g = flow.NewTaskGroup(TaskGroupReconcileControlPlaneComponents).
 			WithDependencies(
 				TaskGroupInitializeSecretsManagement,
+				TaskGroupDeployCloudProviderSecret,
 				TaskGroupReconcileGardenerResourceManager,
 			)
 
 		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes controller manager",
-			Fn:           flow.TaskFn(b.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(TaskGroupDeployCloudProviderSecret),
-			SkipIf:       b.Shoot.IsSelfHosted(),
+			Name:   "Deploying Kubernetes controller manager",
+			Fn:     flow.TaskFn(b.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf: b.Shoot.IsSelfHosted(),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying Kubernetes scheduler",
