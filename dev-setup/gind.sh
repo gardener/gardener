@@ -35,6 +35,9 @@ case "$COMMAND" in
     # when the Dockerfile or its build context actually changed.
     GIND_BUILD_CONTEXT="$(dirname "$0")/../pkg/provider-local/machine-provider/node"
     export GIND_MACHINE_IMAGE="gind-machine:$(find "$GIND_BUILD_CONTEXT" -type f | sort | xargs shasum -a 256 | shasum -a 256 | cut -c1-12)"
+    # The API server load balancer reads its upstream from this directory. Start with the first machine.
+    mkdir -p "$(dirname "$0")/../dev/gind-lb"
+    "$(dirname "$0")/gind/set-api-server-upstream.sh" gind-machine-0 "$(dirname "$0")/../dev/gind-lb"
     docker compose -f "$GIND_COMPOSE_FILE" up -d
 
     make gardenadm-up SCENARIO=unmanaged-infra
