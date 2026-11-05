@@ -103,7 +103,8 @@ This admission controller reacts on `CREATE` and `UPDATE` operations for `Backup
 
 **Type**: Validating. **Enabled by default**: Yes.
 
-This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupEntry`s, `BackupBucket`s, `Seed`s, and `Shoot`s.
+This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupEntry`s, `BackupBucket`s, `Seed`s, `ManagedSeed`s, and `Shoot`s.
+For `ManagedSeed`s, it checks the seed specification in the gardenlet configuration (`.spec.gardenlet.config.seedConfig.spec`).
 For all the various extension types in the specifications of these objects, it validates whether there exists a `ControllerRegistration` in the system that is primarily responsible for the stated extension type(s).
 This prevents misconfigurations that would otherwise allow users to create such resources with extension types that don't exist in the cluster, effectively leading to failing reconciliation loops.
 
