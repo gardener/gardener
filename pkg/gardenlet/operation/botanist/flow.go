@@ -576,14 +576,14 @@ func (b *Botanist) ReconcileKubeAPIServerTaskGroup(skipReadiness bool, deployTim
 	return g.SkipIf(b.Shoot.IsSelfHosted())
 }
 
-// TaskGroupReconcileControlPlaneComponents is a flow.TaskID for a logical flow.TaskGroup.
-const TaskGroupReconcileControlPlaneComponents flow.TaskID = "TaskGroupReconcileControlPlaneComponents"
+// TaskGroupDeployControlPlaneComponents is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupDeployControlPlaneComponents flow.TaskID = "TaskGroupDeployControlPlaneComponents"
 
-// ReconcileControlPlaneComponentsTaskGroup deploys kube-controller-manager, kube-scheduler,
+// DeployControlPlaneComponentsTaskGroup deploys kube-controller-manager, kube-scheduler,
 // vertical-pod-autoscaler, and dependency-watchdog.
-func (b *Botanist) ReconcileControlPlaneComponentsTaskGroup(shootIsGarden bool) flow.TaskGroup {
+func (b *Botanist) DeployControlPlaneComponentsTaskGroup(shootIsGarden bool) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(TaskGroupReconcileControlPlaneComponents).
+		g = flow.NewTaskGroup(TaskGroupDeployControlPlaneComponents).
 			WithDependencies(
 				TaskGroupInitializeSecretsManagement,
 				TaskGroupDeployCloudProviderSecret,

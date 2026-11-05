@@ -438,12 +438,12 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 					v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPrepared)),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, snapshotETCD),
 		})
-		reconcileControlPlaneComponents     = g.AddGroup(b.ReconcileControlPlaneComponentsTaskGroup(shootIsGarden))
+		deployControlPlaneComponents        = g.AddGroup(b.DeployControlPlaneComponentsTaskGroup(shootIsGarden))
 		waitUntilKubeControllerManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until kube-controller-manager reports readiness",
 			Fn:           b.Shoot.Components.ControlPlane.KubeControllerManager.Wait,
 			SkipIf:       flowCtx.skipReadiness || (!saKeyRotationPreparing && !caRotationPreparing) || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(reconcileControlPlaneComponents),
+			Dependencies: flow.NewTaskIDs(deployControlPlaneComponents),
 		})
 		createNewServiceAccountSecrets = g.Add(flow.Task{
 			Name: "Creating new ServiceAccount secrets after creation of new signing key",
@@ -502,7 +502,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		reconcileSystemComponents = g.AddGroup(b.ReconcileSystemComponentsTaskGroup(flowCtx.kubeProxyEnabled, flowCtx.skipReadiness).WithDependencies(
 			ensureShootClusterIdentity,
 			initializeShootClients,
-			reconcileControlPlaneComponents,
+			deployControlPlaneComponents,
 		))
 		syncPointAllSystemComponentsDeployed = flow.NewTaskIDs(
 			reconcileSystemComponents,
@@ -606,7 +606,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 				return b.RemoveTaskAnnotation(ctx, v1beta1constants.ShootTaskRestartControlPlanePods)
 			},
 			SkipIf:       !flowCtx.requestControlPlanePodsRestart || b.Shoot.IsSelfHosted(),
-			Dependencies: flow.NewTaskIDs(reconcileControlPlaneComponents, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployControlPlaneComponents, waitUntilControlPlaneReady),
 		})
 	)
 
