@@ -935,8 +935,8 @@ func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]strin
 	case isSelfHosted:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported for self-hosted shoots"))
 	// The nginx-ingress addon has its own DNSRecord. The name of this record is derived from the domain, and the name of a
-	// DNSRecord is immutable. The domain migration has no handover for this record. Thus refuse a domain change while
-	// the addon is enabled. If not, the reconciliation of the Shoot fails.
+	// DNSRecord is immutable. The domain migration does not replace this record for the new domain. Thus refuse a domain
+	// change while the addon is enabled. If not, the reconciliation of the Shoot fails.
 	case nginxIngressEnabled:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported while the nginx-ingress addon is enabled"))
 	case !domainChangeAllowed(annotations):
