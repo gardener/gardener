@@ -140,12 +140,9 @@ func toBool(val ref.Val) (bool, error) {
 	if val == nil {
 		return false, fmt.Errorf("nil evaluation result")
 	}
-	if val.Type() != types.BoolType {
+	b, ok := val.(types.Bool)
+	if !ok {
 		return false, fmt.Errorf("expected a boolean result, got %v", val.Type())
 	}
-	result, ok := val.Value().(bool)
-	if !ok {
-		return false, fmt.Errorf("could not convert evaluation result to boolean")
-	}
-	return result, nil
+	return bool(b), nil
 }

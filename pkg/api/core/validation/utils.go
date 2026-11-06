@@ -702,12 +702,12 @@ func validateShootExtensionComponents(components []core.ShootExtensionComponent,
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "component name must not be empty"))
 		} else {
 			allErrs = append(allErrs, validateDNS1123Label(component.Name, idxPath.Child("name"))...)
-		}
 
-		if names.Has(component.Name) {
-			allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), component.Name))
+			if names.Has(component.Name) {
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), component.Name))
+			}
+			names.Insert(component.Name)
 		}
-		names.Insert(component.Name)
 
 		// A component entry that pins nothing (no version, no autoUpdate, no updateStrategy) has no effect
 		// and is almost certainly a mistake, so reject it.
