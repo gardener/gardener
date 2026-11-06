@@ -19,6 +19,7 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -173,31 +174,21 @@ func formatShootList(shoots []string) string {
 }
 
 // shootsPinningRemovedVersions returns the shoots that pin a (component, version) of the profile that is
-// no longer present in the `remaining` set. The informer lister only supports label selectors, so all
-// shoots are listed and filtered in memory (as other admission plugins do); listing stops once the
+// no longer present in the `remaining` set. Each shoot is reported at most once; listing stops once the
 // reported cap is reached, since the exact total is not surfaced.
 func (v *ExtensionProfileValidator) shootsPinningRemovedVersions(profile *gardencore.ExtensionProfile, remaining map[string]map[string]bool) ([]string, error) {
-	shoots, err := v.shootLister.List(labels.Everything())
+	// Shoots carry the extensions.extensions.gardener.cloud/<type> label for each enabled extension type
+	// (set by the extensionlabels admission plugin), so only shoots using this profile's type are listed.
+	selector := labels.SelectorFromSet(labels.Set{v1beta1constants.LabelExtensionExtensionTypePrefix + profile.Name: "true"})
+	shoots, err := v.shootLister.List(selector)
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not list shoots: %w", err))
 	}
 
 	var pinningShoots []string
 	for _, shoot := range shoots {
-		for _, extension := range shoot.Spec.Extensions {
-			if extension.Type != profile.Name {
-				continue
-			}
-			for _, component := range extension.Components {
-				if component.Version == nil {
-					continue
-				}
-				versions, componentRemains := remaining[component.Name]
-				if componentRemains && versions[*component.Version] {
-					continue
-				}
-				pinningShoots = append(pinningShoots, shoot.Namespace+"/"+shoot.Name)
-			}
+		if v.shootPinsRemovedVersion(shoot, profile.Name, remaining) {
+			pinningShoots = append(pinningShoots, shoot.Namespace+"/"+shoot.Name)
 		}
 		if len(pinningShoots) > maxReportedShoots {
 			return pinningShoots, nil
@@ -205,6 +196,27 @@ func (v *ExtensionProfileValidator) shootsPinningRemovedVersions(profile *garden
 	}
 
 	return pinningShoots, nil
+}
+
+// shootPinsRemovedVersion reports whether the shoot pins a (component, version) of the given extension type
+// that is no longer present in the `remaining` set.
+func (v *ExtensionProfileValidator) shootPinsRemovedVersion(shoot *gardencorev1beta1.Shoot, extensionType string, remaining map[string]map[string]bool) bool {
+	for _, extension := range shoot.Spec.Extensions {
+		if extension.Type != extensionType {
+			continue
+		}
+		for _, component := range extension.Components {
+			if component.Version == nil {
+				continue
+			}
+			versions, componentRemains := remaining[component.Name]
+			if componentRemains && versions[*component.Version] {
+				continue
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // validateShoot validates a shoot's pinned component versions against the matching ExtensionProfile,
@@ -241,14 +253,25 @@ func (v *ExtensionProfileValidator) validateShoot(ctx context.Context, a admissi
 	}
 
 	for _, extension := range shoot.Spec.Extensions {
+		// The profile only depends on the extension type, so it is fetched at most once per extension
+		// (and not at all for extensions without any pinned component).
+		var (
+			profile        *gardencore.ExtensionProfile
+			profileErr     error
+			profileFetched bool
+		)
+
 		for _, component := range extension.Components {
 			if component.Version == nil {
 				continue
 			}
 
-			profile, err := v.getProfile(extension.Type)
-			if err != nil {
-				return err
+			if !profileFetched {
+				profile, profileErr = v.getProfile(extension.Type)
+				profileFetched = true
+			}
+			if profileErr != nil {
+				return profileErr
 			}
 
 			versionEntry, found := findVersion(profile, component.Name, *component.Version)
