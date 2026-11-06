@@ -1524,12 +1524,6 @@ func (b *Botanist) MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup() flow.
 			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer,
 			Dependencies: flow.NewTaskIDs(deleteExtensionsAfterKubeAPIServer),
 		})
-		// Add this step in interest of completeness. All extension deletions should have already been triggered by previous steps.
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until all extensions have been deleted",
-			Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanup,
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
-		})
 	)
 
 	return g
