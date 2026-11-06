@@ -8007,50 +8007,50 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Describe("#ValidateProviderUpdate", func() {
 			Context("worker pool updateStrategy", func() {
-				It("should forbid changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
+				It("should allow changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate when feature gate is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 
+					newShoot = prepareShootForUpdate(shoot)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[0].MaxSurge = nil
+					newShoot.Spec.Provider.Workers[0].MaxUnavailable = nil
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should forbid changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate when feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, false))
+					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("cannot switch to AutoInPlaceUpdate/ManualInPlaceUpdate when the InPlaceNodeUpdates feature gate is disabled"),
 					}))))
 
 					newShoot = prepareShootForUpdate(shoot)
-
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("cannot switch to AutoInPlaceUpdate/ManualInPlaceUpdate when the InPlaceNodeUpdates feature gate is disabled"),
 					}))))
 				})
 
-				It("should forbid changing the update strategy from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate", func() {
+				It("should allow changing the update strategy from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate", func() {
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
-
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
-
-					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
-					}))))
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					newShoot = prepareShootForUpdate(shoot)
-
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
-
-					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
-					}))))
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
 
 				It("should allow changing the update strategy from AutoInPlaceUpdate to ManualInPlaceUpdate", func() {
@@ -11490,6 +11490,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("the worker pool \"worker-3\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
 				})),
 			))
+		})
+
+		It("should allow in-place → rolling switch even when the pool has pending in-place updates", func() {
+			newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
+			// Reset worker-2's spec so it doesn't independently trigger the ongoing-update restriction.
+			newShoot.Spec.Provider.Workers[1].Machine.Image.Version = oldShoot.Spec.Provider.Workers[1].Machine.Image.Version
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
+		})
+
+		It("should allow in-place → rolling switch when the pool has no pending in-place updates", func() {
+			newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
+			newShoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
+		})
+
+		It("should allow in-place → rolling switch with pending updates when the force annotation is set", func() {
+			newShoot.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationForceInPlaceUpdate,
+			}
+			newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
 		})
 	})
 })

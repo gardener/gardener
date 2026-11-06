@@ -1064,9 +1064,13 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 	}
 
 	poolNames := sets.New[string]()
+	inPlacePoolNames := sets.New[string]()
 	if !hibernationEnabled {
 		for _, pool := range shoot.Spec.Provider.Workers {
 			poolNames.Insert(pool.Name)
+			if v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
+				inPlacePoolNames.Insert(pool.Name)
+			}
 		}
 	}
 
@@ -1087,11 +1091,11 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 	if shoot.Status.InPlaceUpdates != nil {
 		if shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, func(workerName string) bool {
-				return !poolNames.Has(workerName)
+				return !inPlacePoolNames.Has(workerName)
 			})
 
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(workerName string) bool {
-				return !poolNames.Has(workerName)
+				return !inPlacePoolNames.Has(workerName)
 			})
 
 			if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
