@@ -1158,7 +1158,7 @@ func validateDNS(dns *core.DNS, kubernetesVersion string, fldPath *field.Path) f
 		idxPath := fldPath.Child("providers").Index(i)
 
 		if provider.SecretName != nil && versionutils.ConstraintK8sGreaterEqual135.CheckVersion(kubernetesVersion) {
-			allErrs = append(allErrs, field.Forbidden(idxPath.Child("secretName"), "for Kubernetes versions >= 1.35, secretName field is no longer supported"))
+			allErrs = append(allErrs, field.Forbidden(idxPath.Child("secretName"), "for Kubernetes versions >= 1.35, secretName field is no longer supported; the 'secretName' field must be removed with the same request upgrading the kubernetes version"))
 		}
 
 		allErrs = append(allErrs, validateDNSCredentialsRef(provider, kubernetesVersion, idxPath)...)

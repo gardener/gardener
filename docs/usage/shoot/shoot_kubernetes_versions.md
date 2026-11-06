@@ -23,7 +23,7 @@ No Gardener-specific upgrade notes for this version.
 - The `Shoot`'s `.spec.addons` field is forbidden. The retirement of the previously contained components [Kubernetes Dashboard](https://github.com/kubernetes-retired/dashboard) and [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx), requires owners to remove any existing addon configurations from the `Shoot`.
 - The `Shoot`'s `.spec.kubernetes.kubeAPIServer.watchCacheSizes.default` field is forbidden. Watch cache sizes are automatically sized by Kubernetes.
 - The `Shoot`'s `.spec.kubernetes.kubeScheduler.kubeMaxPDVols` field is forbidden. The maximum number of attachable volumes is maintained by the respective CSI plugin.
-- The `Shoot`'s `.spec.dns.providers[].secretName` field is forbidden, use `.spec.dns.providers[].credentialsRef` instead.
+- The `Shoot`'s `.spec.dns.providers[].secretName` field is forbidden, use `.spec.dns.providers[].credentialsRef` instead. A single update request must simultaneously update `.spec.kubernetes.version` and remove all `spec.dns.providers[].secretName` fields.
 
 ## Upgrading to Kubernetes `v1.34`
 
