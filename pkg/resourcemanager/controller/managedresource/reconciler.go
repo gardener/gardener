@@ -747,13 +747,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 					return
 				}
 
-				var err error
-				if isForceDeletion {
-					// Forcefully remove all finalizers to unblock deletion of resources because shoot is being deleted anyways.
-					err = finalizeResource(ctx, r.TargetClient, obj)
-				} else {
-					err = finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj)
-				}
+				err := finalizeResourceIfNecessary(ctx, logger, r.TargetClient, r.Clock, obj, isForceDeletion)
 
 				if err != nil {
 					logger.Error(err, "Error when finalizing resource")
@@ -1032,7 +1026,12 @@ func (d *decodingError) String() string {
 	return fmt.Sprintf("%s: %s.", d.StringShort(), d.err)
 }
 
-func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client.Client, clock clock.Clock, obj *unstructured.Unstructured) error {
+func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client.Client, clock clock.Clock, obj *unstructured.Unstructured, isForceDeletion bool) error {
+	if isForceDeletion {
+		log.Info("Forcefully removing all finalizers to unblock deletion of resource")
+		return finalizeResource(ctx, cl, obj)
+	}
+
 	var finalizeDeletionAfter time.Duration
 	if v, ok := obj.GetAnnotations()[resourcesv1alpha1.FinalizeDeletionAfter]; ok {
 		var err error
