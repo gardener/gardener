@@ -117,6 +117,7 @@ func (r *Reconciler) reconcileBastion(
 			},
 			UserData: createUserData(bastion),
 			Ingress:  extensionIngress,
+			Machine:  machineForExtensionBastion(bastion.Spec.Machine),
 		}
 	)
 
@@ -248,6 +249,20 @@ func newBastionExtension(bastion *operationsv1alpha1.Bastion, shoot *gardencorev
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bastion.Name,
 			Namespace: shoot.Status.TechnicalID,
+		},
+	}
+}
+
+func machineForExtensionBastion(machine *operationsv1alpha1.BastionMachine) *extensionsv1alpha1.BastionMachine {
+	if machine == nil {
+		return nil
+	}
+
+	return &extensionsv1alpha1.BastionMachine{
+		Type: machine.Type,
+		Image: extensionsv1alpha1.BastionMachineImage{
+			Name:    machine.Image.Name,
+			Version: machine.Image.Version,
 		},
 	}
 }

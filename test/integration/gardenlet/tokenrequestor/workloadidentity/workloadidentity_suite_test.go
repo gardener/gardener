@@ -104,7 +104,7 @@ var _ = BeforeSuite(func() {
 		},
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
 			Args: []string{
-				"--disable-admission-plugins=DeletionConfirmation,Bastion,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator,SeedValidator",
+				"--disable-admission-plugins=DeletionConfirmation,BastionMutator,BastionValidator,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator,SeedValidator",
 				"--workload-identity-token-issuer=https://local.gardener.cloud",
 				"--workload-identity-signing-key-file=" + keyFile,
 			},

@@ -33,7 +33,7 @@ var _ = Describe("GardenerTestEnvironment", func() {
 
 	It("should be able to manipulate resource from operations.gardener.cloud/v1alpha1", func() {
 		bastion := &operationsv1alpha1.Bastion{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name}}
-		Expect(testClient.Create(ctx, bastion)).To(MatchError(ContainSubstring("Bastion.operations.gardener.cloud \"\" is invalid")))
+		Expect(testClient.Create(ctx, bastion)).To(MatchError(MatchRegexp("Bastion.operations.gardener.cloud \"test-.+\" is invalid")))
 	})
 
 	It("should be able to manipulate resource from security.gardener.cloud/v1alpha1", func() {
