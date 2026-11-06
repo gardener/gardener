@@ -62,6 +62,28 @@ func (g TaskGroup) TaskIDs() []TaskID {
 	return taskIDs.TaskIDs()
 }
 
+// Tasks returns the group's tasks in the order they were added.
+func (g TaskGroup) Tasks() []Task {
+	tasks := make([]Task, 0, len(g.taskOrder))
+	for _, id := range g.taskOrder {
+		tasks = append(tasks, g.tasks[id])
+	}
+	return tasks
+}
+
+// WithTaskDependencies flattens the group like `Tasks` but additionally inserts the given dependencies into each
+// task's own `Task.Dependencies`. It is the way to chain a reused group behind a gate inside a single flow step: the
+// gate is applied per task while the group's own group-level dependency and `SkipIf` wiring (e.g. aliases on
+// prerequisite groups not run in this flow) are dropped, so flattening cannot drag in tasks absent from the graph.
+func (g TaskGroup) WithTaskDependencies(dependencies ...TaskIDer) []Task {
+	deps := NewTaskIDs(dependencies...)
+	tasks := g.Tasks()
+	for i := range tasks {
+		tasks[i].Dependencies = tasks[i].Dependencies.Copy().Insert(deps)
+	}
+	return tasks
+}
+
 // AddAll adds all given tasks to the group and returns the group for chaining.
 // It panics if any of the tasks has an id that is already present in the group.
 func (g TaskGroup) AddAll(tasks ...Task) TaskGroup {

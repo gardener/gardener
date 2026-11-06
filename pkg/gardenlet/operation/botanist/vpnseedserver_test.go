@@ -154,4 +154,39 @@ var _ = Describe("VPNSeedServer", func() {
 			Expect(botanist.DeployVPNServer(ctx)).To(Equal(fakeErr))
 		})
 	})
+
+	Describe("#DestroyVPNServer", func() {
+		var (
+			vpnSeedServer *mockvpnseedserver.MockInterface
+
+			ctx     = context.TODO()
+			fakeErr = errors.New("fake err")
+		)
+
+		BeforeEach(func() {
+			vpnSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
+			botanist.Shoot = &shootpkg.Shoot{
+				Components: &shootpkg.Components{
+					ControlPlane: &shootpkg.ControlPlane{
+						VPNSeedServer: vpnSeedServer,
+					},
+				},
+			}
+		})
+
+		It("should call Destroy on the component", func() {
+			vpnSeedServer.EXPECT().Destroy(ctx)
+			Expect(botanist.DestroyVPNServer(ctx)).To(Succeed())
+		})
+
+		It("should return the error from Destroy", func() {
+			vpnSeedServer.EXPECT().Destroy(ctx).Return(fakeErr)
+			Expect(botanist.DestroyVPNServer(ctx)).To(Equal(fakeErr))
+		})
+
+		It("should succeed without calling Destroy when VPNSeedServer is nil", func() {
+			botanist.Shoot.Components.ControlPlane.VPNSeedServer = nil
+			Expect(botanist.DestroyVPNServer(ctx)).To(Succeed())
+		})
+	})
 })

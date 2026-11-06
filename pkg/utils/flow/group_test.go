@@ -134,6 +134,74 @@ var _ = Describe("TaskGroup", func() {
 		})
 	})
 
+	Describe("#Tasks", func() {
+		It("should return an empty slice for an empty group", func() {
+			group := flow.NewTaskGroup("group")
+			Expect(group.Tasks()).To(BeEmpty())
+		})
+
+		It("should return tasks in insertion order", func() {
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a"}, flow.Task{Name: "b"}, flow.Task{Name: "c"})
+			tasks := group.Tasks()
+			Expect(tasks).To(HaveLen(3))
+			Expect(tasks[0].Name).To(Equal("a"))
+			Expect(tasks[1].Name).To(Equal("b"))
+			Expect(tasks[2].Name).To(Equal("c"))
+		})
+
+		It("should return tasks with their original dependencies intact", func() {
+			dep := flow.TaskID("dep")
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a", Dependencies: flow.NewTaskIDs(dep)})
+			Expect(group.Tasks()[0].Dependencies.StringList()).To(ConsistOf("dep"))
+		})
+	})
+
+	Describe("#WithTaskDependencies", func() {
+		It("should return tasks in insertion order and add no extra dependencies when called with no args", func() {
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a"}, flow.Task{Name: "b"})
+			tasks := group.WithTaskDependencies()
+			Expect(tasks).To(HaveLen(2))
+			Expect(tasks[0].Name).To(Equal("a"))
+			Expect(tasks[1].Name).To(Equal("b"))
+			Expect(tasks[0].Dependencies).To(BeEmpty())
+			Expect(tasks[1].Dependencies).To(BeEmpty())
+		})
+
+		It("should insert the given dependency into every task", func() {
+			gate := flow.TaskID("gate")
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a"}, flow.Task{Name: "b"})
+			tasks := group.WithTaskDependencies(gate)
+			Expect(tasks).To(HaveLen(2))
+			Expect(tasks[0].Name).To(Equal("a"))
+			Expect(tasks[0].Dependencies.StringList()).To(ConsistOf("gate"))
+			Expect(tasks[1].Name).To(Equal("b"))
+			Expect(tasks[1].Dependencies.StringList()).To(ConsistOf("gate"))
+		})
+
+		It("should insert multiple dependencies into every task", func() {
+			dep1, dep2 := flow.TaskID("dep1"), flow.TaskID("dep2")
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a"})
+			tasks := group.WithTaskDependencies(dep1, dep2)
+			Expect(tasks[0].Dependencies.StringList()).To(ConsistOf("dep1", "dep2"))
+		})
+
+		It("should preserve pre-existing task-level dependencies alongside the new ones", func() {
+			pre := flow.TaskID("pre")
+			gate := flow.TaskID("gate")
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a", Dependencies: flow.NewTaskIDs(pre)})
+			tasks := group.WithTaskDependencies(gate)
+			Expect(tasks[0].Dependencies.StringList()).To(ConsistOf("pre", "gate"))
+		})
+
+		It("should not mutate the original group's task dependencies", func() {
+			gate := flow.TaskID("gate")
+			pre := flow.TaskID("pre")
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a", Dependencies: flow.NewTaskIDs(pre)})
+			group.WithTaskDependencies(gate)
+			Expect(group.Tasks()[0].Dependencies.StringList()).To(ConsistOf("pre"))
+		})
+	})
+
 	Describe("#SkipIf", func() {
 		It("should not skip tasks when the condition is false", func() {
 			var (

@@ -2311,6 +2311,9 @@ const (
 	// ShootLiveMigrationMigrationCompleted indicates that the live control plane migration
 	// has completed successfully.
 	ShootLiveMigrationMigrationCompleted ConditionType = "MigrationCompleted"
+	// ShootLiveMigrationSourceSeedFinalTeardown indicates that the final teardown of the source
+	// seed has been completed successfully.
+	ShootLiveMigrationSourceSeedFinalTeardown ConditionType = "SourceSeedFinalTeardown"
 )
 
 // ShootPurpose is a type alias for string.
