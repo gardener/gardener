@@ -90,6 +90,9 @@ var (
 	// ready.
 	// Exposed for testing.
 	RequeueAfterWaitForStaticPods = 5 * time.Second
+	// RequeueAfterLeaseAcquisitionSkipped defines when to requeue in case Lease acquisition is skipped.
+	// Exposed for testing.
+	RequeueAfterLeaseAcquisitionSkipped = time.Minute
 )
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -206,11 +209,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if serialReconciliationLease.acquiredByAnotherInstance() {
 			if serialReconciliationLease.renewedInTime() {
 				requeueAfter := serialReconciliationLease.durationUntilLeaseExpires()
-				serialReconciliationLease.logger().Info("Lease was acquired by another instance, exiting early and requeue when Lease expires", "requeueAfter", requeueAfter)
+				serialReconciliationLease.logger().Info("Lease was acquired by another instance, exiting early and "+
+					"requeue when Lease expires", "requeueAfter", requeueAfter,
+				)
 				return reconcile.Result{RequeueAfter: requeueAfter}, nil
 			}
 
 			serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
+		}
+
+		if unhealthyNode, err := r.skipLeaseAcquisitionIfEtcdQuorumAtRisk(ctx, node); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to check whether Lease acquisition should be skipped if etcd quorum is at risk: %w", err)
+		} else if unhealthyNode != nil {
+			serialReconciliationLease.logger().Info("Another node has unhealthy critical pods, do not even attempt "+
+				"acquiring the Lease to prevent breaking etcd quorum - requeuing to retry later",
+				"unhealthyNode", unhealthyNode.Name, "requeueAfter", RequeueAfterLeaseAcquisitionSkipped,
+			)
+			return reconcile.Result{RequeueAfter: RequeueAfterLeaseAcquisitionSkipped}, nil
 		}
 
 		// For control-plane nodes doing an in-place update the lease has no timeout and is only released on success.
@@ -1369,4 +1384,33 @@ func (r *Reconciler) getActualStaticPodHashes(ctx context.Context, log logr.Logg
 	}
 
 	return staticPodNameToHash, staticPodList, nil
+}
+
+// skipLeaseAcquisitionIfEtcdQuorumAtRisk returns the unhealthy node object when another node in the same worker pool
+// has a condition of type 'CriticalControlPlanePodsUnhealthy with status 'True'. This means an etcd pod is broken on
+// another node, i.e., attempting to acquire the Lease and eventually updating our node could break the quorum. Hence,
+// we better don't update until all members are healthy.
+func (r *Reconciler) skipLeaseAcquisitionIfEtcdQuorumAtRisk(ctx context.Context, node *corev1.Node) (*corev1.Node, error) {
+	if node == nil {
+		return nil, nil
+	}
+
+	nodeList := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: node.Labels[v1beta1constants.LabelWorkerPool]}); err != nil {
+		return nil, fmt.Errorf("failed to list other nodes in this worker pool: %w", err)
+	}
+
+	for _, n := range nodeList.Items {
+		if n.Name == node.Name {
+			continue
+		}
+
+		for _, condition := range n.Status.Conditions {
+			if condition.Type == nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy && condition.Status == corev1.ConditionTrue {
+				return &n, nil
+			}
+		}
+	}
+
+	return nil, nil
 }
