@@ -1753,6 +1753,11 @@ func (in *SettingLoadBalancerServices) DeepCopyInto(out *SettingLoadBalancerServ
 		*out = new(LoadBalancerServicesProxyProtocol)
 		**out = **in
 	}
+	if in.LoadBalancerSourceRanges != nil {
+		in, out := &in.LoadBalancerSourceRanges, &out.LoadBalancerSourceRanges
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
