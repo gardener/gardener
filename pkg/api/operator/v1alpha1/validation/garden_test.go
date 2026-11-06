@@ -1563,12 +1563,13 @@ var _ = Describe("Validation Tests", func() {
 			})
 
 			Context("ETCD", func() {
-				It("should allow provider config even if bucket name is set", func() {
+				It("should allow providerConfig even if bucket name is set", func() {
 					garden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
 						Main: &operatorv1alpha1.ETCDMain{
 							Backup: &operatorv1alpha1.Backup{
 								BucketName: new("foo"),
 								Provider:   "foo-provider",
+								SecretRef:  corev1.LocalObjectReference{Name: "backup-secret"},
 								ProviderConfig: &runtime.RawExtension{
 									Raw: []byte(`{"foo":"bar"}`),
 								},
@@ -1577,7 +1578,6 @@ var _ = Describe("Validation Tests", func() {
 					}
 
 					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
-
 				})
 
 				It("should complain if invalid autoscaling resource is configured", func() {
@@ -3041,6 +3041,43 @@ var _ = Describe("Validation Tests", func() {
 			})
 
 			Context("ETCD", func() {
+				DescribeTable("backup bucket prefix immutability with confirmation annotation",
+					func(oldBucketName, newBucketName *string, prefixChanged bool) {
+						oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+							Main: &operatorv1alpha1.ETCDMain{
+								Backup: &operatorv1alpha1.Backup{
+									Provider:   "foo-provider",
+									BucketName: oldBucketName,
+									SecretRef:  corev1.LocalObjectReference{Name: "backup-secret"},
+								},
+							},
+						}
+						newGarden.Spec.VirtualCluster.ETCD = oldGarden.Spec.VirtualCluster.ETCD.DeepCopy()
+						newGarden.Spec.VirtualCluster.ETCD.Main.Backup.BucketName = newBucketName
+						metav1.SetMetaDataAnnotation(&newGarden.ObjectMeta, "confirmation.gardener.cloud/change-backup", "true")
+
+						errs := ValidateGardenUpdate(oldGarden, newGarden, extensions)
+						if prefixChanged {
+							Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
+								"Detail": Equal("changing the prefix of the backup bucket is not allowed"),
+							}))))
+						} else {
+							Expect(errs).To(BeEmpty())
+						}
+					},
+					Entry("changing the prefix", new("foo-bucket/backups"), new("bar-bucket/other"), true),
+					Entry("adding a prefix", new("foo-bucket"), new("bar-bucket/backups"), true),
+					Entry("removing the prefix", new("foo-bucket/backups"), new("bar-bucket"), true),
+					Entry("adding a prefix to the default bucket", nil, new("bar-bucket/backups"), true),
+					Entry("removing the prefix by using the default bucket", new("foo-bucket/backups"), nil, true),
+					Entry("keeping the prefix", new("foo-bucket/backups"), new("bar-bucket/backups"), false),
+					Entry("adding a trailing slash", new("foo-bucket/backups"), new("bar-bucket/backups/"), false),
+					Entry("using the default bucket without a prefix", new("foo-bucket"), nil, false),
+					Entry("setting a bucket without a prefix", nil, new("bar-bucket"), false),
+				)
+
 				It("should not be possible to set the backup bucket name if it was unset initially", func() {
 					oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
 						Main: &operatorv1alpha1.ETCDMain{
@@ -3106,9 +3143,71 @@ var _ = Describe("Validation Tests", func() {
 					}
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
+						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup"),
 					}))))
+				})
+
+				It("should forbid changing ETCD bucket/provider/region when no confirmation annotation is set", func() {
+					oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "foo-provider",
+								BucketName: new("foo-bucket"),
+								Region:     new("foo-region"),
+							},
+						},
+					}
+					newGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "bar-provider",
+								BucketName: new("bar-bucket"),
+								Region:     new("bar-region"),
+							},
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.virtualCluster.etcd.main.backup.region"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.virtualCluster.etcd.main.backup.provider"),
+						})),
+					))
+				})
+
+				It("should allow changing ETCD bucket/provider/region when confirmation annotation is set", func() {
+					oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "foo-provider",
+								BucketName: new("foo-bucket"),
+								Region:     new("foo-region"),
+								SecretRef:  corev1.LocalObjectReference{Name: "backup-secret"},
+							},
+						},
+					}
+					newGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "bar-provider",
+								BucketName: new("bar-bucket"),
+								Region:     new("bar-region"),
+								SecretRef:  corev1.LocalObjectReference{Name: "backup-secret"},
+							},
+						},
+					}
+					metav1.SetMetaDataAnnotation(&newGarden.ObjectMeta, "confirmation.gardener.cloud/change-backup", "true")
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
 				})
 			})
 

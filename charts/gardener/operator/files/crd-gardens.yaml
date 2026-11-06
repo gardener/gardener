@@ -521,16 +521,10 @@ spec:
                                   In this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating
                                   and deleting buckets.
                                 type: string
-                                x-kubernetes-validations:
-                                - message: BucketName is immutable
-                                  rule: self == oldSelf
                               provider:
                                 description: Provider is a provider name. This field
                                   is immutable.
                                 type: string
-                                x-kubernetes-validations:
-                                - message: Provider is immutable
-                                  rule: self == oldSelf
                               providerConfig:
                                 description: ProviderConfig is the provider-specific
                                   configuration passed to BackupBucket resource.
@@ -540,9 +534,6 @@ spec:
                                 description: Region is a region name. If undefined,
                                   the provider region is used. This field is immutable.
                                 type: string
-                                x-kubernetes-validations:
-                                - message: Region is immutable
-                                  rule: self == oldSelf
                               secretRef:
                                 description: |-
                                   SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where

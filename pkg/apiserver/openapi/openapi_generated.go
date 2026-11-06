@@ -1529,6 +1529,13 @@ func schema_pkg_apis_core_v1beta1_Backup(ref common.ReferenceCallback) common.Op
 							Ref:         ref(corev1.ObjectReference{}.OpenAPIModelName()),
 						},
 					},
+					"bucketName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BucketName is the name of the backup bucket at the provider. Defaults to the seed's UID. This field can be altered in order to relocate a bucket location.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"provider"},
 			},

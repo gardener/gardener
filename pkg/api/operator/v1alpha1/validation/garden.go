@@ -185,13 +185,7 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 
 	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil &&
 		newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
-		fldBackup := fldPath.Child("etcd", "main", "backup")
-		if newVirtualCluster.ETCD.Main.Backup != nil {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName, fldBackup.Child("bucketName"))...)
-		}
-		if newVirtualCluster.ETCD.Main.Backup == nil {
-			allErrs = append(allErrs, field.Forbidden(fldBackup, "backup must not be deactivated if it was set before"))
-		}
+		allErrs = append(allErrs, ValidateBackupBucketUpdate(newGarden, oldGarden, fldPath.Child("etcd", "main"))...)
 	}
 
 	if oldVirtualCluster.ControlPlane != nil && oldVirtualCluster.ControlPlane.HighAvailability != nil &&
@@ -226,6 +220,38 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.Networking.Services[i], oldVirtualCluster.Networking.Services[i], fldPath.Child("networking", "services").Index(i))...)
 	}
 
+	return allErrs
+}
+
+// ValidateBackupBucketUpdate validates the Garden's embedded backup bucket before an update.
+func ValidateBackupBucketUpdate(newGarden, oldGarden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	var newBackup, oldBackup *gardencore.Backup
+	if backup := helper.GetETCDMainBackup(oldGarden); backup != nil {
+		oldBackup = &gardencore.Backup{
+			BucketName: backup.BucketName,
+			Provider:   backup.Provider,
+			Region:     backup.Region,
+		}
+	}
+	if backup := helper.GetETCDMainBackup(newGarden); backup != nil {
+		newBackup = &gardencore.Backup{
+			BucketName: backup.BucketName,
+			Provider:   backup.Provider,
+			Region:     backup.Region,
+		}
+	}
+
+	if oldBackup != nil && newBackup != nil {
+		_, oldPrefix := helper.EtcdMainBackupBucketNameAndPrefix(oldGarden)
+		_, newPrefix := helper.EtcdMainBackupBucketNameAndPrefix(newGarden)
+		if oldPrefix != newPrefix {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "bucketName"), "changing the prefix of the backup bucket is not allowed"))
+		}
+	}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateEmbeddedBackupBucketUpdate(newBackup, oldBackup, newGarden.Annotations, fldPath)...)
 	return allErrs
 }
 
@@ -384,6 +410,20 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil {
 		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("etcd", "main", "autoscaling"))...)
+
+		if virtualCluster.ETCD.Main.Backup != nil {
+			if len(virtualCluster.ETCD.Main.Backup.Provider) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("etcd", "main", "backup", "provider"), "must provide a backup cloud provider name"))
+			}
+
+			if len(virtualCluster.ETCD.Main.Backup.SecretRef.Name) == 0 {
+				allErrs = append(allErrs, field.Required(fldPath.Child("etcd", "main", "backup", "secretRef", "name"), "must provide a backup secreref name"))
+			}
+
+			if virtualCluster.ETCD.Main.Backup.BucketName != nil && *virtualCluster.ETCD.Main.Backup.BucketName == "" {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("etcd", "main", "backup", "bucketName"), virtualCluster.ETCD.Main.Backup.BucketName, "bucketName must not be an empty string"))
+			}
+		}
 	}
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Events != nil {

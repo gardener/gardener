@@ -1049,21 +1049,8 @@ func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *ope
 }
 
 func etcdMainBackupBucket(garden *operatorv1alpha1.Garden) *extensionsv1alpha1.BackupBucket {
-	name, _ := etcdMainBackupBucketNameAndPrefix(garden)
+	name, _ := helper.EtcdMainBackupBucketNameAndPrefix(garden)
 	return &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
-}
-
-func etcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string, string) {
-	prefix := operatorv1alpha1.VirtualGardenETCDMain
-	if backup := helper.GetETCDMainBackup(garden); backup != nil && backup.BucketName != nil {
-		name := *backup.BucketName
-		if idx := strings.Index(name, "/"); idx != -1 {
-			prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(name[idx+1:], "/"), prefix)
-			name = name[:idx]
-		}
-		return name, prefix
-	}
-	return "garden-" + string(garden.UID), prefix
 }
 
 func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface) func(context.Context) error {
@@ -1086,7 +1073,7 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
-			container, prefix := etcdMainBackupBucketNameAndPrefix(garden)
+			container, prefix := helper.EtcdMainBackupBucketNameAndPrefix(garden)
 
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             backup.Provider,

@@ -84,15 +84,27 @@ var _ = Describe("BackupEntry validation tests", func() {
 			}))))
 		})
 
-		It("should prevent updating the type", func() {
+		It("should allow updating the type", func() {
+			newBackupEntry := prepareBackupEntryForUpdate(be)
+			newBackupEntry.Spec.Type = "changed-type"
+
+			errorList := ValidateBackupEntryUpdate(newBackupEntry, be)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should prevent updating the type if deletion time stamp is set", func() {
+			now := metav1.Now()
+			be.DeletionTimestamp = &now
+
 			newBackupEntry := prepareBackupEntryForUpdate(be)
 			newBackupEntry.Spec.Type = "changed-type"
 
 			errorList := ValidateBackupEntryUpdate(newBackupEntry, be)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.type"),
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec"),
 			}))))
 		})
 

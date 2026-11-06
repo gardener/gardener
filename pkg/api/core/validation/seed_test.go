@@ -85,8 +85,9 @@ var _ = Describe("Seed Validation Tests", func() {
 					},
 				},
 				Backup: &core.Backup{
-					Provider: "foo",
-					Region:   &region,
+					BucketName: new("some-bucket-name"),
+					Provider:   "foo",
+					Region:     &region,
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -1624,6 +1625,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			otherRegion := "other-region"
 			newSeed.Spec.Backup.Provider = "other-provider"
 			newSeed.Spec.Backup.Region = &otherRegion
+			newSeed.Spec.Backup.BucketName = new("other-bucketname")
 
 			Expect(ValidateSeedUpdate(newSeed, seed)).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
@@ -1639,6 +1641,10 @@ var _ = Describe("Seed Validation Tests", func() {
 				"Detail": Equal(`field is immutable`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.backup.bucketName"),
+				"Detail": Equal(`field is immutable`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.backup.region"),
 				"Detail": Equal(`field is immutable`),
 			}, Fields{
@@ -1649,6 +1655,52 @@ var _ = Describe("Seed Validation Tests", func() {
 		})
 
 		Context("#validateSeedBackupUpdate", func() {
+			DescribeTable("backup bucket name changes",
+				func(oldName, newName *string, confirmed, changeRegion bool, expectedField string) {
+					seed.UID = "seed-uid"
+					seed.Spec.Backup.BucketName = oldName
+					newSeed := prepareSeedForUpdate(seed)
+					newSeed.Spec.Backup.BucketName = newName
+					if confirmed {
+						metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "confirmation.gardener.cloud/change-backup", "true")
+					}
+					if changeRegion {
+						newSeed.Spec.Backup.Region = new("other-region")
+					}
+					oldSpec, newSpec := seed.Spec.DeepCopy(), newSeed.Spec.DeepCopy()
+
+					errs := ValidateSeedUpdate(newSeed, seed)
+
+					if expectedField == "" {
+						Expect(errs).To(BeEmpty())
+					} else {
+						Expect(errs).To(ConsistOfFields(Fields{"Field": Equal(expectedField)}))
+					}
+					Expect(seed.Spec).To(Equal(*oldSpec))
+					Expect(newSeed.Spec).To(Equal(*newSpec))
+				},
+				Entry("rejects setting the bucket name to the Seed UID without confirmation", nil, new("seed-uid"), false, false, "spec.backup.bucketName"),
+				Entry("rejects removing the Seed UID bucket name without confirmation", new("seed-uid"), nil, false, false, "spec.backup.bucketName"),
+				Entry("rejects relocation from an omitted name without confirmation", nil, new("custom-bucket"), false, false, "spec.backup.bucketName"),
+				Entry("allows confirmed relocation from an omitted name", nil, new("custom-bucket"), true, false, ""),
+				Entry("rejects removing a custom name without confirmation", new("custom-bucket"), nil, false, false, "spec.backup.bucketName"),
+				Entry("allows confirmed removal of a custom bucket name", new("custom-bucket"), nil, true, false, ""),
+				Entry("allows a confirmed region change when setting the bucket name to the Seed UID", nil, new("seed-uid"), true, true, ""),
+				Entry("allows a region change with a genuinely new bucket", nil, new("custom-bucket"), true, true, ""),
+			)
+
+			// Ideally this would not be possible, but its pretty hard to enforce for seedTemplates
+			It("should allow a confirmed provider change when setting the bucket name to the Seed UID", func() {
+				seed.UID = "seed-uid"
+				seed.Spec.Backup.BucketName = nil
+				newSeed := prepareSeedForUpdate(seed)
+				newSeed.Spec.Backup.BucketName = new("seed-uid")
+				newSeed.Spec.Backup.Provider = "other-provider"
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "confirmation.gardener.cloud/change-backup", "true")
+
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			})
+
 			It("should allow adding backup profile", func() {
 				seed.Spec.Backup = nil
 				newSeed := prepareSeedForUpdate(seed)
@@ -1666,6 +1718,17 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Field":  Equal("spec.backup"),
 					"Detail": Equal(`field is immutable`),
 				}))
+			})
+
+			It("should allow changing ETCD bucket/provider/region when confirmation annotation is set", func() {
+				newSeed := prepareSeedForUpdate(seed)
+				newSeed.Spec.Backup.Provider = "bar-provider"
+				newSeed.Spec.Backup.BucketName = new("bar-bucket")
+				newSeed.Spec.Backup.Region = new("bar-region")
+
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "confirmation.gardener.cloud/change-backup", "true")
+
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
 			})
 		})
 

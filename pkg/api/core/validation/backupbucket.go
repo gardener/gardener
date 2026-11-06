@@ -5,10 +5,12 @@
 package validation
 
 import (
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ValidateBackupBucket validates a BackupBucket object.
@@ -95,5 +97,37 @@ func ValidateBackupBucketSpecUpdate(newSpec, oldSpec *core.BackupBucketSpec, fld
 func ValidateBackupBucketStatusUpdate(_, _ *core.BackupBucket) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	return allErrs
+}
+
+// ValidateEmbeddedBackupBucketUpdate validates BackupBucket specs embedded into the Garden, SeedTemplate, Seed, or (self-hosted) Shoot resources.
+func ValidateEmbeddedBackupBucketUpdate(newBackup, oldBackup *core.Backup, newAnnotations map[string]string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if oldBackup == nil {
+		return allErrs
+	}
+
+	if newBackup == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBackup, oldBackup, fldPath.Child("backup"))...)
+		return allErrs
+	}
+
+	if gardener.CheckIfBackupChangeIsConfirmed(newAnnotations) {
+		bucketNameChanged := !apiequality.Semantic.DeepEqual(oldBackup.BucketName, newBackup.BucketName)
+		providerChanged := !apiequality.Semantic.DeepEqual(oldBackup.Provider, newBackup.Provider)
+		regionChanged := !apiequality.Semantic.DeepEqual(oldBackup.Region, newBackup.Region)
+		if (regionChanged || providerChanged) && !bucketNameChanged {
+			if newBackup.BucketName == nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup"), "changing backup provider or region without adding a new bucketName is not allowed"))
+			} else {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup"), "changing backup provider or region without changing the bucketName is not allowed"))
+			}
+		}
+	} else {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBackup.BucketName, oldBackup.BucketName, fldPath.Child("backup", "bucketName"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBackup.Provider, oldBackup.Provider, fldPath.Child("backup", "provider"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBackup.Region, oldBackup.Region, fldPath.Child("backup", "region"))...)
+	}
 	return allErrs
 }
