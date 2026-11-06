@@ -9,7 +9,7 @@ Conveniently download Gardener configuration resources from an existing garden c
 ### Options
 
 ```
-  -h, --help   help for discover
+  -h, --help[=true|false]   help for discover
 ```
 
 ### Options inherited from parent commands

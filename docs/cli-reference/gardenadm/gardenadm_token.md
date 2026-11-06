@@ -9,7 +9,7 @@ Manage bootstrap and discovery tokens for gardenadm join
 ### Options
 
 ```
-  -h, --help   help for token
+  -h, --help[=true|false]   help for token
 ```
 
 ### Options inherited from parent commands

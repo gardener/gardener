@@ -26,7 +26,7 @@ gardenadm reset --bootstrap-token <token> --ca-certificate <ca-cert> <control-pl
       --bootstrap-token string       Bootstrap token for removing the node from the cluster (create it with 'gardenadm token' on a control plane node)
       --ca-certificate bytesBase64   Base64-encoded certificate authority bundle of the control plane
       --drain-timeout duration       Timeout for draining the node (default 2h0m0s)
-  -h, --help                         help for reset
+  -h, --help[=true|false]            help for reset
 ```
 
 ### Options inherited from parent commands
