@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
@@ -107,11 +108,12 @@ var _ = BeforeSuite(func() {
 			DefaultNotReadyTolerationSeconds:    new(int64(60)),
 			DefaultUnreachableTolerationSeconds: new(int64(120)),
 		},
-		Decoder: admission.NewDecoder(mgr.GetScheme()),
+		Decoder:             admission.NewDecoder(mgr.GetScheme()),
+		ZoneCapNodeSelector: client.MatchingLabels{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Register controller")
-	Expect((&highavailabilityconfig.Reconciler{}).AddToManager(mgr, mgr)).To(Succeed())
+	Expect((&highavailabilityconfig.Reconciler{ZoneCapNodeSelector: client.MatchingLabels{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

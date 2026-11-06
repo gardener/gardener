@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	kubeletapis "k8s.io/kubelet/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,6 +28,29 @@ func HasMoreThanOneNode(ctx context.Context, reader client.Reader) (bool, error)
 		return false, fmt.Errorf("failed to list nodes: %w", err)
 	}
 	return len(nodeList.Items) > 1, nil
+}
+
+// AvailableZones returns the set of distinct `topology.kubernetes.io/zone` values of all schedulable nodes matching
+// the given list options. Cordoned (`.spec.unschedulable`) nodes are excluded, but node readiness is not considered on
+// purpose: readiness flaps on reboots and kubelet restarts, which must not influence the zone set that drives hard node
+// affinities.
+func AvailableZones(ctx context.Context, reader client.Reader, opts ...client.ListOption) (sets.Set[string], error) {
+	nodeList := &corev1.NodeList{}
+	if err := reader.List(ctx, nodeList, opts...); err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+
+	zones := sets.New[string]()
+	for _, node := range nodeList.Items {
+		if node.Spec.Unschedulable {
+			continue
+		}
+		if zone := node.Labels[corev1.LabelTopologyZone]; zone != "" {
+			zones.Insert(zone)
+		}
+	}
+
+	return zones, nil
 }
 
 // IsNodeLabelAllowedForKubelet determines whether kubelet is allowed by the NodeRestriction admission plugin to set a
