@@ -2396,7 +2396,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, shootNamespa
 	}
 
 	if worker.MachineControllerManagerSettings != nil {
-		allErrs = append(allErrs, ValidateMachineControllerManagerSettingsOptions(worker.MachineControllerManagerSettings, worker.UpdateStrategy, worker.Maximum, helper.SystemComponentsAllowed(&worker), fldPath.Child("machineControllerManagerSettings"))...)
+		allErrs = append(allErrs, ValidateMachineControllerManagerSettingsOptions(worker.MachineControllerManagerSettings, worker.UpdateStrategy, worker.Maximum, helper.SystemComponentsAllowed(&worker), fldPath.Child("machineControllerManager"))...)
 	}
 
 	if worker.UpdateStrategy != nil {
