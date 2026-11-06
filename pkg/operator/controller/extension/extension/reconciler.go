@@ -87,11 +87,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	garden := newGardenInfo(gardenObj)
 
-	if extension.DeletionTimestamp != nil || garden.deleting {
-		return r.delete(ctx, log, extension)
+	conditions := NewConditions(r.Clock, extension.Status)
+	if garden.deleting ||
+		extension.DeletionTimestamp != nil ||
+		conditions.installed.Status == gardencorev1beta1.ConditionProgressing && conditions.installed.Reason == ReasonDeleteFailed {
+		return r.delete(ctx, log, extension, conditions)
 	}
 
-	return r.reconcile(ctx, log, garden, extension)
+	return r.reconcile(ctx, log, garden, extension, conditions)
 }
 
 func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, updatedConditions Conditions) error {
