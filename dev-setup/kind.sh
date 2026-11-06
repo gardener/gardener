@@ -145,6 +145,14 @@ EOF
     if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
       echo "Kind cluster '${CLUSTER_NAME}' already exists, skipping creation."
     else
+      "$(dirname "$0")/../hack/generate-certs.sh" \
+        "$(dirname "$0")/../dev/garden/discovery-server" \
+        "discovery.local.gardener.cloud" \
+        "DNS:localhost,DNS:discovery.local.gardener.cloud,IP:127.0.0.1"
+
+      cp "$(dirname "$0")/../example/gardener-local/kube-apiserver/structured-authentication.template.yaml" "$(dirname "$0")/../example/gardener-local/kube-apiserver/structured-authentication.yaml"
+      yq -i ' .jwt[0].issuer.certificateAuthority = load_str("'"$(dirname "$0")/../dev/garden/discovery-server/certs/ca.crt"'") ' "$(dirname "$0")/../example/gardener-local/kube-apiserver/structured-authentication.yaml"
+
       kustomize build "$(dirname "$0")/kind/cluster/overlays/${KUSTOMIZE_OVERLAY}-${IPFAMILY}" | \
         yq 'del(.metadata)' | \
         sed "s|\${DOCKER_SOCKET}|$(docker_socket)|g" | \

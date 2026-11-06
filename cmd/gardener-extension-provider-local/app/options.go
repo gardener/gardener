@@ -15,6 +15,7 @@ import (
 	extensionsoperatingsystemconfigcontroller "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsselfhostedshootexposurecontroller "github.com/gardener/gardener/extensions/pkg/controller/selfhostedshootexposure"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
+	extensionscloudproviderwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	extensionscontrolplanewebhook "github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
@@ -32,6 +33,7 @@ import (
 	selfhostedshootexposurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/selfhostedshootexposure"
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	calicoselfhostedshootwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/calicoselfhostedshoot"
+	cloudproviderwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/cloudprovider"
 	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
@@ -63,6 +65,7 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 	return extensionscmdwebhook.NewSwitchOptions(
 		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
+		extensionscmdwebhook.Switch(extensionscloudproviderwebhook.WebhookName, cloudproviderwebhook.AddToManager),
 		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
 		extensionscmdwebhook.Switch(rolloutspeedupwebhook.WebhookName, rolloutspeedupwebhook.AddToManager),
 		extensionscmdwebhook.Switch(calicoselfhostedshootwebhook.WebhookName, calicoselfhostedshootwebhook.AddToManager),
