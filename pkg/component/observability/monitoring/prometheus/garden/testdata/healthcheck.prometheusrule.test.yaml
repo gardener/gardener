@@ -136,6 +136,9 @@ tests:
       - series: expected_healthcheck:up{task="scrape:empty", job="foo"}
         values: stale stale 0     stale stale 0     0     0     0     0     stale
 
+      - series: scrape_samples_post_metric_relabeling{job="gardener-metrics", instance="1"}
+        values: 0     0     0     0     0     0     0     0     0     0     0
+
       - series: expected_healthcheck:up
         values: 1     1     stale 1     1     stale stale stale stale stale 1
 
