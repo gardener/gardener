@@ -3863,6 +3863,10 @@ func validateSelfHostedShootControlPlane(shoot *core.Shoot, fldPath *field.Path)
 		workerPath            = fldPath.Child("provider", "workers").Index(controlPlaneWorkerIdx)
 	)
 
+	if controlPlaneWorker.Minimum != controlPlaneWorker.Maximum {
+		allErrs = append(allErrs, field.Invalid(workerPath.Child("minimum"), controlPlaneWorker.Minimum, "control plane worker pool must have minimum=maximum"))
+	}
+
 	if shoot.Spec.ControlPlane == nil || shoot.Spec.ControlPlane.HighAvailability == nil {
 		if controlPlaneWorker.Maximum != 1 {
 			allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have maximum=1 when high availability is not configured"))
@@ -3870,8 +3874,8 @@ func validateSelfHostedShootControlPlane(shoot *core.Shoot, fldPath *field.Path)
 		return allErrs
 	}
 
-	if controlPlaneWorker.Minimum != 3 || controlPlaneWorker.Maximum != 3 {
-		allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have minimum=maximum=3 when high availability is configured"))
+	if controlPlaneWorker.Maximum != 3 {
+		allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have maximum=3 when high availability is configured"))
 	}
 
 	neededMaxSurge := 1
