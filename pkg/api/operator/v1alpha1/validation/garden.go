@@ -38,6 +38,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
+	operatorgarden "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
@@ -185,21 +186,7 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 
 	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil &&
 		newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
-		fldBackup := fldPath.Child("etcd", "main")
-		oldBackup := &gardencore.Backup{
-			BucketName: oldVirtualCluster.ETCD.Main.Backup.BucketName,
-			Provider:   oldVirtualCluster.ETCD.Main.Backup.Provider,
-			Region:     oldVirtualCluster.ETCD.Main.Backup.Region,
-		}
-		var newBackup *gardencore.Backup
-		if newVirtualCluster.ETCD.Main.Backup != nil {
-			newBackup = &gardencore.Backup{
-				BucketName: newVirtualCluster.ETCD.Main.Backup.BucketName,
-				Provider:   newVirtualCluster.ETCD.Main.Backup.Provider,
-				Region:     newVirtualCluster.ETCD.Main.Backup.Region,
-			}
-		}
-		allErrs = append(allErrs, gardencorevalidation.ValidateEmbeddedBackupBucketUpdate(newBackup, oldBackup, newGarden.Annotations, newGarden.UID, fldBackup)...)
+		allErrs = append(allErrs, ValidateBackupBucketUpdate(newGarden, oldGarden, fldPath.Child("etcd", "main"))...)
 	}
 
 	if oldVirtualCluster.ControlPlane != nil && oldVirtualCluster.ControlPlane.HighAvailability != nil &&
@@ -234,6 +221,38 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.Networking.Services[i], oldVirtualCluster.Networking.Services[i], fldPath.Child("networking", "services").Index(i))...)
 	}
 
+	return allErrs
+}
+
+// ValidateBackupBucketUpdate validates the Garden's embedded backup bucket before an update.
+func ValidateBackupBucketUpdate(newGarden, oldGarden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	var newBackup, oldBackup *gardencore.Backup
+	if backup := helper.GetETCDMainBackup(oldGarden); backup != nil {
+		oldBackup = &gardencore.Backup{
+			BucketName: backup.BucketName,
+			Provider:   backup.Provider,
+			Region:     backup.Region,
+		}
+	}
+	if backup := helper.GetETCDMainBackup(newGarden); backup != nil {
+		newBackup = &gardencore.Backup{
+			BucketName: backup.BucketName,
+			Provider:   backup.Provider,
+			Region:     backup.Region,
+		}
+	}
+
+	if oldBackup != nil && newBackup != nil {
+		_, oldPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(oldGarden)
+		_, newPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(newGarden)
+		if oldPrefix != newPrefix {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "bucketName"), "changing the prefix of the backup bucket is not allowed"))
+		}
+	}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateEmbeddedBackupBucketUpdate(newBackup, oldBackup, newGarden.Annotations, fldPath)...)
 	return allErrs
 }
 

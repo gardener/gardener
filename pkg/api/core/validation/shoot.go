@@ -591,7 +591,7 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, newShootAnn
 
 		if oldWorker.ControlPlane != nil && oldWorker.ControlPlane.Backup != nil {
 			if newWorker.ControlPlane != nil {
-				allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newWorker.ControlPlane.Backup, oldWorker.ControlPlane.Backup, newShootAnnotations, "", idxPath.Child("controlPlane"))...)
+				allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newWorker.ControlPlane.Backup, oldWorker.ControlPlane.Backup, newShootAnnotations, idxPath.Child("controlPlane"))...)
 			} else {
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup, oldWorker.ControlPlane.Backup, idxPath.Child("controlPlane", "backup"))...)
 			}

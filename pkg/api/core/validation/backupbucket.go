@@ -7,10 +7,8 @@ package validation
 import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	corehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -103,7 +101,7 @@ func ValidateBackupBucketStatusUpdate(_, _ *core.BackupBucket) field.ErrorList {
 }
 
 // ValidateEmbeddedBackupBucketUpdate validates BackupBucket specs embedded into the Garden, SeedTemplate, Seed, or (self-hosted) Shoot resources.
-func ValidateEmbeddedBackupBucketUpdate(newBackup, oldBackup *core.Backup, newAnnotations map[string]string, uid types.UID, fldPath *field.Path) field.ErrorList {
+func ValidateEmbeddedBackupBucketUpdate(newBackup, oldBackup *core.Backup, newAnnotations map[string]string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if oldBackup == nil {
@@ -113,14 +111,6 @@ func ValidateEmbeddedBackupBucketUpdate(newBackup, oldBackup *core.Backup, newAn
 	if newBackup == nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBackup, oldBackup, fldPath.Child("backup"))...)
 		return allErrs
-	}
-
-	if uid != "" {
-		_, oldPrefix := corehelper.EtcdMainBackupBucketNameAndPrefix(oldBackup.BucketName, uid)
-		_, newPrefix := corehelper.EtcdMainBackupBucketNameAndPrefix(newBackup.BucketName, uid)
-		if oldPrefix != newPrefix {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "bucketName"), "changing the prefix of the backup bucket is not allowed"))
-		}
 	}
 
 	if gardener.CheckIfBackupChangeIsConfirmed(newAnnotations) {

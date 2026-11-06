@@ -58,7 +58,7 @@ func ValidateSeedUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 	allErrs = append(allErrs, validateSeedOperationUpdate(newSeed.Annotations[v1beta1constants.GardenerOperation], oldSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
 
-	allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newSeed.Spec.Backup, oldSeed.Spec.Backup, newSeed.Annotations, "", field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newSeed.Spec.Backup, oldSeed.Spec.Backup, newSeed.Annotations, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
 
 	return allErrs
@@ -80,7 +80,7 @@ func ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *core.SeedTempl
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, fldPath.Child("spec"))...)
-	allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newSeedTemplate.Spec.Backup, oldSeedTemplate.Spec.Backup, newSeedTemplate.Annotations, "", fldPath.Child("spec"))...)
+	allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newSeedTemplate.Spec.Backup, oldSeedTemplate.Spec.Backup, newSeedTemplate.Annotations, fldPath.Child("spec"))...)
 
 	return allErrs
 }

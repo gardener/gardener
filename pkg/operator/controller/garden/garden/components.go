@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
-	corehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/api/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
@@ -259,7 +258,7 @@ func (r *Reconciler) instantiateComponents(
 	c.extensions = r.newExtensions(log, garden, extensionList)
 
 	// etcd backup entry
-	if corehelper.GetETCDMainBackup(garden) != nil {
+	if helper.GetETCDMainBackup(garden) != nil {
 		c.etcdMainBackupEntry = r.newEtcdMainBackupEntry(log, garden)
 	}
 
@@ -1927,7 +1926,7 @@ func dashboardTLSSecretName(garden *operatorv1alpha1.Garden, wildcardCertSecretN
 // <namespace>--<uid> convention so that the generic actuator's `ExtractShootDetailsFromBackupEntryName` can derive
 // the garden namespace and create the `etcd-backup` secret there.
 func (r *Reconciler) newEtcdMainBackupEntry(log logr.Logger, garden *operatorv1alpha1.Garden) extensionsbackupentry.Interface {
-	backup := corehelper.GetETCDMainBackup(garden)
+	backup := helper.GetETCDMainBackup(garden)
 
 	var region string
 	switch {
@@ -1937,7 +1936,7 @@ func (r *Reconciler) newEtcdMainBackupEntry(log logr.Logger, garden *operatorv1a
 		region = *garden.Spec.RuntimeCluster.Provider.Region
 	}
 
-	bucketName, _ := corehelper.EtcdMainBackupBucketNameAndPrefixFromGarden(garden)
+	bucketName, _ := EtcdMainBackupBucketNameAndPrefix(garden)
 
 	return extensionsbackupentry.New(log, r.RuntimeClientSet.Client(), r.Clock, &extensionsbackupentry.Values{
 		Name:           r.GardenNamespace + "--" + string(garden.UID),

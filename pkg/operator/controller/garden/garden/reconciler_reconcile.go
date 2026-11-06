@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/imagevector"
-	corehelper "github.com/gardener/gardener/pkg/api/core/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
@@ -178,7 +177,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	var (
-		backupConfigured        = corehelper.GetETCDMainBackup(garden) != nil
+		backupConfigured        = helper.GetETCDMainBackup(garden) != nil
 		virtualClusterClientSet kubernetes.Interface
 		virtualClusterClient    client.Client
 		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
@@ -1007,7 +1006,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 }
 
 func resolveETCDMainBackupConfig(garden *operatorv1alpha1.Garden) (*operatorv1alpha1.Backup, string, error) {
-	backup := corehelper.GetETCDMainBackup(garden)
+	backup := helper.GetETCDMainBackup(garden)
 	if backup == nil {
 		return nil, "", errors.New("no ETCD main backup configuration found in Garden resource")
 	}
@@ -1050,13 +1049,27 @@ func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *ope
 }
 
 func etcdMainBackupBucket(garden *operatorv1alpha1.Garden) *extensionsv1alpha1.BackupBucket {
-	name, _ := corehelper.EtcdMainBackupBucketNameAndPrefixFromGarden(garden)
+	name, _ := EtcdMainBackupBucketNameAndPrefix(garden)
 	return &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
+}
+
+// EtcdMainBackupBucketNameAndPrefix splits the bucketName into its name and prefix component
+func EtcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string, string) {
+	prefix := operatorv1alpha1.VirtualGardenETCDMain
+	if backup := helper.GetETCDMainBackup(garden); backup != nil && backup.BucketName != nil {
+		name := *backup.BucketName
+		if idx := strings.Index(name, "/"); idx != -1 {
+			prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(name[idx+1:], "/"), prefix)
+			name = name[:idx]
+		}
+		return name, prefix
+	}
+	return "garden-" + string(garden.UID), prefix
 }
 
 func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface) func(context.Context) error {
 	return func(ctx context.Context) error {
-		if backup := corehelper.GetETCDMainBackup(garden); backup != nil {
+		if backup := helper.GetETCDMainBackup(garden); backup != nil {
 			snapshotSchedule, err := timewindow.DetermineSchedule(
 				"%d %d * * *",
 				garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
@@ -1074,7 +1087,7 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
-			container, prefix := corehelper.EtcdMainBackupBucketNameAndPrefixFromGarden(garden)
+			container, prefix := EtcdMainBackupBucketNameAndPrefix(garden)
 
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             backup.Provider,
