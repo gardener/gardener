@@ -18,6 +18,7 @@ spec:
           - name: machine-controller-manager-provider-local
             ref: local-skaffold/machine-controller-manager-provider-local
       injectGardenKubeconfig: true
+      injectGardenKubeconfigInRuntimeCluster: true
     admission:
       values:
         logLevel: debug

@@ -63,6 +63,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	testkubernetes "github.com/gardener/gardener/test/utils/kubernetes"
 	"github.com/gardener/gardener/test/utils/managedresource"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 	"github.com/gardener/gardener/test/utils/operationannotation"
@@ -283,8 +284,8 @@ var _ = Describe("Garden controller tests", func() {
 		// The gardener-system-public namespace is also expected to be created by gardener-resource-manager, we create
 		// the namespace to prevent controller failing to deploy the gardener-info configmap due to non-existing namespace.
 		By("Create gardener-{apiserver,admission-controller} deployments to prevent infinite reconciliation loops")
-		gardenerAPIServerDeployment := newDeployment("gardener-apiserver", testNamespace.Name)
-		gardenerAdmissionControllerDeployment := newDeployment("gardener-admission-controller", testNamespace.Name)
+		gardenerAPIServerDeployment := testkubernetes.NewDeployment("gardener-apiserver", testNamespace.Name, "", testID, testRunID)
+		gardenerAdmissionControllerDeployment := testkubernetes.NewDeployment("gardener-admission-controller", testNamespace.Name, "", testID, testRunID)
 		gardenerSystemPublicNamespace := corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "gardener-system-public"}}
 		Expect(testClient.Create(ctx, gardenerAPIServerDeployment)).To(Succeed())
 		Expect(testClient.Create(ctx, gardenerAdmissionControllerDeployment)).To(Succeed())
@@ -980,28 +981,6 @@ spec:
 
 func untilInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
 	return nil
-}
-
-func newDeployment(name, namespace string) *appsv1.Deployment {
-	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-			Replicas: new(int32(1)),
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Name:  "foo-container",
-						Image: "foo",
-					}},
-				},
-			},
-		},
-	}
 }
 
 func patchExtensionStatus(cl client.Client, name, namespace string, lastOp gardencorev1beta1.LastOperationState) {
