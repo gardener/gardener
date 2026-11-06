@@ -16,6 +16,7 @@ import (
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -131,7 +132,9 @@ func run(ctx context.Context, opts *Options) error {
 
 // controlPlaneAddressForNodes returns the address that nodes should use for talking to the control plane. If Gardener
 // manages the internal domain of the self-hosted shoot, this is the internal domain pointing to the internal IPs of the
-// control plane nodes. Otherwise, it is the address of the API server in the used kubeconfig.
+// control plane nodes. Otherwise, it is the external domain of the API server.
+// Note that the address of the API server in the used kubeconfig cannot be used, as the admin kubeconfig on the control
+// plane nodes targets the kube-apiserver on localhost.
 func controlPlaneAddressForNodes(ctx context.Context, clientSet kubernetes.Interface) (string, error) {
 	shoot, err := gardenerextensions.GetShoot(ctx, clientSet.Client(), metav1.NamespaceSystem)
 	if err != nil {
@@ -141,11 +144,15 @@ func controlPlaneAddressForNodes(ctx context.Context, clientSet kubernetes.Inter
 		return "", fmt.Errorf("no Shoot found in Cluster resource %q", metav1.NamespaceSystem)
 	}
 
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+		return "", fmt.Errorf("shoot has no DNS domain")
+	}
+
 	if gardenerutils.SelfHostedShootHasInternalAPIServerDomain(shoot) {
 		return "https://" + gardenerutils.GetSelfHostedShootInternalAPIServerDomain(*shoot.Spec.DNS.Domain), nil
 	}
 
-	return clientSet.RESTConfig().Host, nil
+	return "https://" + v1beta1helper.GetAPIServerDomain(*shoot.Spec.DNS.Domain), nil
 }
 
 func printJoinCommand(clientSet kubernetes.Interface, bootstrapTokenSecret *corev1.Secret, controlPlaneAddress string) string {

@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/clientcmd"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -89,15 +90,21 @@ func (b *GardenadmBotanist) DiscoverKubernetesVersion(clientSet kubernetes.Inter
 // FetchKubeconfig fetches the kubeconfig of the self-hosted shoot from the control plane machine via SSH and stores it
 // in a secret in the shoot namespace of the bootstrap cluster for later retrieval. It also writes the kubeconfig to the
 // given output writer, if any.
+// The kubeconfig on the control plane machine targets the kube-apiserver on localhost. Hence, the server is replaced
+// with the external domain of the API server, so that the kubeconfig can be used from outside the machine.
 func (b *GardenadmBotanist) FetchKubeconfig(ctx context.Context, output io.Writer) error {
 	kubeconfigBuffer := &bytes.Buffer{}
 	if err := b.sshConnection.SCP.CopyFromRemotePassThru(ctx, kubeconfigBuffer, botanist.PathKubeconfig, nil); err != nil {
 		return fmt.Errorf("error fetching kubeconfig: %w", err)
 	}
-	kubeconfigBytes := kubeconfigBuffer.Bytes()
+
+	kubeconfigBytes, err := kubeconfigWithServer(kubeconfigBuffer.Bytes(), "https://"+b.Shoot.ComputeOutOfClusterAPIServerAddress(true))
+	if err != nil {
+		return fmt.Errorf("error replacing server in kubeconfig: %w", err)
+	}
 
 	kubeconfigSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: KubeconfigSecretName, Namespace: b.Shoot.ControlPlaneNamespace}}
-	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, b.SeedClientSet.Client(), kubeconfigSecret, func() error {
+	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, b.SeedClientSet.Client(), kubeconfigSecret, func() error {
 		kubeconfigSecret.Data = map[string][]byte{
 			secretsutils.DataKeyKubeconfig: kubeconfigBytes,
 		}
@@ -118,4 +125,18 @@ func (b *GardenadmBotanist) FetchKubeconfig(ctx context.Context, output io.Write
 	}
 
 	return nil
+}
+
+// kubeconfigWithServer returns the given kubeconfig with the server of all clusters replaced by the given server.
+func kubeconfigWithServer(kubeconfig []byte, server string) ([]byte, error) {
+	config, err := clientcmd.Load(kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading kubeconfig: %w", err)
+	}
+
+	for _, cluster := range config.Clusters {
+		cluster.Server = server
+	}
+
+	return clientcmd.Write(*config)
 }

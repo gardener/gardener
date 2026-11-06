@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
@@ -64,8 +63,6 @@ type GardenadmBotanist struct {
 
 	operatingSystemConfigSecret *corev1.Secret
 
-	// controlPlaneMachines is set by ListControlPlaneMachines during `gardenadm bootstrap`.
-	controlPlaneMachines []machinev1alpha1.Machine
 	// sshConnection is the SSH connection to the first control plane machine. It is set by ConnectToControlPlaneMachine
 	// during `gardenadm bootstrap`.
 	sshConnection *sshutils.Connection

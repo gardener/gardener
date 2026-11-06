@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,10 +33,14 @@ import (
 // ConnectToControlPlaneMachine opens an SSH connection via the Bastion to the first control plane machine of the
 // self-hosted shoot. The connection is stored in the sshConnection field.
 func (b *GardenadmBotanist) ConnectToControlPlaneMachine(ctx context.Context) error {
-	machine, err := b.GetMachineByIndex(0)
-	if err != nil {
-		return err
+	machineList := &machinev1alpha1.MachineList{}
+	if err := b.SeedClientSet.Client().List(ctx, machineList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
+		return fmt.Errorf("failed to list machines: %w", err)
 	}
+	if len(machineList.Items) == 0 {
+		return fmt.Errorf("no control plane machines found")
+	}
+	machine := machineList.Items[0]
 
 	machineAddr, err := PreferredNodeAddress(machine.Status.Addresses)
 	if err != nil {
