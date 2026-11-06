@@ -1464,6 +1464,29 @@ func (b *Botanist) MigrateAndDeleteInfrastructureTaskGroup() flow.TaskGroup {
 	return g.SkipIf(b.Shoot.IsWorkerless)
 }
 
+// TaskGroupMigrateDNSRecords is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupMigrateDNSRecords flow.TaskID = "TaskGroupMigrateDNSRecords"
+
+// MigrateDNSRecordsTaskGroup handles the migration of the shoot's DNS records.
+func (b *Botanist) MigrateDNSRecordsTaskGroup() flow.TaskGroup {
+	g := flow.NewTaskGroup(TaskGroupMigrateDNSRecords)
+
+	g.Add(flow.Task{
+		Name: "Migrating nginx ingress DNS record",
+		Fn:   b.MigrateIngressDNSRecord,
+	})
+	g.Add(flow.Task{
+		Name: "Migrating external domain DNS record",
+		Fn:   b.MigrateExternalDNSRecord,
+	})
+	g.Add(flow.Task{
+		Name: "Migrating internal domain DNS record",
+		Fn:   b.MigrateInternalDNSRecord,
+	})
+
+	return g
+}
+
 // TaskGroupMigrateAndDeleteControlPlane is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupMigrateAndDeleteControlPlane flow.TaskID = "TaskGroupMigrateAndDeleteControlPlane"
 
