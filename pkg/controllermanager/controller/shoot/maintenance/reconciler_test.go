@@ -2539,6 +2539,125 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
+	Describe("#needsPeriodicRetry", func() {
+		It("should return true when failed Reconcile operation is older than 24h", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:           gardencorev1beta1.LastOperationTypeReconcile,
+						State:          gardencorev1beta1.LastOperationStateFailed,
+						LastUpdateTime: metav1.NewTime(time.Now().Add(-25 * time.Hour)),
+					},
+				},
+			}
+			Expect(needsPeriodicRetry(shoot, time.Now())).To(BeTrue())
+		})
+
+		It("should return true when failed Create operation is older than 24h", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:           gardencorev1beta1.LastOperationTypeCreate,
+						State:          gardencorev1beta1.LastOperationStateFailed,
+						LastUpdateTime: metav1.NewTime(time.Now().Add(-25 * time.Hour)),
+					},
+				},
+			}
+			Expect(needsPeriodicRetry(shoot, time.Now())).To(BeTrue())
+		})
+
+		It("should return false when failed operation is younger than 24h", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:           gardencorev1beta1.LastOperationTypeReconcile,
+						State:          gardencorev1beta1.LastOperationStateFailed,
+						LastUpdateTime: metav1.NewTime(time.Now().Add(-23 * time.Hour)),
+					},
+				},
+			}
+			Expect(needsPeriodicRetry(shoot, time.Now())).To(BeFalse())
+		})
+
+		It("should return false when operation type is Delete", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:           gardencorev1beta1.LastOperationTypeDelete,
+						State:          gardencorev1beta1.LastOperationStateFailed,
+						LastUpdateTime: metav1.NewTime(time.Now().Add(-25 * time.Hour)),
+					},
+				},
+			}
+			Expect(needsPeriodicRetry(shoot, time.Now())).To(BeFalse())
+		})
+
+		It("should return false when shoot is ignored", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						v1beta1constants.ShootIgnore: "true",
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:           gardencorev1beta1.LastOperationTypeReconcile,
+						State:          gardencorev1beta1.LastOperationStateFailed,
+						LastUpdateTime: metav1.NewTime(time.Now().Add(-25 * time.Hour)),
+					},
+				},
+			}
+			Expect(needsPeriodicRetry(shoot, time.Now())).To(BeFalse())
+		})
+
+		It("should return false when LastOperation is nil", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			Expect(needsPeriodicRetry(shoot, time.Now())).To(BeFalse())
+		})
+	})
+
+	Describe("#maintainOperation periodic retry", func() {
+		It("should set retry annotation when needsRetry is false but needsPeriodicRetry is true", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:           gardencorev1beta1.LastOperationTypeReconcile,
+						State:          gardencorev1beta1.LastOperationStateFailed,
+						LastUpdateTime: metav1.NewTime(time.Now().Add(-25 * time.Hour)),
+					},
+					LastErrors: []gardencorev1beta1.LastError{
+						{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}},
+					},
+				},
+			}
+			maintainOperation(shoot, nil, time.Now())
+			Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
+		})
+
+		It("should not set retry annotation when needsPeriodicRetry is false due to < 24h", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:           gardencorev1beta1.LastOperationTypeReconcile,
+						State:          gardencorev1beta1.LastOperationStateFailed,
+						LastUpdateTime: metav1.NewTime(time.Now().Add(-23 * time.Hour)),
+					},
+					LastErrors: []gardencorev1beta1.LastError{
+						{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}},
+					},
+				},
+			}
+			maintainOperation(shoot, nil, time.Now())
+			Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+		})
+	})
+
 	Describe("#reconcile", func() {
 		var (
 			ctx          = context.Background()
