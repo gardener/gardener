@@ -424,7 +424,7 @@ func SetForceDeletion(ctx context.Context, c client.Writer, namespace, name stri
 	patch := client.MergeFrom(resource.DeepCopy())
 	metav1.SetMetaDataAnnotation(&resource.ObjectMeta, resourcesv1alpha1.ForceDeletion, "true")
 	if err := c.Patch(ctx, resource, patch); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("could not update managed resource '%s/%s': %w", namespace, name, err)
+		return fmt.Errorf("failed to add force deletion annotation to managed resource '%s/%s': %w", namespace, name, err)
 	}
 
 	return nil
