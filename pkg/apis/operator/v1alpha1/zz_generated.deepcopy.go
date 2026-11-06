@@ -1034,6 +1034,11 @@ func (in *Gardener) DeepCopyInto(out *Gardener) {
 		*out = new(GardenerResourceManagerConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.TrustBundleSecretRef != nil {
+		in, out := &in.TrustBundleSecretRef, &out.TrustBundleSecretRef
+		*out = new(corev1.LocalObjectReference)
+		**out = **in
+	}
 	return
 }
 
