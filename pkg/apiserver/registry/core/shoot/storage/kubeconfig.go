@@ -109,6 +109,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 	var kubeAPIServerAddresses []core.ShootAdvertisedAddress
 	for _, addr := range shoot.Status.AdvertisedAddresses {
 		if addr.Name == v1beta1constants.AdvertisedAddressExternal ||
+			addr.Name == v1beta1constants.AdvertisedAddressPriorExternal ||
 			addr.Name == v1beta1constants.AdvertisedAddressInternal ||
 			addr.Name == v1beta1constants.AdvertisedAddressWildcardTLSSeedBound ||
 			addr.Name == v1beta1constants.AdvertisedAddressUnmanaged {

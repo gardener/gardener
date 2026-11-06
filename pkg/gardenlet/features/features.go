@@ -31,5 +31,6 @@ func GetFeatures() []featuregate.Feature {
 		features.DisableNginxIngressInSeed,
 		features.RemoveHTTPProxyLegacyPort,
 		features.LiveControlPlaneMigration,
+		features.MutableShootDomains,
 	}
 }

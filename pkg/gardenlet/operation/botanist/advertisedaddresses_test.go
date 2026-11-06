@@ -71,6 +71,46 @@ var _ = Describe("AdvertisedAddresses", func() {
 			}))
 		})
 
+		It("returns the prior external address directly after the external address", func() {
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.PriorExternalClusterDomain = new("prior.foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "external",
+					URL:  "https://api.foo.bar",
+				},
+				{
+					Name: "prior-external",
+					URL:  "https://api.prior.foo.bar",
+				},
+				{
+					Name: "internal",
+					URL:  "https://api.baz.foo",
+				},
+				{
+					Name: "service-account-issuer",
+					URL:  "https://api.baz.foo",
+				},
+			}))
+		})
+
+		It("returns no prior external address if no domain migration is running", func() {
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
+				Name: "external",
+				URL:  "https://api.foo.bar",
+			}))
+		})
+
 		It("returns internal and service-account-issuer addresses", func() {
 			botanist.Shoot.InternalClusterDomain = new("baz.foo")
 
