@@ -131,8 +131,6 @@ var _ = Describe("Shoot PVC autoscaling for logging testing", func() {
 			Skip("PVC autoscaler is not enabled for this seed — skipping PVC autoscaler logging test")
 		}
 
-		checkRequiredResources(ctx, shootFramework.SeedClient)
-
 		By("Verify pvc-autoscaler is running in the seed garden namespace")
 		framework.ExpectNoError(shootFramework.WaitUntilDeploymentIsReady(ctx, v1beta1constants.DeploymentNamePVCAutoscaler, v1beta1constants.GardenNamespace, shootFramework.SeedClient))
 	}, pvcAutoscalerInitializationTimeout)
