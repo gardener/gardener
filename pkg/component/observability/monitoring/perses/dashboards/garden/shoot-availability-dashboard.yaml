@@ -35,6 +35,8 @@ spec:
           kind: GaugeChart
           spec:
             calculation: last
+            format:
+              unit: percent
         queries:
           - kind: TimeSeriesQuery
             spec:
