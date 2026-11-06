@@ -200,12 +200,17 @@ var _ = Describe("Controller", func() {
 			Expect(subResourceUpdateCalled).To(BeTrue())
 		})
 
-		It("should not call /finalize subresource if spec.finalizers is empty", func() {
+		It("should call /finalize subresource even if spec.finalizers is empty", func() {
 			subResourceUpdateCalled := false
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).
 				WithInterceptorFuncs(interceptor.Funcs{
-					SubResourceUpdate: func(_ context.Context, _ client.Client, _ string, _ client.Object, _ ...client.SubResourceUpdateOption) error {
+					SubResourceUpdate: func(_ context.Context, _ client.Client, subResourceName string, o client.Object, _ ...client.SubResourceUpdateOption) error {
 						subResourceUpdateCalled = true
+						Expect(subResourceName).To(Equal("finalize"))
+						ns, ok := o.(*corev1.Namespace)
+						Expect(ok).To(BeTrue())
+						Expect(ns.Finalizers).To(BeEmpty())
+						Expect(ns.Spec.Finalizers).To(BeEmpty())
 						return nil
 					},
 				}).Build()
@@ -216,7 +221,7 @@ var _ = Describe("Controller", func() {
 			Expect(fakeClient.Create(ctx, ns)).To(Succeed())
 
 			Expect(clearNamespaceSpecFinalizers(ctx, fakeClient, obj)).To(Succeed())
-			Expect(subResourceUpdateCalled).To(BeFalse())
+			Expect(subResourceUpdateCalled).To(BeTrue())
 		})
 
 		It("should return nil if the namespace does not exist", func() {

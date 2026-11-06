@@ -1078,10 +1078,10 @@ func finalizeResource(ctx context.Context, cl client.Client, obj *unstructured.U
 	return nil
 }
 
-// clearNamespaceSpecFinalizers clears spec.finalizers on namespace resources via the /finalize subresource.
-// This works with *unstructured.Unstructured objects (unlike NewNamespaceFinalizer which requires *corev1.Namespace).
+// clearNamespaceSpecFinalizers clears metadata.finalizers and spec.finalizers on namespace resources
+// via the /finalize subresource. It retrieves the namespace as a typed object from the API because
+// NewNamespaceFinalizer requires *corev1.Namespace (not *unstructured.Unstructured).
 func clearNamespaceSpecFinalizers(ctx context.Context, cl client.Client, obj client.Object) error {
-	// Read current state to check if spec.finalizers is non-empty.
 	namespace := &corev1.Namespace{}
 	if err := cl.Get(ctx, client.ObjectKeyFromObject(obj), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1090,10 +1090,5 @@ func clearNamespaceSpecFinalizers(ctx context.Context, cl client.Client, obj cli
 		return fmt.Errorf("failed to get namespace %s: %w", obj.GetName(), err)
 	}
 
-	if len(namespace.Spec.Finalizers) == 0 {
-		return nil
-	}
-
-	namespace.Spec.Finalizers = nil
-	return cl.SubResource("finalize").Update(ctx, namespace)
+	return utilclient.NewNamespaceFinalizer().Finalize(ctx, cl, namespace)
 }
