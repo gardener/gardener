@@ -90,6 +90,8 @@ var (
 	// ready.
 	// Exposed for testing.
 	RequeueAfterWaitForStaticPods = 5 * time.Second
+	// LeaseDurationSeconds is the duration of the serial reconciliation Lease in seconds. Exposed for testing.
+	LeaseDurationSeconds int32 = 600
 )
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -205,18 +207,41 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		if serialReconciliationLease.acquiredByAnotherInstance() {
 			if serialReconciliationLease.renewedInTime() {
-				requeueAfter := serialReconciliationLease.durationUntilLeaseExpires()
-				serialReconciliationLease.logger().Info("Lease was acquired by another instance, exiting early and requeue when Lease expires", "requeueAfter", requeueAfter)
-				return reconcile.Result{RequeueAfter: requeueAfter}, nil
-			}
+				// The Lease holder identity is the hostname of the gardener-node-agent instance holding it. If it has
+				// not been renewed recently, the holder might have been removed from the cluster (e.g., during a control
+				// plane node rollout) without releasing the Lease. In this case, we must not respect the stale Lease -
+				// otherwise serial reconciliation would be blocked until it expires. We only perform this (uncached)
+				// lookup once renewals lag behind to avoid querying the API server on every reconciliation.
+				holderNodeExists := true
+				if !serialReconciliationLease.renewedRecently() {
+					var err error
+					if holderNodeExists, err = r.holderNodeExists(ctx, serialReconciliationLease.holderIdentity()); err != nil {
+						return reconcile.Result{}, fmt.Errorf("failed checking whether the Lease holder node still exists: %w", err)
+					}
+				}
 
-			serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
+				if holderNodeExists {
+					// If the Lease was renewed recently, requeue when the holder node existence should be rechecked.
+					// Otherwise, requeue when the Lease expires.
+					requeueAfter := serialReconciliationLease.durationUntilLeaseExpires()
+					if durationUntilRecheck := serialReconciliationLease.durationUntilNotRenewedRecently(); durationUntilRecheck > 0 {
+						requeueAfter = durationUntilRecheck
+					}
+
+					serialReconciliationLease.logger().Info("Lease was acquired by another instance, exiting early and requeue", "requeueAfter", requeueAfter)
+					return reconcile.Result{RequeueAfter: requeueAfter}, nil
+				}
+
+				serialReconciliationLease.logger().Info("Lease was acquired by another instance, but its holder node no longer exists in the cluster")
+			} else {
+				serialReconciliationLease.logger().Info("Lease was acquired by another instance, but it was not renewed in time")
+			}
 		}
 
 		// For control-plane nodes doing an in-place update the lease has no timeout and is only released on success.
 		// If a control-plane node fails to update, it keeps the lease and blocks others — operator intervention is required.
 		// In all other cases a 600s timeout ensures a crashed node does not block others.
-		leaseDurationSeconds := new(int32(600))
+		leaseDurationSeconds := new(LeaseDurationSeconds)
 		if isControlPlaneNode {
 			if inPlaceUpdate, err := r.isInPlaceUpdatePending(log, osc, oscChecksum, osVersion); err != nil {
 				return reconcile.Result{}, err
@@ -460,6 +485,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, serialReconciliationLease.release(ctx)
+}
+
+// holderNodeExists returns whether a node whose hostname matches the given Lease holder identity still exists in the
+// cluster. It uses the uncached APIReader because the manager's node cache is restricted to this instance's own node.
+func (r *Reconciler) holderNodeExists(ctx context.Context, holderIdentity string) (bool, error) {
+	node, err := nodeagent.FetchNodeByHostName(ctx, r.APIReader, holderIdentity)
+	if err != nil {
+		return false, err
+	}
+
+	return node != nil, nil
 }
 
 func (r *Reconciler) getNode(ctx context.Context) (*corev1.Node, bool, error) {
