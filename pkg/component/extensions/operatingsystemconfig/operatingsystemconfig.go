@@ -6,6 +6,7 @@ package operatingsystemconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -16,6 +17,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -276,7 +278,63 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	return flow.Parallel(fns...)(ctx)
+	err = flow.Parallel(fns...)(ctx)
+
+	// Deduplicate error messages to avoid flooding the shoot status with many near-identical error messages.
+	// Log the original error to ensure that the full context is still available in the gardenlet logs.
+	deduplicatedErr := DeduplicateOSCErrors(err)
+	if err != deduplicatedErr {
+		o.log.Error(err, "Failed to reconcile OperatingSystemConfig resources")
+	}
+
+	return deduplicatedErr
+}
+
+// DeduplicateOSCErrors collapses a *multierror.Error by grouping entries that share the same
+// unwrapped cause. This prevents the shoot status from being flooded with many
+// near-identical error messages when all OSC resources fail for the same underlying reason.
+func DeduplicateOSCErrors(err error) error {
+	// Only start deduplication if there are more than 5 errors to retain the OSC and worker pool context.
+	const errorThreshold = 5
+
+	var multiErr *multierror.Error
+	if !errors.As(err, &multiErr) || len(multiErr.Errors) <= errorThreshold {
+		return err
+	}
+
+	// Group errors by the message of their direct cause (one Unwrap level).
+	// Preserve insertion order so the output is deterministic.
+	occurrences := make(map[string]int)
+
+	for _, e := range multiErr.Errors {
+		cause := errors.Unwrap(e)
+		causeText := e.Error()
+		if cause != nil {
+			causeText = cause.Error()
+		}
+		occurrences[causeText]++
+	}
+
+	if len(occurrences) == len(multiErr.Errors) {
+		// All causes are unique — nothing to deduplicate.
+		return err
+	}
+
+	sortedCauses := slices.SortedFunc(maps.Keys(occurrences), func(a, b string) int {
+		// sort by error count - higher counts first
+		return occurrences[b] - occurrences[a]
+	})
+
+	var deduped *multierror.Error
+	for _, causeText := range sortedCauses {
+		if occurrences[causeText] == 1 {
+			deduped = multierror.Append(deduped, fmt.Errorf("[%d] occurrence of: %s", occurrences[causeText], causeText))
+		} else {
+			deduped = multierror.Append(deduped, fmt.Errorf("[%d] occurrences of: %s", occurrences[causeText], causeText))
+		}
+	}
+	deduped.ErrorFormat = multiErr.ErrorFormat
+	return deduped.ErrorOrNil()
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
