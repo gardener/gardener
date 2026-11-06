@@ -1049,7 +1049,7 @@ func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden, isRestoringHAControlPl
 			SkipIf: shootIsGarden || !b.Shoot.IsSelfHosted(),
 		})
 		configureEtcd = g.Add(flow.Task{
-			Name: "Configuring static pod control plane node IP addresses for ETCDs",
+			Name: "Configuring first control plane machine IP address for ETCDs",
 			Fn: func(ctx context.Context) error {
 				nodes, err := b.ListControlPlaneNodes(ctx)
 				if err != nil {
@@ -1061,11 +1061,11 @@ func (b *Botanist) ReconcileETCDsTaskGroup(shootIsGarden, isRestoringHAControlPl
 					return fmt.Errorf("failed determining IP address of first control plane node: %w", err)
 				}
 
-				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodControlPlaneNodesIPAddresses(ip)
-				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodControlPlaneNodesIPAddresses(ip)
+				b.Shoot.Components.ControlPlane.EtcdMain.SetStaticPodFirstControlPlaneMachineIP(ip)
+				b.Shoot.Components.ControlPlane.EtcdEvents.SetStaticPodFirstControlPlaneMachineIP(ip)
 				return nil
 			},
-			SkipIf: !b.Shoot.IsSelfHosted(),
+			SkipIf: !b.Shoot.IsSelfHosted() || b.isGardenlet(),
 		})
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs",
