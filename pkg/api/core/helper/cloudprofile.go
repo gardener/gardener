@@ -343,42 +343,6 @@ func GetMachineImageDiff(oldImages, newImages []core.MachineImage) MachineImageD
 	return diff
 }
 
-// FilterVersionsWithClassification filters versions for a classification
-func FilterVersionsWithClassification(versions []core.ExpirableVersion, classification core.VersionClassification) []core.ExpirableVersion {
-	var result []core.ExpirableVersion
-	for _, version := range versions {
-		// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
-		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
-		if (version.Classification == nil || *version.Classification != classification) &&
-			!slices.ContainsFunc(version.Lifecycle, func(s core.LifecycleStage) bool {
-				return s.Classification == classification
-			}) {
-			continue
-		}
-
-		result = append(result, version)
-	}
-	return result
-}
-
-// FindVersionsWithSameMajorMinor filters the given versions slice for versions other the given one, having the same major and minor version as the given version
-func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version semver.Version) ([]core.ExpirableVersion, error) {
-	var result []core.ExpirableVersion
-	for _, v := range versions {
-		// semantic version already checked by validator
-		semVer, err := semver.NewVersion(v.Version)
-		if err != nil {
-			return nil, err
-		}
-		if semVer.Equal(&version) || semVer.Minor() != version.Minor() || semVer.Major() != version.Major() {
-			continue
-		}
-
-		result = append(result, v)
-	}
-	return result, nil
-}
-
 // HasCapability returns true of the passed capabilities contain the capability with the given name.
 func HasCapability(capabilities []core.CapabilityDefinition, capabilityName string) bool {
 	return slices.ContainsFunc(capabilities, func(capability core.CapabilityDefinition) bool {

@@ -91,9 +91,7 @@ func findSupportedArchitectures(images []gardencorev1beta1.MachineImage, machine
 				// Skip versions that are not the specified one.
 				continue
 			}
-			// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
-			// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
-			if version.Classification != nil && v1beta1helper.VersionIsSupported(version.ExpirableVersion) {
+			if v1beta1helper.VersionIsSupported(version.ExpirableVersion) {
 				architectures.Insert(v1beta1helper.GetArchitecturesFromImageVersion(version, capabilityDefinitions)...)
 			}
 			if machineImageVersion != "" {
@@ -172,10 +170,8 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 			return "", fmt.Errorf("image version %s not found not found in cloudProfile", *bastion.MachineImage.Version)
 		}
 
-		// TODO(rapsnx): There is a regression in legacy classifications, which allowed to bypass validations.
-		// Update this when issue: https://github.com/gardener/gardener/issues/14328 is resolved.
 		v := image.Versions[versionIndex]
-		if v.Classification != nil && !v1beta1helper.VersionIsSupported(v.ExpirableVersion) {
+		if !v1beta1helper.VersionIsSupported(v.ExpirableVersion) {
 			return "", fmt.Errorf("specified image %s in version %s is not classified supported", imageName, *bastion.MachineImage.Version)
 		}
 

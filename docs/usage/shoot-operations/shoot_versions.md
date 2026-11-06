@@ -297,11 +297,12 @@ The Gardener API server enforces the following requirements for versions:
 
 - A version that is in use by a Shoot cannot be deleted from the `CloudProfile`.
 - Creating a new version with expiration date in the past is not allowed.
-- There can be only one `supported` version per minor version.
 - The latest Kubernetes version cannot have an expiration date.
   - NOTE: The latest version for a machine image can have an expiration date. [*]
 
 <sub>[*] Useful for cases in which support for a given machine image needs to be deprecated and removed (for example, the machine image reaches end of life).</sub>
+
+Multiple patch versions within the same minor version can be classified as `supported` simultaneously, including overlapping lifecycle periods. This applies to both Kubernetes and machine images.
 
 ## Related Documentation
 
