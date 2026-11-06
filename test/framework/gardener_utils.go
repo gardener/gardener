@@ -513,8 +513,8 @@ func (f *GardenerFramework) RemoveShootAnnotation(ctx context.Context, shoot *ga
 }
 
 // MigrateShoot changes the spec.Seed.Name of a shoot and waits for it to be migrated
-func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, live bool, prerequisites func(shoot *gardencorev1beta1.Shoot) error) error {
-	if live {
+func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, liveMigrate bool, prerequisites func(shoot *gardencorev1beta1.Shoot) error) error {
+	if liveMigrate {
 		if err := f.AnnotateShoot(ctx, shoot, map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "true"}); err != nil {
 			return err
 		}
