@@ -521,6 +521,8 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootAutomaticCredentialsRotationPossible},
 							{Type: gardencorev1beta1.ShootManagedResourcesHonored},
 							{Type: gardencorev1beta1.ShootPreservedFailedMachinesAbsent},
+							{Type: gardencorev1beta1.ShootKubernetesVersionSupported},
+							{Type: gardencorev1beta1.ShootMachineImagesVersionSupported},
 						},
 					},
 				}
@@ -1047,6 +1049,315 @@ var _ = Describe("Constraints", func() {
 				Expect(errorCodes).To(BeNil())
 			})
 		})
+
+		Describe("#CheckIfKubernetesVersionIsSupported", func() {
+			var (
+				expectTrueCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
+					Expect(reason).To(Equal("KubernetesVersionLifecycleClassificationSupported"))
+					Expect(message).To(Equal("The Shoot's Kubernetes version is classified as supported in the CloudProfile."))
+				}
+
+				expectFalseCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedClassification gardencorev1beta1.VersionClassification, expectedReason string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+					Expect(reason).To(Equal(expectedReason))
+					Expect(message).To(Equal(fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", expectedClassification)))
+				}
+
+				expectUnknownCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedVersion string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+					Expect(reason).To(Equal("KubernetesVersionLifecycleClassificationUnknown"))
+					Expect(message).To(Equal("Unknown lifecycle classification of the Shoot's Kubernetes version: " + expectedVersion))
+				}
+
+				createConstraint = func(offsetSupported, offsetDeprecated, offsetExpired, offsetPreview time.Duration, kubernetesVersion string) *Constraint {
+					seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+
+					shoot := &shootpkg.Shoot{
+						CloudProfile: &gardencorev1beta1.CloudProfile{
+							Spec: gardencorev1beta1.CloudProfileSpec{
+								Kubernetes: gardencorev1beta1.KubernetesSettings{
+									Versions: []gardencorev1beta1.ExpirableVersion{
+										{
+											Version: "0.42", Lifecycle: []gardencorev1beta1.LifecycleStage{
+												{
+													Classification: gardencorev1beta1.ClassificationSupported,
+													StartTime:      &metav1.Time{Time: time.Now().Add(offsetSupported * time.Hour)},
+												},
+												{
+													Classification: gardencorev1beta1.ClassificationDeprecated,
+													StartTime:      &metav1.Time{Time: time.Now().Add(offsetDeprecated * time.Hour)},
+												},
+												{
+													Classification: gardencorev1beta1.ClassificationExpired,
+													StartTime:      &metav1.Time{Time: time.Now().Add(offsetExpired * time.Hour)},
+												},
+												{
+													Classification: gardencorev1beta1.ClassificationPreview,
+													StartTime:      &metav1.Time{Time: time.Now().Add(offsetPreview * time.Hour)},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+					shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Kubernetes: gardencorev1beta1.Kubernetes{
+								Version: kubernetesVersion,
+							},
+						},
+					})
+
+					return NewConstraint(
+						GinkgoLogr,
+						shoot,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						},
+						clock,
+					)
+				}
+			)
+
+			It("should return a 'true' condition when the Kubernetes version is supported", func() {
+				constraint = createConstraint(-24, 24, 24, 24, "0.42")
+				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectTrueCondition(status, reason, message)
+			})
+
+			It("should return a 'false' condition when the Kubernetes version is deprecated", func() {
+				constraint = createConstraint(24, -24, 24, 24, "0.42")
+				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationDeprecated, "KubernetesVersionLifecycleClassificationDeprecated")
+			})
+
+			It("should return a 'false' condition when the Kubernetes version is expired", func() {
+				constraint = createConstraint(24, 24, -24, 24, "0.42")
+				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationExpired, "KubernetesVersionLifecycleClassificationExpired")
+			})
+
+			It("should return a 'false' condition when the Kubernetes version is in preview", func() {
+				constraint = createConstraint(24, 24, 24, -24, "0.42")
+				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationPreview, "KubernetesVersionLifecycleClassificationPreview")
+			})
+
+			It("should return a 'false' condition when the Kubernetes version is unavailable", func() {
+				constraint = createConstraint(24, 24, 24, 24, "0.42")
+				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationUnavailable, "KubernetesVersionLifecycleClassificationUnavailable")
+			})
+
+			It("should return a 'false' condition when the Kubernetes version is not found in the lifecycle classification of the CloudProfile", func() {
+				constraint = createConstraint(-24, 24, 24, 24, "0.43")
+				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectUnknownCondition(status, reason, message, "0.43")
+			})
+
+			It("should not panic when the CloudProfile* is nil", func() {
+				_, _, _, err := constraint.CheckIfKubernetesVersionIsSupported()
+				Expect(err).To(HaveOccurred())
+			})
+
+		})
+
+		Describe("#CheckIfmachineImageVersionIsSupported", func() {
+			var (
+				expectTrueCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
+					Expect(reason).To(Equal("MachineImageVersionsLifecycleClassificationSupported"))
+					Expect(message).To(Equal("All of the Shoot's MachineImage versions are classified as supported."))
+				}
+
+				expectFalseCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedClassification gardencorev1beta1.VersionClassification, expectedReason string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+					Expect(reason).To(Equal(expectedReason))
+					Expect(message).To(Equal(fmt.Sprintf("At least one MachineImage version of the Shoot is not classified as supported (found: MachineImage gardenlinux2 with version 0.43 classified as %s; there might be more, this list is not exhaustive).", expectedClassification)))
+				}
+
+				expectUnknownMachineImageCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedMachineImage string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+					Expect(reason).To(Equal("MachineImageVersionsLifecycleClassificationUnknown"))
+					Expect(message).To(Equal(fmt.Sprintf("At least one MachineImage of the Shoot is not found in the CloudProfile (MachineImage %s not found; there might be more, this list is not exhaustive).", expectedMachineImage)))
+				}
+
+				expectUnknownMachineImageVersionCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedMachineImage, expectedVersion string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+					Expect(reason).To(Equal("MachineImageVersionsLifecycleClassificationUnknown"))
+					Expect(message).To(Equal(fmt.Sprintf("At least one MachineImage version of the Shoot is not found in the CloudProfile (MachineImage %s with version %s not found; there might be more, this list is not exhaustive).", expectedMachineImage, expectedVersion)))
+				}
+
+				createConstraint = func(offsetSupported, offsetDeprecated, offsetExpired, offsetPreview time.Duration, machineImage2, machineImage2Version string) *Constraint {
+					seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+					shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+
+					shoot := &shootpkg.Shoot{
+						CloudProfile: &gardencorev1beta1.CloudProfile{
+							Spec: gardencorev1beta1.CloudProfileSpec{
+								MachineImages: []gardencorev1beta1.MachineImage{
+									{
+										Name: "gardenlinux",
+										Versions: []gardencorev1beta1.MachineImageVersion{
+											{
+												ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+													Version: "0.42", Lifecycle: []gardencorev1beta1.LifecycleStage{
+														{
+															Classification: gardencorev1beta1.ClassificationSupported,
+															StartTime:      &metav1.Time{Time: time.Now().Add(-24 * time.Hour)},
+														},
+														{
+															Classification: gardencorev1beta1.ClassificationDeprecated,
+															StartTime:      &metav1.Time{Time: time.Now().Add(24 * time.Hour)},
+														},
+														{
+															Classification: gardencorev1beta1.ClassificationExpired,
+															StartTime:      &metav1.Time{Time: time.Now().Add(24 * time.Hour)},
+														},
+														{
+															Classification: gardencorev1beta1.ClassificationPreview,
+															StartTime:      &metav1.Time{Time: time.Now().Add(24 * time.Hour)},
+														},
+													},
+												},
+											},
+										},
+									},
+									{
+										Name: "gardenlinux2",
+										Versions: []gardencorev1beta1.MachineImageVersion{
+											{
+												ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+													Version: "0.43", Lifecycle: []gardencorev1beta1.LifecycleStage{
+														{
+															Classification: gardencorev1beta1.ClassificationSupported,
+															StartTime:      &metav1.Time{Time: time.Now().Add(offsetSupported * time.Hour)},
+														},
+														{
+															Classification: gardencorev1beta1.ClassificationDeprecated,
+															StartTime:      &metav1.Time{Time: time.Now().Add(offsetDeprecated * time.Hour)},
+														},
+														{
+															Classification: gardencorev1beta1.ClassificationExpired,
+															StartTime:      &metav1.Time{Time: time.Now().Add(offsetExpired * time.Hour)},
+														},
+														{
+															Classification: gardencorev1beta1.ClassificationPreview,
+															StartTime:      &metav1.Time{Time: time.Now().Add(offsetPreview * time.Hour)},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+					shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Provider: gardencorev1beta1.Provider{
+								Workers: []gardencorev1beta1.Worker{
+									{
+										Machine: gardencorev1beta1.Machine{
+											Image: &gardencorev1beta1.ShootMachineImage{
+												Name:    "gardenlinux",
+												Version: new(string("0.42")),
+											},
+										},
+									},
+									{
+										Machine: gardencorev1beta1.Machine{
+											Image: &gardencorev1beta1.ShootMachineImage{
+												Name:    machineImage2,
+												Version: new(machineImage2Version),
+											},
+										},
+									},
+								},
+							},
+						},
+					})
+
+					return NewConstraint(
+						GinkgoLogr,
+						shoot,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						},
+						clock,
+					)
+				}
+			)
+
+			It("should return a 'true' condition when all MachineImage versions are supported", func() {
+				constraint = createConstraint(-24, 24, 24, 24, "gardenlinux2", "0.43")
+				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectTrueCondition(status, reason, message)
+			})
+
+			It("should return a 'false' condition when one MachineImage version is deprecated", func() {
+				constraint = createConstraint(24, -24, 24, 24, "gardenlinux2", "0.43")
+				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationDeprecated, "MachineImageVersionsLifecycleClassificationDeprecated")
+			})
+
+			It("should return a 'false' condition when one MachineImage version is expired", func() {
+				constraint = createConstraint(24, 24, -24, 24, "gardenlinux2", "0.43")
+				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationExpired, "MachineImageVersionsLifecycleClassificationExpired")
+			})
+
+			It("should return a 'false' condition when one MachineImage version is in preview", func() {
+				constraint = createConstraint(24, 24, 24, -24, "gardenlinux2", "0.43")
+				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationPreview, "MachineImageVersionsLifecycleClassificationPreview")
+			})
+
+			It("should return a 'false' condition when one MachineImage version is unavailable", func() {
+				constraint = createConstraint(24, 24, 24, 24, "gardenlinux2", "0.43")
+				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationUnavailable, "MachineImageVersionsLifecycleClassificationUnavailable")
+			})
+
+			It("should return a 'false' condition when one MachineImage is not found in the lifecycle classification of the CloudProfile", func() {
+				constraint = createConstraint(24, 24, 24, 24, "gardenlinux3", "0.43")
+				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectUnknownMachineImageCondition(status, reason, message, "gardenlinux3")
+			})
+
+			It("should return a 'false' condition when the MachineImage version is not found in the lifecycle classification of the CloudProfile", func() {
+				constraint = createConstraint(-24, 24, 24, 24, "gardenlinux2", "0.44")
+				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).NotTo(HaveOccurred())
+				expectUnknownMachineImageVersionCondition(status, reason, message, "gardenlinux2", "0.44")
+			})
+
+			It("should not panic when the CloudProfile* is nil", func() {
+				_, _, _, err := constraint.CheckIfMachineImageVersionIsSupported()
+				Expect(err).To(HaveOccurred())
+			})
+
+		})
+
 	})
 
 	Describe("ShootConstraints", func() {
@@ -1055,6 +1366,8 @@ var _ = Describe("Constraints", func() {
 				constraints := NewShootConstraints(clock, &gardencorev1beta1.Shoot{})
 
 				Expect(constraints.ConvertToSlice()).To(ConsistOf(
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
@@ -1086,6 +1399,8 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -1103,6 +1418,8 @@ var _ = Describe("Constraints", func() {
 					OfType("AutomaticCredentialsRotationPossible"),
 					OfType("ManagedResourcesHonored"),
 					OfType("PreservedFailedMachinesAbsent"),
+					OfType("KubernetesVersionSupported"),
+					OfType("MachineImagesVersionSupported"),
 				))
 			})
 		})
@@ -1120,6 +1437,8 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("AutomaticCredentialsRotationPossible"),
 					gardencorev1beta1.ConditionType("ManagedResourcesHonored"),
 					gardencorev1beta1.ConditionType("PreservedFailedMachinesAbsent"),
+					gardencorev1beta1.ConditionType("KubernetesVersionSupported"),
+					gardencorev1beta1.ConditionType("MachineImagesVersionSupported"),
 				))
 			})
 		})

@@ -73,6 +73,21 @@ func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1bet
 			}
 			continue
 		}
+
+		if cond.Type == gardencorev1beta1.ShootKubernetesVersionSupported {
+			if cond.Status != gardencorev1beta1.ConditionTrue {
+				hibernationConditions = append(hibernationConditions, cond)
+			}
+			continue
+		}
+
+		if cond.Type == gardencorev1beta1.ShootMachineImagesVersionSupported {
+			if cond.Status != gardencorev1beta1.ConditionTrue {
+				hibernationConditions = append(hibernationConditions, cond)
+			}
+			continue
+		}
+
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
@@ -147,6 +162,20 @@ func (c *Constraint) constraintsChecks(
 		constraints.preservedFailedMachinesAbsent = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.preservedFailedMachinesAbsent, status, reason, message)
 	}
 
+	status, reason, message, err = c.CheckIfKubernetesVersionIsSupported()
+	if err != nil {
+		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.kubernetesVersionSupported, err)
+	} else {
+		constraints.kubernetesVersionSupported = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.kubernetesVersionSupported, status, reason, message)
+	}
+
+	status, reason, message, err = c.CheckIfMachineImageVersionIsSupported()
+	if err != nil {
+		constraints.machineImagesVersionSupported = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, constraints.machineImagesVersionSupported, err)
+	} else {
+		constraints.machineImagesVersionSupported = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.machineImagesVersionSupported, status, reason, message)
+	}
+
 	status, reason, message = c.checkIfAutomaticCredentialsRotationPossible()
 	constraints.automaticCredentialsRotationPossible = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.automaticCredentialsRotationPossible, status, reason, message)
 
@@ -176,14 +205,14 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.kubernetesVersionSupported, constraints.machineImagesVersionSupported},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.kubernetesVersionSupported, constraints.machineImagesVersionSupported},
 		)
 	}
 	c.shootClient = shootClient.Client()
@@ -206,7 +235,7 @@ func (c *Constraint) constraintsChecks(
 
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible},
+		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated, constraints.managedResourcesHonored, constraints.preservedFailedMachinesAbsent, constraints.automaticCredentialsRotationPossible, constraints.kubernetesVersionSupported, constraints.machineImagesVersionSupported},
 	)
 }
 
@@ -334,6 +363,97 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 	return gardencorev1beta1.ConditionTrue,
 		"NoCRDsWithProblematicConversionWebhooks",
 		"No CRDs have multiple stored versions present and a conversion webhook configured",
+		nil
+}
+
+func formatLifecycleClassification(name, classification string) string {
+	return fmt.Sprintf("%sLifecycleClassification%s%s", name, strings.ToUpper(classification[:1]), classification[1:])
+}
+
+// CheckIfKubernetesVersionIsSupported checks if the Shoot's Kubernetes version is classified as supported in the CloudProfile.
+func (c *Constraint) CheckIfKubernetesVersionIsSupported() (gardencorev1beta1.ConditionStatus, string, string, error) {
+	cloudProfile := c.shoot.CloudProfile
+	if cloudProfile == nil {
+		return "", "", "", fmt.Errorf("could not get CloudProfile of shoot to check for supported kubernetes version")
+	}
+
+	versionFromShoot := c.shoot.GetInfo().Spec.Kubernetes.Version
+
+	var classification gardencorev1beta1.VersionClassification = "_notFound"
+
+	for _, versionFromCloudProfile := range cloudProfile.Spec.Kubernetes.Versions {
+		if versionFromCloudProfile.Version == versionFromShoot {
+			classification = v1beta1helper.CurrentLifecycleClassification(versionFromCloudProfile)
+			break
+		}
+	}
+
+	switch classification {
+	case gardencorev1beta1.ClassificationSupported:
+		return gardencorev1beta1.ConditionTrue,
+			formatLifecycleClassification("KubernetesVersion", string(classification)),
+			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", classification),
+			nil
+	case gardencorev1beta1.ClassificationDeprecated, gardencorev1beta1.ClassificationExpired, gardencorev1beta1.ClassificationPreview, gardencorev1beta1.ClassificationUnavailable:
+		return gardencorev1beta1.ConditionFalse,
+			formatLifecycleClassification("KubernetesVersion", string(classification)),
+			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", classification),
+			nil
+	default: // either someone added a classification to the VersionClassification constants or _notFound
+		return gardencorev1beta1.ConditionFalse,
+			formatLifecycleClassification("KubernetesVersion", "unknown"),
+			fmt.Sprintf("Unknown lifecycle classification of the Shoot's Kubernetes version: %s", versionFromShoot),
+			nil
+	}
+}
+
+// CheckIfMachineImageVersionIsSupported checks if all machine image versions in the worker pool of the shoot are classified as supported in the CloudProfile.
+func (c *Constraint) CheckIfMachineImageVersionIsSupported() (gardencorev1beta1.ConditionStatus, string, string, error) {
+	cloudProfile := c.shoot.CloudProfile
+	if cloudProfile == nil {
+		return "", "", "", fmt.Errorf("could not get CloudProfile of shoot to check for supported kubernetes version")
+	}
+
+	// Convert CloudProfile MachineImageVersions to a map so we don't have to iterate the whole structure for every worker.
+	workers := c.shoot.GetInfo().Spec.Provider.Workers
+	machineImages := make(map[string]map[string]*gardencorev1beta1.MachineImageVersion, len(cloudProfile.Spec.MachineImages))
+	for _, machineImage := range cloudProfile.Spec.MachineImages {
+		machineImageVersions := make(map[string]*gardencorev1beta1.MachineImageVersion, len(machineImage.Versions))
+		for _, machineImageVersion := range machineImage.Versions {
+			machineImageVersions[machineImageVersion.Version] = &machineImageVersion
+		}
+		// Our validation guarantees that the names are unique, see pkg/api/core/validation/utils.go:344
+		machineImages[machineImage.Name] = machineImageVersions
+	}
+
+	for _, worker := range workers {
+		versions, foundMachine := machineImages[worker.Machine.Image.Name]
+		if !foundMachine || worker.Machine.Image.Version == nil {
+			return gardencorev1beta1.ConditionFalse,
+				formatLifecycleClassification("MachineImageVersions", "unknown"),
+				fmt.Sprintf("At least one MachineImage of the Shoot is not found in the CloudProfile (MachineImage %s not found; there might be more, this list is not exhaustive).", worker.Machine.Image.Name),
+				nil
+		}
+		version, foundVersion := versions[*worker.Machine.Image.Version]
+		if !foundVersion {
+			return gardencorev1beta1.ConditionFalse,
+				formatLifecycleClassification("MachineImageVersions", "unknown"),
+				fmt.Sprintf("At least one MachineImage version of the Shoot is not found in the CloudProfile (MachineImage %s with version %s not found; there might be more, this list is not exhaustive).",
+					worker.Machine.Image.Name, *worker.Machine.Image.Version),
+				nil
+		}
+		classification := v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion)
+		if classification != gardencorev1beta1.ClassificationSupported {
+			return gardencorev1beta1.ConditionFalse,
+				formatLifecycleClassification("MachineImageVersions", string(classification)),
+				fmt.Sprintf("At least one MachineImage version of the Shoot is not classified as supported (found: MachineImage %s with version %s classified as %s; there might be more, this list is not exhaustive).",
+					worker.Machine.Image.Name, *worker.Machine.Image.Version, classification),
+				nil
+		}
+	}
+	return gardencorev1beta1.ConditionTrue,
+		formatLifecycleClassification("MachineImageVersions", string(gardencorev1beta1.ClassificationSupported)),
+		"All of the Shoot's MachineImage versions are classified as supported.",
 		nil
 }
 
@@ -546,6 +666,8 @@ type ShootConstraints struct {
 	automaticCredentialsRotationPossible  gardencorev1beta1.Condition
 	managedResourcesHonored               gardencorev1beta1.Condition
 	preservedFailedMachinesAbsent         gardencorev1beta1.Condition
+	kubernetesVersionSupported            gardencorev1beta1.Condition
+	machineImagesVersionSupported         gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the shoot constraints as a slice.
@@ -559,6 +681,8 @@ func (g ShootConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
 		g.automaticCredentialsRotationPossible,
 		g.managedResourcesHonored,
 		g.preservedFailedMachinesAbsent,
+		g.kubernetesVersionSupported,
+		g.machineImagesVersionSupported,
 	}
 }
 
@@ -573,6 +697,8 @@ func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
 		g.automaticCredentialsRotationPossible.Type,
 		g.managedResourcesHonored.Type,
 		g.preservedFailedMachinesAbsent.Type,
+		g.kubernetesVersionSupported.Type,
+		g.machineImagesVersionSupported.Type,
 	}
 }
 
@@ -588,5 +714,7 @@ func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoo
 		automaticCredentialsRotationPossible:  v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootAutomaticCredentialsRotationPossible),
 		managedResourcesHonored:               v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootManagedResourcesHonored),
 		preservedFailedMachinesAbsent:         v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
+		kubernetesVersionSupported:            v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootKubernetesVersionSupported),
+		machineImagesVersionSupported:         v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootMachineImagesVersionSupported),
 	}
 }
