@@ -503,7 +503,7 @@ var _ = Describe("health check", func() {
 				kubernetesVersion,
 				[]corev1.Node{
 					newNode(
-						labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()},
+						labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(), "worker.gardener.cloud/gardener-node-agent-secret-name": operatingsystemconfig.Key(kubernetesVersion, nil, &gardencorev1beta1.Worker{Name: workerPoolName1}, false, nil, nil)},
 						map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: cloudConfigSecretChecksum1},
 						kubernetesVersion.Original(),
 					),
@@ -534,7 +534,7 @@ var _ = Describe("health check", func() {
 				kubernetesVersion,
 				[]corev1.Node{
 					newNode(
-						labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()},
+						labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original(), "worker.gardener.cloud/gardener-node-agent-secret-name": operatingsystemconfig.Key(kubernetesVersion, nil, &gardencorev1beta1.Worker{Name: workerPoolName1}, false, nil, nil)},
 						map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: cloudConfigSecretChecksum1},
 						kubernetesVersion.Original(),
 					),

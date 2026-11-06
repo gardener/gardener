@@ -676,7 +676,7 @@ const TaskGroupReconcileOperatingSystemConfig flow.TaskID = "TaskGroupReconcileO
 
 // ReconcileOperatingSystemConfigTaskGroup returns the flow.TaskGroup for deploying the OperatingSystemConfig extension
 // resource and waiting for its readiness.
-func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup(skipReadiness bool) flow.TaskGroup {
+func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup() flow.TaskGroup {
 	var (
 		g = flow.
 			NewTaskGroup(TaskGroupReconcileOperatingSystemConfig).
@@ -710,22 +710,6 @@ func (b *Botanist) ReconcileOperatingSystemConfigTaskGroup(skipReadiness bool) f
 			},
 			SkipIf:       b.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
-		})
-		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
-			Name: "Delete stale OperatingSystemConfig resources",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx)
-			},
-			SkipIf:       b.Shoot.IsWorkerless || b.isGardenadmBootstrap(),
-			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Waiting until stale OperatingSystemConfig resources are deleted",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources(ctx)
-			},
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || skipReadiness || b.isGardenadmBootstrap(),
-			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
 		})
 	)
 

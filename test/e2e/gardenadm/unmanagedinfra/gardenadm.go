@@ -271,7 +271,7 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 						workerPoolToNodes, err := botanistpkg.WorkerPoolToNodesMap(ctx, shootClientSet.Client())
 						g.Expect(err).NotTo(HaveOccurred())
 
-						workerPoolToOSCSecretMeta, err := botanistpkg.WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, shootClientSet.Client())
+						workerPoolToOSCSecretMeta, err := botanistpkg.WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx, shootClientSet.Client())
 						g.Expect(err).NotTo(HaveOccurred())
 
 						g.Expect(botanistpkg.OperatingSystemConfigUpdatedForAllWorkerPools(
