@@ -31,6 +31,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -86,6 +88,7 @@ var _ = Describe("ShootSystem", func() {
 		}
 
 		c         client.Client
+		sm        secretsmanager.Interface
 		values    Values
 		component Interface
 
@@ -95,7 +98,18 @@ var _ = Describe("ShootSystem", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(c, namespace)
 		contain = NewManagedResourceContainsObjectsMatcher(c)
+
+		Expect(c.Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ca-kubelet",
+				Namespace: namespace,
+			},
+			Data: map[string][]byte{
+				"bundle.crt": []byte("kubelet-ca-bundle"),
+			},
+		})).To(Succeed())
 
 		values = Values{
 			Extensions:            []string{extension1, extension2},
@@ -108,7 +122,7 @@ var _ = Describe("ShootSystem", func() {
 			ServiceNetworkCIDRs:   serviceCIDRs,
 			NodeNetworkCIDRs:      nodeCIDRs,
 		}
-		component = New(c, namespace, values)
+		component = New(c, namespace, sm, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -128,7 +142,7 @@ var _ = Describe("ShootSystem", func() {
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-			component = New(c, namespace, values)
+			component = New(c, namespace, sm, values)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -209,6 +223,41 @@ var _ = Describe("ShootSystem", func() {
 					}
 
 					Expect(managedResource).To(contain(configMap))
+				})
+			})
+		})
+
+		Context("ca-kubelet ConfigMap", func() {
+			var configMap *corev1.ConfigMap
+
+			BeforeEach(func() {
+				configMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ca-kubelet",
+						Namespace: metav1.NamespaceSystem,
+					},
+					Data: map[string]string{
+						"ca.crt": "kubelet-ca-bundle",
+					},
+				}
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(managedResource).To(contain(configMap))
+			})
+
+			When("shoot is workerless", func() {
+				BeforeEach(func() {
+					values.IsWorkerless = true
+				})
+
+				It("should not deploy ca-kubelet ConfigMap", func() {
+					manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, manifest := range manifests {
+						Expect(manifest).NotTo(ContainSubstring("name: ca-kubelet"))
+					}
 				})
 			})
 		})
