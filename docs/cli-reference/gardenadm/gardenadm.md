@@ -5,7 +5,7 @@ gardenadm bootstraps and manages self-hosted shoot clusters in the Gardener proj
 ### Options
 
 ```
-  -h, --help                help for gardenadm
+  -h, --help[=true|false]   help for gardenadm
       --log-format string   The format for the logs. Must be one of [json text] (default "text")
       --log-level string    The level/severity for the logs. Must be one of [debug info error] (default "info")
 ```

@@ -37,8 +37,8 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --zone zone-
 ```
       --bootstrap-token string       Bootstrap token for joining the cluster (create it with 'gardenadm token' on a control plane node)
       --ca-certificate bytesBase64   Base64-encoded certificate authority bundle of the control plane
-      --control-plane                Create a new control plane instance on this node
-  -h, --help                         help for join
+      --control-plane[=true|false]   Create a new control plane instance on this node
+  -h, --help[=true|false]            help for join
   -w, --worker-pool-name string      Name of the worker pool to assign the joining node.
   -z, --zone string                  Availability zone for the new node. Required if the worker pool in the Shoot has multiple zones configured. Optional if exactly one zone is configured (applied automatically). Must not be set if no zones are configured.
 ```

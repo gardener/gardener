@@ -24,8 +24,8 @@ gardenadm token list --with-token-secret
 ### Options
 
 ```
-  -h, --help                help for list
-      --with-token-secret   Display the token secret
+  -h, --help[=true|false]                help for list
+      --with-token-secret[=true|false]   Display the token secret
 ```
 
 ### Options inherited from parent commands
