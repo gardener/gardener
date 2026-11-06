@@ -130,10 +130,12 @@ func (b *GardenadmBotanist) ActivateGardenerNodeAgent(ctx context.Context) error
 	return b.DBus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName)
 }
 
-// ApproveNodeAgentCertificateSigningRequest approves all not-yet-approved gardener-node-agent client certificate
-// signing requests. It does not stop at the first match: in the `gardenadm restore` flow, an etcd restore brings back a
-// stale already-approved CSR under the same (reissued) bootstrap-token username. Stopping there would skip the new
-// Pending CSR that gardener-node-agent just created, leaving it without a client certificate so the node never joins.
+// ApproveNodeAgentCertificateSigningRequest approves the node agent certificate signing request. It is idempotent:
+// a gardener-node-agent CSR that is already approved is treated as success rather than an error. This tolerates a
+// lingering gardener-resource-manager approving the CSR out-of-band during `gardenadm restore`, which is safe because
+// restore cleanup deletes the stale gardener-node-agent CSRs from the etcd snapshot beforehand, so any CSR present
+// here belongs to the current run. The step still errors when no gardener-node-agent CSR exists yet, so the flow
+// retries until gardener-node-agent has created it.
 func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx context.Context) error {
 	alreadyBootstrapped, err := b.FS.Exists(nodeagentconfigv1alpha1.KubeconfigFilePath)
 	if err != nil {
@@ -161,7 +163,7 @@ func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx contex
 		return fmt.Errorf("failed listing certificate signing requests: %w", err)
 	}
 
-	foundForApproval := false
+	foundNodeAgentCSR := false
 	for _, csr := range csrList.Items {
 		if csr.Spec.Username == username && csr.Spec.SignerName == certificatesv1.KubeAPIServerClientSignerName {
 			x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
@@ -186,14 +188,16 @@ func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx contex
 				if err := b.SeedClientSet.Client().SubResource("approval").Update(ctx, &csr); err != nil {
 					return fmt.Errorf("failed approving certificate signing request: %w", err)
 				}
-
-				foundForApproval = true
 			}
+
+			// At this point the gardener-node-agent CSR is approved, either by us just now or already
+			// out-of-band. See the function doc for why an already-approved CSR is safe to accept here.
+			foundNodeAgentCSR = true
 		}
 	}
 
-	if !foundForApproval {
-		return fmt.Errorf("no certificate signing request found to approve for gardener-node-agent from username %q", username)
+	if !foundNodeAgentCSR {
+		return fmt.Errorf("no certificate signing request found for gardener-node-agent from username %q", username)
 	}
 
 	return nil
