@@ -34,6 +34,7 @@ type BackupEntry struct {
 
 	// Specification of the BackupEntry.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec BackupEntrySpec `json:"spec"`
 	// +optional
 	Status BackupEntryStatus `json:"status,omitempty"`
@@ -73,10 +74,13 @@ type BackupEntrySpec struct {
 	// +optional
 	BackupBucketProviderStatus *runtime.RawExtension `json:"backupBucketProviderStatus,omitempty"`
 	// Region is the region of this Entry. This field is immutable.
+	// +required
 	Region string `json:"region"`
 	// BucketName is the name of backup bucket for this Backup Entry.
+	// +required
 	BucketName string `json:"bucketName"`
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
+	// +required
 	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 

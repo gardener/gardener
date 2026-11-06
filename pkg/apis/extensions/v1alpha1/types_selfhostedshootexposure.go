@@ -32,6 +32,7 @@ type SelfHostedShootExposure struct {
 
 	// Specification of the SelfHostedShootExposure.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec SelfHostedShootExposureSpec `json:"spec"`
 	// +optional
 	Status SelfHostedShootExposureStatus `json:"status,omitempty"`
@@ -71,16 +72,20 @@ type SelfHostedShootExposureSpec struct {
 	// Port is the port number that should be exposed by the exposure mechanism.
 	// It is the port where the API server listens on the control plane nodes and the port on which the load balancer (or
 	// any other exposure mechanism) should listen on.
+	// +required
 	Port int32 `json:"port"`
 	// Endpoints contains a list of healthy control plane nodes to expose.
+	// +required
 	Endpoints []ControlPlaneEndpoint `json:"endpoints"`
 }
 
 // ControlPlaneEndpoint is an endpoint that should be exposed.
 type ControlPlaneEndpoint struct {
 	// NodeName is the name of the node to expose.
+	// +required
 	NodeName string `json:"nodeName"`
 	// Addresses is a list of addresses of type NodeAddress to expose.
+	// +required
 	Addresses []corev1.NodeAddress `json:"addresses"`
 }
 

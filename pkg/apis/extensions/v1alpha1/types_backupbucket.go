@@ -32,6 +32,7 @@ type BackupBucket struct {
 
 	// Specification of the BackupBucket.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec BackupBucketSpec `json:"spec"`
 	// +optional
 	Status BackupBucketStatus `json:"status,omitempty"`
@@ -65,8 +66,10 @@ type BackupBucketSpec struct {
 	DefaultSpec `json:",inline"`
 
 	// Region is the region of this bucket. This field is immutable.
+	// +required
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
+	// +required
 	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 

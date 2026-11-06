@@ -32,6 +32,7 @@ type Bastion struct {
 
 	// Spec is the specification of this Bastion.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec BastionSpec `json:"spec"`
 	// Status is the bastion's status.
 	// +optional
@@ -56,14 +57,17 @@ type BastionSpec struct {
 	// UserData is the base64-encoded user data for the bastion instance. This should
 	// contain code to provision the SSH key on the bastion instance.
 	// This field is immutable.
+	// +required
 	UserData []byte `json:"userData"`
 	// Ingress controls from where the created bastion host should be reachable.
+	// +required
 	Ingress []BastionIngressPolicy `json:"ingress"`
 }
 
 // BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
 type BastionIngressPolicy struct {
 	// IPBlock defines an IP block that is allowed to access the bastion.
+	// +required
 	IPBlock networkingv1.IPBlock `json:"ipBlock"`
 }
 
