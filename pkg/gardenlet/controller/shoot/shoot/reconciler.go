@@ -209,6 +209,11 @@ func (r *Reconciler) migrateShoot(ctx context.Context, log logr.Logger, shoot *g
 func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, role v1beta1helper.LiveMigrationRole) (reconcile.Result, error) {
 	log = log.WithValues("operation", "live-migrate", "liveMigrationRole", role)
 
+	if err := r.checkGardenletVersionParity(ctx, shoot, role); err != nil {
+		updateErr := r.patchShootStatusOperationError(ctx, shoot, err.Error(), gardencorev1beta1.LastOperationTypeLiveMigrate, false)
+		return reconcile.Result{}, errorsutils.WithSuppressed(err, updateErr)
+	}
+
 	o, result, err := r.prepareOperation(ctx, log, shoot)
 	if err != nil || o == nil {
 		return result, err
@@ -216,7 +221,7 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 
 	if flowErr := r.runLiveMigrateShootFlow(ctx, o, role); flowErr != nil {
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeLiveMigrate, false, flowErr.LastErrors...)
-		return reconcile.Result{}, errorsutils.WithSuppressed(fmt.Errorf("%s", flowErr.Description), updateErr)
+		return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
 	log.Info("Live control plane migration completed")
