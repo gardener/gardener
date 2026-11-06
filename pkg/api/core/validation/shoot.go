@@ -3878,16 +3878,19 @@ func validateSelfHostedShootControlPlane(shoot *core.Shoot, fldPath *field.Path)
 		allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have maximum=3 when high availability is configured"))
 	}
 
-	neededMaxSurge := 1
-	if helper.HasManagedInfrastructure(shoot) {
-		neededMaxSurge = max(neededMaxSurge, len(shoot.Spec.Provider.Workers[controlPlaneWorkerIdx].Zones))
-	}
-	if controlPlaneWorker.MaxSurge == nil || controlPlaneWorker.MaxSurge.IntValue() != neededMaxSurge {
-		allErrs = append(allErrs, field.Invalid(workerPath.Child("maxSurge"), controlPlaneWorker.MaxSurge, fmt.Sprintf("control plane worker pool must have maxSurge=%d when high availability is configured", neededMaxSurge)))
-	}
-
-	if controlPlaneWorker.MaxUnavailable == nil || controlPlaneWorker.MaxUnavailable.IntValue() != 0 {
-		allErrs = append(allErrs, field.Invalid(workerPath.Child("maxUnavailable"), controlPlaneWorker.MaxUnavailable, "control plane worker pool must have maxUnavailable=0 when high availability is configured"))
+	// For in-place update strategies, maxSurge and maxUnavailable are already handled by the general worker
+	// validation and defaulting: AutoInPlaceUpdate defaults to maxSurge=0/maxUnavailable=1, and ManualInPlaceUpdate
+	// forbids both fields. No additional constraint is needed here. For rolling updates, MCM must bring up a healthy
+	// new node before terminating an old one to protect etcd quorum, hence maxUnavailable=0. maxSurge equals the
+	// number of zones (one MachineDeployment per zone, surge split equally) to allow one surging node per zone.
+	if !helper.IsUpdateStrategyInPlace(controlPlaneWorker.UpdateStrategy) {
+		neededMaxSurge := max(1, len(controlPlaneWorker.Zones))
+		if controlPlaneWorker.MaxSurge == nil || controlPlaneWorker.MaxSurge.IntValue() != neededMaxSurge {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxSurge"), controlPlaneWorker.MaxSurge, fmt.Sprintf("control plane worker pool must have maxSurge=%d when high availability is configured", neededMaxSurge)))
+		}
+		if controlPlaneWorker.MaxUnavailable == nil || controlPlaneWorker.MaxUnavailable.IntValue() != 0 {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxUnavailable"), controlPlaneWorker.MaxUnavailable, "control plane worker pool must have maxUnavailable=0 when high availability is configured"))
+		}
 	}
 
 	if shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone && len(controlPlaneWorker.Zones) != 3 {
