@@ -18,7 +18,7 @@ Refer to the following table to find the resource to update.
 | Virtual garden | `Garden` | `.spec.virtualCluster.etcd.main.backup` | `.metadata.annotations` |
 | Self-hosted shoot | `Shoot` | `.spec.provider.workers[].controlPlane.backup` (select the worker pool with the `controlPlane` section) | `.metadata.annotations` |
 
-> [!NOTE]
+> [!IMPORTANT]
 > Do not edit the configuration directly in the `Seed`, because these changes will conflict with the configuration in the managing resource.
 
 The changes must be confirmed by setting the following annotation:
