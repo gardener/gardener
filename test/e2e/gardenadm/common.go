@@ -434,6 +434,10 @@ func ItShouldBeReconciledByGardenlet(
 
 			adminKubeconfig, err := clientcmd.Load(stdOut.Contents())
 			Expect(err).NotTo(HaveOccurred())
+			Expect(adminKubeconfig.Clusters).NotTo(BeEmpty())
+			for _, cluster := range adminKubeconfig.Clusters {
+				Expect(cluster.Server).To(Equal("https://localhost"), "admin.conf should target the kube-apiserver on localhost")
+			}
 			Expect(adminKubeconfig.AuthInfos).To(HaveLen(1))
 			for _, authInfo := range adminKubeconfig.AuthInfos {
 				Expect(authInfo.Token).To(BeEmpty(), "admin.conf should not contain an inline token")
