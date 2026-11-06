@@ -25,7 +25,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/shoot/system"
@@ -104,7 +103,7 @@ var _ = Describe("ShootSystem", func() {
 
 		Expect(c.Create(ctx, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.SecretNameCAKubelet,
+				Name:      "ca-kubelet",
 				Namespace: namespace,
 			},
 			Data: map[string][]byte{
@@ -234,7 +233,7 @@ var _ = Describe("ShootSystem", func() {
 			BeforeEach(func() {
 				configMap = &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      v1beta1constants.SecretNameCAKubelet,
+						Name:      "ca-kubelet",
 						Namespace: metav1.NamespaceSystem,
 					},
 					Data: map[string]string{
@@ -257,7 +256,7 @@ var _ = Describe("ShootSystem", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					for _, manifest := range manifests {
-						Expect(manifest).NotTo(ContainSubstring("name: " + v1beta1constants.SecretNameCAKubelet))
+						Expect(manifest).NotTo(ContainSubstring("name: ca-kubelet"))
 					}
 				})
 			})
