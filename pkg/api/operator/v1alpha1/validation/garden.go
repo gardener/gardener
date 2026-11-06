@@ -21,6 +21,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/ptr"
 
@@ -407,6 +408,8 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 			allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, opts, true, gardenerutils.DefaultGroupResourcesForEncryption(), path)...)
 		}
 
+		allErrs = append(allErrs, validateAuditWebhook(kubeAPIServer.AuditWebhook, path.Child("auditWebhook"))...)
+
 		// The API server domain of the virtual cluster which is derived from the primary (immutable) DNS name does not
 		// match any SNI domain pattern. It is used by gardenlets to connect to the virtual cluster API server, and they
 		// expect a certificate signed by the Garden CA.
@@ -596,6 +599,57 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 		if config.ShootAdminKubeconfigMaxExpiration.Duration < time.Hour || config.ShootAdminKubeconfigMaxExpiration.Duration > time.Duration(1<<32)*time.Second {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("shootAdminKubeconfigMaxExpiration"), config.ShootAdminKubeconfigMaxExpiration.Duration, "must be between 1h and 2^32 seconds"))
 		}
+	}
+
+	allErrs = append(allErrs, validateAuditWebhook(config.AuditWebhook, fldPath.Child("auditWebhook"))...)
+
+	return allErrs
+}
+
+// validateAuditWebhook validates the audit webhook configuration of an API server. The truncation sizes are validated
+// the same way as the kube-apiserver does it, i.e. the effective max batch size must be greater than or equal to the
+// effective max event size. The values which are not configured fall back to the defaults of the kube-apiserver.
+func validateAuditWebhook(webhook *operatorv1alpha1.AuditWebhook, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if webhook == nil {
+		return allErrs
+	}
+
+	defaults := genericoptions.NewAuditTruncateOptions()
+
+	var (
+		maxBatchSize = defaults.TruncateConfig.MaxBatchSize
+		maxEventSize = defaults.TruncateConfig.MaxEventSize
+	)
+
+	if webhook.TruncateMaxBatchSize != nil {
+		maxBatchSize = *webhook.TruncateMaxBatchSize
+	}
+	if webhook.TruncateMaxEventSize != nil {
+		maxEventSize = *webhook.TruncateMaxEventSize
+	}
+
+	// The kube-apiserver validates the truncation options unconditionally as soon as the audit webhook is enabled,
+	// i.e. independently of whether the truncation itself is enabled.
+	if maxBatchSize < maxEventSize {
+		invalidPath := fldPath.Child("truncateMaxBatchSize")
+		invalidValue := maxBatchSize
+
+		if webhook.TruncateMaxBatchSize == nil {
+			invalidPath = fldPath.Child("truncateMaxEventSize")
+			invalidValue = maxEventSize
+		}
+
+		message := fmt.Sprintf("must be greater than or equal to the effective max event size %d (the effective max batch size is %d)", maxEventSize, maxBatchSize)
+		if webhook.TruncateMaxBatchSize == nil {
+			message += fmt.Sprintf("; the effective max batch size is the default of the kube-apiserver (%d) because truncateMaxBatchSize is not set", defaults.TruncateConfig.MaxBatchSize)
+		}
+		if webhook.TruncateMaxEventSize == nil {
+			message += fmt.Sprintf("; the effective max event size is the default of the kube-apiserver (%d) because truncateMaxEventSize is not set", defaults.TruncateConfig.MaxEventSize)
+		}
+
+		allErrs = append(allErrs, field.Invalid(invalidPath, invalidValue, message))
 	}
 
 	return allErrs
