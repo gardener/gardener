@@ -1054,20 +1054,20 @@ var _ = Describe("Constraints", func() {
 			var (
 				expectTrueCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string) {
 					Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
-					Expect(reason).To(Equal("KubernetesVersionLifecycleStatussupported"))
+					Expect(reason).To(Equal("KubernetesVersionLifecycleClassificationSupported"))
 					Expect(message).To(Equal("The Shoot's Kubernetes version is classified as supported in the CloudProfile."))
 				}
 
-				expectFalseCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedClassification gardencorev1beta1.VersionClassification) {
+				expectFalseCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedClassification gardencorev1beta1.VersionClassification, expectedReason string) {
 					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-					Expect(reason).To(Equal(fmt.Sprintf("KubernetesVersionLifecycleStatus%s", expectedClassification)))
+					Expect(reason).To(Equal(expectedReason))
 					Expect(message).To(Equal(fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", expectedClassification)))
 				}
 
 				expectUnknownCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedVersion string) {
 					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-					Expect(reason).To(Equal("KubernetesVersionLifecycleStatusUnknown"))
-					Expect(message).To(Equal("Unknown lifecycle status of the Shoot's Kubernetes version: " + expectedVersion))
+					Expect(reason).To(Equal("KubernetesVersionLifecycleClassificationUnknown"))
+					Expect(message).To(Equal("Unknown lifecycle classification of the Shoot's Kubernetes version: " + expectedVersion))
 				}
 
 				createConstraint = func(offsetSupported, offsetDeprecated, offsetExpired, offsetPreview time.Duration, kubernetesVersion string) *Constraint {
@@ -1135,28 +1135,28 @@ var _ = Describe("Constraints", func() {
 				constraint = createConstraint(24, -24, 24, 24, "0.42")
 				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationDeprecated)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationDeprecated, "KubernetesVersionLifecycleClassificationDeprecated")
 			})
 
 			It("should return a 'false' condition when the Kubernetes version is expired", func() {
 				constraint = createConstraint(24, 24, -24, 24, "0.42")
 				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationExpired)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationExpired, "KubernetesVersionLifecycleClassificationExpired")
 			})
 
 			It("should return a 'false' condition when the Kubernetes version is in preview", func() {
 				constraint = createConstraint(24, 24, 24, -24, "0.42")
 				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationPreview)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationPreview, "KubernetesVersionLifecycleClassificationPreview")
 			})
 
 			It("should return a 'false' condition when the Kubernetes version is unavailable", func() {
 				constraint = createConstraint(24, 24, 24, 24, "0.42")
 				status, reason, message, err := constraint.CheckIfKubernetesVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationUnavailable)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationUnavailable, "KubernetesVersionLifecycleClassificationUnavailable")
 			})
 
 			It("should return a 'false' condition when the Kubernetes version is not found in the lifecycle classification of the CloudProfile", func() {
@@ -1177,25 +1177,25 @@ var _ = Describe("Constraints", func() {
 			var (
 				expectTrueCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string) {
 					Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
-					Expect(reason).To(Equal("MachineImageVersionsLifecycleStatusSupported"))
+					Expect(reason).To(Equal("MachineImageVersionsLifecycleClassificationSupported"))
 					Expect(message).To(Equal("All of the Shoot's MachineImage versions are classified as supported."))
 				}
 
-				expectFalseCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedClassification gardencorev1beta1.VersionClassification) {
+				expectFalseCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedClassification gardencorev1beta1.VersionClassification, expectedReason string) {
 					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-					Expect(reason).To(Equal(fmt.Sprintf("MachineImageVersionsLifecycleStatus%s", expectedClassification)))
+					Expect(reason).To(Equal(expectedReason))
 					Expect(message).To(Equal(fmt.Sprintf("At least one MachineImage version of the Shoot is not classified as supported (found: MachineImage gardenlinux2 with version 0.43 classified as %s; there might be more, this list is not exhaustive).", expectedClassification)))
 				}
 
 				expectUnknownMachineImageCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedMachineImage string) {
 					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-					Expect(reason).To(Equal("MachineImageVersionsLifecycleStatusUnknown"))
+					Expect(reason).To(Equal("MachineImageVersionsLifecycleClassificationUnknown"))
 					Expect(message).To(Equal(fmt.Sprintf("At least one MachineImage of the Shoot is not found in the CloudProfile (MachineImage %s not found; there might be more, this list is not exhaustive).", expectedMachineImage)))
 				}
 
 				expectUnknownMachineImageVersionCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, expectedMachineImage, expectedVersion string) {
 					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-					Expect(reason).To(Equal("MachineImageVersionsLifecycleStatusUnknown"))
+					Expect(reason).To(Equal("MachineImageVersionsLifecycleClassificationUnknown"))
 					Expect(message).To(Equal(fmt.Sprintf("At least one MachineImage version of the Shoot is not found in the CloudProfile (MachineImage %s with version %s not found; there might be more, this list is not exhaustive).", expectedMachineImage, expectedVersion)))
 				}
 
@@ -1313,28 +1313,28 @@ var _ = Describe("Constraints", func() {
 				constraint = createConstraint(24, -24, 24, 24, "gardenlinux2", "0.43")
 				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationDeprecated)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationDeprecated, "MachineImageVersionsLifecycleClassificationDeprecated")
 			})
 
 			It("should return a 'false' condition when one MachineImage version is expired", func() {
 				constraint = createConstraint(24, 24, -24, 24, "gardenlinux2", "0.43")
 				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationExpired)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationExpired, "MachineImageVersionsLifecycleClassificationExpired")
 			})
 
 			It("should return a 'false' condition when one MachineImage version is in preview", func() {
 				constraint = createConstraint(24, 24, 24, -24, "gardenlinux2", "0.43")
 				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationPreview)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationPreview, "MachineImageVersionsLifecycleClassificationPreview")
 			})
 
 			It("should return a 'false' condition when one MachineImage version is unavailable", func() {
 				constraint = createConstraint(24, 24, 24, 24, "gardenlinux2", "0.43")
 				status, reason, message, err := constraint.CheckIfMachineImageVersionIsSupported()
 				Expect(err).NotTo(HaveOccurred())
-				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationUnavailable)
+				expectFalseCondition(status, reason, message, gardencorev1beta1.ClassificationUnavailable, "MachineImageVersionsLifecycleClassificationUnavailable")
 			})
 
 			It("should return a 'false' condition when one MachineImage is not found in the lifecycle classification of the CloudProfile", func() {

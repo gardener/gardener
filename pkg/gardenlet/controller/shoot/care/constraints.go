@@ -366,7 +366,11 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 		nil
 }
 
-// CheckIfKubernetesVersionIsSupported checks if the Shoot's Kubernetes version is is classified as supported in the CloudProfile.
+func formatLifecycleClassification(name, classification string) string {
+	return fmt.Sprintf("%sLifecycleClassification%s%s", name, strings.ToUpper(classification[:1]), classification[1:])
+}
+
+// CheckIfKubernetesVersionIsSupported checks if the Shoot's Kubernetes version is classified as supported in the CloudProfile.
 func (c *Constraint) CheckIfKubernetesVersionIsSupported() (gardencorev1beta1.ConditionStatus, string, string, error) {
 	cloudProfile := c.shoot.CloudProfile
 	if cloudProfile == nil {
@@ -387,18 +391,18 @@ func (c *Constraint) CheckIfKubernetesVersionIsSupported() (gardencorev1beta1.Co
 	switch classification {
 	case gardencorev1beta1.ClassificationSupported:
 		return gardencorev1beta1.ConditionTrue,
-			fmt.Sprintf("KubernetesVersionLifecycleStatus%s", classification),
+			formatLifecycleClassification("KubernetesVersion", string(classification)),
 			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", classification),
 			nil
 	case gardencorev1beta1.ClassificationDeprecated, gardencorev1beta1.ClassificationExpired, gardencorev1beta1.ClassificationPreview, gardencorev1beta1.ClassificationUnavailable:
 		return gardencorev1beta1.ConditionFalse,
-			fmt.Sprintf("KubernetesVersionLifecycleStatus%s", classification),
+			formatLifecycleClassification("KubernetesVersion", string(classification)),
 			fmt.Sprintf("The Shoot's Kubernetes version is classified as %s in the CloudProfile.", classification),
 			nil
-	default: // either someone added a status to the VersionClassification constants or _notFound
+	default: // either someone added a classification to the VersionClassification constants or _notFound
 		return gardencorev1beta1.ConditionFalse,
-			"KubernetesVersionLifecycleStatusUnknown",
-			fmt.Sprintf("Unknown lifecycle status of the Shoot's Kubernetes version: %s", versionFromShoot),
+			formatLifecycleClassification("KubernetesVersion", "unknown"),
+			fmt.Sprintf("Unknown lifecycle classification of the Shoot's Kubernetes version: %s", versionFromShoot),
 			nil
 	}
 }
@@ -426,14 +430,14 @@ func (c *Constraint) CheckIfMachineImageVersionIsSupported() (gardencorev1beta1.
 		versions, foundMachine := machineImages[worker.Machine.Image.Name]
 		if !foundMachine || worker.Machine.Image.Version == nil {
 			return gardencorev1beta1.ConditionFalse,
-				"MachineImageVersionsLifecycleStatusUnknown",
+				formatLifecycleClassification("MachineImageVersions", "unknown"),
 				fmt.Sprintf("At least one MachineImage of the Shoot is not found in the CloudProfile (MachineImage %s not found; there might be more, this list is not exhaustive).", worker.Machine.Image.Name),
 				nil
 		}
 		version, foundVersion := versions[*worker.Machine.Image.Version]
 		if !foundVersion {
 			return gardencorev1beta1.ConditionFalse,
-				"MachineImageVersionsLifecycleStatusUnknown",
+				formatLifecycleClassification("MachineImageVersions", "unknown"),
 				fmt.Sprintf("At least one MachineImage version of the Shoot is not found in the CloudProfile (MachineImage %s with version %s not found; there might be more, this list is not exhaustive).",
 					worker.Machine.Image.Name, *worker.Machine.Image.Version),
 				nil
@@ -441,14 +445,14 @@ func (c *Constraint) CheckIfMachineImageVersionIsSupported() (gardencorev1beta1.
 		classification := v1beta1helper.CurrentLifecycleClassification(version.ExpirableVersion)
 		if classification != gardencorev1beta1.ClassificationSupported {
 			return gardencorev1beta1.ConditionFalse,
-				fmt.Sprintf("MachineImageVersionsLifecycleStatus%s", classification),
+				formatLifecycleClassification("MachineImageVersions", string(classification)),
 				fmt.Sprintf("At least one MachineImage version of the Shoot is not classified as supported (found: MachineImage %s with version %s classified as %s; there might be more, this list is not exhaustive).",
 					worker.Machine.Image.Name, *worker.Machine.Image.Version, classification),
 				nil
 		}
 	}
 	return gardencorev1beta1.ConditionTrue,
-		"MachineImageVersionsLifecycleStatusSupported",
+		formatLifecycleClassification("MachineImageVersions", string(gardencorev1beta1.ClassificationSupported)),
 		"All of the Shoot's MachineImage versions are classified as supported.",
 		nil
 }
