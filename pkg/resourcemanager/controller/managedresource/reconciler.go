@@ -1052,12 +1052,6 @@ func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client
 		return nil
 	}
 
-	if hasFinalizers, err := utilclient.NewFinalizer().HasFinalizers(obj); err != nil {
-		return fmt.Errorf("failed checking whether resource has finalizers: %w", err)
-	} else if !hasFinalizers {
-		return nil
-	}
-
 	log.Info("Removing finalizers from resource since grace period has elapsed", "deletionTimestamp", obj.GetDeletionTimestamp(), "gracePeriod", finalizeDeletionAfter)
 	return finalizeResource(ctx, cl, obj)
 }
