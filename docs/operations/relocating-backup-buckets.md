@@ -3,7 +3,7 @@
 An operator may need to relocate the etcd backup target of a `Seed`, `Garden`, or self-hosted `Shoot` to a new cloud provider or a different region.
 However, the provider and region of an existing `BackupBucket` resource are immutable. Further, changes to the backup configuration of a `Seed`, `Garden`, or self-hosted `Shoot` are protected against accidental updates.
 
-To change the backup target, an operator needs to trigger the creation of a new `BackupBucket` by changing the `backup` configuration.
+To change the backup target, an operator needs to trigger the creation of a new `BackupBucket` by changing the relevant `backup` configuration (see table below).
 For this, it is **mandatory to change the `bucketName` field**. Optionally, the `provider` and `region` fields can be changed on top of that.
 
 > [!NOTE]
