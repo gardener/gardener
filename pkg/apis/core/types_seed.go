@@ -411,6 +411,9 @@ type SeedVolume struct {
 	MinimumSize *resource.Quantity
 	// Providers is a list of storage class provisioner types for the seed.
 	Providers []SeedVolumeProvider
+	// ETCDStorageClassName defines the name of the StorageClass used by etcd (if provided) for
+	// persistent volumes in the seed. If unset, the provider extension's default applies.
+	ETCDStorageClassName *string
 }
 
 // SeedVolumeProvider is a storage class provisioner type.

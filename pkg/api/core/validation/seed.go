@@ -127,6 +127,12 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
 		}
 
+		if name := seedSpec.Volume.ETCDStorageClassName; name != nil {
+			for _, msg := range apivalidation.NameIsDNSSubdomain(*name, false) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("volume", "etcdStorageClassName"), *name, msg))
+			}
+		}
+
 		volumeProviderPurposes := make(sets.Set[string], len(seedSpec.Volume.Providers))
 		for i, provider := range seedSpec.Volume.Providers {
 			idxPath := fldPath.Child("volume", "providers").Index(i)
