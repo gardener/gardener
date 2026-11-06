@@ -2597,7 +2597,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).ToNot(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.dns.providers[0].secretName"),
-						"Detail": Equal("for Kubernetes versions >= 1.35, secretName field is no longer supported"),
+						"Detail": Equal("for Kubernetes versions >= 1.35, secretName field is no longer supported; the 'secretName' field must be removed with the same request upgrading the kubernetes version"),
 					}))))
 				})
 			})
@@ -2611,7 +2611,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					matcher := ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.dns.providers[0].secretName"),
-						"Detail": Equal("for Kubernetes versions >= 1.35, secretName field is no longer supported"),
+						"Detail": Equal("for Kubernetes versions >= 1.35, secretName field is no longer supported; the 'secretName' field must be removed with the same request upgrading the kubernetes version"),
 					})))
 
 					if !expectForbidden {
