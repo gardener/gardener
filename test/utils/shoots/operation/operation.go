@@ -49,9 +49,9 @@ func ReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string) {
 
 	if shoot.Status.LastOperation != nil {
 		switch shoot.Status.LastOperation.Type {
-		case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationTypeRestore:
+		case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationTypeRestore, gardencorev1beta1.LastOperationTypeLiveMigrate:
 			if shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-				return false, "last operation type was create, reconcile or restore but state was not succeeded"
+				return false, "last operation type was create, reconcile, restore or live-migrate but state was not succeeded"
 			}
 		case gardencorev1beta1.LastOperationTypeMigrate:
 			return false, "last operation type was migrate, the migration process is not finished yet"
