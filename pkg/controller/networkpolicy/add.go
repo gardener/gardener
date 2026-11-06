@@ -37,6 +37,9 @@ const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cluster) error {
+	if r.NetworkPolicyNamePrefix == "" {
+		return fmt.Errorf("network policy name prefix must not be empty")
+	}
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = runtimeCluster.GetClient()
 	}
@@ -117,7 +120,7 @@ func (r *Reconciler) NetworkPolicyPredicate() predicate.Predicate {
 	)
 
 	for _, config := range configs {
-		predicates = append(predicates, predicateutils.HasName(config.name))
+		predicates = append(predicates, predicateutils.HasName(r.networkPolicyName(config.name)))
 	}
 
 	return predicate.Or(predicates...)

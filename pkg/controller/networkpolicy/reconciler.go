@@ -50,6 +50,8 @@ type Reconciler struct {
 	RuntimeNetworks                   RuntimeNetworkConfig
 	AdditionalNamespaceSelectors      []metav1.LabelSelector
 	additionalNamespaceLabelSelectors []labels.Selector
+	// NetworkPolicyNamePrefix is prepended to the names of all NetworkPolicies managed by this reconciler.
+	NetworkPolicyNamePrefix string
 }
 
 // RuntimeNetworkConfig is the configuration of the networks for the runtime cluster.
@@ -107,7 +109,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	for _, policyConfig := range r.networkPolicyConfigs() {
 		networkPolicy := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      policyConfig.name,
+				Name:      r.networkPolicyName(policyConfig.name),
 				Namespace: request.Name,
 			},
 		}
@@ -119,6 +121,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				return reconcile.Result{}, fmt.Errorf("failed to delete NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
 			}
 
+			if err := r.deleteOrphanedNetworkPolicies(ctx, log, request.Name, policyConfig.name); err != nil {
+				return reconcile.Result{}, err
+			}
+
 			continue
 		}
 
@@ -127,6 +133,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, fmt.Errorf("failed to reconcile NetworkPolicy %s: %w", client.ObjectKeyFromObject(networkPolicy), err)
 		}
 		networkPolicyLogger.Info("Successfully reconciled NetworkPolicy")
+
+		// Clean up NetworkPolicies stored under a different name only after the current one has been reconciled, so the
+		// namespace is never left without a NetworkPolicy.
+		if err := r.deleteOrphanedNetworkPolicies(ctx, log, request.Name, policyConfig.name); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -152,6 +164,60 @@ func (r *Reconciler) reconcileNetworkPolicy(ctx context.Context, log logr.Logger
 		return nil
 	})
 	return err
+}
+
+const (
+	// NetworkPolicyNamePrefixOperator is the prefix for NetworkPolicies managed by the gardener-operator.
+	NetworkPolicyNamePrefixOperator = "gardener.cloud--operator--"
+	// NetworkPolicyNamePrefixGardenlet is the prefix for NetworkPolicies managed by the gardenlet.
+	NetworkPolicyNamePrefixGardenlet = "gardener.cloud--gardenlet--"
+)
+
+func (r *Reconciler) networkPolicyName(name string) string {
+	return r.NetworkPolicyNamePrefix + name
+}
+
+// gardenerNetworkPolicyNamePrefixes lists all name prefixes under which this controller stored its managed
+// NetworkPolicies over time. The empty prefix refers to NetworkPolicies created before the prefixes were introduced.
+var gardenerNetworkPolicyNamePrefixes = []string{"", NetworkPolicyNamePrefixOperator, NetworkPolicyNamePrefixGardenlet}
+
+// deleteOrphanedNetworkPolicies deletes Gardener-managed NetworkPolicies that are stored under a name this reconciler no
+// longer uses, i.e. under a different Gardener prefix, or without any prefix if they were created before the prefixes
+// were introduced. This happens when the component managing the NetworkPolicies changes, e.g. when a seed is registered
+// as garden cluster and the gardener-operator takes over from the gardenlet.
+// NetworkPolicies with a Gardener prefix are managed by Gardener. Unprefixed NetworkPolicies are only managed by
+// Gardener if they carry the Gardener description annotation, otherwise they are left untouched.
+//
+// TODO(mehrabix): Remove this function and its call sites with the next Gardener version.
+func (r *Reconciler) deleteOrphanedNetworkPolicies(ctx context.Context, log logr.Logger, namespace, name string) error {
+	for _, prefix := range gardenerNetworkPolicyNamePrefixes {
+		if prefix == r.NetworkPolicyNamePrefix {
+			continue
+		}
+
+		key := client.ObjectKey{Namespace: namespace, Name: prefix + name}
+		networkPolicy := &networkingv1.NetworkPolicy{}
+		if err := r.RuntimeClient.Get(ctx, key, networkPolicy); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("failed to get NetworkPolicy %s: %w", key, err)
+		}
+
+		if prefix == "" {
+			// Unprefixed NetworkPolicies are only managed by Gardener if they were created by it.
+			if _, ok := networkPolicy.Annotations[v1beta1constants.GardenerDescription]; !ok {
+				continue
+			}
+		}
+
+		log.WithValues("networkPolicy", key).Info("Deleting NetworkPolicy managed under a different name")
+		if err := kubernetesutils.DeleteObject(ctx, r.RuntimeClient, networkPolicy); err != nil {
+			return fmt.Errorf("failed to delete NetworkPolicy %s: %w", key, err)
+		}
+	}
+
+	return nil
 }
 
 type networkPolicyConfig struct {
@@ -259,7 +325,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToAPIServer(ctx context.Context,
 	}
 
 	if !r.Resolver.HasSynced() {
-		log.Info("Resolver has not synced yet - skipping update of NetworkPolicy", "networkPolicyName", "allow-to-runtime-apiserver")
+		log.Info("Resolver has not synced yet - skipping update of NetworkPolicy", "networkPolicyName", networkPolicy.Name)
 		// The resolver triggers an event after it has been synced, which starts a new reconciliation.
 		// No need to raise an error here.
 		return nil

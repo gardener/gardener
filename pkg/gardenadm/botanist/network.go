@@ -64,8 +64,9 @@ func (b *GardenadmBotanist) CheckControlPlaneNodeLabeled(ctx context.Context) er
 // ApplyNetworkPolicies reconciles all namespaces in the cluster in order to apply the network policies.
 func (b *GardenadmBotanist) ApplyNetworkPolicies(ctx context.Context) error {
 	reconciler := &networkpolicy.Reconciler{
-		RuntimeClient: b.SeedClientSet.Client(),
-		Resolver:      hostnameresolver.NewNoOpProvider(),
+		RuntimeClient:           b.SeedClientSet.Client(),
+		NetworkPolicyNamePrefix: networkpolicy.NetworkPolicyNamePrefixGardenlet,
+		Resolver:                hostnameresolver.NewNoOpProvider(),
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 			IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
 			Pods:       netIPNetSliceToStringSlice(b.Shoot.Networks.Pods),

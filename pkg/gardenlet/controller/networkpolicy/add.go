@@ -75,6 +75,7 @@ func AddToManager(
 	reconciler := &networkpolicy.Reconciler{
 		ConcurrentSyncs:              cfg.ConcurrentSyncs,
 		AdditionalNamespaceSelectors: cfg.AdditionalNamespaceSelectors,
+		NetworkPolicyNamePrefix:      networkpolicy.NetworkPolicyNamePrefixGardenlet,
 		Resolver:                     resolver,
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 			IPFamilies: networks.IPFamilies,
