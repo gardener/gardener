@@ -1258,17 +1258,33 @@ var _ = Describe("OperatingSystemConfig", func() {
 			Expect(DeduplicateOSCErrors(err)).To(Equal(err))
 		})
 
+		It("should leave a multierror with 5 or fewer errors unchanged regardless of duplicate causes", func() {
+			cause := fmt.Errorf("same cause")
+			err := multierror.Append(nil,
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-init for worker pool1: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-reconcile for worker pool1: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-reconcile for worker pool2: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-init for worker pool3: %w", cause),
+			)
+			Expect(DeduplicateOSCErrors(err)).To(Equal(err))
+		})
+
 		It("should leave a multierror with all unique causes unchanged", func() {
 			err := multierror.Append(nil,
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-init for worker pool1: %w", fmt.Errorf("cause A")),
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", fmt.Errorf("cause B")),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-init for worker pool3: %w", fmt.Errorf("cause C")),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool4-init for worker pool4: %w", fmt.Errorf("cause D")),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool5-init for worker pool5: %w", fmt.Errorf("cause E")),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool6-init for worker pool6: %w", fmt.Errorf("cause F")),
 			)
 			result := DeduplicateOSCErrors(err)
 			Expect(result.Error()).To(ContainSubstring("cause A"))
-			Expect(result.Error()).To(ContainSubstring("cause B"))
+			Expect(result.Error()).To(ContainSubstring("cause F"))
 			var multiErr *multierror.Error
 			Expect(errors.As(result, &multiErr)).To(BeTrue())
-			Expect(multiErr.Errors).To(HaveLen(2))
+			Expect(multiErr.Errors).To(HaveLen(6))
 		})
 
 		It("should collapse multiple errors sharing the same cause into one", func() {
@@ -1278,12 +1294,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-reconcile for worker pool1: %w", cause),
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", cause),
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-reconcile for worker pool2: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-init for worker pool3: %w", cause),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-reconcile for worker pool3: %w", cause),
 			)
 			result := DeduplicateOSCErrors(err)
 			var multiErr *multierror.Error
 			Expect(errors.As(result, &multiErr)).To(BeTrue())
 			Expect(multiErr.Errors).To(HaveLen(1))
-			Expect(multiErr.Errors[0].Error()).To(ContainSubstring("[4] occurrences of: extension not installed"))
+			Expect(multiErr.Errors[0].Error()).To(ContainSubstring("[6] occurrences of: extension not installed"))
 		})
 
 		It("should group errors by cause and emit one entry per unique cause", func() {
@@ -1291,8 +1309,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 			causeB := fmt.Errorf("cause B")
 			err := multierror.Append(nil,
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-init for worker pool1: %w", causeA),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-reconcile for worker pool1: %w", causeA),
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", causeA),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-reconcile for worker pool2: %w", causeA),
 				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-init for worker pool3: %w", causeB),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-reconcile for worker pool3: %w", causeB),
 			)
 			result := DeduplicateOSCErrors(err)
 			var multiErr *multierror.Error
