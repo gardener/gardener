@@ -62,6 +62,30 @@ func (g TaskGroup) TaskIDs() []TaskID {
 	return taskIDs.TaskIDs()
 }
 
+// Tasks returns the group's tasks in the order they were added.
+func (g TaskGroup) Tasks() []Task {
+	tasks := make([]Task, 0, len(g.taskOrder))
+	for _, id := range g.taskOrder {
+		tasks = append(tasks, g.tasks[id])
+	}
+	return tasks
+}
+
+// TasksWithDependencies returns the group's tasks (like `Tasks`) with the given dependencies added to each task, gating
+// them all behind a common dependency within a single flow step.
+//
+// Unlike `Graph.AddGroup`, the group's own `WithDependencies` and `SkipIf` are dropped. Those may reference other
+// groups by alias, which only resolve if those groups were added too; dropping them keeps the flattened tasks from
+// depending on anything outside the current graph.
+func (g TaskGroup) TasksWithDependencies(dependencies ...TaskIDer) []Task {
+	deps := NewTaskIDs(dependencies...)
+	tasks := g.Tasks()
+	for i := range tasks {
+		tasks[i].Dependencies = tasks[i].Dependencies.Copy().Insert(deps)
+	}
+	return tasks
+}
+
 // AddAll adds all given tasks to the group and returns the group for chaining.
 // It panics if any of the tasks has an id that is already present in the group.
 func (g TaskGroup) AddAll(tasks ...Task) TaskGroup {
