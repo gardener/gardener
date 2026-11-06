@@ -21,9 +21,9 @@ import (
 
 var _ = Describe("#checkGardenletVersionParity", func() {
 	var (
-		ctx                = context.TODO()
+		ctx                  = context.TODO()
 		sourceSeed, destSeed *gardencorev1beta1.Seed
-		shoot              *gardencorev1beta1.Shoot
+		shoot                *gardencorev1beta1.Shoot
 	)
 
 	BeforeEach(func() {
