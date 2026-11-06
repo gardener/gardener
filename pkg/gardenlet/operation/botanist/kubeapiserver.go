@@ -20,7 +20,6 @@ import (
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -298,15 +297,21 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname str
 
 // DefaultServiceAccountIssuerChanges returns true while a domain migration changes the default ServiceAccount issuer.
 func (b *Botanist) DefaultServiceAccountIssuerChanges() bool {
-	return !ptr.Equal(cmp.Or(b.Shoot.InternalClusterDomain, b.Shoot.ExternalClusterDomain), b.priorDefaultIssuerDomain())
+	return defaultServiceAccountIssuer(cmp.Or(b.Shoot.InternalClusterDomain, b.Shoot.ExternalClusterDomain)) != b.priorDefaultServiceAccountIssuer()
 }
 
 func (b *Botanist) priorDefaultServiceAccountIssuer() string {
-	priorDomain := b.priorDefaultIssuerDomain()
-	if priorDomain == nil {
+	if b.Shoot.PriorServiceAccountIssuer != nil {
+		return *b.Shoot.PriorServiceAccountIssuer
+	}
+	return defaultServiceAccountIssuer(b.priorDefaultIssuerDomain())
+}
+
+func defaultServiceAccountIssuer(domain *string) string {
+	if domain == nil {
 		return ""
 	}
-	return "https://" + v1beta1helper.GetAPIServerDomain(*priorDomain)
+	return "https://" + v1beta1helper.GetAPIServerDomain(*domain)
 }
 
 func (b *Botanist) priorDefaultIssuerDomain() *string {

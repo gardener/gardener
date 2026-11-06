@@ -314,6 +314,9 @@ var _ = Describe("KubeAPIServer", func() {
 				botanist.Shoot.InternalClusterDomain = nil
 				botanist.Shoot.PriorExternalClusterDomain = new("prior-external.foo.bar.com")
 			}, true),
+			Entry("internal domain enabled during the migration", func() {
+				botanist.Shoot.PriorServiceAccountIssuer = new("https://api.external.foo.bar.com")
+			}, true),
 		)
 	})
 
@@ -544,6 +547,15 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:          "https://api.external.foo.bar.com",
 						AcceptedIssuers: []string{"https://api.prior-external.foo.bar.com"},
+					},
+				),
+				Entry("should accept the prior service account issuer if the internal domain is enabled during the migration",
+					func() {
+						botanist.Shoot.PriorServiceAccountIssuer = new("https://api.external.foo.bar.com")
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://api.internal.foo.bar.com",
+						AcceptedIssuers: []string{"https://api.external.foo.bar.com"},
 					},
 				),
 				Entry("should not accept another issuer if only the external domain changes",

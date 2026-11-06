@@ -106,6 +106,9 @@ type Shoot struct {
 	// PriorInternalDomain holds the domain information of PriorInternalClusterDomain, which can differ from
 	// InternalDomain in provider, zone and credentials. It is nil if PriorInternalClusterDomain is nil.
 	PriorInternalDomain *gardenerutils.Domain
+	// PriorServiceAccountIssuer is the default service account issuer before a domain migration which enables the
+	// internal domain. It is nil in all other cases.
+	PriorServiceAccountIssuer *string
 	// ExternalClusterDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalClusterDomain *string
 	// PriorExternalClusterDomain is the external domain which is replaced during a running domain migration.

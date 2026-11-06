@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -259,6 +260,21 @@ func priorInternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
 	return domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressPriorInternal)
 }
 
+func priorServiceAccountIssuer(shoot *gardencorev1beta1.Shoot) *string {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) ||
+		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
+		return nil
+	}
+
+	i := slices.IndexFunc(shoot.Status.AdvertisedAddresses, func(address gardencorev1beta1.ShootAdvertisedAddress) bool {
+		return address.Name == v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer
+	})
+	if i < 0 {
+		return nil
+	}
+	return new(shoot.Status.AdvertisedAddresses[i].URL)
+}
+
 func (b *Builder) internalDomainForNewShoots() *gardenerutils.Domain {
 	if len(b.internalDomains) == 0 {
 		return nil
@@ -328,6 +344,7 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	shoot.DesiredInternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots())
 	shoot.InternalClusterDomain = internalClusterDomain(shootObject, shoot.DesiredInternalClusterDomain)
 	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
+	shoot.PriorServiceAccountIssuer = priorServiceAccountIssuer(shootObject)
 	if shoot.InternalDomain, err = b.findInternalDomain(shootObject.Name, shoot.InternalClusterDomain); err != nil {
 		return nil, err
 	}

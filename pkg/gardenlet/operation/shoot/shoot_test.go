@@ -1019,6 +1019,53 @@ var _ = Describe("shoot", func() {
 				})
 			})
 
+			Describe("#PriorServiceAccountIssuer", func() {
+				BeforeEach(func() {
+					shootObject.Status.AdvertisedAddresses = append(shootObject.Status.AdvertisedAddresses,
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, "foo.example.com"),
+					)
+				})
+
+				DescribeTable("should take the URL of the prior service account issuer address in each migration phase",
+					func(phase gardencorev1beta1.CredentialsRotationPhase) {
+						withCARotationPhase(phase)
+
+						Expect(buildShoot().PriorServiceAccountIssuer).To(PointTo(Equal("https://api.foo.example.com")))
+					},
+
+					Entry("Preparing", gardencorev1beta1.RotationPreparing),
+					Entry("PreparingWithoutWorkersRollout", gardencorev1beta1.RotationPreparingWithoutWorkersRollout),
+					Entry("WaitingForWorkersRollout", gardencorev1beta1.RotationWaitingForWorkersRollout),
+					Entry("Prepared", gardencorev1beta1.RotationPrepared),
+				)
+
+				It("should be nil without a prior service account issuer address", func() {
+					shootObject.Status.AdvertisedAddresses = shootObject.Status.AdvertisedAddresses[:2]
+					withCARotationPhase(gardencorev1beta1.RotationPrepared)
+
+					Expect(buildShoot().PriorServiceAccountIssuer).To(BeNil())
+				})
+
+				DescribeTable("should be nil outside of the migration phases",
+					func(phase gardencorev1beta1.CredentialsRotationPhase) {
+						withCARotationPhase(phase)
+
+						Expect(buildShoot().PriorServiceAccountIssuer).To(BeNil())
+					},
+
+					Entry("Completing", gardencorev1beta1.RotationCompleting),
+					Entry("Completed", gardencorev1beta1.RotationCompleted),
+					Entry("no phase", gardencorev1beta1.CredentialsRotationPhase("")),
+				)
+
+				It("should be nil if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					withCARotationPhase(gardencorev1beta1.RotationPrepared)
+
+					Expect(buildShoot().PriorServiceAccountIssuer).To(BeNil())
+				})
+			})
+
 			Describe("#PriorInternalDomain", func() {
 				BeforeEach(func() {
 					shootObject.Status.AdvertisedAddresses = append(shootObject.Status.AdvertisedAddresses,

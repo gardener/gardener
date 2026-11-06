@@ -192,6 +192,30 @@ var _ = Describe("AdvertisedAddresses", func() {
 			}))
 		})
 
+		It("returns the prior service account issuer address directly after the service-account-issuer address", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
+			botanist.Shoot.PriorServiceAccountIssuer = new("https://api.foo.bar")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "internal",
+					URL:  "https://api.baz.foo",
+				},
+				{
+					Name: "service-account-issuer",
+					URL:  "https://api.baz.foo",
+				},
+				{
+					Name: "prior-service-account-issuer",
+					URL:  "https://api.foo.bar",
+				},
+			}))
+		})
+
 		It("returns unmanaged address", func() {
 			botanist.APIServerAddress = "bar.foo"
 

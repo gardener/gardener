@@ -104,6 +104,13 @@ func (b *Botanist) ToAdvertisedAddresses(ctx context.Context) ([]gardencorev1bet
 		})
 	}
 
+	if b.Shoot.PriorServiceAccountIssuer != nil {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer,
+			URL:  *b.Shoot.PriorServiceAccountIssuer,
+		})
+	}
+
 	ingressItems, err := b.GetIngressAdvertisedEndpoints(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ingress advertised endpoints: %w", err)
