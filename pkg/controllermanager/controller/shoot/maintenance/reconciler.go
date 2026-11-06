@@ -275,7 +275,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		operations = append(operations, reasons...)
 	}
 
-	operation := maintainOperation(maintainedShoot, credentialsToRotationUpdate)
+	operation := maintainOperation(maintainedShoot, credentialsToRotationUpdate, now.Time)
 	if operation != "" {
 		operations = append(operations, fmt.Sprintf("Added %q operation annotation", operation))
 	}
@@ -352,7 +352,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 	// update shoot spec changes in maintenance call
 	shoot.Spec = *maintainedShoot.Spec.DeepCopy()
-	_ = maintainOperation(shoot, credentialsToRotationUpdate)
+	_ = maintainOperation(shoot, credentialsToRotationUpdate, now.Time)
 	maintainTasks(shoot, r.Config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
@@ -498,7 +498,7 @@ func (r *Reconciler) recordMaintenanceEventsForPool(workerToUpdateResult map[str
 	}
 }
 
-func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult) string {
+func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpdate map[string]updateResult, now time.Time) string {
 	var operation string
 	if hasMaintainNowAnnotation(shoot) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
@@ -513,6 +513,8 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot, credentialsToRotationUpda
 		if needsRetry(shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
+		} else if needsPeriodicRetry(shoot, now) {
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 		}
 	default:
 		operation = getOperation(shoot, credentialsToRotationUpdate)
@@ -770,6 +772,27 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 	}
 
 	return needsRetryOperation || (allShootConditionsTrue(shoot) && !v1beta1helper.HasNonRetryableErrorCode(shoot.Status.LastErrors...))
+}
+
+// needsPeriodicRetry checks whether a shoot in a failed state should be retried, even if last errors are non-retryable.
+// As this only runs during the maintenance window, the actual retry interval may be up to ~48 hours.
+func needsPeriodicRetry(shoot *gardencorev1beta1.Shoot, now time.Time) bool {
+	if shoot.Status.LastOperation == nil {
+		return false
+	}
+
+	if shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeCreate &&
+		shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeReconcile {
+		return false
+	}
+
+	if value, ok := shoot.Annotations[v1beta1constants.ShootIgnore]; ok {
+		if ignore, _ := strconv.ParseBool(value); ignore {
+			return false
+		}
+	}
+
+	return now.UTC().Sub(shoot.Status.LastOperation.LastUpdateTime.UTC()) > 24*time.Hour
 }
 
 func allShootConditionsTrue(shoot *gardencorev1beta1.Shoot) bool {

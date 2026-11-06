@@ -2450,7 +2450,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		Context("shoot lastOperation is Failed", func() {
 			It("should not set retry annotation when conditions are absent", func() {
-				maintainOperation(shoot, nil)
+				maintainOperation(shoot, nil, time.Now())
 				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 			})
 
@@ -2459,7 +2459,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "ControlPlaneHealthy", Status: gardencorev1beta1.ConditionFalse},
 				}
-				maintainOperation(shoot, nil)
+				maintainOperation(shoot, nil, time.Now())
 				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 			})
 
@@ -2469,7 +2469,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					{Type: "ControlPlaneHealthy", Status: gardencorev1beta1.ConditionTrue},
 					{Type: "SystemComponentsHealthy", Status: gardencorev1beta1.ConditionTrue},
 				}
-				maintainOperation(shoot, nil)
+				maintainOperation(shoot, nil, time.Now())
 				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 			})
 
@@ -2481,7 +2481,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				shoot.Status.LastErrors = []gardencorev1beta1.LastError{
 					{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem}},
 				}
-				maintainOperation(shoot, nil)
+				maintainOperation(shoot, nil, time.Now())
 				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 			})
 
@@ -2489,7 +2489,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.FailedShootNeedsRetryOperation: "true",
 				}
-				maintainOperation(shoot, nil)
+				maintainOperation(shoot, nil, time.Now())
 				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation))
 			})
@@ -2501,7 +2501,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				shoot.Status.Conditions = []gardencorev1beta1.Condition{
 					{Type: "APIServerAvailable", Status: gardencorev1beta1.ConditionTrue},
 				}
-				maintainOperation(shoot, nil)
+				maintainOperation(shoot, nil, time.Now())
 				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 				Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation))
 			})
