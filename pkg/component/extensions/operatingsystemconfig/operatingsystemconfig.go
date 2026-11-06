@@ -278,23 +278,33 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	// deduplicate error messages to avoid flooding the shoot status with many near-identical error messages
-	return DeduplicateOSCErrors(flow.Parallel(fns...)(ctx))
+	err = flow.Parallel(fns...)(ctx)
+
+	// Deduplicate error messages to avoid flooding the shoot status with many near-identical error messages.
+	// Log the original error to ensure that the full context is still available in the gardenlet logs.
+	deduplicatedErr := DeduplicateOSCErrors(err)
+	if err != deduplicatedErr {
+		o.log.Error(err, "Failed to reconcile OperatingSystemConfig resources")
+	}
+
+	return deduplicatedErr
 }
 
 // DeduplicateOSCErrors collapses a *multierror.Error by grouping entries that share the same
 // unwrapped cause. This prevents the shoot status from being flooded with many
 // near-identical error messages when all OSC resources fail for the same underlying reason.
 func DeduplicateOSCErrors(err error) error {
+	// Only start deduplication if there are more than 5 errors to retain the OSC and worker pool context.
+	const errorThreshold = 5
+
 	var multiErr *multierror.Error
-	if !errors.As(err, &multiErr) || len(multiErr.Errors) <= 1 {
+	if !errors.As(err, &multiErr) || len(multiErr.Errors) <= errorThreshold {
 		return err
 	}
 
 	// Group errors by the message of their direct cause (one Unwrap level).
 	// Preserve insertion order so the output is deterministic.
 	occurrences := make(map[string]int)
-	duplicateFound := false
 
 	for _, e := range multiErr.Errors {
 		cause := errors.Unwrap(e)
@@ -303,12 +313,9 @@ func DeduplicateOSCErrors(err error) error {
 			causeText = cause.Error()
 		}
 		occurrences[causeText]++
-		if occurrences[causeText] > 1 {
-			duplicateFound = true
-		}
 	}
 
-	if !duplicateFound {
+	if len(occurrences) == len(multiErr.Errors) {
 		// All causes are unique — nothing to deduplicate.
 		return err
 	}
