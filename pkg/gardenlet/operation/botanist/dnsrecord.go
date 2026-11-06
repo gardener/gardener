@@ -100,42 +100,11 @@ func (b *Botanist) newDNSRecord(values *extensionsdnsrecord.Values, needed bool,
 
 // DefaultPriorInternalDNSRecord creates the default deployer for the DNSRecord resource of the prior internal domain.
 func (b *Botanist) DefaultPriorInternalDNSRecord() extensionsdnsrecord.Interface {
-	values := &extensionsdnsrecord.Values{
-		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorInternalName,
-		SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordPriorInternalName,
-		Namespace:                    b.Shoot.ControlPlaneNamespace,
-		TTL:                          b.dnsRecordTTLSeconds(),
-		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
-		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
-			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
-			b.Shoot.IsRestorePhase(),
-		IPStack: gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
-		Labels: map[string]string{
-			v1beta1constants.LabelRole:  v1beta1constants.LabelDNSRecordPriorInternal,
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-		},
-	}
-
-	var credentialsDeployer extensionsdnsrecord.CredentialsDeployFunc
-
-	if b.NeedsPriorInternalDNS() {
-		values.Type = b.Shoot.PriorInternalDomain.Provider
-		if b.Shoot.PriorInternalDomain.Zone != "" {
-			values.Zone = &b.Shoot.PriorInternalDomain.Zone
-		}
-		credentialsDeployer = extensionsdnsrecord.CredentialsDeployerFromCredentials(b.Shoot.PriorInternalDomain.Credentials, b.Shoot.GetInfo())
-		values.DNSName = v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorInternalClusterDomain)
-	}
-
-	return extensionsdnsrecord.New(
-		b.Logger,
-		b.SeedClientSet.Client(),
-		values,
-		extensionsdnsrecord.DefaultInterval,
-		extensionsdnsrecord.DefaultSevereThreshold,
-		extensionsdnsrecord.DefaultTimeout,
-		credentialsDeployer,
-	)
+	deleting := b.Shoot.GetInfo().DeletionTimestamp != nil
+	values := b.dnsRecordValues(v1beta1constants.DNSRecordPriorInternalName, v1beta1constants.LabelDNSRecordPriorInternal,
+		deleting || controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) || b.Shoot.IsRestorePhase())
+	values.ReconcileOnlyOnChangeOrError = deleting
+	return b.newDNSRecord(values, b.NeedsPriorInternalDNS(), b.Shoot.PriorInternalDomain, apiServerDomain(b.Shoot.PriorInternalClusterDomain))
 }
 
 // DeployOrDestroyExternalDNSRecord deploys, restores, or destroys the external DNSRecord and waits for the operation to complete.

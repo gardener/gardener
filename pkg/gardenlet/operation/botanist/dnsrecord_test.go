@@ -817,7 +817,7 @@ var _ = Describe("dnsrecord", func() {
 				b.Shoot.PriorInternalDomain = &gardenerutils.Domain{Domain: priorInternalDomain, Provider: priorInternalProvider}
 			})
 
-			It("should hand over the record of the old domain before it deploys the record of the new domain", func() {
+			It("should destroy the record of the old domain, keeping its DNS entry, before it deploys the record of the new domain", func() {
 				createInternalDNSRecord("api." + priorInternalDomain)
 
 				gomock.InOrder(
@@ -832,7 +832,7 @@ var _ = Describe("dnsrecord", func() {
 				Expect(b.DeployOrDestroyInternalDNSRecord(ctx)).To(Succeed())
 			})
 
-			It("should hand over the record of the old domain if the internal domain is disabled", func() {
+			It("should destroy the record of the old domain, keeping its DNS entry, if the internal domain is disabled", func() {
 				createInternalDNSRecord("api." + priorInternalDomain)
 				b.Shoot.InternalClusterDomain = nil
 				b.Shoot.InternalDomain = nil
