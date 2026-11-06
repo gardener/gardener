@@ -9633,7 +9633,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.disableHealthTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.disableHealthTimeout"),
 					"Detail": Equal("can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
 				}))))
 			})
@@ -9668,7 +9668,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machineDrainTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machineDrainTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9681,7 +9681,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machineHealthTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machineHealthTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9694,7 +9694,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machineCreationTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machineCreationTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9707,7 +9707,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.inPlaceUpdateTimeout"),
 					"Detail": Equal("can only be set when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
 				}))))
 			})
@@ -9733,7 +9733,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.inPlaceUpdateTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9743,7 +9743,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
-				Expect(errList).To(ConsistOf(field.Invalid(field.NewPath("workers[0].machineControllerManagerSettings.maxEvictRetries"), int64(-2), "must be greater than or equal to 0").WithOrigin("minimum")))
+				Expect(errList).To(ConsistOf(field.Invalid(field.NewPath("workers[0].machineControllerManager.maxEvictRetries"), int64(-2), "must be greater than or equal to 0").WithOrigin("minimum")))
 			})
 
 			It("should forbid setting machinePreserveTimeout to negative value", func() {
@@ -9754,7 +9754,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machinePreserveTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machinePreserveTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9788,7 +9788,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Field":  Equal("workers[0].machineControllerManager.autoPreserveFailedMachineMax"),
 					"Detail": Equal("must not be greater than maximum value"),
 				}))))
 			})
@@ -9802,7 +9802,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Field":  Equal("workers[0].machineControllerManager.autoPreserveFailedMachineMax"),
 					"Detail": Equal("must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"),
 				}))))
 			})
@@ -9826,7 +9826,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Field":  Equal("workers[0].machineControllerManager.autoPreserveFailedMachineMax"),
 					"Detail": Equal("must not be negative"),
 				}))))
 			})
