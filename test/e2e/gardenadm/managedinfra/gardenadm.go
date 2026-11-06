@@ -148,19 +148,10 @@ var _ = Describe("gardenadm managed infrastructure scenario tests", Label("garde
 			Eventually(ctx, Object(deployment)).Should(HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))))
 		}, SpecTimeout(time.Minute))
 
-		It("should deploy the DNSRecord", func(ctx SpecContext) {
-			dnsRecord := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-external", Namespace: technicalID}}
-			Eventually(ctx, Object(dnsRecord)).Should(BeHealthy(health.CheckExtensionObject))
-
-			// The internal DNSRecord is only deployed by `gardenadm init` in the self-hosted shoot.
-			Expect(Get(&extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-internal", Namespace: technicalID}})()).To(BeNotFoundError())
-		}, SpecTimeout(time.Minute))
-
 		It("should prepare extension resources for migration", func(ctx SpecContext) {
 			extensionKinds := map[string]client.ObjectList{
 				extensionsv1alpha1.InfrastructureResource: &extensionsv1alpha1.InfrastructureList{},
 				extensionsv1alpha1.WorkerResource:         &extensionsv1alpha1.WorkerList{},
-				extensionsv1alpha1.DNSRecordResource:      &extensionsv1alpha1.DNSRecordList{},
 			}
 
 			for kind, list := range extensionKinds {

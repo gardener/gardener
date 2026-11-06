@@ -6,7 +6,6 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -14,27 +13,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 )
-
-// DeployBootstrapDNSRecord deploys the external DNSRecord pointing to the first control plane machine for bootstrapping
-// the self-hosted shoot cluster. The DNSRecord might be publicly resolvable but not publicly accessible, depending on
-// shoot's infrastructure provider and network setup. It should be resolvable and accessible from within the shoot
-// cluster's network including the machines, so `gardenadm init` can use it to bootstrap the cluster.
-func (b *GardenadmBotanist) DeployBootstrapDNSRecord(ctx context.Context) error {
-	machine, err := b.GetMachineByIndex(0)
-	if err != nil {
-		return err
-	}
-
-	machineAddr, err := PreferredNodeAddress(machine.Status.Addresses)
-	if err != nil {
-		return fmt.Errorf("failed getting preferred address for machine %q: %w", machine.Name, err)
-	}
-
-	b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(machineAddr))
-	b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{machineAddr})
-
-	return component.OpWait(b.Shoot.Components.Extensions.ExternalDNSRecord).Deploy(ctx)
-}
 
 // RestoreExternalDNSRecord restores the external DNSRecord for the self-hosted shoot's API server.
 // For extension-based exposure the DNS target is set to the ingress that is read from the
