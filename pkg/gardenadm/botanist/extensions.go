@@ -89,10 +89,10 @@ func ComputeExtensions(resources gardenadm.Resources, runsControlPlane, managedI
 // `gardenadm init`).
 func wantedExtensionKinds(runsControlPlane, managedInfrastructure bool) sets.Set[string] {
 	if !runsControlPlane {
-		// When running `gardenadm bootstrap` against the bootstrap cluster, we create Infrastructure, OSC, Worker, and
-		// DNSRecord for the control plane of the self-hosted shoot cluster, so we only need to deploy a subset of the
-		// extensions required for the shoot.
-		return sets.New(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource, extensionsv1alpha1.DNSRecordResource)
+		// When running `gardenadm bootstrap` against the bootstrap cluster, we create Infrastructure, OSC, and Worker for
+		// the control plane of the self-hosted shoot cluster, so we only need to deploy a subset of the extensions
+		// required for the shoot.
+		return sets.New(extensionsv1alpha1.InfrastructureResource, extensionsv1alpha1.OperatingSystemConfigResource, extensionsv1alpha1.WorkerResource)
 	}
 
 	// In the "unmanaged infrastructure" scenario, we don't deploy Infrastructure, Worker, and DNSRecord extensions
