@@ -662,11 +662,6 @@ var _ = Describe("VPA", func() {
 					Resources: []string{"verticalpodautoscalercheckpoints"},
 					Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
 				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"namespaces"},
-					Verbs:     []string{"get", "list"},
-				},
 			},
 		}
 		clusterRoleBindingRecommenderCheckpointActor = &rbacv1.ClusterRoleBinding{
