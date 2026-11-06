@@ -5,6 +5,7 @@
 package helper
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -351,4 +352,18 @@ func GetAllIngressDomains(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DN
 	}
 
 	return allIngressDomains
+}
+
+// EtcdMainBackupBucketNameAndPrefix splits the bucketName into its name and prefix component
+func EtcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string, string) {
+	prefix := operatorv1alpha1.VirtualGardenETCDMain
+	if backup := GetETCDMainBackup(garden); backup != nil && backup.BucketName != nil {
+		name := *backup.BucketName
+		if idx := strings.Index(name, "/"); idx != -1 {
+			prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(name[idx+1:], "/"), prefix)
+			name = name[:idx]
+		}
+		return name, prefix
+	}
+	return "garden-" + string(garden.UID), prefix
 }

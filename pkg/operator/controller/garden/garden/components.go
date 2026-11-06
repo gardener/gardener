@@ -1936,7 +1936,7 @@ func (r *Reconciler) newEtcdMainBackupEntry(log logr.Logger, garden *operatorv1a
 		region = *garden.Spec.RuntimeCluster.Provider.Region
 	}
 
-	bucketName, _ := EtcdMainBackupBucketNameAndPrefix(garden)
+	bucketName, _ := helper.EtcdMainBackupBucketNameAndPrefix(garden)
 
 	return extensionsbackupentry.New(log, r.RuntimeClientSet.Client(), r.Clock, &extensionsbackupentry.Values{
 		Name:           r.GardenNamespace + "--" + string(garden.UID),

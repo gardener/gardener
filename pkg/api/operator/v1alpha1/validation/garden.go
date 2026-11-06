@@ -38,7 +38,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
-	operatorgarden "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
@@ -245,8 +244,8 @@ func ValidateBackupBucketUpdate(newGarden, oldGarden *operatorv1alpha1.Garden, f
 	}
 
 	if oldBackup != nil && newBackup != nil {
-		_, oldPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(oldGarden)
-		_, newPrefix := operatorgarden.EtcdMainBackupBucketNameAndPrefix(newGarden)
+		_, oldPrefix := helper.EtcdMainBackupBucketNameAndPrefix(oldGarden)
+		_, newPrefix := helper.EtcdMainBackupBucketNameAndPrefix(newGarden)
 		if oldPrefix != newPrefix {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "bucketName"), "changing the prefix of the backup bucket is not allowed"))
 		}

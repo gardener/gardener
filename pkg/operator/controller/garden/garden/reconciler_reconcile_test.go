@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	. "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 )
 
 var _ = Describe("Reconciler Reconcile", func() {
@@ -28,7 +28,7 @@ var _ = Describe("Reconciler Reconcile", func() {
 				garden.Spec.VirtualCluster.ETCD = etcd
 				original := garden.DeepCopy()
 
-				name, prefix := EtcdMainBackupBucketNameAndPrefix(garden)
+				name, prefix := helper.EtcdMainBackupBucketNameAndPrefix(garden)
 
 				Expect(name).To(Equal("garden-garden-uid"))
 				Expect(prefix).To(Equal(operatorv1alpha1.VirtualGardenETCDMain))
@@ -49,7 +49,7 @@ var _ = Describe("Reconciler Reconcile", func() {
 				}
 				original := garden.DeepCopy()
 
-				name, prefix := EtcdMainBackupBucketNameAndPrefix(garden)
+				name, prefix := helper.EtcdMainBackupBucketNameAndPrefix(garden)
 
 				Expect(name).To(Equal(expectedName))
 				Expect(prefix).To(Equal(expectedPrefix))
