@@ -19,7 +19,7 @@ require (
 	github.com/elliotchance/orderedmap/v3 v3.1.1
 	github.com/fatih/color v1.19.0
 	github.com/fluent/fluent-operator/v3 v3.7.0
-	github.com/gardener/cert-management/pkg/apis v0.28.0
+	github.com/gardener/cert-management/pkg/apis v0.29.0
 	github.com/gardener/dependency-watchdog v1.8.1
 	github.com/gardener/etcd-druid/api v0.39.2
 	github.com/gardener/gardener/pkg/apis v1.154.0
@@ -347,7 +347,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20261106112924-d498a4c2cc9a // indirect
 	golang.org/x/mod v0.42.0 // indirect
-	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
