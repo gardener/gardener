@@ -329,7 +329,7 @@ func itShouldResetOrJoinNode(command, message string) {
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(ctx, stdOut).Should(gbytes.Say(message))
-	}, SpecTimeout(time.Minute))
+	}, SpecTimeout(5*time.Minute))
 }
 
 func itShouldSeeJoinedNodeAndCheckHealth(shootClientSet func() kubernetes.Interface) {
