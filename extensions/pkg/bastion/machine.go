@@ -15,6 +15,7 @@ import (
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // MachineSpec define all bastion vm details derived from the CloudProfile
@@ -26,12 +27,25 @@ type MachineSpec struct {
 	ImageVersion            string
 }
 
-// GetMachineSpecFromCloudProfile determines the bastion vm details based on information in the cloud profile
-func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm MachineSpec, err error) {
+// GetMachineSpecFromCloudProfile determines the bastion vm details based on information in the cloud profile.
+// If the operator-provided machine override from the Bastion resource (machine) is set, it takes precedence over the
+// default defined in the CloudProfile (profile.Spec.Bastion). Otherwise, the CloudProfile default is used, and fields
+// that are not set there are resolved automatically (smallest machine type, latest image version).
+func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile, machine *extensionsv1alpha1.BastionMachine) (vm MachineSpec, err error) {
 	if profile == nil {
 		return MachineSpec{}, fmt.Errorf("cloudprofile is nil")
 	}
+
 	bastionSpec := profile.Spec.Bastion
+	if machine != nil {
+		bastionSpec = &gardencorev1beta1.Bastion{
+			MachineType: &gardencorev1beta1.BastionMachineType{Name: machine.Type},
+			MachineImage: &gardencorev1beta1.BastionMachineImage{
+				Name:    machine.Image.Name,
+				Version: new(machine.Image.Version),
+			},
+		}
+	}
 
 	if bastionSpec != nil && bastionSpec.MachineType != nil {
 		vm.MachineTypeName, vm.Architecture, vm.MachineTypeCapabilities, err = getMachine(bastionSpec, profile.Spec.MachineTypes, profile.Spec.MachineCapabilities)
@@ -39,7 +53,7 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 			return MachineSpec{}, err
 		}
 	} else {
-		vm.MachineTypeName, vm.Architecture, vm.MachineTypeCapabilities, err = findMostSuitableMachineType(profile)
+		vm.MachineTypeName, vm.Architecture, vm.MachineTypeCapabilities, err = findMostSuitableMachineType(profile, bastionSpec)
 		if err != nil {
 			return MachineSpec{}, err
 		}
@@ -211,8 +225,8 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 
 // findMostSuitableMachineType searches for the machine type that satisfies certain criteria
 // currently we try to find the machine with the lowest amount of cpus
-func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machineName string, machineArch string, capabilities gardencorev1beta1.Capabilities, err error) {
-	supportedArchitectures := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages, profile.Spec.MachineCapabilities)
+func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile, bastion *gardencorev1beta1.Bastion) (machineName string, machineArch string, capabilities gardencorev1beta1.Capabilities, err error) {
+	supportedArchitectures := getImageArchitectures(bastion, profile.Spec.MachineImages, profile.Spec.MachineCapabilities)
 
 	var minCpu *int64
 
@@ -226,8 +240,11 @@ func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machi
 			continue
 		}
 
-		if minCpu == nil || machine.CPU.Value() < *minCpu &&
-			(supportedArchitectures == nil || slices.Contains(supportedArchitectures, arch)) {
+		if supportedArchitectures != nil && !slices.Contains(supportedArchitectures, arch) {
+			continue
+		}
+
+		if minCpu == nil || machine.CPU.Value() < *minCpu {
 			minCpu = new(machine.CPU.Value())
 			machineName = machine.Name
 			machineArch = arch

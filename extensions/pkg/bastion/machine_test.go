@@ -14,6 +14,7 @@ import (
 	. "github.com/gardener/gardener/extensions/pkg/bastion"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -108,61 +109,61 @@ var _ = Describe("Bastion VM Details", func() {
 
 	Describe("#GetMachineSpecFromCloudProfile", func() {
 		It("should succeed without setting bastion image version", func() {
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
 
 		It("should succeed with empty bastion section", func() {
 			cloudProfile.Spec.Bastion = &gardencorev1beta1.Bastion{}
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
 
 		It("should succeed without setting bastion section", func() {
 			cloudProfile.Spec.Bastion = nil
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
 
 		It("should succeed without setting bastion image", func() {
 			cloudProfile.Spec.Bastion.MachineImage = nil
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
 
 		It("should succeed without setting machineType", func() {
 			cloudProfile.Spec.Bastion.MachineType = nil
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
 
 		It("forbid unknown image name", func() {
 			cloudProfile.Spec.Bastion.MachineImage.Name = "unknown_image"
-			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			_, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("forbid unknown image version", func() {
 			cloudProfile.Spec.Bastion.MachineImage.Version = new("6.6.6")
-			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			_, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("forbid unknown machineType", func() {
 			cloudProfile.Spec.Bastion.MachineType.Name = "unknown_machine"
-			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			_, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should find greatest supported version", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationSupported, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
 			desired.ImageVersion = "1.2.4"
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
@@ -178,9 +179,34 @@ var _ = Describe("Bastion VM Details", func() {
 					"architecture": []string{v1beta1constants.ArchitectureAMD64},
 				},
 			})
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details.MachineTypeName).To(DeepEqual("smallerMachine"))
+		})
+
+		It("should skip the smallest machine when its architecture is unsupported by the pinned image", func() {
+			// The pinned image only supports amd64.
+			cloudProfile.Spec.Bastion.MachineType = nil
+			cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{v1beta1constants.ArchitectureAMD64}
+			cloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = []gardencorev1beta1.MachineImageFlavor{
+				{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}}},
+			}
+
+			// The arm64 machine is the smallest AND the first candidate, so it is considered before the
+			// compatible amd64 machine. It is incompatible with the amd64-only image and must be skipped.
+			cloudProfile.Spec.MachineTypes = append([]gardencorev1beta1.MachineType{{
+				CPU:          resource.MustParse("1"),
+				Name:         "smallest_arm_machine",
+				Architecture: new(v1beta1constants.ArchitectureARM64),
+				Capabilities: gardencorev1beta1.Capabilities{
+					"architecture": []string{v1beta1constants.ArchitectureARM64},
+				},
+			}}, cloudProfile.Spec.MachineTypes...)
+
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details.MachineTypeName).To(Equal(desired.MachineTypeName))
+			Expect(details.Architecture).To(Equal(v1beta1constants.ArchitectureAMD64))
 		})
 
 		It("should ignore unusable machines", func() {
@@ -195,14 +221,14 @@ var _ = Describe("Bastion VM Details", func() {
 					"architecture": []string{v1beta1constants.ArchitectureAMD64},
 				},
 			})
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
 
 		It("should only use supported version", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationPreview, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
@@ -210,7 +236,7 @@ var _ = Describe("Bastion VM Details", func() {
 		It("should use version which has been specified", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationSupported, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
 			cloudProfile.Spec.Bastion.MachineImage.Version = new("1.2.3")
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
@@ -218,13 +244,13 @@ var _ = Describe("Bastion VM Details", func() {
 		It("should not allow preview image even if version is specified", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationPreview, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
 			cloudProfile.Spec.Bastion.MachineImage.Version = new("1.2.4")
-			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			_, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("only use images for matching machineType architecture", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationSupported, []string{"x86"}, gardencorev1beta1.Capabilities{"architecture": []string{"x86"}})
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
@@ -232,7 +258,7 @@ var _ = Describe("Bastion VM Details", func() {
 		It("fail if no image with matching machineType architecture can be found", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"x86"}
 			cloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors[0].Capabilities["architecture"][0] = "x86"
-			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			_, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).To(HaveOccurred())
 		})
 		It("only use images with compatible machineType capabilities", func() {
@@ -242,9 +268,79 @@ var _ = Describe("Bastion VM Details", func() {
 					"cap1":         []string{"val3"},
 				})
 
-			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
+		})
+
+		Context("with an operator-provided machine override", func() {
+			BeforeEach(func() {
+				cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
+					CPU:          resource.MustParse("8"),
+					Name:         "large_machine",
+					Architecture: new(desired.Architecture),
+					Capabilities: gardencorev1beta1.Capabilities{
+						"architecture": []string{v1beta1constants.ArchitectureAMD64},
+						"cap1":         []string{"val1", "val2"},
+					},
+				})
+				cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, gardencorev1beta1.MachineImage{
+					Name: "other_image",
+					Versions: []gardencorev1beta1.MachineImageVersion{{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version:        "4.5.6",
+							Classification: new(gardencorev1beta1.ClassificationSupported),
+						},
+						Architectures: []string{desired.Architecture},
+						CapabilityFlavors: []gardencorev1beta1.MachineImageFlavor{
+							{Capabilities: gardencorev1beta1.Capabilities{"architecture": []string{desired.Architecture}}},
+						},
+					}},
+				})
+			})
+
+			It("should let the override win for both machine type and image", func() {
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "large_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "4.5.6"},
+				}
+				details, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(details.MachineTypeName).To(Equal("large_machine"))
+				Expect(details.ImageBaseName).To(Equal("other_image"))
+				Expect(details.ImageVersion).To(Equal("4.5.6"))
+			})
+
+			It("should use the override when the CloudProfile does not define a bastion", func() {
+				cloudProfile.Spec.Bastion = nil
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "large_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "4.5.6"},
+				}
+				details, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(details.MachineTypeName).To(Equal("large_machine"))
+				Expect(details.ImageBaseName).To(Equal("other_image"))
+				Expect(details.ImageVersion).To(Equal("4.5.6"))
+			})
+
+			It("should error when the override machine type is unknown", func() {
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "unknown_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "4.5.6"},
+				}
+				_, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should error when the override image version is unknown", func() {
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "large_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "9.9.9"},
+				}
+				_, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 })

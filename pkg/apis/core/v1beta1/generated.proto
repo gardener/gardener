@@ -2188,7 +2188,7 @@ message LoadBalancerServicesProxyProtocol {
   optional bool allowed = 1;
 }
 
-// Machine contains information about the machine type and image.
+// Machine contains information about the machine type, image and architecture.
 message Machine {
   // Type is the machine type of the worker group.
   // +required
@@ -4213,7 +4213,7 @@ message Worker {
   // +required
   optional string name = 6;
 
-  // Machine contains information about the machine type and image.
+  // Machine contains information about the machine type, image and architecture.
   // +required
   optional Machine machine = 7;
 

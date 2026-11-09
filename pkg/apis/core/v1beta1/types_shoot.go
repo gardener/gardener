@@ -1821,7 +1821,7 @@ type Worker struct {
 	// Name is the name of the worker group.
 	// +required
 	Name string `json:"name" protobuf:"bytes,6,opt,name=name"`
-	// Machine contains information about the machine type and image.
+	// Machine contains information about the machine type, image and architecture.
 	// +required
 	Machine Machine `json:"machine" protobuf:"bytes,7,opt,name=machine"`
 	// Maximum is the maximum number of machines to create.
@@ -2041,7 +2041,7 @@ type WorkerKubernetes struct {
 	Version *string `json:"version,omitempty" protobuf:"bytes,2,opt,name=version"`
 }
 
-// Machine contains information about the machine type and image.
+// Machine contains information about the machine type, image and architecture.
 type Machine struct {
 	// Type is the machine type of the worker group.
 	// +required
