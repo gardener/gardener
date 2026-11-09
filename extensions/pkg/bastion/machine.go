@@ -15,6 +15,7 @@ import (
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // MachineSpec define all bastion vm details derived from the CloudProfile
@@ -27,16 +28,25 @@ type MachineSpec struct {
 }
 
 // GetMachineSpecFromCloudProfile determines the bastion vm details based on information in the cloud profile.
-// The operator-provided override on the Bastion resource (bastionMachineOverride) is merged on top of the default defined in
-// the CloudProfile (profile.Spec.Bastion) on a per-field basis: for each of the machine type and the machine image, the
-// value from the override takes precedence, falling back to the CloudProfile default when the override does not set it.
-// Fields that are set in neither are resolved automatically (smallest machine type, latest image version).
-func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile, bastionMachineOverride *gardencorev1beta1.Bastion) (vm MachineSpec, err error) {
+// If the operator-provided machine override from the Bastion resource (machine) is set, it takes precedence over the
+// default defined in the CloudProfile (profile.Spec.Bastion). Otherwise, the CloudProfile default is used, and fields
+// that are not set there are resolved automatically (smallest machine type, latest image version).
+func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile, machine *extensionsv1alpha1.BastionMachine) (vm MachineSpec, err error) {
 	if profile == nil {
 		return MachineSpec{}, fmt.Errorf("cloudprofile is nil")
 	}
 
-	bastionSpec := mergeBastionMachineConfig(profile.Spec.Bastion, bastionMachineOverride)
+	bastionSpec := profile.Spec.Bastion
+	if machine != nil {
+		bastionSpec = &gardencorev1beta1.Bastion{
+			MachineType: &gardencorev1beta1.BastionMachineType{Name: machine.Type},
+			MachineImage: &gardencorev1beta1.BastionMachineImage{
+				Name:    machine.Image.Name,
+				Version: new(machine.Image.Version),
+			},
+		}
+	}
+
 	if bastionSpec != nil && bastionSpec.MachineType != nil {
 		vm.MachineTypeName, vm.Architecture, vm.MachineTypeCapabilities, err = getMachine(bastionSpec, profile.Spec.MachineTypes, profile.Spec.MachineCapabilities)
 		if err != nil {
@@ -55,28 +65,6 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile, bas
 	}
 	vm.ImageVersion, err = getImageVersion(bastionSpec, vm.ImageBaseName, vm.Architecture, vm.MachineTypeCapabilities, profile.Spec.MachineImages, profile.Spec.MachineCapabilities)
 	return vm, err
-}
-
-// mergeBastionMachineConfig merges the override Bastion configuration on top of the base one. The machine type and the
-// machine image are merged independently: the override's value wins when set, otherwise the base value is used. The
-// machine image is treated as an atomic block (name and version together).
-func mergeBastionMachineConfig(base, override *gardencorev1beta1.Bastion) *gardencorev1beta1.Bastion {
-	if override == nil {
-		return base
-	}
-	if base == nil {
-		return override
-	}
-
-	merged := base.DeepCopy()
-	if override.MachineType != nil {
-		merged.MachineType = override.MachineType
-	}
-	if override.MachineImage != nil {
-		merged.MachineImage = override.MachineImage
-	}
-
-	return merged
 }
 
 // getMachine retrieves the bastion machine name and arch

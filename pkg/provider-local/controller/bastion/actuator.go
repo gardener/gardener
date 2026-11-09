@@ -137,8 +137,7 @@ func (a *actuator) ForceDelete(_ context.Context, _ logr.Logger, _ *extensionsv1
 }
 
 func bastionImage(bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) (string, error) {
-	bastionMachineOverride := extensionsbastion.BastionMachineToCloudProfileBastion(bastion.Spec.Machine)
-	machineSpec, err := extensionsbastion.GetMachineSpecFromCloudProfile(cluster.CloudProfile, bastionMachineOverride)
+	machineSpec, err := extensionsbastion.GetMachineSpecFromCloudProfile(cluster.CloudProfile, bastion.Spec.Machine)
 	if err != nil {
 		return "", fmt.Errorf("failed to determine machine spec for bastion from CloudProfile: %w", err)
 	}

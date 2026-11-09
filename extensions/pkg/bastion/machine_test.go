@@ -14,6 +14,7 @@ import (
 	. "github.com/gardener/gardener/extensions/pkg/bastion"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -272,7 +273,7 @@ var _ = Describe("Bastion VM Details", func() {
 			Expect(details).To(DeepEqual(desired))
 		})
 
-		Context("with an operator-provided Bastion override", func() {
+		Context("with an operator-provided machine override", func() {
 			BeforeEach(func() {
 				cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
 					CPU:          resource.MustParse("8"),
@@ -298,56 +299,46 @@ var _ = Describe("Bastion VM Details", func() {
 				})
 			})
 
-			It("should let the override machine type win while inheriting the CloudProfile image", func() {
-				override := &gardencorev1beta1.Bastion{
-					MachineType: &gardencorev1beta1.BastionMachineType{Name: "large_machine"},
-				}
-				details, err := GetMachineSpecFromCloudProfile(cloudProfile, override)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(details.MachineTypeName).To(Equal("large_machine"))
-				Expect(details.ImageBaseName).To(Equal(desired.ImageBaseName))
-				Expect(details.ImageVersion).To(Equal(desired.ImageVersion))
-			})
-
-			It("should let the override image win while inheriting the CloudProfile machine type", func() {
-				override := &gardencorev1beta1.Bastion{
-					MachineImage: &gardencorev1beta1.BastionMachineImage{Name: "other_image"},
-				}
-				details, err := GetMachineSpecFromCloudProfile(cloudProfile, override)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(details.MachineTypeName).To(Equal(desired.MachineTypeName))
-				Expect(details.ImageBaseName).To(Equal("other_image"))
-				Expect(details.ImageVersion).To(Equal("4.5.6"))
-			})
-
 			It("should let the override win for both machine type and image", func() {
-				override := &gardencorev1beta1.Bastion{
-					MachineType:  &gardencorev1beta1.BastionMachineType{Name: "large_machine"},
-					MachineImage: &gardencorev1beta1.BastionMachineImage{Name: "other_image", Version: new("4.5.6")},
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "large_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "4.5.6"},
 				}
-				details, err := GetMachineSpecFromCloudProfile(cloudProfile, override)
+				details, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(details.MachineTypeName).To(Equal("large_machine"))
 				Expect(details.ImageBaseName).To(Equal("other_image"))
 				Expect(details.ImageVersion).To(Equal("4.5.6"))
 			})
 
-			It("should resolve machine type automatically when neither override nor CloudProfile pins it", func() {
-				cloudProfile.Spec.Bastion.MachineType = nil
-				override := &gardencorev1beta1.Bastion{
-					MachineImage: &gardencorev1beta1.BastionMachineImage{Name: desired.ImageBaseName},
+			It("should use the override when the CloudProfile does not define a bastion", func() {
+				cloudProfile.Spec.Bastion = nil
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "large_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "4.5.6"},
 				}
-				details, err := GetMachineSpecFromCloudProfile(cloudProfile, override)
+				details, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(details.MachineTypeName).To(Equal(desired.MachineTypeName))
-				Expect(details.ImageBaseName).To(Equal(desired.ImageBaseName))
+				Expect(details.MachineTypeName).To(Equal("large_machine"))
+				Expect(details.ImageBaseName).To(Equal("other_image"))
+				Expect(details.ImageVersion).To(Equal("4.5.6"))
 			})
 
 			It("should error when the override machine type is unknown", func() {
-				override := &gardencorev1beta1.Bastion{
-					MachineType: &gardencorev1beta1.BastionMachineType{Name: "unknown_machine"},
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "unknown_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "4.5.6"},
 				}
-				_, err := GetMachineSpecFromCloudProfile(cloudProfile, override)
+				_, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should error when the override image version is unknown", func() {
+				machine := &extensionsv1alpha1.BastionMachine{
+					Type:  "large_machine",
+					Image: extensionsv1alpha1.BastionMachineImage{Name: "other_image", Version: "9.9.9"},
+				}
+				_, err := GetMachineSpecFromCloudProfile(cloudProfile, machine)
 				Expect(err).To(HaveOccurred())
 			})
 		})
