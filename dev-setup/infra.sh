@@ -20,6 +20,17 @@ if [[ "$(id -u)" != "0" ]]; then
   SUDO="sudo "
 fi
 
+ca_trust_anchor_dir() {
+  local dir
+  for dir in /etc/pki/ca-trust/source/anchors /etc/ca-certificates/trust-source/anchors; do
+    if [[ -d "$dir" ]]; then
+      echo "$dir"
+      return 0
+    fi
+  done
+  return 1
+}
+
 cleanup_registry_ca() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
     echo "> Removing registry CA from macOS login keychain..."
@@ -50,13 +61,14 @@ cleanup_registry_ca() {
     done <<< "$fingerprints"
 
   elif [[ "$(uname -s)" == "Linux" ]]; then
+    local anchor_dir
     if command -v update-ca-certificates >/dev/null 2>&1; then
       echo "> Removing registry CA from /usr/local/share/ca-certificates/..."
       ${SUDO}rm -f /usr/local/share/ca-certificates/gardener-local-registry-ca.crt
       ${SUDO}update-ca-certificates --fresh >/dev/null 2>&1 || true
-    elif command -v update-ca-trust >/dev/null 2>&1; then
-      echo "> Removing registry CA from /etc/pki/ca-trust/source/anchors/..."
-      ${SUDO}rm -f /etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem
+    elif command -v update-ca-trust >/dev/null 2>&1 && anchor_dir="$(ca_trust_anchor_dir)"; then
+      echo "> Removing registry CA from ${anchor_dir}/..."
+      ${SUDO}rm -f "${anchor_dir}/gardener-local-registry-ca.pem"
       ${SUDO}update-ca-trust extract >/dev/null 2>&1 || true
     fi
   fi
@@ -215,6 +227,7 @@ EOF
         if [[ -n "$SUDO" ]]; then
           echo "> Installing the registry CA into the system trust store may prompt for your sudo password... (run 'make cleanup-local-registry-ca' to undo)"
         fi
+        local anchor_dir
         if command -v update-ca-certificates >/dev/null 2>&1; then
           # Debian/Ubuntu
           local trust_anchor="/usr/local/share/ca-certificates/gardener-local-registry-ca.crt"
@@ -223,9 +236,9 @@ EOF
             ${SUDO}cp "$ca_crt" "$trust_anchor"
             ${SUDO}update-ca-certificates >/dev/null
           fi
-        elif command -v update-ca-trust >/dev/null 2>&1; then
-          # RHEL/Fedora
-          local trust_anchor="/etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem"
+        elif command -v update-ca-trust >/dev/null 2>&1 && anchor_dir="$(ca_trust_anchor_dir)"; then
+          # RHEL/Fedora, Arch Linux
+          local trust_anchor="${anchor_dir}/gardener-local-registry-ca.pem"
           if ! cmp -s "$ca_crt" "$trust_anchor" 2>/dev/null; then
             echo "> Installing registry CA into $trust_anchor..."
             ${SUDO}cp "$ca_crt" "$trust_anchor"
