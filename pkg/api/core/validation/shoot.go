@@ -931,7 +931,10 @@ func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]strin
 	switch {
 	case newDNS.Domain == nil:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "the domain cannot be unset"))
-	// TODO(ftl): Remove this check once the selfhostedshootexposure controller patches all external DNSRecords.
+	// The gardenlet does not migrate the DNSRecords of a self-hosted shoot: the external and the internal domain
+	// (`api.internal.<domain>`, used by the nodes) are both derived from the domain, but the shoot flow does not deploy
+	// DNSRecords for self-hosted shoots.
+	// TODO(ftl): Remove this check once the domain migration supports self-hosted shoots.
 	case isSelfHosted:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported for self-hosted shoots"))
 	// The nginx-ingress addon has its own DNSRecord. The name of this record is derived from the domain, and the name of a
