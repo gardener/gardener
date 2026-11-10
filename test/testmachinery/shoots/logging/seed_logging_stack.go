@@ -111,8 +111,11 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		// It is used to fetch the resource definitions deployed later in the test cluster
 		seedClient := shootFramework.SeedClient.Client()
 
-		// Fetch Vali StatefulSet - skip if RemoveVali is enabled
-		removeVali := isRemoveValiEnabled(ctx, shootFramework.GardenClient.Client(), shootFramework.Seed.Name)
+		// Skip if RemoveVali feature gate is enabled
+		removeVali, err := isRemoveValiEnabled(ctx, shootFramework.GardenClient.Client(), shootFramework.Seed.Name)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("could not determine RemoveVali feature gate state for seed %s: %s", shootFramework.Seed.Name, err.Error()))
+		}
 		if removeVali {
 			ginkgo.Skip(fmt.Sprintf("RemoveVali feature gate is enabled for seed %s — skipping", shootFramework.Seed.Name))
 		}

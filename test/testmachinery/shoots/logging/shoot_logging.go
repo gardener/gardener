@@ -57,12 +57,16 @@ var _ = ginkgo.Describe("Shoot logging testing", func() {
 
 	framework.CBeforeEach(func(ctx context.Context) {
 
-		removeVali := isRemoveValiEnabled(ctx, shootFramework.GardenClient.Client(), shootFramework.Seed.Name)
+		// Skip if RemoveVali feature gate is enabled
+		removeVali, err := isRemoveValiEnabled(ctx, shootFramework.GardenClient.Client(), shootFramework.Seed.Name)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("could not determine RemoveVali feature gate state for seed %s: %s", shootFramework.Seed.Name, err.Error()))
+		}
 		if removeVali {
 			ginkgo.Skip(fmt.Sprintf("RemoveVali feature gate is enabled for seed %s — skipping", shootFramework.Seed.Name))
 		}
 
-		err := shootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, &appsv1.StatefulSet{})
+		err = shootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, &appsv1.StatefulSet{})
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Error occurred checking for Vali in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
 		}

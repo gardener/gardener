@@ -13,6 +13,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,23 +49,62 @@ func getFluentBitDaemonSet(ctx context.Context, k8sSeedClient kubernetes.Interfa
 }
 
 // isRemoveValiEnabled reports whether the RemoveVali feature gate is enabled for the gardenlet.
-// It reads the Gardenlet from the garden cluster if the key is absent the default from features.AllFeatureGates is used.
-func isRemoveValiEnabled(ctx context.Context, gardenClient client.Client, seedName string) bool {
+// Tries ManagedSeed first, then standalone Gardenlet CR. Falls back to AllFeatureGates default.
+// Returns an error only if a resource exists but cannot be decoded.
+func isRemoveValiEnabled(ctx context.Context, gardenClient client.Client, seedName string) (bool, error) {
+	enabled, found, err := isRemoveValiEnabledOnManagedSeed(ctx, gardenClient, seedName)
+	if err != nil {
+		return false, err
+	}
+	if found {
+		return enabled, nil
+	}
+
+	enabled, found, err = isRemoveValiEnabledOnGardenlet(ctx, gardenClient, seedName)
+	if err != nil {
+		return false, err
+	}
+	if found {
+		return enabled, nil
+	}
+
+	return features.AllFeatureGates[features.RemoveVali].Default, nil
+}
+
+func isRemoveValiEnabledOnGardenlet(ctx context.Context, gardenClient client.Client, seedName string) (bool, bool, error) {
 	gardenlet := &seedmanagementv1alpha1.Gardenlet{}
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: seedName}, gardenlet); err != nil {
-		return false
+	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: seedName}, gardenlet); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, false, nil
+		}
+		return false, false, fmt.Errorf("failed to get Gardenlet %s: %w", seedName, err)
 	}
 
 	cfg, err := encoding.DecodeGardenletConfiguration(&gardenlet.Spec.Config, false)
 	if err != nil {
-		return false
+		return false, false, fmt.Errorf("failed to decode GardenletConfiguration for Gardenlet %s: %w", seedName, err)
 	}
 
-	if val, ok := cfg.FeatureGates[string(features.RemoveVali)]; ok {
-		return val
+	val, ok := cfg.FeatureGates[string(features.RemoveVali)]
+	return val, ok, nil
+}
+
+func isRemoveValiEnabledOnManagedSeed(ctx context.Context, gardenClient client.Client, seedName string) (bool, bool, error) {
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: seedName}, managedSeed); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, false, nil
+		}
+		return false, false, fmt.Errorf("failed to get ManagedSeed %s: %w", seedName, err)
 	}
 
-	return features.AllFeatureGates[features.RemoveVali].Default
+	cfg, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
+	if err != nil {
+		return false, false, fmt.Errorf("failed to decode GardenletConfiguration for ManagedSeed %s: %w", seedName, err)
+	}
+
+	val, ok := cfg.FeatureGates[string(features.RemoveVali)]
+	return val, ok, nil
 }
 
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
