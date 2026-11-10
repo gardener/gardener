@@ -345,4 +345,26 @@ var _ = Describe("Object", func() {
 			Expect(secret).To(Equal(expectedSecret))
 		})
 	})
+
+	Describe("#IsUnique", func() {
+		It("should return true for a name made unique from the base name", func() {
+			Expect(IsUnique("some-name-ec321de5", "some-name")).To(BeTrue())
+		})
+
+		It("should return true when the base name already ends with a hyphen", func() {
+			Expect(IsUnique("some-name-ec321de5", "some-name-")).To(BeTrue())
+		})
+
+		It("should return false when the prefix does not match", func() {
+			Expect(IsUnique("other-name-ec321de5", "some-name")).To(BeFalse())
+		})
+
+		It("should return false when the checksum suffix has the wrong length", func() {
+			Expect(IsUnique("some-name-ec321", "some-name")).To(BeFalse())
+		})
+
+		It("should return false for the base name without a checksum suffix", func() {
+			Expect(IsUnique("some-name", "some-name")).To(BeFalse())
+		})
+	})
 })

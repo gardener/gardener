@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -359,7 +358,7 @@ func (b *Botanist) mergeExistingSecretRefsOfOtherWorkerPoolsIntoNodeAgentManaged
 ) error {
 	isExistingRefForDesiredWorkerPool := func(secretRefName string) bool {
 		for _, pool := range workerPools {
-			if prefix := managedresources.SecretPrefix + managedResourceSecretName(pool.Name) + "-"; strings.HasPrefix(secretRefName, prefix) && len(secretRefName) == len(prefix)+8 {
+			if kubernetesutils.IsUnique(secretRefName, managedresources.SecretPrefix+managedResourceSecretName(pool.Name)) {
 				return true
 			}
 		}

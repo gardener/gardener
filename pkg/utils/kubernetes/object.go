@@ -113,14 +113,16 @@ func hasNoOrMetadataOnlyFieldSelector(listOpts ...client.ListOption) bool {
 	return true
 }
 
+// numberOfChecksumChars is the number of checksum characters appended to object names by MakeUnique.
+const numberOfChecksumChars = 8
+
 // MakeUnique takes either a *corev1.ConfigMap or a *corev1.Secret object and makes it immutable, i.e., it sets
 // .immutable=true, computes a checksum based on .data, and appends the first 8 characters of the computed checksum
 // to the name of the object. Additionally, it injects the `resources.gardener.cloud/garbage-collectable-reference=true`
 // label.
 func MakeUnique(obj runtime.Object) error {
 	var (
-		numberOfChecksumChars = 8
-		prependHyphen         = func(name string) string {
+		prependHyphen = func(name string) string {
 			if strings.HasSuffix(name, "-") {
 				return ""
 			}
@@ -154,4 +156,14 @@ func MakeUnique(obj runtime.Object) error {
 	}
 
 	return nil
+}
+
+// IsUnique reports whether uniqueName is the unique name derived from baseName by MakeUnique, i.e., baseName followed
+// by a hyphen and the checksum characters appended by MakeUnique.
+func IsUnique(uniqueName, baseName string) bool {
+	prefix := baseName
+	if !strings.HasSuffix(prefix, "-") {
+		prefix += "-"
+	}
+	return strings.HasPrefix(uniqueName, prefix) && len(uniqueName) == len(prefix)+numberOfChecksumChars
 }
