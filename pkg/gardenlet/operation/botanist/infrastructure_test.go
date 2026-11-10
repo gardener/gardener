@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -141,7 +140,6 @@ var _ = Describe("Infrastructure", func() {
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
-						// Nodes:    new(nodesCIDRs[0]),
 						Pods:     new(podsCIDRs[0]),
 						Services: new(servicesCIDRs[0]),
 					},
@@ -181,7 +179,7 @@ var _ = Describe("Infrastructure", func() {
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 
 			updatedShoot := botanist.Shoot.GetInfo()
-			Expect(updatedShoot.Spec.Networking.Nodes).To(Equal(new(nodesCIDRs[0])))
+			Expect(updatedShoot.Spec.Networking.Nodes).To(BeNil())
 			Expect(updatedShoot.Status.Networking).To(Equal(&gardencorev1beta1.NetworkingStatus{
 				Nodes:       nodesCIDRs,
 				Pods:        podsCIDRs,
@@ -213,27 +211,6 @@ var _ = Describe("Infrastructure", func() {
 
 		It("should return the error during wait", func() {
 			infrastructure.EXPECT().Wait(ctx).Return(fakeErr)
-
-			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
-			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
-		})
-
-		It("should return the error during nodes cidr update", func() {
-			infrastructure.EXPECT().Wait(ctx)
-			infrastructure.EXPECT().NodesCIDRs().Return(nodesCIDRs)
-
-			// Use an interceptor to make the Patch fail
-			gardenFakeClientWithErr := fakeclient.NewClientBuilder().
-				WithScheme(kubernetes.GardenScheme).
-				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
-				WithInterceptorFuncs(interceptor.Funcs{
-					Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
-						return fakeErr
-					},
-				}).
-				Build()
-			botanist.GardenClient = gardenFakeClientWithErr
-			Expect(gardenFakeClientWithErr.Create(ctx, shoot.DeepCopy())).To(Succeed())
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
 			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
