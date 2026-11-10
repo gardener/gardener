@@ -400,6 +400,7 @@ func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
+	SyncNodesCIDRFromStatus(newShoot)
 	// Ensure credentialsRef is synced even on /status subresource requests.
 	// Some clients are patching just the status which still results in update events
 	// for those watching the resource.
@@ -561,4 +562,18 @@ func SyncDNSProviderCredentials(shoot *core.Shoot) {
 
 func isSecretDNSProviderCredentialsRef(credentialsRef *autoscalingv1.CrossVersionObjectReference) bool {
 	return credentialsRef != nil && credentialsRef.APIVersion == "v1" && credentialsRef.Kind == "Secret"
+}
+
+// SyncNodesCIDRFromStatus back-fills the nodes CIDR discovered by the infrastructure extension into the spec.
+// gardenlet writes the discovered value only to the status via the `/status` subresource; gardener-apiserver copies
+// it into the spec so that the write is attributed to gardener-apiserver and not to gardenlet.
+func SyncNodesCIDRFromStatus(shoot *core.Shoot) {
+	if shoot.Spec.Networking == nil || shoot.Spec.Networking.Nodes != nil {
+		return
+	}
+	if shoot.Status.Networking == nil || len(shoot.Status.Networking.Nodes) == 0 {
+		return
+	}
+
+	shoot.Spec.Networking.Nodes = &shoot.Status.Networking.Nodes[0]
 }

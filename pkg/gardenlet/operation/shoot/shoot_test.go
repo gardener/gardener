@@ -147,6 +147,36 @@ var _ = Describe("shoot", func() {
 				})))
 			})
 
+			When("spec nodes is nil but status has nodes", func() {
+				It("returns the status nodes CIDR without error", func() {
+					shoot.Spec.Networking.Nodes = nil
+					shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+						Nodes: []string{"30.0.0.0/24"},
+					}
+
+					result, err := ToNetworks(shoot, false)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result).To(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Nodes": ConsistOf(net.IPNet{
+							IP:   []byte{30, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						}),
+					})))
+				})
+			})
+
+			When("both spec and status nodes are empty for non-workerless, non-IPv6-single-stack shoot", func() {
+				It("returns an error", func() {
+					shoot.Spec.Networking.Nodes = nil
+
+					result, err := ToNetworks(shoot, false)
+
+					Expect(err).To(MatchError("shoot's node cidr is empty"))
+					Expect(result).To(BeNil())
+				})
+			})
+
 			DescribeTable("#ConstructInternalClusterDomain", func(mutateFunc func(s *gardencorev1beta1.Shoot)) {
 				mutateFunc(shoot)
 				result, err := ToNetworks(shoot, false)
