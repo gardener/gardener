@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	"github.com/gardener/gardener/pkg/apiserver/registry/metadata"
 	bastionstore "github.com/gardener/gardener/pkg/apiserver/registry/operations/bastion/storage"
 )
 
@@ -37,6 +38,7 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	bastionStorage := bastionstore.NewStorage(restOptionsGetter)
 	storage["bastions"] = bastionStorage.Bastion
 	storage["bastions/status"] = bastionStorage.Status
+	storage["bastions/metadata"] = metadata.NewREST(bastionStorage.Bastion.Store)
 
 	return storage
 }
