@@ -1400,11 +1400,11 @@ message ExtensionProfile {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec defines the offered component versions and the update policy.
-  // +optional
+  // +required
   optional ExtensionProfileSpec spec = 2;
 
   // Status contains the computed classification of the offered versions.
-  // +optional
+  // +required
   optional ExtensionProfileStatus status = 3;
 }
 

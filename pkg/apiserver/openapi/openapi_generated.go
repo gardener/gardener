@@ -4602,6 +4602,7 @@ func schema_pkg_apis_core_v1beta1_ExtensionProfile(ref common.ReferenceCallback)
 						},
 					},
 				},
+				Required: []string{"spec", "status"},
 			},
 		},
 		Dependencies: []string{
