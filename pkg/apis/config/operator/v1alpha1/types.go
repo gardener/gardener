@@ -96,6 +96,7 @@ type ControllerConfiguration struct {
 	// +required
 	ExtensionRequiredVirtual ExtensionRequiredVirtualControllerConfiguration `json:"extensionRequiredVirtual"`
 	// TokenRequestor is the configuration for the token-requestor controller.
+	// +required
 	TokenRequestor TokenRequestorControllerConfiguration `json:"tokenRequestor"`
 }
 

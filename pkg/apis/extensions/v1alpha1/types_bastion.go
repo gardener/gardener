@@ -77,8 +77,10 @@ type BastionIngressPolicy struct {
 // BastionMachine contains information about the machine type and image.
 type BastionMachine struct {
 	// Type is the machine type of the bastion.
+	// +required
 	Type string `json:"type"`
 	// Image holds information about the machine image to use for the bastion.
+	// +required
 	Image BastionMachineImage `json:"image"`
 }
 
@@ -86,8 +88,10 @@ type BastionMachine struct {
 // defined in the respective CloudProfile.
 type BastionMachineImage struct {
 	// Name is the name of the image.
+	// +required
 	Name string `json:"name"`
 	// Version is the version of the image.
+	// +required
 	Version string `json:"version"`
 }
 
