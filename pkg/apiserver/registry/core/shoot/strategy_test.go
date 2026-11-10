@@ -1107,6 +1107,23 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Spec.DNS.Providers[0].SecretName).To(BeNil())
 			})
 		})
+
+		Context("nodes CIDR back-fill", func() {
+			It("should back-fill the spec nodes CIDR from the status", func() {
+				oldShoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						Networking: &core.Networking{},
+					},
+				}
+
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Status.Networking = &core.NetworkingStatus{Nodes: []string{"10.250.0.0/16"}}
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Networking.Nodes).To(Equal(new("10.250.0.0/16")))
+			})
+		})
 	})
 })
 
@@ -1328,6 +1345,52 @@ var _ = Describe("SyncDNSProviderCredentials", func() {
 			}},
 		),
 	)
+})
+
+var _ = Describe("#SyncNodesCIDRFromStatus", func() {
+	var shoot core.Shoot
+
+	BeforeEach(func() {
+		shoot = core.Shoot{
+			Spec: core.ShootSpec{
+				Networking: &core.Networking{},
+			},
+			Status: core.ShootStatus{
+				Networking: &core.NetworkingStatus{
+					Nodes: []string{"10.250.0.0/16"},
+				},
+			},
+		}
+	})
+
+	It("should back-fill the spec nodes CIDR from the status when the spec field is unset", func() {
+		SyncNodesCIDRFromStatus(&shoot)
+		Expect(shoot.Spec.Networking.Nodes).To(Equal(new("10.250.0.0/16")))
+	})
+
+	It("should not overwrite an already set spec nodes CIDR", func() {
+		shoot.Spec.Networking.Nodes = new("192.168.0.0/16")
+		SyncNodesCIDRFromStatus(&shoot)
+		Expect(shoot.Spec.Networking.Nodes).To(Equal(new("192.168.0.0/16")))
+	})
+
+	It("should do nothing when the status has no nodes CIDR", func() {
+		shoot.Status.Networking.Nodes = nil
+		SyncNodesCIDRFromStatus(&shoot)
+		Expect(shoot.Spec.Networking.Nodes).To(BeNil())
+	})
+
+	It("should do nothing when status networking is nil", func() {
+		shoot.Status.Networking = nil
+		SyncNodesCIDRFromStatus(&shoot)
+		Expect(shoot.Spec.Networking.Nodes).To(BeNil())
+	})
+
+	It("should not panic when spec networking is nil (workerless shoot)", func() {
+		shoot.Spec.Networking = nil
+		SyncNodesCIDRFromStatus(&shoot)
+		Expect(shoot.Spec.Networking).To(BeNil())
+	})
 })
 
 func createNewShootObject(seedName string) *core.Shoot {
