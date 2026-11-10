@@ -335,13 +335,18 @@ func (in ETCD) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
-func (in ETCDConfig) OpenAPIModelName() string {
-	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ETCDConfig"
+func (in ETCDEncryptionKeyRotation) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ETCDEncryptionKeyRotation"
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
-func (in ETCDEncryptionKeyRotation) OpenAPIModelName() string {
-	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ETCDEncryptionKeyRotation"
+func (in ETCDEvents) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ETCDEvents"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ETCDMain) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ETCDMain"
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.

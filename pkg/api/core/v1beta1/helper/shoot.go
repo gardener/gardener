@@ -263,6 +263,14 @@ func MutateShootServiceAccountKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 	f(shoot.Status.Credentials.Rotation.ServiceAccountKey)
 }
 
+// IsETCDEventsEnabled returns whether the ETCD events component is enabled.
+func IsETCDEventsEnabled(etcd *gardencorev1beta1.ETCD) bool {
+	if etcd == nil || etcd.Events == nil || etcd.Events.Enabled == nil {
+		return true
+	}
+	return *etcd.Events.Enabled
+}
+
 // GetShootETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
 // string.
 func GetShootETCDEncryptionKeyRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.CredentialsRotationPhase {

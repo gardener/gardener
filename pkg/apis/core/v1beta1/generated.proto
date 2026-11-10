@@ -1133,18 +1133,11 @@ message DualApprovalForDeletion {
 message ETCD {
   // Main contains configuration for the main etcd.
   // +optional
-  optional ETCDConfig main = 1;
+  optional ETCDMain main = 1;
 
   // Events contains configuration for the events etcd.
   // +optional
-  optional ETCDConfig events = 2;
-}
-
-// ETCDConfig contains etcd configuration.
-message ETCDConfig {
-  // Autoscaling contains auto-scaling configuration options for etcd.
-  // +optional
-  optional ControlPlaneAutoscaling autoscaling = 1;
+  optional ETCDEvents events = 2;
 }
 
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
@@ -1181,6 +1174,24 @@ message ETCDEncryptionKeyRotation {
   // TODO(AleksandarSavchev): Remove this after support for Kubernetes v1.33 is dropped.
   // +optional
   optional bool autoCompleteAfterPrepared = 6;
+}
+
+// ETCDEvents contains configuration for etcd-events.
+message ETCDEvents {
+  // Autoscaling contains auto-scaling configuration options for etcd.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 1;
+
+  // Enabled specifies whether the events etcd is enabled. Defaults to true.
+  // +optional
+  optional bool enabled = 2;
+}
+
+// ETCDMain contains configuration for etcd-main.
+message ETCDMain {
+  // Autoscaling contains auto-scaling configuration options for etcd.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 1;
 }
 
 // EncryptionAtRest contains information about Shoot data encryption at rest.

@@ -169,14 +169,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Kubernetes: core.Kubernetes{
 						Version: "1.31.0",
 						ETCD: &core.ETCD{
-							Main: &core.ETCDConfig{
+							Main: &core.ETCDMain{
 								Autoscaling: &core.ControlPlaneAutoscaling{
 									MinAllowed: map[corev1.ResourceName]resource.Quantity{
 										"cpu": resource.MustParse("2"),
 									},
 								},
 							},
-							Events: &core.ETCDConfig{
+							Events: &core.ETCDEvents{
 								Autoscaling: &core.ControlPlaneAutoscaling{
 									MinAllowed: map[corev1.ResourceName]resource.Quantity{
 										"cpu": resource.MustParse("1"),
@@ -2723,14 +2723,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Context("Autoscaling validation", func() {
 				It("should succeed defining minAllowed values", func() {
 					shoot.Spec.Kubernetes.ETCD = &core.ETCD{
-						Main: &core.ETCDConfig{
+						Main: &core.ETCDMain{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
 									"memory": resource.MustParse("300M"),
 								},
 							},
 						},
-						Events: &core.ETCDConfig{
+						Events: &core.ETCDEvents{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
 									"memory": resource.MustParse("60M"),
@@ -2744,14 +2744,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				It("should not allow minAllowed values below minimum", func() {
 					shoot.Spec.Kubernetes.ETCD = &core.ETCD{
-						Main: &core.ETCDConfig{
+						Main: &core.ETCDMain{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
 									"memory": resource.MustParse("299M"),
 								},
 							},
 						},
-						Events: &core.ETCDConfig{
+						Events: &core.ETCDEvents{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
 									"memory": resource.MustParse("59M"),

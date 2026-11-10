@@ -162,12 +162,12 @@ var _ = Describe("Etcd", func() {
 				minAllowedETCDEvents = corev1.ResourceList{"cpu": resource.MustParse("100m")}
 
 				botanist.Shoot.GetInfo().Spec.Kubernetes.ETCD = &gardencorev1beta1.ETCD{
-					Main: &gardencorev1beta1.ETCDConfig{
+					Main: &gardencorev1beta1.ETCDMain{
 						Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
 							MinAllowed: minAllowedETCDMain,
 						},
 					},
-					Events: &gardencorev1beta1.ETCDConfig{
+					Events: &gardencorev1beta1.ETCDEvents{
 						Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
 							MinAllowed: minAllowedETCDEvents,
 						},

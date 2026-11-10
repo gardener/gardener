@@ -166,9 +166,11 @@ func (m *DualApprovalForDeletion) Reset() { *m = DualApprovalForDeletion{} }
 
 func (m *ETCD) Reset() { *m = ETCD{} }
 
-func (m *ETCDConfig) Reset() { *m = ETCDConfig{} }
-
 func (m *ETCDEncryptionKeyRotation) Reset() { *m = ETCDEncryptionKeyRotation{} }
+
+func (m *ETCDEvents) Reset() { *m = ETCDEvents{} }
+
+func (m *ETCDMain) Reset() { *m = ETCDMain{} }
 
 func (m *EncryptionAtRest) Reset() { *m = EncryptionAtRest{} }
 
@@ -4028,41 +4030,6 @@ func (m *ETCD) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ETCDConfig) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ETCDConfig) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ETCDConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Autoscaling != nil {
-		{
-			size, err := m.Autoscaling.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintGenerated(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *ETCDEncryptionKeyRotation) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -4146,6 +4113,86 @@ func (m *ETCDEncryptionKeyRotation) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Phase)))
 	i--
 	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ETCDEvents) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ETCDEvents) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ETCDEvents) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Enabled != nil {
+		i--
+		if *m.Enabled {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Autoscaling != nil {
+		{
+			size, err := m.Autoscaling.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ETCDMain) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ETCDMain) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ETCDMain) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Autoscaling != nil {
+		{
+			size, err := m.Autoscaling.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -15149,19 +15196,6 @@ func (m *ETCD) Size() (n int) {
 	return n
 }
 
-func (m *ETCDConfig) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Autoscaling != nil {
-		l = m.Autoscaling.Size()
-		n += 1 + l + sovGenerated(uint64(l))
-	}
-	return n
-}
-
 func (m *ETCDEncryptionKeyRotation) Size() (n int) {
 	if m == nil {
 		return 0
@@ -15188,6 +15222,35 @@ func (m *ETCDEncryptionKeyRotation) Size() (n int) {
 	}
 	if m.AutoCompleteAfterPrepared != nil {
 		n += 2
+	}
+	return n
+}
+
+func (m *ETCDEvents) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Autoscaling != nil {
+		l = m.Autoscaling.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.Enabled != nil {
+		n += 2
+	}
+	return n
+}
+
+func (m *ETCDMain) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Autoscaling != nil {
+		l = m.Autoscaling.Size()
+		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
 }
@@ -19694,18 +19757,8 @@ func (this *ETCD) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&ETCD{`,
-		`Main:` + strings.Replace(this.Main.String(), "ETCDConfig", "ETCDConfig", 1) + `,`,
-		`Events:` + strings.Replace(this.Events.String(), "ETCDConfig", "ETCDConfig", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *ETCDConfig) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&ETCDConfig{`,
-		`Autoscaling:` + strings.Replace(this.Autoscaling.String(), "ControlPlaneAutoscaling", "ControlPlaneAutoscaling", 1) + `,`,
+		`Main:` + strings.Replace(this.Main.String(), "ETCDMain", "ETCDMain", 1) + `,`,
+		`Events:` + strings.Replace(this.Events.String(), "ETCDEvents", "ETCDEvents", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -19721,6 +19774,27 @@ func (this *ETCDEncryptionKeyRotation) String() string {
 		`LastInitiationFinishedTime:` + strings.Replace(fmt.Sprintf("%v", this.LastInitiationFinishedTime), "Time", "v11.Time", 1) + `,`,
 		`LastCompletionTriggeredTime:` + strings.Replace(fmt.Sprintf("%v", this.LastCompletionTriggeredTime), "Time", "v11.Time", 1) + `,`,
 		`AutoCompleteAfterPrepared:` + valueToStringGenerated(this.AutoCompleteAfterPrepared) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ETCDEvents) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ETCDEvents{`,
+		`Autoscaling:` + strings.Replace(this.Autoscaling.String(), "ControlPlaneAutoscaling", "ControlPlaneAutoscaling", 1) + `,`,
+		`Enabled:` + valueToStringGenerated(this.Enabled) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ETCDMain) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ETCDMain{`,
+		`Autoscaling:` + strings.Replace(this.Autoscaling.String(), "ControlPlaneAutoscaling", "ControlPlaneAutoscaling", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -32326,7 +32400,7 @@ func (m *ETCD) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Main == nil {
-				m.Main = &ETCDConfig{}
+				m.Main = &ETCDMain{}
 			}
 			if err := m.Main.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -32362,95 +32436,9 @@ func (m *ETCD) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Events == nil {
-				m.Events = &ETCDConfig{}
+				m.Events = &ETCDEvents{}
 			}
 			if err := m.Events.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenerated(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ETCDConfig) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenerated
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ETCDConfig: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ETCDConfig: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Autoscaling", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenerated
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenerated
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Autoscaling == nil {
-				m.Autoscaling = &ControlPlaneAutoscaling{}
-			}
-			if err := m.Autoscaling.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -32701,6 +32689,199 @@ func (m *ETCDEncryptionKeyRotation) Unmarshal(dAtA []byte) error {
 			}
 			b := bool(v != 0)
 			m.AutoCompleteAfterPrepared = &b
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ETCDEvents) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ETCDEvents: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ETCDEvents: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Autoscaling", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Autoscaling == nil {
+				m.Autoscaling = &ControlPlaneAutoscaling{}
+			}
+			if err := m.Autoscaling.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Enabled", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.Enabled = &b
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ETCDMain) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ETCDMain: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ETCDMain: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Autoscaling", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Autoscaling == nil {
+				m.Autoscaling = &ControlPlaneAutoscaling{}
+			}
+			if err := m.Autoscaling.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
