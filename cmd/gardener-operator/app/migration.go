@@ -16,23 +16,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/cmd/internal/migration"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func runMigrations(ctx context.Context, reader client.Reader, c client.Client, log logr.Logger) manager.RunnableFunc {
+func runMigrations(ctx context.Context, c client.Client, log logr.Logger) manager.RunnableFunc {
 	return func(context.Context) error {
 		// TODO(timuthy): Remove migration after Gardener v1.155 has been released.
 		if err := DeleteStaleShootAccessSecrets(ctx, c, log); err != nil {
 			return err
 		}
 
-		// TODO(DobromirNPeev): Remove this migration once a release containing it has been published and clusters have been
-		// upgraded past it.
-		if err := gardenerutils.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, reader, c); err != nil {
-			return fmt.Errorf("failed removing vpa-in-place-updates mutated label from VerticalPodAutoscalers: %w", err)
+		// TODO(DobromirNPeev): Remove this migration after Gardener v1.158 has been released.
+		if err := migration.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, c, log); err != nil {
+			return err
 		}
 
 		return nil

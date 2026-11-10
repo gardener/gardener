@@ -6,7 +6,6 @@ package gardener
 
 import (
 	"context"
-	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -19,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // ReconcileVPAForGardenerComponent deploys a VPA for a Gardener component.
@@ -67,36 +65,4 @@ func DeleteVPAForGardenerComponent(ctx context.Context, c client.Client, name, n
 
 func emptyVPA(name, namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: name + "-vpa", Namespace: namespace}}
-}
-
-// vpaInPlaceUpdatesMutatedLabel is the label that was set on VerticalPodAutoscalers by the removed
-// vpa-in-place-updates webhook of gardener-resource-manager.
-const vpaInPlaceUpdatesMutatedLabel = "vpa-in-place-updates.resources.gardener.cloud/mutated"
-
-// RemoveVPAInPlaceUpdatesMutatedLabel removes the `vpa-in-place-updates.resources.gardener.cloud/mutated` label from
-// all VerticalPodAutoscalers in the cluster.
-// TODO(DobromirNPeev): Remove this function once the migration has been rolled out to all clusters, i.e. after a
-// release containing it has been published and clusters have been upgraded past it.
-func RemoveVPAInPlaceUpdatesMutatedLabel(ctx context.Context, reader client.Reader, c client.Client) error {
-	vpaList := &vpaautoscalingv1.VerticalPodAutoscalerList{}
-	if err := reader.List(ctx, vpaList, client.HasLabels{vpaInPlaceUpdatesMutatedLabel}); err != nil {
-		if meta.IsNoMatchError(err) {
-			return nil
-		}
-		return fmt.Errorf("failed listing VerticalPodAutoscalers: %w", err)
-	}
-
-	taskFns := make([]flow.TaskFn, 0, len(vpaList.Items))
-	for _, vpa := range vpaList.Items {
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			patch := client.MergeFrom(vpa.DeepCopy())
-			delete(vpa.Labels, vpaInPlaceUpdatesMutatedLabel)
-			if err := c.Patch(ctx, &vpa, patch); client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("failed removing label %q from VerticalPodAutoscaler %s: %w", vpaInPlaceUpdatesMutatedLabel, client.ObjectKeyFromObject(&vpa), err)
-			}
-			return nil
-		})
-	}
-
-	return flow.ParallelN(20, taskFns...)(ctx)
 }

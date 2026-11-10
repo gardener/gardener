@@ -191,7 +191,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager: mgr,
 		BootstrapRunnables: []manager.Runnable{
-			runMigrations(ctx, mgr.GetAPIReader(), mgr.GetClient(), log),
+			runMigrations(ctx, mgr.GetClient(), log),
 		},
 		ActualRunnables: []manager.Runnable{
 			gardenClientMap,

@@ -9,8 +9,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/cmd/internal/migration"
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
@@ -18,17 +20,16 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
-func (g *garden) runMigrations(ctx context.Context, gardenClient client.Client) error {
+func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
 	if !gardenlet.IsResponsibleForSelfHostedShoot() && features.DefaultFeatureGate.Enabled(features.RemoveHTTPProxyLegacyPort) {
 		if err := VerifyRemoveHTTPProxyLegacyPortMigration(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
 			return fmt.Errorf("failed to verify migration for RemoveHTTPProxyLegacyPort feature gate: %w", err)
 		}
 	}
 
-	// TODO(DobromirNPeev): Remove this migration once a release containing it has been published and clusters have been
-	// upgraded past it.
-	if err := gardenerutils.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, g.mgr.GetAPIReader(), g.mgr.GetClient()); err != nil {
-		return fmt.Errorf("failed removing vpa-in-place-updates mutated label from VerticalPodAutoscalers: %w", err)
+	// TODO(DobromirNPeev): Remove this migration after Gardener v1.158 has been released.
+	if err := migration.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, g.mgr.GetClient(), log); err != nil {
+		return err
 	}
 
 	return nil
