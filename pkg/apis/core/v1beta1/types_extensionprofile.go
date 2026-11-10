@@ -23,11 +23,11 @@ type ExtensionProfile struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec defines the offered component versions and the update policy.
-	// +optional
-	Spec ExtensionProfileSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	// +required
+	Spec ExtensionProfileSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status contains the computed classification of the offered versions.
-	// +optional
-	Status ExtensionProfileStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	// +required
+	Status ExtensionProfileStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

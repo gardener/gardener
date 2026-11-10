@@ -4850,7 +4850,6 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Spec defines the offered component versions and the update policy.</p>
 </td>
 </tr>
@@ -4862,7 +4861,6 @@ Refer to the Kubernetes API documentation for the fields of the <code>metadata</
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Status contains the computed classification of the offered versions.</p>
 </td>
 </tr>
