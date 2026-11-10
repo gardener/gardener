@@ -3213,6 +3213,9 @@ message SeedDNS {
   optional SeedDNSProvider provider = 2;
 
   // Internal configures DNS settings related to seed internal domain.
+  //
+  // Deprecated: Use InternalDomains instead. If both fields are set, Internal must be equal to the first entry of
+  // InternalDomains.
   // +optional
   optional SeedDNSProviderConfig internal = 3;
 
@@ -3229,6 +3232,7 @@ message SeedDNS {
 
   // InternalDomainEnabled indicates whether the shoots on this seed use an internal domain.
   // Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.
+  // Setting it to false requires the MutableShootDomains feature gate.
   // +optional
   optional bool internalDomainEnabled = 6;
 }

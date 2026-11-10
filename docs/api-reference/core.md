@@ -11008,7 +11008,7 @@ SeedDNS contains DNS-relevant information about this seed cluster.
 </td>
 <td>
 <em>(Optional)</em>
-<p>Internal configures DNS settings related to seed internal domain.</p>
+<p>Internal configures DNS settings related to seed internal domain.<br />Deprecated: Use InternalDomains instead. If both fields are set, Internal must be equal to the first entry of<br />InternalDomains.</p>
 </td>
 </tr>
 <tr>
@@ -11044,7 +11044,7 @@ boolean
 </td>
 <td>
 <em>(Optional)</em>
-<p>InternalDomainEnabled indicates whether the shoots on this seed use an internal domain.<br />Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.</p>
+<p>InternalDomainEnabled indicates whether the shoots on this seed use an internal domain.<br />Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.<br />Setting it to false requires the MutableShootDomains feature gate.</p>
 </td>
 </tr>
 

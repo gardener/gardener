@@ -175,6 +175,9 @@ type SeedDNS struct {
 	// +optional
 	Provider *SeedDNSProvider `json:"provider,omitempty" protobuf:"bytes,2,opt,name=provider"`
 	// Internal configures DNS settings related to seed internal domain.
+	//
+	// Deprecated: Use InternalDomains instead. If both fields are set, Internal must be equal to the first entry of
+	// InternalDomains.
 	// +optional
 	Internal *SeedDNSProviderConfig `json:"internal,omitempty" protobuf:"bytes,3,opt,name=internal"`
 	// Defaults configures DNS settings related to seed default domains.
@@ -188,6 +191,7 @@ type SeedDNS struct {
 	InternalDomains []SeedDNSProviderConfig `json:"internalDomains,omitempty" protobuf:"bytes,5,rep,name=internalDomains"`
 	// InternalDomainEnabled indicates whether the shoots on this seed use an internal domain.
 	// Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.
+	// Setting it to false requires the MutableShootDomains feature gate.
 	// +optional
 	InternalDomainEnabled *bool `json:"internalDomainEnabled,omitempty" protobuf:"varint,6,opt,name=internalDomainEnabled"`
 }

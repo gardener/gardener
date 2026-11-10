@@ -238,6 +238,7 @@
 * [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](operations/network_policies.md)
 * [Seed Bootstrapping](operations/seed_bootstrapping.md)
 * [Seed Settings](operations/seed_settings.md)
+* [Domains of a Seed](operations/seed_domains.md)
 * [Topology-Aware Traffic Routing](operations/topology_aware_routing.md)
 * [Trusted TLS certificate for shoot control planes](operations/trusted-tls-for-control-planes.md)
 * [Trusted TLS certificate for garden runtime cluster](operations/trusted-tls-for-garden-runtime.md)

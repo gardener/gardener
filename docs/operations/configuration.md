@@ -55,7 +55,7 @@ When the `gardenlet` starts, it scans the `garden` namespace of the garden clust
 * **Internal domain secret** - contains the DNS provider credentials (having appropriate privileges) which will be used to create/delete the so-called "internal" DNS records for the Shoot clusters, please see this [yaml file](../../example/10-secret-internal-domain.yaml) for an example.
   * This secret is used in order to establish a stable endpoint for shoot clusters, which is used internally by all control plane components.
   * The DNS records are normal DNS records but called "internal" in our scenario because only the kubeconfigs for the control plane components use this endpoint when talking to the shoot clusters.
-  * It is forbidden to change the internal domain secret if there are existing shoot clusters.
+  * It is forbidden to change the internal domain secret if there are existing shoot clusters, unless the `MutableShootDomains` feature gate is enabled (see [Internal Domains of a Seed](seed_domains.md#internal-domains)).
 
 * **Default domain secrets** (optional) - contain the DNS provider credentials (having appropriate privileges) which will be used to create/delete DNS records for a default domain for shoots (e.g., `example.com`), please see this [yaml file](../../example/10-secret-default-domain.yaml) for an example.
   * Not every end-user/stakeholder/customer has its own domain, however, Gardener needs to create a DNS record for every shoot cluster.

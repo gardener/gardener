@@ -12,6 +12,7 @@
     - [Triggering Worker Node Rollout Individually](#triggering-worker-node-rollout-individually)
     - [Worker Node with ManualInPlaceUpdate Update Strategy](#worker-node-with-manualinplaceupdate-update-strategy)
     - [Changing the External Domain](#changing-the-external-domain)
+    - [Migrating the Internal Domain](#migrating-the-internal-domain)
   - [Observability Password(s) For Plutono and Prometheus](#observability-passwords-for-plutono-and-prometheus)
   - [SSH Key Pair for Worker Nodes](#ssh-key-pair-for-worker-nodes)
   - [ETCD Encryption Key](#etcd-encryption-key)
@@ -251,11 +252,11 @@ Update all API clients to the new domain together with the new CA bundle (see ab
 When you complete the rotation with `rotate-ca-complete`, the old domain is removed: its DNS record is deleted, and it is dropped from the server certificate and from `.status.advertisedAddresses`.
 API clients that still use the old domain stop working.
 
-The internal domain of the `Shoot` and all components using it (e.g., the `kubelet`s and the default `ServiceAccount` token issuer) are not affected by the domain change.
+The internal domain of the `Shoot` and all components using it (e.g., the `kubelet`s and the default `ServiceAccount` token issuer) are not affected by the domain change, see [Migrating the Internal Domain](#migrating-the-internal-domain).
 
 The following restrictions apply:
 
-- A `Shoot` with a default domain can only move to another default domain of its `Seed`, following the scheme `<shoot-name>.<project-name>.<default-domain>`.
+- A `Shoot` with a default domain can only move to another default domain of its `Seed`, following the scheme `<shoot-name>.<project-name>.<default-domain>` (see [Default Domains](../../operations/seed_domains.md#default-domains)).
 - A `Shoot` with a custom domain can only move to another custom domain of its primary DNS provider.
 - A `Shoot` cannot move between a default domain and a custom domain: a default domain must not be combined with a primary DNS provider, the primary DNS provider cannot be removed, and `.spec.dns.providers` cannot change together with the domain.
 - `.spec.dns.providers` cannot be changed in the same request.
@@ -263,6 +264,43 @@ The following restrictions apply:
 - The domain cannot be changed while a CA rotation is already in progress.
 - The domain of self-hosted `Shoot`s cannot be changed yet.
 - The domain cannot be changed while the deprecated nginx-ingress addon is enabled.
+
+#### Migrating the Internal Domain
+
+> [!NOTE]
+> This is an alpha feature. It requires the `MutableShootDomains` feature gate in `gardener-apiserver` and `gardenlet`, see [GEP-0066](https://github.com/gardener/enhancements/tree/main/geps/0066-make-shoot-domains-mutable).
+
+The internal domain of a `Shoot` is derived from the internal domain of its `Seed`.
+When the operator changes or disables the internal domain of the `Seed` (see [Internal Domains of a Seed](../../operations/seed_domains.md#internal-domains)), existing `Shoot`s keep their internal domain and get the constraint `InternalDomainUpToDate` with status `False`.
+Its message names the current and the new internal domain.
+
+To migrate, set the confirmation annotation and start a CA rotation, in the same request or one after the other:
+
+```bash
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> confirmation.gardener.cloud/migrate-internal-domain=true
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ca-start
+```
+
+The same four operations as for [changing the external domain](#changing-the-external-domain) start the migration.
+Gardener reads the annotation only when the CA rotation starts. Then Gardener removes the annotation.
+If you set the annotation after the start, the internal domain does not change in this CA rotation. Gardener migrates the internal domain when the next CA rotation starts.
+A CA rotation without the annotation does not migrate the internal domain.
+
+While the CA rotation is in one of the phases `Preparing`, `PreparingWithoutWorkersRollout`, `WaitingForWorkersRollout`, or `Prepared`, the `Shoot` is reachable under both internal domains:
+
+- DNS records exist for both domains.
+- The server certificate of the `kube-apiserver` is valid for both domains.
+- `.status.advertisedAddresses` contains the new domain as `internal` and the old domain as `prior-internal`. If the internal domain is disabled, there is no `internal` entry.
+- The control plane and system components use the new domain. The nodes change to the new domain with the worker rollout of the CA rotation.
+
+If the `Shoot` uses the default `ServiceAccount` issuer, the issuer changes with the internal domain (to the external domain if the internal domain is disabled).
+New tokens have the new issuer, and tokens of the old issuer are accepted until the rotation is completed.
+`.status.advertisedAddresses` contains the old issuer as `prior-service-account-issuer`.
+Parties outside of the `Shoot` that trust the old issuer must be updated before the rotation is started.
+
+When you complete the rotation with `rotate-ca-complete`, the old internal domain and the old issuer are removed, and the constraint disappears.
+
+The domain migration of self-hosted `Shoot`s is not supported yet.
 
 ### Observability Password(s) For Plutono and Prometheus
 

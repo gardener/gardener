@@ -8955,7 +8955,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 					},
 					"internal": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Internal configures DNS settings related to seed internal domain.",
+							Description: "Internal configures DNS settings related to seed internal domain.\n\nDeprecated: Use InternalDomains instead. If both fields are set, Internal must be equal to the first entry of InternalDomains.",
 							Ref:         ref(v1beta1.SeedDNSProviderConfig{}.OpenAPIModelName()),
 						},
 					},
@@ -8987,7 +8987,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 					},
 					"internalDomainEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "InternalDomainEnabled indicates whether the shoots on this seed use an internal domain. Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.",
+							Description: "InternalDomainEnabled indicates whether the shoots on this seed use an internal domain. Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain. Setting it to false requires the MutableShootDomains feature gate.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
