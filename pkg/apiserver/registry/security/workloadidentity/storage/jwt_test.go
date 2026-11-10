@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -382,8 +383,8 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeNotFoundError())
-			Expect(err.Error()).To(Equal("shoot.core.gardener.cloud \"test-shoot\" not found"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).To(ContainSubstring("does not exist or is not related to seed \"test-seed\""))
 			Expect(ctxObjects).To(BeNil())
 
 			By("shoot and context uid does not match")
@@ -395,7 +396,8 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world Shoot resource (" + shootUID + ") differ"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).NotTo(ContainSubstring(string(shootUID)))
 			Expect(ctxObjects).To(BeNil())
 
 			By("seed does not exist")
@@ -457,8 +459,8 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeNotFoundError())
-			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).To(ContainSubstring("does not exist or is not related to seed \"test-seed\""))
 			Expect(ctxObjects).To(BeNil())
 
 			By("seed and context uid does not match")
@@ -469,7 +471,8 @@ var _ = Describe("#TokenRequest", func() {
 			uidMismatchContext.UID = uidMismatch
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world Seed resource (" + seedUID + ") differ"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).NotTo(ContainSubstring(string(seedUID)))
 			Expect(ctxObjects).To(BeNil())
 		})
 
@@ -511,8 +514,8 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeNotFoundError())
-			Expect(err.Error()).To(Equal("backupbucket.core.gardener.cloud \"test-backup-bucket\" not found"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).To(ContainSubstring("does not exist or is not related to seed \"test-seed\""))
 			Expect(ctxObjects).To(BeNil())
 
 			By("backupBucket and context uid does not match")
@@ -524,7 +527,8 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world BackupBucket resource (" + backupBucketUID + ") differ"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).NotTo(ContainSubstring(string(backupBucketUID)))
 			Expect(ctxObjects).To(BeNil())
 
 			By("bind the backupBucket to the seed")
@@ -645,8 +649,8 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeNotFoundError())
-			Expect(err.Error()).To(Equal("backupentry.core.gardener.cloud \"shoot--test-project--test-shoot--9a134d22-dd61-4845-951e-9a20bde1648a\" not found"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).To(ContainSubstring("does not exist or is not related to seed \"test-seed\""))
 			Expect(ctxObjects).To(BeNil())
 
 			By("backupEntry and context uid does not match")
@@ -658,7 +662,8 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err = r.resolveContextObject(&seedUser, uidMismatchContext, workloadIdentity)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world BackupEntry resource (" + backupEntryUID + ") differ"))
+			Expect(err).To(BeForbiddenError())
+			Expect(err.Error()).NotTo(ContainSubstring(string(backupEntryUID)))
 			Expect(ctxObjects).To(BeNil())
 
 			By("backupBucket does not exist")
@@ -722,6 +727,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			ctxObjects, err := r.resolveContextObject(&seedUser, contextObject, workloadIdentity)
 			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeBadRequestError())
 			Expect(err.Error()).To(Equal("unsupported GVK for context object: test/v1alpha1, Kind=Foo"))
 			Expect(ctxObjects).To(BeNil())
 		})
@@ -864,6 +870,89 @@ var _ = Describe("#TokenRequest", func() {
 				}, workloadIdentity)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ctxObjects.backupEntry.GetUID()).To(Equal(backupEntryUID))
+			})
+		})
+
+		Context("context object not available to the requester", func() {
+			const otherSeedName = "other-seed"
+
+			var uidMismatch = types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
+
+			// expectIndistinguishableErrors verifies that requests for non-existing objects, objects of other seeds, and
+			// objects with mismatching UIDs fail with the same error, which does not disclose any UID.
+			expectIndistinguishableErrors := func(nonExisting, otherSeed, wrongUID *securityapi.ContextObject, realUIDs ...types.UID) {
+				var messages []string
+				for _, ctxObj := range []*securityapi.ContextObject{nonExisting, otherSeed, wrongUID} {
+					ctxObjects, err := r.resolveContextObject(&seedUser, ctxObj, workloadIdentity)
+					Expect(err).To(BeForbiddenError())
+					Expect(ctxObjects).To(BeNil())
+					for _, uid := range realUIDs {
+						Expect(err.Error()).NotTo(ContainSubstring(string(uid)))
+					}
+					// The message only differs in the name of the requested object, hence normalize it.
+					messages = append(messages, strings.Replace(err.Error(), ctxObj.Name+" does not exist", "<name> does not exist", 1))
+				}
+				Expect(messages[1]).To(Equal(messages[0]))
+				Expect(messages[2]).To(Equal(messages[0]))
+			}
+
+			It("should not reveal whether shoots exist", func() {
+				otherShoot := shoot.DeepCopy()
+				otherShoot.Name, otherShoot.UID = "other-shoot", "other-shoot-uid"
+				otherShoot.Spec.SeedName = new(otherSeedName)
+				Expect(shootInformer.Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+				newCtx := func(name string, uid types.UID) *securityapi.ContextObject {
+					return &securityapi.ContextObject{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot", Namespace: new(namespaceName), Name: name, UID: uid}
+				}
+				expectIndistinguishableErrors(newCtx("non-existing", uidMismatch), newCtx(otherShoot.Name, otherShoot.UID), newCtx(shootName, uidMismatch), shootUID, otherShoot.UID)
+			})
+
+			It("should not reveal whether seeds exist", func() {
+				newCtx := func(name string, uid types.UID) *securityapi.ContextObject {
+					return &securityapi.ContextObject{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Seed", Name: name, UID: uid}
+				}
+				Expect(seedInformer.Informer().GetStore().Add(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: otherSeedName, UID: "other-seed-uid"}})).To(Succeed())
+
+				expectIndistinguishableErrors(newCtx("non-existing", uidMismatch), newCtx(otherSeedName, "other-seed-uid"), newCtx(seedName, uidMismatch), seedUID, "other-seed-uid")
+			})
+
+			It("should not reveal whether backupBuckets exist", func() {
+				otherBucket := backupBucket.DeepCopy()
+				otherBucket.Name, otherBucket.UID = "other-bucket", "other-bucket-uid"
+				otherBucket.Spec.SeedName = new(otherSeedName)
+				Expect(backupBucketInformer.Informer().GetStore().Add(otherBucket)).To(Succeed())
+
+				newCtx := func(name string, uid types.UID) *securityapi.ContextObject {
+					return &securityapi.ContextObject{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "BackupBucket", Name: name, UID: uid}
+				}
+				expectIndistinguishableErrors(newCtx("non-existing", uidMismatch), newCtx(otherBucket.Name, otherBucket.UID), newCtx(backupBucketName, uidMismatch), backupBucketUID, otherBucket.UID)
+			})
+
+			It("should not reveal whether backupEntries exist", func() {
+				otherEntry := backupEntry.DeepCopy()
+				otherEntry.Name, otherEntry.UID = "other-entry", "other-entry-uid"
+				otherEntry.Spec.SeedName = new(otherSeedName)
+				Expect(backupEntryInformer.Informer().GetStore().Add(otherEntry)).To(Succeed())
+
+				newCtx := func(name string, uid types.UID) *securityapi.ContextObject {
+					return &securityapi.ContextObject{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "BackupEntry", Namespace: new(namespaceName), Name: name, UID: uid}
+				}
+				expectIndistinguishableErrors(newCtx("non-existing", uidMismatch), newCtx(otherEntry.Name, otherEntry.UID), newCtx(backupEntryName, uidMismatch), backupEntryUID, otherEntry.UID)
+			})
+
+			It("should return an internal error without details if reading the context object fails", func() {
+				r.shootListers = &fakeShootLister{err: errors.New("cache failure with details")}
+
+				_, err := r.resolveContextObject(&seedUser, &securityapi.ContextObject{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Shoot",
+					Namespace:  new(namespaceName),
+					Name:       shootName,
+					UID:        shootUID,
+				}, workloadIdentity)
+				Expect(err).To(BeInternalServerError())
+				Expect(err.Error()).NotTo(ContainSubstring("cache failure with details"))
 			})
 		})
 
@@ -1115,6 +1204,29 @@ var _ = Describe("#TokenRequest", func() {
 			Expect(exp).ToNot(BeNil())
 			Expect(exp.After(now)).To(BeTrue())
 			Expect(token).ToNot(BeEmpty())
+		})
+
+		It("should return status errors of the context object resolution unwrapped", func() {
+			// The shoot is not scheduled to the seed of the requester.
+			tokenRequest := &securityapi.TokenRequest{
+				Spec: securityapi.TokenRequestSpec{
+					ContextObject: &securityapi.ContextObject{
+						APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+						Kind:       "Shoot",
+						Name:       shootName,
+						Namespace:  new(namespaceName),
+						UID:        shootUID,
+					},
+					ExpirationSeconds: int64(3600),
+				},
+			}
+
+			token, _, err := r.issueToken(&seedUser, tokenRequest, workloadIdentity)
+			Expect(token).To(BeEmpty())
+			// The apiserver maps only unwrapped status errors to their status code, wrapped errors result in a 500.
+			_, isStatusError := err.(apierrors.APIStatus)
+			Expect(isStatusError).To(BeTrue())
+			Expect(err).To(BeForbiddenError())
 		})
 
 		It("should omit setting empty namespace claim", func() {

@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 
 	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
@@ -59,6 +60,11 @@ type contextObjects struct {
 func (r *TokenRequestREST) issueToken(user user.Info, tokenRequest *securityapi.TokenRequest, workloadIdentity *securityapi.WorkloadIdentity) (string, *time.Time, error) {
 	contextObjects, err := r.resolveContextObject(user, tokenRequest.Spec.ContextObject, workloadIdentity)
 	if err != nil {
+		// Status errors are returned unwrapped, as the apiserver maps only unwrapped status errors to their status code
+		// and responds with a 500 otherwise.
+		if statusErr, ok := errors.AsType[*apierrors.StatusError](err); ok {
+			return "", nil, statusErr
+		}
 		return "", nil, fmt.Errorf("failed to resolve context object: %w", err)
 	}
 
@@ -145,9 +151,19 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 	}
 
 	// The context claims are only trustworthy if they are bound to the requester, hence context objects not related to
-	// the requesting seed are rejected. This check must happen before comparing UIDs to avoid disclosing them.
-	notRelatedToRequester := func() error {
-		return apierrors.NewForbidden(securityapi.Resource("workloadidentities"), "", fmt.Errorf("context object %s is not related to seed %q", ctxObjectKey(ctxObj), requesterSeedName))
+	// the requesting seed are rejected. Non-existing objects, objects of other seeds, and UID mismatches result in the
+	// same error, so that requesters can neither learn about the existence nor the UIDs of objects of other seeds.
+	contextObjectNotAvailable := func(reason string) error {
+		klog.InfoS("Rejecting workload identity token request because the context object is not available to the requester",
+			"workloadIdentity", workloadIdentity.Namespace+"/"+workloadIdentity.Name, "contextObject", ctxObjectKey(ctxObj), "seed", requesterSeedName, "reason", reason)
+		return apierrors.NewForbidden(securityapi.Resource("workloadidentities"), workloadIdentity.Name, fmt.Errorf("context object %s does not exist or is not related to seed %q", ctxObjectKey(ctxObj), requesterSeedName))
+	}
+	contextObjectLookupError := func(err error) error {
+		if apierrors.IsNotFound(err) {
+			return contextObjectNotAvailable("not found")
+		}
+		klog.ErrorS(err, "Failed reading context object of workload identity token request", "contextObject", ctxObjectKey(ctxObj))
+		return apierrors.NewInternalError(errors.New("failed reading context object"))
 	}
 	isAssignedToRequester := func(seedNames ...*string) bool {
 		return slices.ContainsFunc(seedNames, func(s *string) bool { return ptr.Deref(s, "") == requesterSeedName })
@@ -172,17 +188,17 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 	switch gvk := schema.FromAPIVersionAndKind(ctxObj.APIVersion, ctxObj.Kind); {
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Shoot":
 		if shoot, err = r.shootListers.Shoots(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
-			return nil, err
+			return nil, contextObjectLookupError(err)
 		}
 
 		// Accepting the status seed name allows the source seed to request tokens during control plane migration.
 		if !isAssignedToRequester(shoot.Spec.SeedName, shoot.Status.SeedName) {
-			return nil, notRelatedToRequester()
+			return nil, contextObjectNotAvailable("not assigned to the requesting seed")
 		}
 		ctxObjects.shoot = shoot.GetObjectMeta()
 
 		if shoot.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world Shoot resource (%s) differ", ctxObj.UID, shoot.UID)
+			return nil, contextObjectNotAvailable("uid mismatch")
 		}
 
 		// Shoots may also use workload identities provided by their seed, e.g., for the internal or default domain.
@@ -215,15 +231,15 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Seed":
 		if ctxObj.Name != requesterSeedName {
-			return nil, notRelatedToRequester()
+			return nil, contextObjectNotAvailable("not the requesting seed")
 		}
 
 		if seed, err = r.seedLister.Get(ctxObj.Name); err != nil {
-			return nil, err
+			return nil, contextObjectLookupError(err)
 		}
 
 		if seed.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world Seed resource (%s) differ", ctxObj.UID, seed.UID)
+			return nil, contextObjectNotAvailable("uid mismatch")
 		}
 
 		if !seedReferencesWorkloadIdentity(seed, workloadIdentity) {
@@ -233,15 +249,15 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupBucket":
 		if backupBucket, err = r.backupBucketLister.Get(ctxObj.Name); err != nil {
-			return nil, err
+			return nil, contextObjectLookupError(err)
 		}
 
 		if !isAssignedToRequester(backupBucket.Spec.SeedName) {
-			return nil, notRelatedToRequester()
+			return nil, contextObjectNotAvailable("not assigned to the requesting seed")
 		}
 
 		if backupBucket.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world BackupBucket resource (%s) differ", ctxObj.UID, backupBucket.UID)
+			return nil, contextObjectNotAvailable("uid mismatch")
 		}
 
 		if !isWorkloadIdentityObjectReference(backupBucket.Spec.CredentialsRef, workloadIdentity) {
@@ -259,16 +275,16 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "BackupEntry":
 		if backupEntry, err = r.backupEntryLister.BackupEntries(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
-			return nil, err
+			return nil, contextObjectLookupError(err)
 		}
 
 		// Accepting the status seed name allows the source seed to request tokens during control plane migration.
 		if !isAssignedToRequester(backupEntry.Spec.SeedName, backupEntry.Status.SeedName) {
-			return nil, notRelatedToRequester()
+			return nil, contextObjectNotAvailable("not assigned to the requesting seed")
 		}
 
 		if backupEntry.UID != ctxObj.UID {
-			return nil, fmt.Errorf("uid of contextObject (%s) and real world BackupEntry resource (%s) differ", ctxObj.UID, backupEntry.UID)
+			return nil, contextObjectNotAvailable("uid mismatch")
 		}
 		ctxObjects.backupEntry = backupEntry.GetObjectMeta()
 
@@ -308,7 +324,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported GVK for context object: %s", gvk.String())
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("unsupported GVK for context object: %s", gvk.String()))
 	}
 
 	return ctxObjects, nil
