@@ -132,7 +132,7 @@ var _ = Describe("VictoriaLogs", func() {
 					},
 					ReplicaCount: new(int32(0)),
 					ExtraArgs: map[string]string{
-						"httpListenAddr": fmt.Sprintf(":%d,:%d", 9429, 9428),
+						"httpListenAddr": fmt.Sprintf(":%d,localhost:%d", 9429, 9428),
 						"tls":            "true,false",
 						"tlsCertFile":    "/etc/victorialogs/tls/tls.crt",
 						"tlsKeyFile":     "/etc/victorialogs/tls/tls.key",
@@ -173,12 +173,6 @@ var _ = Describe("VictoriaLogs", func() {
 								Name:       "https",
 								Port:       9429,
 								TargetPort: intstr.FromInt32(9429),
-								Protocol:   corev1.ProtocolTCP,
-							},
-							{
-								Name:       "http",
-								Port:       9428,
-								TargetPort: intstr.FromInt32(9428),
 								Protocol:   corev1.ProtocolTCP,
 							},
 						},
