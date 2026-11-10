@@ -136,23 +136,27 @@ func WorkerPoolToNodesMap(ctx context.Context, shootClient client.Client) (map[s
 	return workerPoolToNodes, nil
 }
 
-// WorkerPoolToOperatingSystemConfigSecretMetaMap lists all the cloud-config secrets with the given client in the shoot cluster.
-// It returns a map whose key is the name of a worker pool and whose values are the corresponding metadata of the
-// cloud-config script stored inside the secret's data.
-func WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx context.Context, shootClient client.Client) (map[string]metav1.ObjectMeta, error) {
+// WorkerPoolToOperatingSystemConfigSecretNameToChecksum lists all the gardener-node-agent secrets with the given client in the
+// shoot cluster. It returns a map whose key is the name of a worker pool. The values of the map is another map whose
+// keys are the names of the secret containing the OperatingSystemConfig for gardener-node-agent, and whose values are
+// the checksum annotations of the secrets.
+func WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx context.Context, shootClient client.Client) (map[string]map[string]string, error) {
 	secretList := &corev1.SecretList{}
 	if err := shootClient.List(ctx, secretList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleOperatingSystemConfig}); err != nil {
 		return nil, err
 	}
 
-	workerPoolToCloudConfigSecretMeta := make(map[string]metav1.ObjectMeta, len(secretList.Items))
+	workerPoolToSecretNameToChecksumMap := make(map[string]map[string]string, len(secretList.Items))
 	for _, secret := range secretList.Items {
 		if poolName, ok := secret.Labels[v1beta1constants.LabelWorkerPool]; ok {
-			workerPoolToCloudConfigSecretMeta[poolName] = secret.ObjectMeta
+			if workerPoolToSecretNameToChecksumMap[poolName] == nil {
+				workerPoolToSecretNameToChecksumMap[poolName] = make(map[string]string)
+			}
+			workerPoolToSecretNameToChecksumMap[poolName][secret.Name] = secret.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
 		}
 	}
 
-	return workerPoolToCloudConfigSecretMeta, nil
+	return workerPoolToSecretNameToChecksumMap, nil
 }
 
 // OperatingSystemConfigUpdatedForAllWorkerPools checks if all the non-preserved nodes for all the provided worker pools have successfully
@@ -162,24 +166,19 @@ func WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx context.Context, shootCl
 func OperatingSystemConfigUpdatedForAllWorkerPools(
 	workers []gardencorev1beta1.Worker,
 	workerPoolToNodes map[string][]corev1.Node,
-	workerPoolToOperatingSystemConfigSecretMeta map[string]metav1.ObjectMeta,
+	workerPoolToOSCSecretNameToChecksum map[string]map[string]string,
 ) error {
 	var result error
 
 	for _, worker := range workers {
-		secretMeta, ok := workerPoolToOperatingSystemConfigSecretMeta[worker.Name]
+		secretNameToChecksum, ok := workerPoolToOSCSecretNameToChecksum[worker.Name]
 		if !ok {
 			result = multierror.Append(result, fmt.Errorf("missing operating system config secret metadata for worker pool %q", worker.Name))
 			continue
 		}
 
-		var (
-			gardenerNodeAgentSecretName = secretMeta.Name
-			secretChecksum              = secretMeta.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
-		)
-
 		for _, node := range workerPoolToNodes[worker.Name] {
-			if nodeToBeDeleted(node, gardenerNodeAgentSecretName) {
+			if nodeTaintedForNoSchedule(node) {
 				continue
 			}
 
@@ -188,6 +187,8 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 			if health.IsNodePreservedAndUnhealthy(node) {
 				continue
 			}
+
+			secretChecksum := secretNameToChecksum[node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]]
 
 			if nodeChecksum, ok := node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; !ok {
 				result = multierror.Append(result, fmt.Errorf("the last successfully applied operating system config on node %q hasn't been reported yet", node.Name))
@@ -198,18 +199,6 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 	}
 
 	return result
-}
-
-func nodeToBeDeleted(node corev1.Node, gardenerNodeAgentSecretName string) bool {
-	if nodeTaintedForNoSchedule(node) {
-		return true
-	}
-
-	if val, ok := node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
-		return val != gardenerNodeAgentSecretName
-	}
-
-	return false
 }
 
 func nodeTaintedForNoSchedule(node corev1.Node) bool {
@@ -286,12 +275,12 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 			return retryFn(err)
 		}
 
-		workerPoolToOperatingSystemConfigSecretMeta, err := WorkerPoolToOperatingSystemConfigSecretMetaMap(ctx, b.ShootClientSet.Client())
+		workerPoolToOSCSecretNameToChecksum, err := WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx, b.ShootClientSet.Client())
 		if err != nil {
 			return retryFn(err)
 		}
 
-		if err := OperatingSystemConfigUpdatedForAllWorkerPools(workerPools, workerPoolToNodes, workerPoolToOperatingSystemConfigSecretMeta); err != nil {
+		if err := OperatingSystemConfigUpdatedForAllWorkerPools(workerPools, workerPoolToNodes, workerPoolToOSCSecretNameToChecksum); err != nil {
 			return retry.MinorError(err)
 		}
 

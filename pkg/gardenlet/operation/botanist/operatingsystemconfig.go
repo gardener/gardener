@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -242,26 +243,39 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 		return err
 	}
 
-	// Generate operating system config secrets for the relevant worker pools.
-	for _, worker := range workerPools {
-		oscData, ok := workerNameToOperatingSystemConfigMaps[worker.Name]
-		if !ok {
-			return fmt.Errorf("did not find osc data for worker pool %q", worker.Name)
+	for poolName, oscData := range workerNameToOperatingSystemConfigMaps {
+		lookupPoolByName := func(worker gardencorev1beta1.Worker) bool { return worker.Name == poolName }
+
+		if forControlPlanePoolOnly && !slices.ContainsFunc(workerPools, lookupPoolByName) {
+			continue
 		}
 
-		data, err := b.generateOperatingSystemConfigSecretForWorker(ctx, worker, oscData.Original)
+		oscOriginalData := oscData.OldOriginals
+		if oscData.Original.Object != nil {
+			oscOriginalData = append([]operatingsystemconfig.Data{oscData.Original}, oscOriginalData...)
+		}
+		if len(oscOriginalData) == 0 {
+			continue
+		}
+
+		worker := gardencorev1beta1.Worker{Name: poolName}
+		if idx := slices.IndexFunc(workerPools, lookupPoolByName); idx != -1 {
+			worker = workerPools[idx]
+		}
+
+		data, err := b.generateOperatingSystemConfigSecretForWorker(ctx, worker, oscOriginalData)
 		if err != nil {
 			return err
 		}
 
-		managedResourceSecretNameToData["shoot-gardener-node-agent-"+worker.Name] = data
+		managedResourceSecretNameToData[managedResourceSecretName(poolName)] = data
 	}
 
 	rbacResourcesData, err := NodeAgentRBACResourcesDataFn()
 	if err != nil {
 		return err
 	}
-	managedResourceSecretNameToData["shoot-gardener-node-agent-rbac"] = rbacResourcesData
+	managedResourceSecretNameToData[managedResourceSecretName("rbac")] = rbacResourcesData
 
 	// Create Secrets for the ManagedResource containing the configs for all worker pools well as the RBAC resources.
 	for secretName, data := range managedResourceSecretNameToData {
@@ -291,7 +305,7 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 	// from the ManagedResource's `.spec.secretRefs[]` - otherwise, they would be deleted.
 	// To prevent this, we check if the ManagedResource already exists, and if so, we collect all existing references
 	if forControlPlanePoolOnly {
-		if err := b.mergeExistingSecretRefsIntoNodeAgentManagedResource(ctx, managedResource, managedResourceSecretNamesWanted); err != nil {
+		if err := b.mergeExistingSecretRefsOfOtherWorkerPoolsIntoNodeAgentManagedResource(ctx, managedResource, managedResourceSecretNamesWanted, workerPools); err != nil {
 			return fmt.Errorf("failed to merge existing ManagedResource secret references into the gardener-node-agent ManagedResource: %w", err)
 		}
 	}
@@ -319,6 +333,10 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 	})
 }
 
+func managedResourceSecretName(suffix string) string {
+	return "shoot-gardener-node-agent-" + suffix
+}
+
 func (b *Botanist) relevantWorkerPools(controlPlanePoolOnly bool) ([]gardencorev1beta1.Worker, error) {
 	workerPools := b.Shoot.GetInfo().Spec.Provider.Workers
 	if !controlPlanePoolOnly {
@@ -332,7 +350,21 @@ func (b *Botanist) relevantWorkerPools(controlPlanePoolOnly bool) ([]gardencorev
 	return []gardencorev1beta1.Worker{*controlPlanePool}, nil
 }
 
-func (b *Botanist) mergeExistingSecretRefsIntoNodeAgentManagedResource(ctx context.Context, managedResource *builder.ManagedResource, managedResourceSecretNamesWanted sets.Set[string]) error {
+func (b *Botanist) mergeExistingSecretRefsOfOtherWorkerPoolsIntoNodeAgentManagedResource(
+	ctx context.Context,
+	managedResource *builder.ManagedResource,
+	managedResourceSecretNamesWanted sets.Set[string],
+	workerPools []gardencorev1beta1.Worker,
+) error {
+	isExistingRefForDesiredWorkerPool := func(secretRefName string) bool {
+		for _, pool := range workerPools {
+			if kubernetesutils.IsUnique(secretRefName, managedresources.SecretPrefix+managedResourceSecretName(pool.Name)) {
+				return true
+			}
+		}
+		return false
+	}
+
 	existingManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: GardenerNodeAgentManagedResourceName, Namespace: b.Shoot.ControlPlaneNamespace}}
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(existingManagedResource), existingManagedResource); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -342,6 +374,10 @@ func (b *Botanist) mergeExistingSecretRefsIntoNodeAgentManagedResource(ctx conte
 	}
 
 	for _, secretRef := range existingManagedResource.Spec.SecretRefs {
+		if isExistingRefForDesiredWorkerPool(secretRef.Name) {
+			continue
+		}
+
 		if managedResourceSecretName := secretRef.Name; !managedResourceSecretNamesWanted.Has(secretRef.Name) {
 			managedResource.WithSecretRef(managedResourceSecretName)
 			managedResourceSecretNamesWanted.Insert(managedResourceSecretName)
@@ -354,21 +390,25 @@ func (b *Botanist) mergeExistingSecretRefsIntoNodeAgentManagedResource(ctx conte
 func (b *Botanist) generateOperatingSystemConfigSecretForWorker(
 	ctx context.Context,
 	worker gardencorev1beta1.Worker,
-	oscDataOriginal operatingsystemconfig.Data,
+	oscOriginalData []operatingsystemconfig.Data,
 ) (
 	map[string][]byte,
 	error,
 ) {
-	oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscDataOriginal.Object, oscDataOriginal.GardenerNodeAgentSecretName, worker, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
+	var oscSecrets []client.Object
+	for _, oscData := range oscOriginalData {
+		oscSecret, err := NodeAgentOSCSecretFn(ctx, b.SeedClientSet.Client(), oscData.Object, oscData.GardenerNodeAgentSecretName, worker, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", worker.Name, err)
+		}
+		oscSecrets = append(oscSecrets, oscSecret)
 	}
 
 	resources, err := managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
-		AddAllAndSerialize(oscSecret)
+		AddAllAndSerialize(oscSecrets...)
 	if err != nil {
-		return nil, fmt.Errorf("failed adding gardener-node-agent secret for pool %q to the registry and serializing it: %w", worker.Name, err)
+		return nil, fmt.Errorf("failed adding gardener-node-agent secrets for pool %q to the registry and serializing them: %w", worker.Name, err)
 	}
 
 	return resources, nil
