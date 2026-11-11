@@ -1322,6 +1322,31 @@ var _ = Describe("OperatingSystemConfig", func() {
 			Expect(multiErr.Errors[0].Error()).To(ContainSubstring("cause A"))
 			Expect(multiErr.Errors[1].Error()).To(ContainSubstring("cause B"))
 		})
+
+		It("should sort higher-count causes before equal-count causes alphabetically", func() {
+			causeA := fmt.Errorf("cause A")
+			causeB := fmt.Errorf("cause B")
+			causeC := fmt.Errorf("cause C")
+			// causeB and causeC each appear twice; causeA appears four times and must come first.
+			// Among the two-occurrence causes, alphabetical order must break the tie.
+			err := multierror.Append(nil,
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-init for worker pool3: %w", causeC),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool3-reconcile for worker pool3: %w", causeC),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-init for worker pool2: %w", causeB),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool2-reconcile for worker pool2: %w", causeB),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-init for worker pool1: %w", causeA),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool1-reconcile for worker pool1: %w", causeA),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool4-init for worker pool4: %w", causeA),
+				fmt.Errorf("failed reconciling OperatingSystemConfig ns/osc-pool4-reconcile for worker pool4: %w", causeA),
+			)
+			result := DeduplicateOSCErrors(err)
+			var multiErr *multierror.Error
+			Expect(errors.As(result, &multiErr)).To(BeTrue())
+			Expect(multiErr.Errors).To(HaveLen(3))
+			Expect(multiErr.Errors[0].Error()).To(ContainSubstring("[4] occurrences of: cause A"))
+			Expect(multiErr.Errors[1].Error()).To(ContainSubstring("[2] occurrences of: cause B"))
+			Expect(multiErr.Errors[2].Error()).To(ContainSubstring("[2] occurrences of: cause C"))
+		})
 	})
 
 	Describe("#Key", func() {
