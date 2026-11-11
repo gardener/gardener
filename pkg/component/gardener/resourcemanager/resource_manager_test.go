@@ -129,6 +129,7 @@ var _ = Describe("ResourceManager", func() {
 		mutatingWebhookConfigurationFor                      func(responsibilityMode ResponsibilityMode, bootstrapControlPlaneNode bool) *admissionregistrationv1.MutatingWebhookConfiguration
 		mutatingWebhookConfigurationYAML                     func() string
 		clusterRoleBindingTargetYAML                         string
+		validatingWebhookConfigurationShootYAML              string
 		validatingWebhookConfiguration                       *admissionregistrationv1.ValidatingWebhookConfiguration
 		managedResourceSecret                                *corev1.Secret
 		managedResource                                      *resourcesv1alpha1.ManagedResource
@@ -460,6 +461,9 @@ var _ = Describe("ResourceManager", func() {
 						Enabled:                !isWorkerless,
 						AuthorizeWithSelectors: new(true),
 						MachineNamespace:       cfg.MachineNamespace,
+					},
+					NodeAgentRestriction: resourcemanagerconfigv1alpha1.NodeAgentRestrictionWebhookConfig{
+						Enabled: !isWorkerless,
 					},
 				},
 			}
@@ -1546,6 +1550,43 @@ webhooks:
 			return out
 		}
 
+		validatingWebhookConfigurationShootYAML = `apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    app: gardener-resource-manager
+  name: gardener-resource-manager-shoot
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/validate-node-agent-restriction
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: node-agent-restriction.resources.gardener.cloud
+  namespaceSelector: {}
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - UPDATE
+    resources:
+    - nodes
+  - apiGroups:
+    - certificates.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - certificatesigningrequests
+  sideEffects: None
+  timeoutSeconds: 10`
+
 		clusterRoleBindingTargetYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -1987,7 +2028,7 @@ subjects:
 			},
 		}
 
-		compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), clusterRoleBindingTargetYAML)
+		compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), validatingWebhookConfigurationShootYAML, clusterRoleBindingTargetYAML)
 		Expect(err).NotTo(HaveOccurred())
 
 		managedResourceSecret = &corev1.Secret{
@@ -2045,7 +2086,7 @@ subjects:
 						resourceManager = New(fakeClient, deployNamespace, sm, cfg)
 						resourceManager.SetSecrets(secrets)
 
-						compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), clusterRoleBindingTargetYAML)
+						compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), validatingWebhookConfigurationShootYAML, clusterRoleBindingTargetYAML)
 						Expect(err).NotTo(HaveOccurred())
 
 						managedResourceSecret = &corev1.Secret{
@@ -2161,7 +2202,7 @@ subjects:
 						resourceManager = New(fakeClient, deployNamespace, sm, cfg)
 						resourceManager.SetSecrets(secrets)
 
-						compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), clusterRoleBindingTargetYAML)
+						compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), validatingWebhookConfigurationShootYAML, clusterRoleBindingTargetYAML)
 						Expect(err).NotTo(HaveOccurred())
 
 						managedResourceSecret = &corev1.Secret{
@@ -3202,6 +3243,12 @@ func validateWebhookConfiguration(
 	if actualConfig.Webhooks.ExtensionValidation.Enabled {
 		expectedNumEnabledValidatingWebhooks += 13 // the list of length 13 is hardcoded in NewExtensionValidationValidatingWebhooks, see pkg/component/gardener/resourcemanager/resource_manager.go
 		Expect(actualValidatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", ContainSubstring("validation.extensions."))))
+	}
+	// The node-agent-restriction webhook is only shipped to the shoot cluster, hence it only appears in the
+	// ManagedResource for the shoot.
+	if cfg.ResponsibilityMode == ForShootOrVirtualGarden && actualConfig.Webhooks.NodeAgentRestriction.Enabled {
+		expectedNumEnabledValidatingWebhooks++
+		Expect(actualValidatingWebhookConfiguration.Webhooks).To(ContainElement(HaveField("Name", "node-agent-restriction.resources.gardener.cloud")))
 	}
 	Expect(actualValidatingWebhookConfiguration.Webhooks).To(HaveLen(expectedNumEnabledValidatingWebhooks))
 
