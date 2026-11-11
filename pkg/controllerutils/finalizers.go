@@ -16,7 +16,7 @@ import (
 // Note that this is done with a regular merge-patch since strategic merge-patches do not work with custom resources,
 // see https://github.com/kubernetes/kubernetes/issues/105146.
 func AddFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
-	return patchFinalizers(ctx, writer, obj, mergeFromWithOptimisticLock, controllerutil.AddFinalizer, finalizers...)
+	return patchFinalizers(ctx, resourcePatchFunc(writer), obj, controllerutil.AddFinalizer, finalizers...)
 }
 
 // RemoveFinalizers ensures that the given finalizer is not present anymore in the given object and optimistic locking.
@@ -24,7 +24,7 @@ func AddFinalizers(ctx context.Context, writer client.Writer, obj client.Object,
 // Note that this is done with a regular merge-patch since strategic merge-patches do not work with custom resources,
 // see https://github.com/kubernetes/kubernetes/issues/105146.
 func RemoveFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
-	return client.IgnoreNotFound(patchFinalizers(ctx, writer, obj, mergeFromWithOptimisticLock, controllerutil.RemoveFinalizer, finalizers...))
+	return client.IgnoreNotFound(patchFinalizers(ctx, resourcePatchFunc(writer), obj, controllerutil.RemoveFinalizer, finalizers...))
 }
 
 // RemoveAllFinalizers ensures that the given object has no finalizers with exponential backoff.
@@ -35,10 +35,38 @@ func RemoveAllFinalizers(ctx context.Context, writer client.Writer, obj client.O
 	return client.IgnoreNotFound(writer.Patch(ctx, obj, mergeFrom(beforePatch)))
 }
 
-func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Object, patchFunc patchFn, mutate func(client.Object, string) bool, finalizers ...string) error {
+// AddFinalizersViaMetadataSubresource is like AddFinalizers but issues the patch against the `metadata`
+// subresource of the object instead of the main resource.
+func AddFinalizersViaMetadataSubresource(ctx context.Context, c client.Client, obj client.Object, finalizers ...string) error {
+	return patchFinalizers(ctx, metadataSubresourcePatchFunc(c), obj, controllerutil.AddFinalizer, finalizers...)
+}
+
+// RemoveFinalizersViaMetadataSubresource is like RemoveFinalizers but issues the patch against the `metadata`
+// subresource of the object instead of the main resource.
+func RemoveFinalizersViaMetadataSubresource(ctx context.Context, c client.Client, obj client.Object, finalizers ...string) error {
+	return client.IgnoreNotFound(patchFinalizers(ctx, metadataSubresourcePatchFunc(c), obj, controllerutil.RemoveFinalizer, finalizers...))
+}
+
+func patchFinalizers(ctx context.Context, patch patchFunc, obj client.Object, mutate func(client.Object, string) bool, finalizers ...string) error {
 	beforePatch := obj.DeepCopyObject().(client.Object)
 	for _, finalizer := range finalizers {
 		mutate(obj, finalizer)
 	}
-	return writer.Patch(ctx, obj, patchFunc(beforePatch))
+	return patch(ctx, obj, mergeFromWithOptimisticLock(beforePatch))
+}
+
+// patchFunc issues the given patch for the given object. resourcePatchFunc targets the main resource,
+// metadataSubresourcePatchFunc the `metadata` subresource.
+type patchFunc func(ctx context.Context, obj client.Object, patch client.Patch) error
+
+func resourcePatchFunc(writer client.Writer) patchFunc {
+	return func(ctx context.Context, obj client.Object, patch client.Patch) error {
+		return writer.Patch(ctx, obj, patch)
+	}
+}
+
+func metadataSubresourcePatchFunc(c client.Client) patchFunc {
+	return func(ctx context.Context, obj client.Object, patch client.Patch) error {
+		return c.SubResource("metadata").Patch(ctx, obj, patch)
+	}
 }
