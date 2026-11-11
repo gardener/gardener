@@ -628,8 +628,8 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 		return nil, err
 	}
 
-	// Destroy Vali if logging is disabled in config
-	if !gardenlethelper.IsLoggingEnabled(&r.Config) {
+	// Destroy Vali if logging or Vali is disabled in config
+	if !gardenlethelper.IsLoggingEnabled(&r.Config) || !gardenlethelper.IsValiEnabled(&r.Config) {
 		return component.OpDestroy(deployer), err
 	}
 
@@ -694,7 +694,7 @@ func (r *Reconciler) newVictoriaLogs(
 		return nil, err
 	}
 
-	if !gardenlethelper.IsLoggingEnabled(&r.Config) || !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+	if !gardenlethelper.IsLoggingEnabled(&r.Config) || !gardenlethelper.IsVictoriaLogsEnabled(&r.Config) {
 		return component.OpDestroyAndWait(deployer), err
 	}
 
