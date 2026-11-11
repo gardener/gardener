@@ -191,7 +191,7 @@ func (h *health) checkObservabilityComponents(ctx context.Context, condition gar
 	return new(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy."))
 }
 
-// GardenConditions contains all conditions of the garden status subresource.
+// GardenConditions contains conditions relevant to the care controller of the garden status subresource.
 type GardenConditions struct {
 	virtualGardenAPIServerAvailable gardencorev1beta1.Condition
 	runtimeComponentsHealthy        gardencorev1beta1.Condition
