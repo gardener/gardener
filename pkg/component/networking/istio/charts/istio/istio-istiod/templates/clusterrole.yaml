@@ -73,13 +73,13 @@ rules:
     verbs: ["create"]
 
   # Use for Kubernetes Service APIs
-  - apiGroups: ["gateway.networking.k8s.io",  "gateway.networking.x-k8s.io"]
+  - apiGroups: ["gateway.networking.k8s.io", "gateway.networking.x-k8s.io"]
     resources: ["*"]
     verbs: ["get", "watch", "list"]
   - apiGroups: ["gateway.networking.x-k8s.io"]
     resources:
+    - xbackends/status
     - xbackendtrafficpolicies/status
-    - xlistenersets/status
     verbs: ["update", "patch"]
   - apiGroups: ["gateway.networking.k8s.io"]
     resources:
@@ -92,6 +92,7 @@ rules:
     - tcproutes/status
     - tlsroutes/status
     - udproutes/status
+    - listenersets/status
     verbs: ["update", "patch"]
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["gatewayclasses"]

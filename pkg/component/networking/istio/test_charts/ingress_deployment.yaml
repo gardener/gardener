@@ -7,7 +7,7 @@ metadata:
   name: istio-ingressgateway
   namespace: test-ingress
   labels:
-    app.kubernetes.io/version: 1.29.1
+    app.kubernetes.io/version: 1.32.0
     app: istio-ingressgateway
     foo: bar
 spec:
@@ -28,7 +28,7 @@ spec:
         foo: bar
         to-target: allowed
         service.istio.io/canonical-name: "istio-ingressgateway"
-        service.istio.io/canonical-revision: "1.29"
+        service.istio.io/canonical-revision: "1.32"
       annotations:
         sidecar.istio.io/inject: "false"
         # Evict stale metrics (e.g. for old kube-apiserver pods) after inactivity to prevent unbounded metric growth.

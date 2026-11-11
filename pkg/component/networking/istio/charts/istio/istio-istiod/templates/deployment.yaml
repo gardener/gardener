@@ -28,6 +28,7 @@ spec:
       tolerations:
       - key: cni.istio.io/not-ready
         operator: "Exists"
+      terminationGracePeriodSeconds: 30
       serviceAccountName: istiod
       securityContext:
         fsGroup: 1337
@@ -102,15 +103,6 @@ spec:
             value: "false"
           - name: CLUSTER_ID
             value: "Kubernetes"
-          - name: GOMEMLIMIT
-            valueFrom:
-              resourceFieldRef:
-                resource: limits.memory
-          - name: GOMAXPROCS
-            valueFrom:
-              resourceFieldRef:
-                resource: limits.cpu
-                divisor: "1"
           - name: PLATFORM
             value: ""
 {{- if eq .Values.dualStack true }}
