@@ -391,31 +391,27 @@ func (s *Shoot) SetShootState(shootState *gardencorev1beta1.ShootState) {
 	s.shootState.Store(shootState)
 }
 
-// UpdateInfo updates the shoot resource of this Shoot in a concurrency safe way,
-// using the given context, client, and mutate function.
-// It copies the current shoot resource and then uses the copy to patch the resource in the cluster
-// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
-// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// UpdateInfoMetadata updates the metadata of the shoot resource of this Shoot in a concurrency safe way,
+// using the given context, client, and mutate function. The patch is issued against the `metadata` subresource,
+// hence the mutate function must only change `.metadata` (any changes to `.spec`/`.status` are ignored by the
+// server).
+// It copies the current shoot resource and then uses the copy to merge-patch the resource in the cluster.
+// This method is protected by a mutex, so only a single UpdateInfoMetadata or UpdateInfoStatus operation can be
 // executed at any point in time.
 // The stored object preserves .metadata and .spec as mutated by f, but adopts .status and .metadata.resourceVersion
 // from the server response. This keeps the in-memory generation stable across reconciliation while letting
 // subsequent status patches compute correct diffs against the current server state.
-func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
+func (s *Shoot) UpdateInfoMetadata(ctx context.Context, c client.Client, f func(*gardencorev1beta1.Shoot) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
 	shoot := s.info.Load().(*gardencorev1beta1.Shoot).DeepCopy()
-	var patch client.Patch
-	if useStrategicMerge {
-		patch = client.StrategicMergeFrom(shoot.DeepCopy())
-	} else {
-		patch = client.MergeFrom(shoot.DeepCopy())
-	}
+	patch := client.MergeFrom(shoot.DeepCopy())
 	if err := f(shoot); err != nil {
 		return err
 	}
 	shootWithMutations := shoot.DeepCopy()
-	if err := c.Patch(ctx, shoot, patch); err != nil {
+	if err := c.SubResource("metadata").Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
 	// Carry .resourceVersion and .status from the server response: .resourceVersion keeps subsequent patches

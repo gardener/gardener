@@ -613,7 +613,7 @@ var _ = Describe("shoot", func() {
 			})
 		})
 
-		Describe("#UpdateInfo", func() {
+		Describe("#UpdateInfoMetadata", func() {
 			It("should apply the mutation, carry .resourceVersion and .status from server, but not other server-side fields", func() {
 				shootObj := &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
@@ -632,8 +632,9 @@ var _ = Describe("shoot", func() {
 					WithScheme(kubernetes.GardenScheme).
 					WithObjects(shootObj).
 					WithInterceptorFuncs(interceptor.Funcs{
-						Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-							if err := c.Patch(ctx, obj, patch, opts...); err != nil {
+						SubResourcePatch: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+							Expect(subResourceName).To(Equal("metadata"))
+							if err := c.SubResource(subResourceName).Patch(ctx, obj, patch, opts...); err != nil {
 								return err
 							}
 							obj.(*gardencorev1beta1.Shoot).ResourceVersion = "2"
@@ -644,7 +645,7 @@ var _ = Describe("shoot", func() {
 					}).
 					Build()
 
-				Expect(s.UpdateInfo(context.Background(), c, false, func(shoot *gardencorev1beta1.Shoot) error {
+				Expect(s.UpdateInfoMetadata(context.Background(), c, func(shoot *gardencorev1beta1.Shoot) error {
 					shoot.Labels = map[string]string{"foo": "bar"}
 					return nil
 				})).To(Succeed())
