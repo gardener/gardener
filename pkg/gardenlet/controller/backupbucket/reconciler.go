@@ -98,7 +98,7 @@ func (r *Reconciler) reconcileBackupBucket(
 ) error {
 	if !controllerutil.ContainsFinalizer(backupBucket, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, backupBucket, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizersViaMetadataSubresource(gardenCtx, r.GardenClient, backupBucket, gardencorev1beta1.GardenerName); err != nil {
 			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -117,14 +117,14 @@ func (r *Reconciler) reconcileBackupBucket(
 
 	if !controllerutil.ContainsFinalizer(backupCredentials, finalizerName) {
 		log.Info("Adding finalizer to backup credentials", "finalizer", finalizerName, "gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(), "key", client.ObjectKeyFromObject(backupCredentials))
-		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, backupCredentials, finalizerName); err != nil {
+		if err := r.addFinalizersToCredentials(gardenCtx, backupCredentials, finalizerName); err != nil {
 			return fmt.Errorf("failed to add finalizer to backup credentials: %w", err)
 		}
 	}
 	// TODO(dimityrmirchev): Remove this handling in a future release
 	if controllerutil.ContainsFinalizer(backupCredentials, gardencorev1beta1.ExternalGardenerName) {
 		log.Info("Removing finalizer from backup credentials", "finalizer", gardencorev1beta1.ExternalGardenerName, "gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(), "key", client.ObjectKeyFromObject(backupCredentials))
-		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
+		if err := r.removeFinalizersFromCredentials(gardenCtx, backupCredentials, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return fmt.Errorf("failed to remove finalizer from backup credentials: %w", err)
 		}
 	}
@@ -345,14 +345,14 @@ func (r *Reconciler) deleteBackupBucket(
 			"gvk", backupCredentials.GetObjectKind().GroupVersionKind().String(),
 			"credentials", client.ObjectKeyFromObject(backupCredentials),
 		)
-		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupCredentials, gardencorev1beta1.ExternalGardenerName, finalizerName); err != nil {
+		if err := r.removeFinalizersFromCredentials(gardenCtx, backupCredentials, gardencorev1beta1.ExternalGardenerName, finalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from credentials: %w", err)
 		}
 	}
 
 	if controllerutil.ContainsFinalizer(backupBucket, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupBucket, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.RemoveFinalizersViaMetadataSubresource(gardenCtx, r.GardenClient, backupBucket, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -545,4 +545,27 @@ func workloadIdentitySecretChanged(backupBucket *gardencorev1beta1.BackupBucket,
 	}
 
 	return !s.Equal(secretToCompareTo), nil
+}
+
+// addFinalizersToCredentials adds the given finalizers to the backup credentials object. For the Gardener-managed
+// credential types (`InternalSecret`, `WorkloadIdentity`) the patch is issued against the `metadata` subresource,
+// while `corev1.Secret` is served by the kube-apiserver which has no such subresource.
+func (r *Reconciler) addFinalizersToCredentials(ctx context.Context, credentials client.Object, finalizers ...string) error {
+	switch credentials.(type) {
+	case *corev1.Secret:
+		return controllerutils.AddFinalizers(ctx, r.GardenClient, credentials, finalizers...)
+	default:
+		return controllerutils.AddFinalizersViaMetadataSubresource(ctx, r.GardenClient, credentials, finalizers...)
+	}
+}
+
+// removeFinalizersFromCredentials removes the given finalizers from the backup credentials object, routing the patch
+// like addFinalizersToCredentials.
+func (r *Reconciler) removeFinalizersFromCredentials(ctx context.Context, credentials client.Object, finalizers ...string) error {
+	switch credentials.(type) {
+	case *corev1.Secret:
+		return controllerutils.RemoveFinalizers(ctx, r.GardenClient, credentials, finalizers...)
+	default:
+		return controllerutils.RemoveFinalizersViaMetadataSubresource(ctx, r.GardenClient, credentials, finalizers...)
+	}
 }
