@@ -35,6 +35,15 @@ spec:
         # Replaces the deprecated METRIC_ROTATION_INTERVAL env var removed in Istio v1.28.
         sidecar.istio.io/statsEvictionInterval: "6m"
         proxy.istio.io/config: |-
+          connectionSettings:
+            "profile": "EDGE"
+            # Same value as maximum of x-envoy-upstream-rq-timeout-ms in apiserver-tls-termination-envoyfilter.yaml
+            "httpRequestTimeout": "86400s"
+            "httpMaxConnectionDuration": "86400s"
+            "httpMaxStreamDuration": "86400s"
+            # Limit idle HTTP streams and connections to 6 hours
+            "httpIdleTimeout": "21600s"
+            "httpStreamIdleTimeout": "21600s"
           protocolDetectionTimeout: 100ms
           runtimeValues:
             "overload.global_downstream_max_connections": "750000"
