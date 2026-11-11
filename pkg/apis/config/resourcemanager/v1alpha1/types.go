@@ -300,6 +300,9 @@ type ResourceManagerWebhookConfiguration struct {
 	// NodeAgentAuthorizer is the configuration for the node-agent-authorizer webhook.
 	// +required
 	NodeAgentAuthorizer NodeAgentAuthorizerWebhookConfig `json:"nodeAgentAuthorizer"`
+	// NodeAgentRestriction is the configuration for the node-agent-restriction webhook.
+	// +required
+	NodeAgentRestriction NodeAgentRestrictionWebhookConfig `json:"nodeAgentRestriction"`
 	// SeccompProfile is the configuration for the seccomp-profile webhook.
 	// +required
 	SeccompProfile SeccompProfileWebhookConfig `json:"seccompProfile"`
@@ -409,6 +412,13 @@ type NodeAgentAuthorizerWebhookConfig struct {
 
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.
 type SeccompProfileWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	// +required
+	Enabled bool `json:"enabled"`
+}
+
+// NodeAgentRestrictionWebhookConfig is the configuration for the node-agent-restriction webhook.
+type NodeAgentRestrictionWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	// +required
 	Enabled bool `json:"enabled"`

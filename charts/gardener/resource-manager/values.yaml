@@ -143,3 +143,5 @@ global:
         enabled: false
       # machineNamespace: shoot--foo--bar
       # authorizeWithSelectors: false
+      nodeAgentRestriction:
+        enabled: false
