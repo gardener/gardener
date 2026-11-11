@@ -1248,7 +1248,17 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		workloadIdentityTokenIssuer,
 		goAwayChance,
 		targetVersion,
+		trustBundleSecretName(garden),
 	)
+}
+
+// trustBundleSecretName returns the name of the Secret referenced via
+// `.spec.virtualCluster.gardener.trustBundleSecretRef`, or nil when not configured.
+func trustBundleSecretName(garden *operatorv1alpha1.Garden) *string {
+	if ref := garden.Spec.VirtualCluster.Gardener.TrustBundleSecretRef; ref != nil {
+		return &ref.Name
+	}
+	return nil
 }
 
 func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableAuthorizerRestrictions bool) (component.DeployWaiter, error) {

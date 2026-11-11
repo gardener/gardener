@@ -41,6 +41,7 @@ func NewGardenerAPIServer(
 	workloadIdentityTokenIssuer string,
 	goAwayChance *float64,
 	targetVersion *semver.Version,
+	trustBundleSecretName *string,
 ) (
 	gardenerapiserver.Interface,
 	error,
@@ -113,6 +114,7 @@ func NewGardenerAPIServer(
 			TopologyAwareRoutingEnabled:       topologyAwareRoutingEnabled,
 			WorkloadIdentityTokenIssuer:       workloadIdentityTokenIssuer,
 			TargetVersion:                     targetVersion,
+			TrustBundleSecretName:             trustBundleSecretName,
 		},
 	), nil
 }
