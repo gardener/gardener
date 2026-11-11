@@ -42,10 +42,10 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 }
 
 // WaitUntilTemporaryTunnelConnectionExists waits until a port forward connection to the temporary tunnel pod
-// (vpn-shoot-tmp) in the kube-system namespace of the Shoot cluster can be established. The temporary vpn-shoot is
+// (vpn-shoot-temp) in the kube-system namespace of the Shoot cluster can be established. The temporary vpn-shoot is
 // deployed on the destination seed during live control plane migration.
 func (b *Botanist) WaitUntilTemporaryTunnelConnectionExists(ctx context.Context) error {
-	return b.waitUntilTunnelConnectionExists(ctx, v1beta1constants.VPNTunnel+"-tmp")
+	return b.waitUntilTunnelConnectionExists(ctx, v1beta1constants.VPNTunnel+"-temp")
 }
 
 func (b *Botanist) waitUntilTunnelConnectionExists(ctx context.Context, tunnelName string) error {

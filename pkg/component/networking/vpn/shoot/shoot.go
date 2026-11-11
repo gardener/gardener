@@ -47,8 +47,6 @@ import (
 )
 
 const (
-	labelValue = "vpn-shoot"
-
 	managedResourceName = "shoot-core-vpn-shoot"
 	deploymentName      = "vpn-shoot"
 	containerName       = "vpn-shoot"
@@ -114,22 +112,8 @@ type Values struct {
 	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
 	AutoMTU *bool
 	// NameSuffix, when non-empty, is appended with a dash to every resource name produced by this component.
-	// Set to "tmp" for the temporary VPN shoot client during live migration.
+	// Set to "temp" for the temporary VPN shoot client during live migration.
 	NameSuffix string
-}
-
-func (v Values) name() string {
-	if v.NameSuffix == "" {
-		return deploymentName
-	}
-	return deploymentName + "-" + v.NameSuffix
-}
-
-func (v Values) clientCertName() string {
-	if v.NameSuffix == "" {
-		return "vpn-shoot-client"
-	}
-	return "vpn-shoot-client-" + v.NameSuffix
 }
 
 func (v Values) suffixedName(base string) string {
@@ -179,7 +163,7 @@ type vpnSecret struct {
 func (v *vpnShoot) Deploy(ctx context.Context) error {
 	scrapeConfig := v.emptyScrapeConfig()
 	jobName := v.values.suffixedName("tunnel-probe-apiserver-proxy")
-	podRegex := v.values.name() + `-(0|.+-.+);` + initContainerName
+	podRegex := v.values.suffixedName(deploymentName) + `-(0|.+-.+);` + initContainerName
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, scrapeConfig, func() error {
 		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
@@ -250,7 +234,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 				Rules: []monitoringv1.Rule{
 					{
 						Alert: "VPNShootNoPods",
-						Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="` + v.values.name() + `"} == 0`),
+						Expr:  intstr.FromString(`kube_deployment_status_replicas_available{deployment="` + v.values.suffixedName(deploymentName) + `"} == 0`),
 						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
@@ -265,7 +249,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 					},
 					{
 						Alert: "VPNHAShootNoPods",
-						Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="` + v.values.name() + `"} == 0`),
+						Expr:  intstr.FromString(`kube_statefulset_status_replicas_ready{statefulset="` + v.values.suffixedName(deploymentName) + `"} == 0`),
 						For:   new(monitoringv1.Duration("30m")),
 						Labels: map[string]string{
 							"service":    "vpn",
@@ -303,8 +287,8 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 
 	var (
 		config = &secretsutils.CertificateSecretConfig{
-			Name:                        v.values.clientCertName(),
-			CommonName:                  v.values.clientCertName(),
+			Name:                        v.values.suffixedName("vpn-shoot-client"),
+			CommonName:                  v.values.suffixedName("vpn-shoot-client"),
 			CertType:                    secretsutils.ClientCert,
 			SkipPublishingCACertificate: true,
 		}
@@ -458,7 +442,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v.values.name(),
+				Name:      v.values.suffixedName(deploymentName),
 				Namespace: metav1.NamespaceSystem,
 				Labels:    v.getLabels(),
 			},
@@ -486,7 +470,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 
 		labels = map[string]string{
 			v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-			v1beta1constants.LabelApp:       v.values.name(),
+			v1beta1constants.LabelApp:       v.values.suffixedName(deploymentName),
 			managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 		}
 		template = v.podTemplate(serviceAccount, secretsVPNShoot, secretCA, secretTLSAuth)
@@ -556,7 +540,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 		})
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v.values.name(),
+				Name:      v.values.suffixedName(deploymentName),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -602,7 +586,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 func (v *vpnShoot) podDisruptionBudget() client.Object {
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.values.name(),
+			Name:      v.values.suffixedName(deploymentName),
 			Namespace: metav1.NamespaceSystem,
 			Labels:    v.getLabels(),
 		},
@@ -621,7 +605,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-				v1beta1constants.LabelApp:       v.values.name(),
+				v1beta1constants.LabelApp:       v.values.suffixedName(deploymentName),
 				managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				"type":                          "tunnel",
 			},
@@ -742,7 +726,7 @@ func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemp
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.values.name(),
+			Name:      v.values.suffixedName(deploymentName),
 			Namespace: metav1.NamespaceSystem,
 			Labels:    labels,
 		},
@@ -768,7 +752,7 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 	replicas := v.values.HighAvailabilityNumberOfShootClients
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.values.name(),
+			Name:      v.values.suffixedName(deploymentName),
 			Namespace: metav1.NamespaceSystem,
 			Labels:    labels,
 		},
@@ -788,14 +772,11 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 }
 
 func (v *vpnShoot) getLabels() map[string]string {
-	return map[string]string{v1beta1constants.LabelApp: v.values.name()}
+	return map[string]string{v1beta1constants.LabelApp: v.values.suffixedName(deploymentName)}
 }
 
 func (v *vpnShoot) managedResourceNameValue() string {
-	if v.values.NameSuffix == "" {
-		return managedResourceName
-	}
-	return managedResourceName + "-" + v.values.NameSuffix
+	return v.values.suffixedName(managedResourceName)
 }
 
 func (v *vpnShoot) indexedReversedHeader(index *int) string {

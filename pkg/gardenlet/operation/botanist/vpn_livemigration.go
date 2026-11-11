@@ -22,12 +22,16 @@ const dnsRecordLiveMigrationVPNName = "live-migration-vpn"
 // LiveMigrationTemporaryVPNDNSName returns the hostname for the temporary VPN DNS record created during live
 // control plane migration.
 func LiveMigrationTemporaryVPNDNSName(internalClusterDomain string) string {
-	return "vpn-tmp." + internalClusterDomain
+	return "vpn-temp." + internalClusterDomain
 }
 
-// DefaultLiveMigrationVPNDNSRecord returns a DNSRecord deployer for vpn-tmp.<internalDomain>. It is built
+// DefaultLiveMigrationVPNDNSRecord returns a DNSRecord deployer for vpn-temp.<internalDomain>. It is built
 // analogously to DefaultInternalDNSRecord but targets the temporary VPN subdomain.
 func (b *Botanist) DefaultLiveMigrationVPNDNSRecord() extensionsdnsrecord.Interface {
+	if b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted() {
+		return nil
+	}
+
 	values := &extensionsdnsrecord.Values{
 		Name:              b.Shoot.GetInfo().Name + "-" + dnsRecordLiveMigrationVPNName,
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + dnsRecordLiveMigrationVPNName,
@@ -70,7 +74,7 @@ func (b *Botanist) DeployLiveMigrationVPNDNSRecord(ctx context.Context) error {
 	return b.Shoot.Components.Extensions.LiveMigrationVPNDNSRecord.Deploy(ctx)
 }
 
-// DestroyLiveMigrationVPNDNSRecord destroys the vpn-tmp DNS record and waits for cleanup.
+// DestroyLiveMigrationVPNDNSRecord destroys the vpn-temp DNS record and waits for cleanup.
 func (b *Botanist) DestroyLiveMigrationVPNDNSRecord(ctx context.Context) error {
 	if err := b.Shoot.Components.Extensions.LiveMigrationVPNDNSRecord.Destroy(ctx); err != nil {
 		return err
@@ -78,10 +82,14 @@ func (b *Botanist) DestroyLiveMigrationVPNDNSRecord(ctx context.Context) error {
 	return b.Shoot.Components.Extensions.LiveMigrationVPNDNSRecord.WaitCleanup(ctx)
 }
 
-// DefaultTemporaryVPNShoot returns the vpn-shoot-tmp component deployed on the destination seed during live
-// migration. It tunnels to the destination via the dedicated vpn-tmp.<internalDomain> endpoint, giving the new
+// DefaultTemporaryVPNShoot returns the vpn-shoot-temp component deployed on the destination seed during live
+// migration. It tunnels to the destination via the dedicated vpn-temp.<internalDomain> endpoint, giving the new
 // kube-apiserver a path into the shoot network before DNS is cut over.
 func (b *Botanist) DefaultTemporaryVPNShoot() (vpnshoot.Interface, error) {
+	if b.Shoot.IsWorkerless || b.Shoot.IsSelfHosted() {
+		return nil, nil
+	}
+
 	endpoint := LiveMigrationTemporaryVPNDNSName(*b.Shoot.InternalClusterDomain)
 
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpnClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
@@ -108,12 +116,12 @@ func (b *Botanist) DefaultTemporaryVPNShoot() (vpnshoot.Interface, error) {
 			// ordinal (reusing vpn-shoot-client-0..N-1), which is legal under the server's duplicate-cn.
 			ClientIndexOffset: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 			SeedPodNetwork:    b.Seed.GetInfo().Spec.Networks.Pods,
-			NameSuffix:        "tmp",
+			NameSuffix:        "temp",
 		},
 	), nil
 }
 
-// DeployTemporaryVPNShoot sets network CIDRs and deploys the vpn-shoot-tmp ManagedResource.
+// DeployTemporaryVPNShoot sets network CIDRs and deploys the vpn-shoot-temp ManagedResource.
 func (b *Botanist) DeployTemporaryVPNShoot(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.TemporaryVPNShoot.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 	b.Shoot.Components.SystemComponents.TemporaryVPNShoot.SetServiceNetworkCIDRs(b.Shoot.Networks.Services)
@@ -121,7 +129,7 @@ func (b *Botanist) DeployTemporaryVPNShoot(ctx context.Context) error {
 	return b.Shoot.Components.SystemComponents.TemporaryVPNShoot.Deploy(ctx)
 }
 
-// DestroyTemporaryVPNShoot deletes the vpn-shoot-tmp ManagedResource.
+// DestroyTemporaryVPNShoot deletes the vpn-shoot-temp ManagedResource.
 func (b *Botanist) DestroyTemporaryVPNShoot(ctx context.Context) error {
 	return b.Shoot.Components.SystemComponents.TemporaryVPNShoot.Destroy(ctx)
 }
