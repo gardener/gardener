@@ -58,7 +58,7 @@ func (r *Reconciler) reconcile(
 
 	if !controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizersViaMetadataSubresource(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
 			return err
 		}
 	}
