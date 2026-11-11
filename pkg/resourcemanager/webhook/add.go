@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentrestriction"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
@@ -116,6 +117,15 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			Config: cfg.Webhooks.NodeAgentAuthorizer,
 		}).AddToManager(mgr, sourceCluster.GetClient(), targetCluster.GetClient()); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", nodeagentauthorizer.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.NodeAgentRestriction.Enabled {
+		if err := (&nodeagentrestriction.Handler{
+			Logger:  mgr.GetLogger().WithName("webhook").WithName(nodeagentrestriction.HandlerName),
+			Decoder: admission.NewDecoder(mgr.GetScheme()),
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", nodeagentrestriction.HandlerName, err)
 		}
 	}
 
