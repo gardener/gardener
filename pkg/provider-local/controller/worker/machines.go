@@ -165,8 +165,8 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			machineClasses = append(machineClasses, machineClass)
 
 			updateConfiguration := machinev1alpha1.UpdateConfiguration{
-				MaxUnavailable: &pool.MaxUnavailable,
-				MaxSurge:       &pool.MaxSurge,
+				MaxUnavailable: new(worker.DistributePositiveIntOrPercent(zoneIdx, pool.MaxUnavailable, zoneLen, pool.Minimum)),
+				MaxSurge:       new(worker.DistributePositiveIntOrPercent(zoneIdx, pool.MaxSurge, zoneLen, pool.Maximum)),
 			}
 
 			machineDeploymentStrategy := machinev1alpha1.MachineDeploymentStrategy{

@@ -169,7 +169,7 @@ var _ = BeforeSuite(func() {
 	workers := []gardencorev1beta1.Worker{
 		{Name: poolDefault, Minimum: 5, Maximum: 5, MaxUnavailable: new(intstr.FromInt32(1)), Machine: gardencorev1beta1.Machine{Type: "test-machine", Image: &machineImage}},
 		{Name: poolMulti, Minimum: 5, Maximum: 5, MaxUnavailable: new(intstr.FromInt32(2)), Machine: gardencorev1beta1.Machine{Type: "test-machine", Image: &machineImage}},
-		{Name: poolControlPlane, Minimum: 1, Maximum: 1, ControlPlane: &gardencorev1beta1.WorkerControlPlane{}, MaxUnavailable: new(intstr.FromString("99%")), Machine: gardencorev1beta1.Machine{Type: "test-machine", Image: &machineImage}},
+		{Name: poolControlPlane, Minimum: 1, Maximum: 1, ControlPlane: &gardencorev1beta1.WorkerControlPlane{}, MaxUnavailable: new(intstr.FromInt32(1)), Machine: gardencorev1beta1.Machine{Type: "test-machine", Image: &machineImage}},
 	}
 
 	codec := kubernetes.GardenCodec.LegacyCodec(gardencorev1beta1.SchemeGroupVersion)
