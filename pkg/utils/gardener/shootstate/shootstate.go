@@ -94,7 +94,7 @@ func Delete(ctx context.Context, gardenClient client.Client, shoot *gardencorev1
 		},
 	}
 
-	if err := gardenerutils.ConfirmDeletion(ctx, gardenClient, shootState); err != nil {
+	if err := gardenerutils.ConfirmDeletionViaMetadataSubresource(ctx, gardenClient, shootState); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
