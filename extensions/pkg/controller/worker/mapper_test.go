@@ -23,6 +23,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	testutils "github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Mapper", func() {
@@ -90,6 +91,12 @@ var _ = Describe("Mapper", func() {
 
 		It("should return nil when the predicates do not match", func() {
 			mapper = MachineToWorkerMapper(fakeClient, predicateutils.AddTypeAndClassPredicates(nil, nil, "local2"))
+
+			Expect(mapper(ctx, machine)).To(BeNil())
+		})
+
+		It("should return nil when the DefaultPredicates are used ", func() {
+			mapper = MachineToWorkerMapper(fakeClient, predicateutils.AddTypeAndClassPredicates(DefaultPredicates(ctx, testutils.FakeManager{Client: fakeClient}, false), nil, "local"))
 
 			Expect(mapper(ctx, machine)).To(BeNil())
 		})
