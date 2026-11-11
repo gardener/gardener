@@ -42,8 +42,6 @@ func (p *perses) istioResources(ctx context.Context) ([]client.Object, error) {
 
 	var tlsSecret *corev1.Secret
 	if tlsSecretName == "" && p.values.ExternalExposure.SecretsManager != nil {
-		// Use the secret returned by the secrets manager directly instead of reading it again. The client might read from a
-		// cache which has not observed the newly created secret yet, so reading it could fail with a NotFound error.
 		var err error
 		tlsSecret, err = p.values.ExternalExposure.SecretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        p.persesName() + "-tls",

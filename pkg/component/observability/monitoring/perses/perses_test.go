@@ -533,7 +533,7 @@ var _ = Describe("Perses", func() {
 						Expect(fakeClient.Create(ctx, generatedTLSSecret.DeepCopy())).To(Succeed())
 
 						values.ExternalExposure.WildcardCertSecretName = nil
-						values.ExternalExposure.SecretsManager = &secretsManagerReturning{secret: generatedTLSSecret}
+						values.ExternalExposure.SecretsManager = &fakeSecretsManager{secret: generatedTLSSecret}
 
 						// Simulate a cache which has not observed the newly created secret yet.
 						fakeClient = interceptor.NewClient(fakeClient.(client.WithWatch), interceptor.Funcs{
@@ -890,12 +890,12 @@ var (
 	}
 )
 
-// secretsManagerReturning is a secrets manager which only implements Generate and returns the given secret.
-type secretsManagerReturning struct {
+// fakeSecretsManager is a secrets manager which only implements Generate and returns the given secret.
+type fakeSecretsManager struct {
 	secretsmanager.Interface
 	secret *corev1.Secret
 }
 
-func (s *secretsManagerReturning) Generate(_ context.Context, _ secretsutils.ConfigInterface, _ ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
+func (s *fakeSecretsManager) Generate(_ context.Context, _ secretsutils.ConfigInterface, _ ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
 	return s.secret.DeepCopy(), nil
 }
