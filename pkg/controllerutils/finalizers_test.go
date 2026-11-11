@@ -93,6 +93,59 @@ var _ = Describe("Finalizers", func() {
 		test(`{"metadata":{"finalizers":null}}`, []string{"foo"})
 		test(`{"metadata":{"finalizers":null}}`, []string{"foo", "bar"})
 	})
+
+	Describe("AddFinalizersViaMetadataSubresource", func() {
+		test := func(expectedPatchFinalizers string, existingFinalizers []string, finalizer string) {
+			It(fmt.Sprintf("should succeed %v, %v", existingFinalizers, finalizer), func() {
+				obj.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
+
+				patchCalled := false
+				fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					SubResourcePatch: func(_ context.Context, _ client.Client, subResourceName string, o client.Object, patch client.Patch, _ ...client.SubResourcePatchOption) error {
+						patchCalled = true
+						Expect(subResourceName).To(Equal("metadata"))
+						Expect(patch.Type()).To(Equal(types.MergePatchType))
+						Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers)))
+						return nil
+					},
+				}).Build()
+
+				Expect(AddFinalizersViaMetadataSubresource(ctx, fakeClient, obj, finalizer)).To(Succeed())
+				Expect(patchCalled).To(BeTrue())
+			})
+		}
+
+		test(`["foo"]`, nil, "foo")
+		test(`["foo","bar"]`, []string{"foo"}, "bar")
+		test(``, []string{"foo"}, "foo")
+	})
+
+	Describe("RemoveFinalizersViaMetadataSubresource", func() {
+		test := func(expectedPatchFinalizers string, existingFinalizers []string, finalizer string) {
+			It(fmt.Sprintf("should succeed %v, %v", existingFinalizers, finalizer), func() {
+				obj.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
+
+				patchCalled := false
+				fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+					SubResourcePatch: func(_ context.Context, _ client.Client, subResourceName string, o client.Object, patch client.Patch, _ ...client.SubResourcePatchOption) error {
+						patchCalled = true
+						Expect(subResourceName).To(Equal("metadata"))
+						Expect(patch.Type()).To(Equal(types.MergePatchType))
+						Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers)))
+						return nil
+					},
+				}).Build()
+
+				Expect(RemoveFinalizersViaMetadataSubresource(ctx, fakeClient, obj, finalizer)).To(Succeed())
+				Expect(patchCalled).To(BeTrue())
+			})
+		}
+
+		test(``, nil, "foo")
+		test(``, []string{"foo"}, "bar")
+		test(`null`, []string{"foo"}, "foo")
+		test(`["bar"]`, []string{"foo", "bar"}, "foo")
+	})
 })
 
 func expectedMergePatchWithOptimisticLocking(expectedPatchFinalizers string) string {
