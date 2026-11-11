@@ -1618,7 +1618,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"etcd-$role\"}[$__rate_interval])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"etcd-$role\"}[$__rate_interval])) by (pod, le))",
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
@@ -1629,10 +1629,10 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~\"etcd-$role\"}[$__rate_interval])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~\"etcd-$role\"}[$__rate_interval])) by (pod, le))",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{pod}} DB fsync",
+          "legendFormat": "{{pod}} Backend Commit",
           "metric": "etcd_disk_backend_commit_duration_seconds_bucket",
           "refId": "B",
           "step": 4
@@ -1642,7 +1642,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "description": "99th percentile latency of WAL fsync and bbolt backend commit operations. High values indicate I/O saturation and directly contribute to elevated etcd write latency.",
+      "description": "99th percentile latency of WAL fsync (on the critical path of every write) and bbolt backend commit (batched in the background, roughly every 100ms). High values indicate disk I/O saturation.",
       "title": "Disk Sync Duration",
       "tooltip": {
         "msResolution": false,
