@@ -728,7 +728,7 @@ func cleanupOrphanIstioNamespace(
 }
 
 func removeSeedOperationAnnotation(ctx context.Context, gardenClient client.Client, seed *seedpkg.Seed) error {
-	return seed.UpdateInfo(ctx, gardenClient, false, func(seedObj *gardencorev1beta1.Seed) error {
+	return seed.UpdateInfoMetadata(ctx, gardenClient, func(seedObj *gardencorev1beta1.Seed) error {
 		delete(seedObj.Annotations, v1beta1constants.GardenerOperation)
 		return nil
 	})
