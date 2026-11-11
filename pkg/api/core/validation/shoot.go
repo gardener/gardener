@@ -3867,6 +3867,18 @@ func validateSelfHostedShootControlPlane(shoot *core.Shoot, fldPath *field.Path)
 		allErrs = append(allErrs, field.Invalid(workerPath.Child("minimum"), controlPlaneWorker.Minimum, "control plane worker pool must have minimum=maximum"))
 	}
 
+	// For AutoInPlaceUpdate, nodes are updated in place, so no surge is possible (maxSurge=0) and exactly one node
+	// may be unavailable at a time (maxUnavailable=1) to keep etcd quorum. This is independent of high availability.
+	// ManualInPlaceUpdate forbids both fields (enforced by the general worker validation).
+	if ptr.Deref(controlPlaneWorker.UpdateStrategy, "") == core.AutoInPlaceUpdate {
+		if controlPlaneWorker.MaxSurge == nil || controlPlaneWorker.MaxSurge.IntValue() != 0 {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxSurge"), controlPlaneWorker.MaxSurge, "control plane worker pool must have maxSurge=0 when update strategy is AutoInPlaceUpdate"))
+		}
+		if controlPlaneWorker.MaxUnavailable == nil || controlPlaneWorker.MaxUnavailable.IntValue() != 1 {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxUnavailable"), controlPlaneWorker.MaxUnavailable, "control plane worker pool must have maxUnavailable=1 when update strategy is AutoInPlaceUpdate"))
+		}
+	}
+
 	if shoot.Spec.ControlPlane == nil || shoot.Spec.ControlPlane.HighAvailability == nil {
 		if controlPlaneWorker.Maximum != 1 {
 			allErrs = append(allErrs, field.Invalid(workerPath.Child("maximum"), controlPlaneWorker.Maximum, "control plane worker pool must have maximum=1 when high availability is not configured"))
@@ -3880,24 +3892,14 @@ func validateSelfHostedShootControlPlane(shoot *core.Shoot, fldPath *field.Path)
 
 	// For rolling updates, MCM must bring up a healthy new node before terminating an old one to protect etcd
 	// quorum, hence maxUnavailable=0. maxSurge equals the number of zones (one MachineDeployment per zone, surge
-	// split equally) to allow one surging node per zone. For AutoInPlaceUpdate, nodes are updated in place, so no
-	// surge is possible (maxSurge=0) and exactly one node may be unavailable at a time (maxUnavailable=1) to keep
-	// etcd quorum. ManualInPlaceUpdate forbids both fields (enforced by the general worker validation).
-	switch {
-	case !helper.IsUpdateStrategyInPlace(controlPlaneWorker.UpdateStrategy):
+	// split equally) to allow one surging node per zone.
+	if !helper.IsUpdateStrategyInPlace(controlPlaneWorker.UpdateStrategy) {
 		neededMaxSurge := max(1, len(controlPlaneWorker.Zones))
 		if controlPlaneWorker.MaxSurge == nil || controlPlaneWorker.MaxSurge.IntValue() != neededMaxSurge {
 			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxSurge"), controlPlaneWorker.MaxSurge, fmt.Sprintf("control plane worker pool must have maxSurge=%d when high availability is configured", neededMaxSurge)))
 		}
 		if controlPlaneWorker.MaxUnavailable == nil || controlPlaneWorker.MaxUnavailable.IntValue() != 0 {
 			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxUnavailable"), controlPlaneWorker.MaxUnavailable, "control plane worker pool must have maxUnavailable=0 when high availability is configured"))
-		}
-	case ptr.Deref(controlPlaneWorker.UpdateStrategy, "") == core.AutoInPlaceUpdate:
-		if controlPlaneWorker.MaxSurge == nil || controlPlaneWorker.MaxSurge.IntValue() != 0 {
-			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxSurge"), controlPlaneWorker.MaxSurge, "control plane worker pool must have maxSurge=0 when high availability is configured"))
-		}
-		if controlPlaneWorker.MaxUnavailable == nil || controlPlaneWorker.MaxUnavailable.IntValue() != 1 {
-			allErrs = append(allErrs, field.Invalid(workerPath.Child("maxUnavailable"), controlPlaneWorker.MaxUnavailable, "control plane worker pool must have maxUnavailable=1 when high availability is configured"))
 		}
 	}
 

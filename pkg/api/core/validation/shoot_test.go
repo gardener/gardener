@@ -1496,6 +1496,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Namespace = "garden"
 
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
+					shoot.Spec.Provider.Workers[0].MaxSurge = new(intstr.FromInt32(0))
+					shoot.Spec.Provider.Workers[0].MaxUnavailable = new(intstr.FromInt32(1))
 
 					w := worker
 					w.Name = "worker-2"
@@ -1557,6 +1559,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
 
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should prevent maxSurge != 0 without high availability and AutoInPlaceUpdate update strategy", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					shoot.Spec.Provider.Workers[0].MaxSurge = new(intstr.FromInt32(1))
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].maxSurge"),
+						"Detail": ContainSubstring("control plane worker pool must have maxSurge=0 when update strategy is AutoInPlaceUpdate"),
+					}))))
+				})
+
+				It("should prevent maxUnavailable != 1 without high availability and AutoInPlaceUpdate update strategy", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+					shoot.Spec.Provider.Workers[0].MaxUnavailable = new(intstr.FromInt32(2))
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].maxUnavailable"),
+						"Detail": ContainSubstring("control plane worker pool must have maxUnavailable=1 when update strategy is AutoInPlaceUpdate"),
+					}))))
 				})
 
 				It("should prevent minimum != maximum", func() {
@@ -1640,7 +1664,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].maxSurge"),
-						"Detail": ContainSubstring("control plane worker pool must have maxSurge=0 when high availability is configured"),
+						"Detail": ContainSubstring("control plane worker pool must have maxSurge=0 when update strategy is AutoInPlaceUpdate"),
 					}))))
 				})
 
@@ -1661,7 +1685,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].maxUnavailable"),
-						"Detail": ContainSubstring("control plane worker pool must have maxUnavailable=1 when high availability is configured"),
+						"Detail": ContainSubstring("control plane worker pool must have maxUnavailable=1 when update strategy is AutoInPlaceUpdate"),
 					}))))
 				})
 
@@ -1757,6 +1781,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Provider.Workers[0].Minimum = 3
 					shoot.Spec.Provider.Workers[0].Maximum = 3
 					shoot.Spec.Provider.Workers[0].MaxSurge = new(intstr.FromInt32(3))
+					shoot.Spec.Provider.Workers[0].MaxUnavailable = new(intstr.FromInt32(0))
 					shoot.Spec.Provider.Workers[0].Zones = []string{"a", "b", "c"}
 					shoot.Spec.ControlPlane = &core.ControlPlane{
 						HighAvailability: &core.HighAvailability{
