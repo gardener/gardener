@@ -29,11 +29,13 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Authorizer", func() {
@@ -637,79 +639,117 @@ var _ = Describe("Authorizer", func() {
 		})
 
 		Context("#Secrets", func() {
-			DescribeTable("should allow accessing the secrets which belong to the gardener-node-agent instance", func(verb string) {
-				attrs := &auth.AttributesRecord{
-					User:            nodeAgentUser,
-					Name:            "",
-					Namespace:       "kube-system",
-					APIGroup:        "",
-					Resource:        "secrets",
-					ResourceRequest: true,
-					Verb:            verb,
-				}
-				secretNames := []string{machineSecretName, "gardener-valitail", "shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-cluster-admin"}
+			When("the operating system config secrets exist", func() {
+				BeforeEach(func() {
+					// foo-machine belongs to the control plane worker pool: its operating system config declares the control
+					// plane component access tokens in the gardener-node-agent configuration, so its node-agent may read them.
+					oscSecret := oscSecretWithTokenSyncConfigs(machineSecretName, "control-plane", "gardener-valitail", "shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-cluster-admin")
+					Expect(targetClient.Create(ctx, oscSecret)).To(Succeed())
+					DeferCleanup(func() { Expect(targetClient.Delete(ctx, oscSecret)).To(Succeed()) })
 
-				for _, secretName := range secretNames {
-					attrs.Name = secretName
-					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					// bar-machine belongs to a regular worker pool: its operating system config does not declare any control
+					// plane access tokens.
+					newOSCSecret := oscSecretWithTokenSyncConfigs(newMachineSecretName, "worker")
+					Expect(targetClient.Create(ctx, newOSCSecret)).To(Succeed())
+					DeferCleanup(func() { Expect(targetClient.Delete(ctx, newOSCSecret)).To(Succeed()) })
+				})
 
-					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionAllow))
-					Expect(reason).To(BeEmpty())
-				}
-			},
-				Entry("get", "get"),
-				Entry("list", "list"),
-				Entry("watch", "watch"),
-			)
+				DescribeTable("should allow accessing the secrets which belong to the gardener-node-agent instance", func(verb string) {
+					attrs := &auth.AttributesRecord{
+						User:            nodeAgentUser,
+						Name:            "",
+						Namespace:       "kube-system",
+						APIGroup:        "",
+						Resource:        "secrets",
+						ResourceRequest: true,
+						Verb:            verb,
+					}
+					secretNames := []string{machineSecretName, "gardener-valitail", "shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-cluster-admin"}
 
-			DescribeTable("should deny accessing the node agent config secret which belong to a different gardener-node-agent instance", func(verb string) {
-				attrs := &auth.AttributesRecord{
-					User:            nodeAgentUser,
-					Name:            newMachineSecretName,
-					Namespace:       "kube-system",
-					APIGroup:        "",
-					Resource:        "secrets",
-					ResourceRequest: true,
-					Verb:            verb,
-				}
+					for _, secretName := range secretNames {
+						attrs.Name = secretName
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
 
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					}
+				},
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector shoot-access-kube-controller-manager shoot-access-kube-scheduler shoot-access-etcd-main shoot-access-etcd-events shoot-access-cluster-admin %s] in \"kube-system\" namespace", machineSecretName)))
-			},
-				Entry("get", "get"),
-				Entry("list", "list"),
-				Entry("watch", "watch"),
-			)
+				DescribeTable("should deny accessing control plane access tokens for a node-agent of a regular worker pool", func(verb string) {
+					attrs := &auth.AttributesRecord{
+						User:            newNodeAgentUser,
+						Namespace:       "kube-system",
+						APIGroup:        "",
+						Resource:        "secrets",
+						ResourceRequest: true,
+						Verb:            verb,
+					}
+					secretNames := []string{"shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-etcd-main", "shoot-access-etcd-events", "shoot-access-cluster-admin"}
 
-			DescribeTable("should deny accessing secrets in a different namespace", func(verb string) {
-				attrs := &auth.AttributesRecord{
-					User:            nodeAgentUser,
-					Name:            "",
-					Namespace:       "default",
-					APIGroup:        "",
-					Resource:        "secrets",
-					ResourceRequest: true,
-					Verb:            verb,
-				}
-				secretNames := []string{machineSecretName, "gardener-valitail", "shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-cluster-admin"}
+					for _, secretName := range secretNames {
+						attrs.Name = secretName
+						decision, _, err := authorizer.Authorize(ctx, attrs)
 
-				for _, secretName := range secretNames {
-					attrs.Name = secretName
-					decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionDeny), "expected secret %q to be denied", secretName)
+					}
+				},
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should deny accessing the node agent config secret which belong to a different gardener-node-agent instance", func(verb string) {
+					attrs := &auth.AttributesRecord{
+						User:            nodeAgentUser,
+						Name:            newMachineSecretName,
+						Namespace:       "kube-system",
+						APIGroup:        "",
+						Resource:        "secrets",
+						ResourceRequest: true,
+						Verb:            verb,
+					}
+
+					decision, _, err := authorizer.Authorize(ctx, attrs)
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionDeny))
-					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail gardener-opentelemetry-collector shoot-access-kube-controller-manager shoot-access-kube-scheduler shoot-access-etcd-main shoot-access-etcd-events shoot-access-cluster-admin %s] in \"kube-system\" namespace", machineSecretName)))
-				}
-			},
-				Entry("get", "get"),
-				Entry("list", "list"),
-				Entry("watch", "watch"),
-			)
+				},
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should deny accessing secrets in a different namespace", func(verb string) {
+					attrs := &auth.AttributesRecord{
+						User:            nodeAgentUser,
+						Name:            "",
+						Namespace:       "default",
+						APIGroup:        "",
+						Resource:        "secrets",
+						ResourceRequest: true,
+						Verb:            verb,
+					}
+					secretNames := []string{machineSecretName, "gardener-valitail", "shoot-access-kube-controller-manager", "shoot-access-kube-scheduler", "shoot-access-cluster-admin"}
+
+					for _, secretName := range secretNames {
+						attrs.Name = secretName
+						decision, _, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionDeny))
+					}
+				},
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+			})
 
 			DescribeTable("should deny because no allowed verb", func(verb string) {
 				attrs := &auth.AttributesRecord{
@@ -1263,3 +1303,46 @@ var _ = Describe("Authorizer", func() {
 		})
 	})
 })
+
+func oscSecretWithTokenSyncConfigs(name, workerPool string, tokenSecretNames ...string) *corev1.Secret {
+	nodeAgentScheme := runtime.NewScheme()
+	Expect(nodeagentconfigv1alpha1.AddToScheme(nodeAgentScheme)).To(Succeed())
+	nodeAgentSerializer := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, nodeAgentScheme, nodeAgentScheme, jsonserializer.SerializerOptions{Yaml: true})
+	nodeAgentCodec := serializer.NewCodecFactory(nodeAgentScheme).CodecForVersions(nodeAgentSerializer, nodeAgentSerializer, schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion}), schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion}))
+
+	var syncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
+	for _, tokenSecretName := range tokenSecretNames {
+		syncConfigs = append(syncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{SecretName: tokenSecretName, Path: "/some/path"})
+	}
+
+	nodeAgentConfigRaw, err := runtime.Encode(nodeAgentCodec, &nodeagentconfigv1alpha1.NodeAgentConfiguration{
+		Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
+			Token: nodeagentconfigv1alpha1.TokenControllerConfig{SyncConfigs: syncConfigs},
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	oscScheme := runtime.NewScheme()
+	Expect(extensionsv1alpha1.AddToScheme(oscScheme)).To(Succeed())
+	oscSerializer := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, oscScheme, oscScheme, jsonserializer.SerializerOptions{Yaml: true})
+	oscCodec := serializer.NewCodecFactory(oscScheme).CodecForVersions(oscSerializer, oscSerializer, schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion}), schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion}))
+
+	oscRaw, err := runtime.Encode(oscCodec, &extensionsv1alpha1.OperatingSystemConfig{
+		Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+			Files: []extensionsv1alpha1.File{{
+				Path:    "/var/lib/gardener-node-agent/config-v0.0.0-master+$Format:%H$.yaml",
+				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(nodeAgentConfigRaw)}},
+			}},
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: metav1.NamespaceSystem,
+			Labels:    map[string]string{v1beta1constants.LabelWorkerPool: workerPool},
+		},
+		Data: map[string][]byte{"osc.yaml": oscRaw},
+	}
+}
