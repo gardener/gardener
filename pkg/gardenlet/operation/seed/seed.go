@@ -71,28 +71,23 @@ func (s *Seed) SetInfo(seed *gardencorev1beta1.Seed) {
 	s.info.Store(seed)
 }
 
-// UpdateInfo updates the seed resource of this Seed in a concurrency safe way,
-// using the given context, client, and mutate function.
-// It copies the current seed resource and then uses the copy to patch the resource in the cluster
-// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
-// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// UpdateInfoMetadata updates the metadata of the seed resource of this Seed in a concurrency safe way,
+// using the given context, client, and mutate function. The patch is issued against the `metadata` subresource,
+// hence the mutate function must only change `.metadata` (any changes to `.spec`/`.status` are ignored by the server).
+// It copies the current seed resource and then uses the copy to merge-patch the resource in the cluster.
+// This method is protected by a mutex, so only a single UpdateInfoMetadata or UpdateInfoStatus operation can be
 // executed at any point in time.
-func (s *Seed) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Seed) error) error {
+func (s *Seed) UpdateInfoMetadata(ctx context.Context, c client.Client, f func(*gardencorev1beta1.Seed) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
 	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
 
-	var patch client.Patch
-	if useStrategicMerge {
-		patch = client.StrategicMergeFrom(seed.DeepCopy())
-	} else {
-		patch = client.MergeFrom(seed.DeepCopy())
-	}
+	patch := client.MergeFrom(seed.DeepCopy())
 	if err := f(seed); err != nil {
 		return err
 	}
-	if err := c.Patch(ctx, seed, patch); err != nil {
+	if err := c.SubResource("metadata").Patch(ctx, seed, patch); err != nil {
 		return err
 	}
 	s.info.Store(seed)
@@ -103,7 +98,7 @@ func (s *Seed) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerg
 // using the given context, client, and mutate function.
 // It copies the current seed resource and then uses the copy to patch the resource in the cluster
 // using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
-// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// This method is protected by a mutex, so only a single UpdateInfoMetadata or UpdateInfoStatus operation can be
 // executed at any point in time.
 func (s *Seed) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Seed) error) error {
 	s.infoMutex.Lock()
