@@ -156,5 +156,20 @@ var _ = Describe("SeedEventHandler", func() {
 				Request{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "secret-b"},
 			))
 		})
+
+		It("should enqueue the refs of all internal domains", func() {
+			spec := specWith(refA)
+			spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{
+				*spec.DNS.Internal,
+				{Type: "test", Domain: "former.example.com", CredentialsRef: refB},
+			}
+
+			hdlr.Delete(ctx, event.TypedDeleteEvent[client.Object]{Object: newGardenlet("seed-a", spec)}, queue)
+
+			Expect(drain()).To(ConsistOf(
+				Request{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "secret-a"},
+				Request{APIVersion: "v1", Kind: "Secret", Namespace: "garden", Name: "secret-b"},
+			))
+		})
 	})
 })

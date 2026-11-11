@@ -297,6 +297,13 @@ func (v *ValidateSeed) validateReferenceAllowlist(attrs admission.Attributes, se
 		}
 	}
 
+	for i, internalDNS := range seed.Spec.DNS.InternalDomains {
+		ref := internalDNS.CredentialsRef
+		if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, fmt.Sprintf("spec.dns.internalDomains[%d].credentialsRef", i)); err != nil {
+			return err
+		}
+	}
+
 	for i, defaultDNS := range seed.Spec.DNS.Defaults {
 		ref := defaultDNS.CredentialsRef
 		if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, fmt.Sprintf("spec.dns.defaults[%d].credentialsRef", i)); err != nil {

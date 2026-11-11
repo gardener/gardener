@@ -476,7 +476,6 @@ func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *fie
 	return allErrs
 }
 
-// validateSeedDNSProviderConfig validates a SeedDNSProviderConfig.
 func validateSeedInternalDomains(dns core.SeedDNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

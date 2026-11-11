@@ -568,6 +568,46 @@ var _ = Describe("validator", func() {
 					})
 				})
 
+				When("spec.dns.internalDomains[].credentialsRef is a Secret", func() {
+					BeforeEach(func() {
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{
+							*newSeed.Spec.DNS.Internal,
+							{
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: corev1.SchemeGroupVersion.String(),
+									Kind:       "Secret",
+									Namespace:  namespaceName,
+									Name:       "dns-former-internal-secret",
+								},
+							},
+						}
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "dns-former-internal-secret", Namespace: namespaceName},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Validate(context.TODO(), attrs, nil)
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("spec.dns.internalDomains[1].credentialsRef")))
+					})
+
+					It("should allow when annotation lists the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "dns-former-internal-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
 				When("spec.dns.defaults[].credentialsRef is a Secret", func() {
 					BeforeEach(func() {
 						newSeed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{
