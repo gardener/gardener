@@ -297,7 +297,7 @@
     },
     {
       "datasource": "prometheus",
-      "description": "99th percentile end-to-end latency of unary gRPC requests as seen by the server \u2014 the client-visible latency signal for the D in RED. Only populated for the main etcd (requires extensive metrics); empty for events.",
+      "description": "99th percentile end-to-end latency of unary gRPC requests as seen by the server \u2014 the client-visible latency signal for the D in RED. Yellow above 500ms, red above 1s (the Kubernetes API p99 SLO for mutating calls, of which etcd is only one part). Only populated for the main etcd (requires extensive metrics); empty for events.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -313,11 +313,11 @@
               },
               {
                 "color": "yellow",
-                "value": 0.1
+                "value": 0.5
               },
               {
                 "color": "red",
-                "value": 0.15
+                "value": 1
               }
             ]
           },
