@@ -550,6 +550,7 @@ func (r *Reconciler) newEtcd(
 		storageClassName              *string
 		storageCapacity               string
 		minAllowed                    corev1.ResourceList
+		disabled                      bool
 	)
 
 	switch role {
@@ -571,6 +572,7 @@ func (r *Reconciler) newEtcd(
 		evictionRequirement = new(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
+		disabled = !helper.IsETCDEventsEnabled(garden)
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
 			minAllowed = etcd.Events.Autoscaling.MinAllowed
 		}
@@ -608,6 +610,7 @@ func (r *Reconciler) newEtcd(
 		r.GardenNamespace,
 		secretsManager,
 		etcd.Values{
+			Disabled:                    disabled,
 			NamePrefix:                  operatorv1alpha1.VirtualGardenNamePrefix,
 			Role:                        role,
 			Class:                       class,

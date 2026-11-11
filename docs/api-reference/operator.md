@@ -1232,6 +1232,18 @@ ETCDEvents contains configuration for the events etcd.
 
 <tr>
 <td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled specifies whether the events etcd is enabled. Defaults to true.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>autoscaling</code></br>
 <em>
 <a href="#controlplaneautoscaling">ControlPlaneAutoscaling</a>

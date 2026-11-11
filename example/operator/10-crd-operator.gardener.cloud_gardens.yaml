@@ -472,6 +472,10 @@ spec:
                             required:
                             - minAllowed
                             type: object
+                          enabled:
+                            description: Enabled specifies whether the events etcd
+                              is enabled. Defaults to true.
+                            type: boolean
                           storage:
                             description: Storage contains storage configuration.
                             properties:

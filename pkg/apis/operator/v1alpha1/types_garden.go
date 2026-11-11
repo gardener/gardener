@@ -332,6 +332,9 @@ type ETCDMain struct {
 
 // ETCDEvents contains configuration for the events etcd.
 type ETCDEvents struct {
+	// Enabled specifies whether the events etcd is enabled. Defaults to true.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 	// Autoscaling contains auto-scaling configuration options for etcd.
 	// +optional
 	Autoscaling *gardencorev1beta1.ControlPlaneAutoscaling `json:"autoscaling,omitempty"`
