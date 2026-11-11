@@ -266,7 +266,11 @@ data:
 > This means you do not need to repeat the same CA secret for every `Extension` or `ControllerDeployment` that uses the same private registry.
 > See [Helm Chart Image Vector](../deployment/image_vector.md#helm-chart-image-vector) for details.
 
-The downloaded chart is cached in memory. It is recommended to always specify a digest, because if it is not specified, the manifest is fetched in every reconciliation to compare the digest with the local cache.
+The downloaded chart is cached in memory.
+It is recommended to always specify a digest rather than a tag.
+Besides avoiding a manifest fetch on every reconciliation to compare against the cache, a digest pins the exact chart content that `gardener-operator` and `gardenlet` render and apply with highly privileged clients.
+A tag is mutable: if the content served for it changes at the registry, the next reconciliation pulls and applies the new content.
+Unlike container images that run as `Pod`s, this pull path does not pass through Kubernetes admission, so no admission-time signature verification (e.g., via the [`shoot-lakom-service`](https://github.com/gardener/gardener-extension-shoot-lakom-service) extension) applies to it — pinning a digest is the applicable control.
 
 ### Helm Values
 
