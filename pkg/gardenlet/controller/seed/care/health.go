@@ -131,7 +131,7 @@ func (h *health) checkEmergencyStopShootReconciliations(condition gardencorev1be
 	))
 }
 
-// SeedConditions contains all seed related conditions of the seed status subresource.
+// SeedConditions contains conditions relevant to the care controller of the seed status subresource.
 type SeedConditions struct {
 	systemComponentsHealthy           gardencorev1beta1.Condition
 	emergencyStopShootReconciliations gardencorev1beta1.Condition

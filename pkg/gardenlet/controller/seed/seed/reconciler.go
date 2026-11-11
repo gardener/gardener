@@ -167,6 +167,8 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, seed *garde
 	seed.Status.ClientCertificateExpirationTimestamp = r.ClientCertificateExpirationTimestamp
 	seed.Status.KubernetesVersion = new(r.SeedClientSet.Version())
 
+	seed.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, seed.Status.Conditions, true, "", "")
+
 	// Initialize capacity and allocatable
 	var capacity, allocatable corev1.ResourceList
 	if r.Config.Resources != nil && len(r.Config.Resources.Capacity) > 0 {
@@ -232,6 +234,8 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, seed *gar
 		}
 	}
 
+	seed.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, seed.Status.Conditions, false, "", "")
+
 	seed.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           operationType,
 		State:          gardencorev1beta1.LastOperationStateSucceeded,
@@ -254,6 +258,8 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, seed *garde
 	seed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
 	seed.Status.LastOperation.Description = err.Error() + " Operation will be retried."
 	seed.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+	seed.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, seed.Status.Conditions, false, string(operationType)+string(seed.Status.LastOperation.State), seed.Status.LastOperation.Description)
 
 	if err2 := r.GardenClient.Status().Patch(ctx, seed, patch); err2 != nil {
 		return fmt.Errorf("failed updating last operation to state 'Error' (due to %s): %w", err.Error(), err2)
