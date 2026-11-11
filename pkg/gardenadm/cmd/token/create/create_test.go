@@ -146,11 +146,18 @@ var _ = Describe("Create", func() {
 					Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("failed reading Shoot from Cluster resource")))
 				})
 
-				It("should successfully print the join command", func() {
+				It("should return an error because the Shoot has no DNS domain", func() {
+					shoot.Spec.DNS = nil
+					createShootInfoAndCluster()
+
+					Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("shoot has no DNS domain")))
+				})
+
+				It("should print the join command with the external domain if the control plane is not exposed", func() {
 					createShootInfoAndCluster()
 
 					Expect(command.RunE(command, []string{token})).To(Succeed())
-					Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
+					Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" https://api.root.example.com
 `))
 				})
 
@@ -173,11 +180,11 @@ var _ = Describe("Create", func() {
 					Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("`--print-{join,reset}-command` can only be used when the kubeconfig points to a Shoot cluster")))
 				})
 
-				It("should successfully print the reset command", func() {
+				It("should print the reset command with the external domain if the control plane is not exposed", func() {
 					createShootInfoAndCluster()
 
 					Expect(command.RunE(command, []string{token})).To(Succeed())
-					Eventually(stdOut).Should(Say(`gardenadm reset --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" some-host
+					Eventually(stdOut).Should(Say(`gardenadm reset --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" https://api.root.example.com
 `))
 				})
 

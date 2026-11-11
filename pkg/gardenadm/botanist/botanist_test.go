@@ -202,7 +202,6 @@ metadata:
 				Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
 				Expect(b.Extensions).To(ConsistOf(
 					HaveField("ControllerRegistration.Name", "provider-stackit"),
-					HaveField("ControllerRegistration.Name", "dns-local"),
 				))
 				Expect(b.Seed).To(BeNil())
 			})

@@ -146,12 +146,6 @@ func run(ctx context.Context, opts *Options) error {
 				SkipIf(hasMigratedExtensionKind[extensionsv1alpha1.WorkerResource]),
 		)
 
-		listControlPlaneMachines = g.Add(flow.Task{
-			Name:         "Listing control plane machines",
-			Fn:           b.ListControlPlaneMachines,
-			Dependencies: flow.NewTaskIDs(reconcileWorker),
-		})
-
 		// Scale down machine-controller-manager to prevent it from interfering with Machine objects that will be migrated
 		// to the self-hosted shoot. Scaling down instead of deleting it, allows operators/developers to simply scale it up
 		// again in case they need to redeploy a control plane machine manually because of errors.
@@ -164,13 +158,6 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(reconcileWorker),
 		})
 
-		deployDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying DNSRecord pointing to the first control plane machine",
-			Fn:           b.DeployBootstrapDNSRecord,
-			SkipIf:       hasMigratedExtensionKind[extensionsv1alpha1.DNSRecordResource],
-			Dependencies: flow.NewTaskIDs(listControlPlaneMachines),
-		})
-
 		// In contrast to the usual Shoot migrate flow, we don't delete the extension objects after executing the migrate
 		// operation. The extension controllers are supposed to skip any reconcile operation if the last operation is of
 		// type "Migrate". Also, this makes it easier to allow re-running `gardenadm bootstrap` in case of failures
@@ -180,9 +167,8 @@ func run(ctx context.Context, opts *Options) error {
 			Fn: flow.Parallel(
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Infrastructure),
 				component.MigrateAndWait(b.Shoot.Components.Extensions.Worker),
-				component.MigrateAndWait(b.Shoot.Components.Extensions.ExternalDNSRecord),
 			),
-			Dependencies: flow.NewTaskIDs(scaleDownMachineControllerManager, deployDNSRecord),
+			Dependencies: flow.NewTaskIDs(scaleDownMachineControllerManager),
 		})
 
 		// In contrast to a usual Shoot control plane migration, there is no garden cluster where the ShootState is stored.
@@ -209,7 +195,7 @@ func run(ctx context.Context, opts *Options) error {
 		connectToMachine = g.Add(flow.Task{
 			Name:         "Connecting to the first control plane machine",
 			Fn:           flow.TaskFn(b.ConnectToControlPlaneMachine).RetryUntilTimeout(5*time.Second, 6*time.Minute),
-			Dependencies: flow.NewTaskIDs(listControlPlaneMachines, deployBastion),
+			Dependencies: flow.NewTaskIDs(reconcileWorker, deployBastion),
 		})
 		copyManifests = g.Add(flow.Task{
 			Name: "Copying manifests to the first control plane machine",
@@ -238,7 +224,7 @@ func run(ctx context.Context, opts *Options) error {
 					fmt.Sprintf("%s %q", nodeinit.GardenadmPathDownloadScript, image.String()),
 				)
 			}).Timeout(5 * time.Minute),
-			Dependencies: flow.NewTaskIDs(deployDNSRecord, copyManifests, installRegistryCABundle),
+			Dependencies: flow.NewTaskIDs(copyManifests, installRegistryCABundle),
 		})
 		bootstrapControlPlane = g.Add(flow.Task{
 			Name: "Bootstrapping control plane on the first control plane machine",
@@ -356,7 +342,6 @@ func getMigratedExtensionKinds(ctx context.Context, c client.Reader, namespace s
 	relevantExtensionKinds := map[string]client.ObjectList{
 		extensionsv1alpha1.InfrastructureResource: &extensionsv1alpha1.InfrastructureList{},
 		extensionsv1alpha1.WorkerResource:         &extensionsv1alpha1.WorkerList{},
-		extensionsv1alpha1.DNSRecordResource:      &extensionsv1alpha1.DNSRecordList{},
 	}
 
 	out := make(map[string]bool, len(relevantExtensionKinds))

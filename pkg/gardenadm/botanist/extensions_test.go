@@ -322,7 +322,7 @@ var _ = Describe("Extensions", func() {
 		})
 
 		When("not running the control plane (gardenadm bootstrap)", func() {
-			It("should return the Infrastructure, Worker, OSC, and DNSRecord extensions", func() {
+			It("should return the Infrastructure, Worker, and OSC extensions", func() {
 				Expect(ComputeExtensions(resources, false, true)).To(ConsistOf(
 					And(
 						HaveField("ControllerRegistration.Name", controllerRegistrationInfraWorker.Name),
@@ -331,10 +331,6 @@ var _ = Describe("Extensions", func() {
 					And(
 						HaveField("ControllerRegistration.Name", controllerRegistrationOSC.Name),
 						HaveField("ControllerDeployment.Name", controllerDeploymentOSC.Name),
-					),
-					And(
-						HaveField("ControllerRegistration.Name", controllerRegistrationDNS.Name),
-						HaveField("ControllerDeployment.Name", controllerDeploymentDNS.Name),
 					),
 				))
 			})

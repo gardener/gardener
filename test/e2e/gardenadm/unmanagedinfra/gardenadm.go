@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -132,6 +133,18 @@ var _ = Describe("gardenadm unmanaged infrastructure scenario tests", Label("gar
 					g.Expect(err).NotTo(HaveOccurred())
 					return string(stdOut.Contents())
 				}).Should(Equal(configDirectory))
+			}, SpecTimeout(time.Minute))
+
+			It("should configure the admin kubeconfig to target the kube-apiserver on localhost", func(ctx SpecContext) {
+				stdOut, _, err := RunInMachine(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
+				Expect(err).NotTo(HaveOccurred())
+
+				adminKubeconfig, err := clientcmd.Load(stdOut.Contents())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(adminKubeconfig.Clusters).NotTo(BeEmpty())
+				for _, cluster := range adminKubeconfig.Clusters {
+					Expect(cluster.Server).To(Equal("https://localhost"))
+				}
 			}, SpecTimeout(time.Minute))
 
 			itShouldJoinNode()

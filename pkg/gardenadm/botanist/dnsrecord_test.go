@@ -80,7 +80,6 @@ var _ = Describe("DNSRecord", func() {
 				},
 			},
 		})
-		b.Shoot.SetShootState(&gardencorev1beta1.ShootState{})
 	})
 
 	// setExtensionExposure configures the shoot info to have extension-based exposure.
@@ -114,7 +113,7 @@ var _ = Describe("DNSRecord", func() {
 		}
 	}
 
-	Describe("#RestoreExternalDNSRecord", func() {
+	Describe("#DeployExternalDNSRecord", func() {
 		It("should fail if there are no control plane nodes", func(ctx SpecContext) {
 			node := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -126,14 +125,14 @@ var _ = Describe("DNSRecord", func() {
 			}
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("no control plane nodes found"))
+			Expect(b.DeployExternalDNSRecord(ctx)).To(MatchError("no control plane nodes found"))
 		})
 
 		It("should fail if a control plane node has no addresses", func(ctx SpecContext) {
 			node := healthyControlPlaneNode(controlPlaneWorkerPoolName + "-1")
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("has no addresses")))
+			Expect(b.DeployExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("has no addresses")))
 		})
 
 		It("should fail if no node address matches the configured IP family", func(ctx SpecContext) {
@@ -144,10 +143,10 @@ var _ = Describe("DNSRecord", func() {
 			node := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"})
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("configured IP family")))
+			Expect(b.DeployExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("configured IP family")))
 		})
 
-		It("should set the preferred (internal first) addresses and restore the DNSRecord", func(ctx SpecContext) {
+		It("should set the preferred (internal first) addresses and deploy the DNSRecord", func(ctx SpecContext) {
 			// The internal address is preferred so the record stays resolvable within the cluster network even when
 			// the nodes have no externally routable addresses.
 			node1 := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1",
@@ -161,23 +160,23 @@ var _ = Describe("DNSRecord", func() {
 
 			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1", "1.2.3.5"})
-			externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+			externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 			externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+			Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 		})
 
-		It("should include unhealthy control plane nodes (restore is a one-shot at bootstrap)", func(ctx SpecContext) {
+		It("should include unhealthy control plane nodes (deployed once while bootstrapping)", func(ctx SpecContext) {
 			node := healthyControlPlaneNode(controlPlaneWorkerPoolName+"-1", corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "10.0.0.1"})
 			node.Status.Conditions = []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}
 			Expect(fakeClient.Create(ctx, node)).To(Succeed())
 
 			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
-			externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+			externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 			externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+			Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 		})
 
 		It("should filter dual-stack addresses to the first IP family", func(ctx SpecContext) {
@@ -192,10 +191,10 @@ var _ = Describe("DNSRecord", func() {
 
 			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
-			externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+			externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 			externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-			Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+			Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 		})
 
 		Context("with extension-based exposure", func() {
@@ -204,13 +203,13 @@ var _ = Describe("DNSRecord", func() {
 			})
 
 			It("should fail if SelfHostedShootExposure has no ingress yet", func(ctx SpecContext) {
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError("exposure has no ingress yet"))
+				Expect(b.DeployExternalDNSRecord(ctx)).To(MatchError("exposure has no ingress yet"))
 			})
 
 			It("should fail if all ingress entries have neither IP nor hostname", func(ctx SpecContext) {
 				selfHostedShootExposure.Ingress = []corev1.LoadBalancerIngress{{IP: "", Hostname: ""}}
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("neither IPs nor hostnames")))
+				Expect(b.DeployExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("neither IPs nor hostnames")))
 			})
 
 			It("should use IPs when available", func(ctx SpecContext) {
@@ -221,10 +220,10 @@ var _ = Describe("DNSRecord", func() {
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1", "10.0.0.2"})
-				externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+				externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 				externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+				Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 			})
 
 			It("should fall back to hostnames when no IPs are present", func(ctx SpecContext) {
@@ -234,10 +233,10 @@ var _ = Describe("DNSRecord", func() {
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeCNAME)
 				externalDNSRecord.EXPECT().SetValues([]string{"lb.example.com"})
-				externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+				externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 				externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+				Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 			})
 
 			It("should prefer IPs over hostnames when both are present across entries", func(ctx SpecContext) {
@@ -248,10 +247,10 @@ var _ = Describe("DNSRecord", func() {
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
-				externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+				externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 				externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+				Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 			})
 
 			It("should filter dual-stack IPs to the first IP family", func(ctx SpecContext) {
@@ -263,10 +262,10 @@ var _ = Describe("DNSRecord", func() {
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
-				externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+				externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 				externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+				Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 			})
 
 			It("should fall back to the second IP family when no IPs match the first", func(ctx SpecContext) {
@@ -277,10 +276,10 @@ var _ = Describe("DNSRecord", func() {
 
 				externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 				externalDNSRecord.EXPECT().SetValues([]string{"10.0.0.1"})
-				externalDNSRecord.EXPECT().Restore(gomock.Any(), gomock.Any()).Return(nil)
+				externalDNSRecord.EXPECT().Deploy(gomock.Any()).Return(nil)
 				externalDNSRecord.EXPECT().Wait(gomock.Any()).Return(nil)
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(Succeed())
+				Expect(b.DeployExternalDNSRecord(ctx)).To(Succeed())
 			})
 
 			It("should fail if ingress IPs do not match any configured IP family", func(ctx SpecContext) {
@@ -289,7 +288,7 @@ var _ = Describe("DNSRecord", func() {
 					{IP: "10.0.0.1"},
 				}
 
-				Expect(b.RestoreExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("configured IP family")))
+				Expect(b.DeployExternalDNSRecord(ctx)).To(MatchError(ContainSubstring("configured IP family")))
 			})
 		})
 	})

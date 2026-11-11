@@ -330,19 +330,32 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 }
 
 func (b *Botanist) appendStaticAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
-	userKubeconfigSecret, ok := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
-	if !ok {
-		return nil, fmt.Errorf("failed fetching secret %q", kubeapiserver.SecretNameUserKubeconfig)
+	secretStaticToken, found := b.SecretsManager.Get(kubeapiserver.SecretStaticTokenName)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", kubeapiserver.SecretStaticTokenName)
 	}
 
-	return append(files, extensionsv1alpha1.File{
-		Path:        PathKubeconfig,
-		Permissions: new(int32(0600)),
-		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(userKubeconfigSecret.Data[secretsutils.DataKeyKubeconfig])}},
-	}), nil
+	staticToken, err := secretsutils.LoadStaticTokenFromCSV(kubeapiserver.SecretStaticTokenName, secretStaticToken.Data[secretsutils.DataKeyStaticTokenCSV])
+	if err != nil {
+		return nil, fmt.Errorf("failed loading static token from secret %q: %w", kubeapiserver.SecretStaticTokenName, err)
+	}
+
+	adminToken, err := staticToken.GetTokenForUsername(kubeapiserver.UserNameClusterAdmin)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting admin token from static token csv: %w", err)
+	}
+
+	return b.appendAdminKubeconfigToFiles(files, clientcmdv1.AuthInfo{Token: adminToken.Token})
 }
 
 func (b *Botanist) appendDynamicAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
+	return b.appendAdminKubeconfigToFiles(files, clientcmdv1.AuthInfo{TokenFile: adminaccess.PathOnControlPlaneNodes})
+}
+
+// appendAdminKubeconfigToFiles appends the admin kubeconfig with the given credentials to the given files. The admin
+// kubeconfig is used on the control plane nodes, hence it targets the kube-apiserver on localhost. This way, it doesn't
+// depend on the DNS records of the shoot, which are not necessarily set up while bootstrapping the control plane.
+func (b *Botanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File, authInfo clientcmdv1.AuthInfo) ([]extensionsv1alpha1.File, error) {
 	clusterCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
@@ -351,13 +364,13 @@ func (b *Botanist) appendDynamicAdminKubeconfigToFiles(files []extensionsv1alpha
 	kubeconfig := kubernetesutils.NewKubeconfig(
 		b.Shoot.GetInfo().Status.TechnicalID,
 		clientcmdv1.Cluster{Server: "localhost", CertificateAuthorityData: clusterCABundleSecret.Data[secretsutils.DataKeyCertificateBundle]},
-		clientcmdv1.AuthInfo{TokenFile: adminaccess.PathOnControlPlaneNodes},
+		authInfo,
 	)
 	kubeconfig.Contexts[0].Context.Namespace = b.Shoot.ControlPlaneNamespace
 
 	rawKubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+		return nil, fmt.Errorf("failed encoding admin kubeconfig: %w", err)
 	}
 
 	return append(files, extensionsv1alpha1.File{
