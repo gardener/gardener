@@ -305,7 +305,7 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [finalizers status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [finalizers metadata status]"))
 				})
 
 				It("should allow when verb is delete and resource does not exist", func() {
@@ -342,9 +342,11 @@ var _ = Describe("Shoot", func() {
 
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("patch w/ metadata subresource", "patch", "metadata"),
 					Entry("patch w/ finalizers subresource", "patch", "finalizers"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ status subresource", "update", "status"),
+					Entry("update w/ metadata subresource", "update", "metadata"),
 					Entry("update w/ finalizers subresource", "update", "finalizers"),
 					Entry("delete", "delete", ""),
 				)
@@ -428,7 +430,7 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata status]"))
 				})
 
 				It("should allow when verb is delete and resource does not exist", func() {
@@ -465,8 +467,10 @@ var _ = Describe("Shoot", func() {
 
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("patch w/ metadata subresource", "patch", "metadata"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ status subresource", "update", "status"),
+					Entry("update w/ metadata subresource", "update", "metadata"),
 					Entry("delete", "delete", ""),
 				)
 
@@ -538,7 +542,7 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata status]"))
 				})
 
 				It("should have no opinion because request is for a namespace the gardenlet is not responsible for", func() {
@@ -571,8 +575,10 @@ var _ = Describe("Shoot", func() {
 					Entry("get", "get", ""),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("patch w/ metadata subresource", "patch", "metadata"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ status subresource", "update", "status"),
+					Entry("update w/ metadata subresource", "update", "metadata"),
 				)
 
 				DescribeTable("should allow list/watch requests if field selector is provided",
@@ -834,7 +840,7 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata status]"))
 				})
 
 				DescribeTable("should return correct result if path exists",
@@ -858,8 +864,10 @@ var _ = Describe("Shoot", func() {
 					Entry("get w/o subresource", "get", ""),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ status subresource", "update", "status"),
+					Entry("update w/ metadata subresource", "update", "metadata"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("patch w/ metadata subresource", "patch", "metadata"),
 				)
 
 				DescribeTable("should allow list/watch requests if field selector is provided",
@@ -1279,7 +1287,7 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata status]"))
 				})
 
 				It("should have no opinion because namespace does not match", func() {
@@ -1337,10 +1345,13 @@ var _ = Describe("Shoot", func() {
 
 					Entry("get w/o subresource", "get", ""),
 					Entry("get w/ subresource", "get", "status"),
+					Entry("get w/ metadata subresource", "get", "metadata"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ subresource", "patch", "status"),
+					Entry("patch w/ metadata subresource", "patch", "metadata"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ subresource", "update", "status"),
+					Entry("update w/ metadata subresource", "update", "metadata"),
 				)
 			})
 
@@ -1478,7 +1489,7 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata status]"))
 				})
 
 				It("should have no opinion because namespace does not match", func() {
@@ -1537,10 +1548,13 @@ var _ = Describe("Shoot", func() {
 
 					Entry("get w/o subresource", "get", ""),
 					Entry("get w/ subresource", "get", "status"),
+					Entry("get w/ metadata subresource", "get", "metadata"),
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ subresource", "patch", "status"),
+					Entry("patch w/ metadata subresource", "patch", "metadata"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ subresource", "update", "status"),
+					Entry("update w/ metadata subresource", "update", "metadata"),
 				)
 			})
 
@@ -1637,8 +1651,24 @@ var _ = Describe("Shoot", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata]"))
 				})
+
+				DescribeTable("should allow the request when the request is for 'metadata' subresource and path exists",
+					func(verb string) {
+						attrs.Subresource = "metadata"
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeInternalSecret, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("patch", "patch"),
+					Entry("update", "update"),
+				)
 
 				It("should have no opinion because no resource name is given", func() {
 					attrs.Name = ""
@@ -1867,7 +1897,18 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata]"))
+				})
+
+				It("should allow the request when the request is for 'metadata' subresource and path exists", func() {
+					attrs.Subresource = "metadata"
+					attrs.Verb = "patch"
+
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeShootState, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
 				})
 			})
 
@@ -1921,6 +1962,24 @@ var _ = Describe("Shoot", func() {
 					Expect(reason).To(BeEmpty())
 				})
 
+				DescribeTable("should allow the request when the request is for 'metadata' subresource and path exists",
+					func(verb string) {
+						attrs.Subresource = "metadata"
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphutils.VertexTypeWorkloadIdentity, namespace, name, graphutils.VertexTypeShoot, shootNamespace, shootName).Return(true)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+				)
+
 				DescribeTable("should have no opinion because no allowed verb",
 					func(verb string) {
 						attrs.Verb = verb
@@ -1956,7 +2015,7 @@ var _ = Describe("Shoot", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [token]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata token]"))
 				})
 
 				It("should have no opinion because create is not allowed for non-token subresource", func() {
@@ -1967,7 +2026,7 @@ var _ = Describe("Shoot", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [token]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata token]"))
 				})
 
 				It("should have no opinion because patch is not allowed for token subresource", func() {
@@ -1978,7 +2037,7 @@ var _ = Describe("Shoot", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [token]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata token]"))
 				})
 
 				It("should have no opinion because no resource name is given", func() {
@@ -2690,7 +2749,7 @@ var _ = Describe("Shoot", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [metadata status]"))
 				})
 
 				DescribeTable("should return correct result if path exists",
@@ -2713,8 +2772,10 @@ var _ = Describe("Shoot", func() {
 
 					Entry("patch w/o subresource", "patch", ""),
 					Entry("patch w/ status subresource", "patch", "status"),
+					Entry("patch w/ metadata subresource", "patch", "metadata"),
 					Entry("update w/o subresource", "update", ""),
 					Entry("update w/ status subresource", "update", "status"),
+					Entry("update w/ metadata subresource", "update", "metadata"),
 				)
 			})
 		})
