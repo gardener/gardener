@@ -49,6 +49,15 @@ func ConfirmDeletion(ctx context.Context, w client.Writer, obj client.Object) er
 	return w.Patch(ctx, obj, patch)
 }
 
+// ConfirmDeletionViaMetadataSubresource is like ConfirmDeletion but issues the patch against the `metadata` subresource
+// of the object instead of the main resource. It must only be used for types served by the gardener-apiserver.
+func ConfirmDeletionViaMetadataSubresource(ctx context.Context, c client.Client, obj client.Object) error {
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.ConfirmationDeletion, "true")
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
+	return c.SubResource("metadata").Patch(ctx, obj, patch)
+}
+
 func confirmationAnnotationRequiredError() error {
 	return fmt.Errorf("must have a %q annotation to delete", v1beta1constants.ConfirmationDeletion)
 }
