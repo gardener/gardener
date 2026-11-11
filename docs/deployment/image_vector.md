@@ -31,6 +31,19 @@ That means that Gardener will use the `pause-container` with tag `3.4` for all c
 > As you can see, it is possible to provide the full image reference via the `ref` field.
 > Another option is to use the `repository` and `tag` fields. `tag` may also be a digest only (starting with `sha256:...`), or it can contain both tag and digest (`v1.2.3@sha256:...`).
 
+> [!IMPORTANT]
+> Several images are not run as `Pod`s but are pulled directly by `containerd` on shoot worker nodes (via `ctr images pull` during node bootstrap and on every self-update), with a binary extracted from them and executed on the node — in some cases as `root`:
+> - `gardener-node-agent` (extracts `/gardener-node-agent`, runs as `root`),
+> - `hyperkube` (extracts `/kubelet`, runs as `root`),
+> - `valitail` (extracts `/usr/bin/valitail`),
+> - `opentelemetry-collector` (extracts `/bin/otelcol`), and
+> - `gardenadm` (pulled via the same `ctr` mechanism during bootstrap).
+>
+> Unlike container images that run as `Pod`s, this pull path does not pass through Kubernetes admission, so no admission-time signature or digest verification applies to it.
+> For productive deployments you should therefore pin these images (and ideally all images) to digests in your image vector (overwrite) — either via `ref: repository@sha256:...` or via `repository` plus a `tag` containing a digest (`v1.2.3@sha256:...`).
+> Pinning a digest makes the pulled bytes integrity-verified end-to-end, independent of the registry, mirror, or CA configuration in use on the nodes.
+> Note that `Pod`-level signature verification (e.g., via the [`shoot-lakom-service`](https://github.com/gardener/gardener-extension-shoot-lakom-service) extension) does **not** cover this path, since these images are pulled by `containerd` and never admitted as `Pod`s — digest pinning in the image vector is the applicable control here.
+
 ## Architectures
 
 ```yaml
