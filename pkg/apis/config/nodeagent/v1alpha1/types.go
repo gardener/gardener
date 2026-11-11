@@ -70,12 +70,16 @@ type NodeAgentConfiguration struct {
 
 	// ClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to use
 	// when communicating with the kube-apiserver of the shoot cluster.
+	// +required
 	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	// +required
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
+	// +required
 	LogFormat string `json:"logFormat"`
 	// Server defines the configuration of the HTTP server.
+	// +required
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
 	// +optional
@@ -86,19 +90,23 @@ type NodeAgentConfiguration struct {
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// APIServer contains information about the API server.
+	// +required
 	APIServer APIServer `json:"apiServer"`
 	// Bootstrap contains configuration for the bootstrap command.
 	// +optional
 	Bootstrap *BootstrapConfiguration `json:"bootstrap,omitempty"`
 	// Controllers defines the configuration of the controllers.
+	// +required
 	Controllers ControllerConfiguration `json:"controllers"`
 }
 
 // APIServer contains information about the API server.
 type APIServer struct {
 	// Server is the address of the API server.
+	// +required
 	Server string `json:"server"`
 	// CAFile is the path on the node to the certificate authority file for the API server.
+	// +required
 	CAFile string `json:"caFile"`
 }
 
@@ -117,16 +125,20 @@ type BootstrapConfiguration struct {
 type ControlPlaneNodesEndpoints struct {
 	// Enabled specifies whether the bootstrapper is enabled. This should only be true for control plane nodes in
 	// self-hosted shoots.
+	// +required
 	Enabled bool `json:"enabled"`
 }
 
 // ControllerConfiguration defines the configuration of the controllers.
 type ControllerConfiguration struct {
 	// OperatingSystemConfig is the configuration for the operating system config controller.
+	// +required
 	OperatingSystemConfig OperatingSystemConfigControllerConfig `json:"operatingSystemConfig"`
 	// Token is the configuration for the access token controller.
+	// +required
 	Token TokenControllerConfig `json:"token"`
 	// SystemdUnitCheck is the configuration for the systemd unit check controller.
+	// +required
 	SystemdUnitCheck SystemdUnitCheckControllerConfig `json:"systemdUnitCheck"`
 }
 
@@ -137,9 +149,11 @@ type OperatingSystemConfigControllerConfig struct {
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// SecretName defines the name of the secret in the shoot cluster control plane, which contains the operating system
 	// config (OSC) for the gardener-node-agent.
+	// +required
 	SecretName string `json:"secretName"`
 	// KubernetesVersion contains the Kubernetes version of the kubelet, used for annotating the corresponding node
 	// resource with a kubernetes version annotation.
+	// +required
 	KubernetesVersion *semver.Version `json:"kubernetesVersion"`
 	// PreferIPv6 specifies whether IPv6 addresses should be preferred over IPv4 addresses.
 	// +optional
@@ -160,8 +174,10 @@ type TokenControllerConfig struct {
 type TokenSecretSyncConfig struct {
 	// SecretName defines the name of the secret in the shoot cluster's kube-system namespace which contains the access
 	// token.
+	// +required
 	SecretName string `json:"secretName"`
 	// Path is the path on the machine where the access token content should be synced.
+	// +required
 	Path string `json:"path"`
 }
 
@@ -189,7 +205,9 @@ type ServerConfiguration struct {
 // Server contains information for HTTP(S) server configuration.
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
+	// +required
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve requests.
+	// +required
 	Port int32 `json:"port"`
 }

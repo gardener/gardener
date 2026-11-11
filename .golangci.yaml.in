@@ -340,13 +340,7 @@ linters:
       # (e.g. extensions/pkg/apis/...), extend the path-except pattern below.
       - linters:
           - kubeapilinter
-        path-except: 'pkg/apis/[^/]+(/[^/]+)?/v[0-9]+((alpha|beta)[0-9]+)?/[^/]+$'
-      # optionalorrequired is only enforced for the API groups listed below. Add a group here once its fields are
-      # explicitly marked as +optional or +required; remove this rule when all groups are migrated.
-      - linters:
-          - kubeapilinter
-        text: 'optionalorrequired:'
-        path-except: 'pkg/apis/(config/operator/v1alpha1|config/resourcemanager/v1alpha1|core/v1|core/v1beta1|extensions/v1alpha1|operations/v1alpha1|operator/v1alpha1)/[^/]+$'
+        path-except: '^pkg/apis/[^/]+(/[^/]+)?/v[0-9]+((alpha|beta)[0-9]+)?/[^/]+$'
       # optionalfields: Spec/Status and other struct fields on top-level API objects have established non-pointer
       # conventions in Kubernetes APIs. Similarly, scalar fields (int64, string) with incomplete validation
       # are intentionally kept as value types. Converting these to pointers would be API-breaking.
