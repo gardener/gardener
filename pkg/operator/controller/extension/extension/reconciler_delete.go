@@ -74,7 +74,6 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Handling Extension in runtime cluster",
 			Fn: func(ctx context.Context) error {
-				// Deploying the extension with a Garden kubeconfig during deletion is best-effort only, as the Garden cluster might already be in the process of being deleted.
 				_, err := r.deployExtensionInRuntime(ctx, log, virtualClusterClientSet, extension)
 				return err
 			},

@@ -16,7 +16,7 @@ The path to this kubeconfig is revealed under the `GARDEN_KUBECONFIG` environmen
 
 Extensions that are deployed to the garden runtime cluster via `gardener-operator` (i.e., by setting `.spec.deployment.extension.runtimeClusterValues` in the [`Extension` resource](../concepts/operator.md#extension-deployment)) can request `gardener-operator` to inject a kubeconfig and a token for the (virtual) garden cluster.
 
-In order to do so, `injectGardenKubeconfigInRuntimeCluster` must be set to `true` in `.spec.deployment.extension.injectGardenKubeconfig` of the `Extension` resource.
+In order to do so, `.spec.deployment.extension.injectGardenKubeconfigInRuntimeCluster` must be set to `true` in the `Extension` resource.
 By default, the Kubeconfig is injected into all workload resources (`Deployment`, `StatefulSet`, etc.) owned by the extension.
 An individual opt-out for a workload resource is possible by labeling it with `extensions.gardener.cloud/inject-garden-kubeconfig=false`.
 
