@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/cmd/internal/migration"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -25,7 +26,16 @@ import (
 func runMigrations(ctx context.Context, c client.Client, log logr.Logger) manager.RunnableFunc {
 	return func(context.Context) error {
 		// TODO(timuthy): Remove migration after Gardener v1.155 has been released.
-		return DeleteStaleShootAccessSecrets(ctx, c, log)
+		if err := DeleteStaleShootAccessSecrets(ctx, c, log); err != nil {
+			return err
+		}
+
+		// TODO(DobromirNPeev): Remove this migration after Gardener v1.158 has been released.
+		if err := migration.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, c, log); err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 

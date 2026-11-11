@@ -54,6 +54,7 @@ build:
             - charts
             - cmd/gardenlet
             - cmd/gardenlet/app
+            - cmd/internal/migration
             - cmd/utils
             - cmd/utils/initrun
             - imagevector
