@@ -7,8 +7,10 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -109,11 +111,13 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 	return nil
 }
 
-// executeStepOrWait returns a TaskFn that either executes the tasks in the given group sequentially (if this
-// gardenlet owns the step) or waits for the peer gardenlet to complete it.
+// executeStepOrWait returns a TaskFn that runs the given task group if this gardenlet owns the step, or waits for the peer gardenlet to complete it.
 func (r *Reconciler) executeStepOrWait(botanist *botanistpkg.Botanist, role v1beta1helper.LiveMigrationRole, conditionType gardencorev1beta1.ConditionType, group flow.TaskGroup) flow.TaskFn {
 	owner := liveMigrationStepOwners[conditionType]
 	return flow.TaskFn(func(ctx context.Context) error {
+		if err := r.checkGardenletVersionParity(ctx, botanist.Shoot.GetInfo(), role); err != nil {
+			return err
+		}
 		if role != owner {
 			return r.waitForLiveMigrationPeerStep(ctx, botanist, conditionType)
 		}
@@ -348,4 +352,59 @@ func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	})
 
 	return g
+}
+
+// checkGardenletVersionParity returns an error when the local and peer gardenlet versions differ or are not reported.
+func (r *Reconciler) checkGardenletVersionParity(ctx context.Context, shoot *gardencorev1beta1.Shoot, role v1beta1helper.LiveMigrationRole) error {
+	if r.Config.SeedConfig == nil {
+		return fmt.Errorf("seed config is not set")
+	}
+	ownSeedName := r.Config.SeedConfig.Name
+
+	localVersion := r.Identity.Version
+	if localVersion == "" {
+		return newGardenletVersionNotReportedError(role, ownSeedName)
+	}
+
+	peerSeedName, peerRole := liveMigratePeer(shoot, ownSeedName)
+	if peerRole == v1beta1helper.LiveMigrationRoleNone {
+		// The shoot is no longer undergoing a live migration (e.g. it was aborted).
+		return nil
+	}
+
+	peerSeed := &gardencorev1beta1.Seed{}
+	if err := r.GardenAPIReader.Get(ctx, client.ObjectKey{Name: peerSeedName}, peerSeed); err != nil {
+		return fmt.Errorf("getting live migration peer seed %q: %w", peerSeedName, err)
+	}
+
+	peerVersion := ptr.Deref(peerSeed.Status.Gardener, gardencorev1beta1.Gardener{}).Version
+	if peerVersion == "" {
+		return newGardenletVersionNotReportedError(peerRole, peerSeedName)
+	}
+
+	if localVersion != peerVersion {
+		sourceVersion, destinationVersion := localVersion, peerVersion
+		if role == v1beta1helper.LiveMigrationRoleDestination {
+			sourceVersion, destinationVersion = destinationVersion, sourceVersion
+		}
+		return fmt.Errorf("source and destination seeds must run the same gardenlet version (source: %q, destination: %q)", sourceVersion, destinationVersion)
+	}
+
+	return nil
+}
+
+// newGardenletVersionNotReportedError returns an error for a seed whose gardenlet version is not reported.
+func newGardenletVersionNotReportedError(role v1beta1helper.LiveMigrationRole, seedName string) error {
+	return fmt.Errorf("gardenlet version not reported for %s seed %q", strings.ToLower(string(role)), seedName)
+}
+
+func liveMigratePeer(shoot *gardencorev1beta1.Shoot, ownSeedName string) (seedName string, role v1beta1helper.LiveMigrationRole) {
+	switch v1beta1helper.GetLiveMigrationRole(shoot, ownSeedName) {
+	case v1beta1helper.LiveMigrationRoleSource:
+		return ptr.Deref(shoot.Spec.SeedName, ""), v1beta1helper.LiveMigrationRoleDestination
+	case v1beta1helper.LiveMigrationRoleDestination:
+		return ptr.Deref(shoot.Status.SeedName, ""), v1beta1helper.LiveMigrationRoleSource
+	default:
+		return "", v1beta1helper.LiveMigrationRoleNone
+	}
 }
