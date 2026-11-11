@@ -10,7 +10,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
@@ -32,23 +31,7 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 				return
 			}
 
-			g.handleServiceAccountCreateOrUpdate(serviceAccount)
-		},
-
-		UpdateFunc: func(oldObj, newObj any) {
-			oldServiceAccount, ok := oldObj.(*corev1.ServiceAccount)
-			if !ok {
-				return
-			}
-
-			newServiceAccount, ok := newObj.(*corev1.ServiceAccount)
-			if !ok {
-				return
-			}
-
-			if !apiequality.Semantic.DeepEqual(oldServiceAccount.Secrets, newServiceAccount.Secrets) {
-				g.handleServiceAccountCreateOrUpdate(newServiceAccount)
-			}
+			g.handleServiceAccountCreate(serviceAccount)
 		},
 
 		DeleteFunc: func(obj any) {
@@ -71,36 +54,26 @@ func (g *graph) setupServiceAccountWatch(_ context.Context, informer cache.Infor
 	return err
 }
 
-func (g *graph) handleServiceAccountCreateOrUpdate(serviceAccount *corev1.ServiceAccount) {
+func (g *graph) handleServiceAccountCreate(serviceAccount *corev1.ServiceAccount) {
 	start := time.Now()
 	defer func() {
-		metricUpdateDuration.WithLabelValues("ServiceAccount", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+		metricUpdateDuration.WithLabelValues("ServiceAccount", "Create").Observe(time.Since(start).Seconds())
 	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	if g.forSelfHostedShoots {
-		g.handleServiceAccountCreateOrUpdateForShoots(serviceAccount)
+	// Only self-hosted shoots derive an edge from ServiceAccounts (ServiceAccount -> Shoot for extension garden
+	// access). In the garden cluster, the gardenlet bootstrap flow uses the `TokenRequest` API and no longer relies on
+	// ServiceAccount token `Secret`s referenced via `.secrets[]` (auto-population was dropped in Kubernetes 1.24), so
+	// there is nothing to model here.
+	if !g.forSelfHostedShoots {
 		return
 	}
 
-	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name)
-
-	serviceAccountVertex := g.getOrCreateVertex(VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name)
-
-	for _, secret := range serviceAccount.Secrets {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, serviceAccount.Namespace, secret.Name)
-		g.addEdge(secretVertex, serviceAccountVertex)
-	}
-}
-
-func (g *graph) handleServiceAccountCreateOrUpdateForShoots(serviceAccount *corev1.ServiceAccount) {
 	shootName, ok := gardenerutils.ParseExtensionShootServiceAccountName(serviceAccount.Name)
 	if !ok {
 		return
 	}
-
-	g.deleteAllOutgoingEdges(VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name, VertexTypeShoot)
 
 	serviceAccountVertex := g.getOrCreateVertex(VertexTypeServiceAccount, serviceAccount.Namespace, serviceAccount.Name)
 	shootVertex := g.getOrCreateVertex(VertexTypeShoot, serviceAccount.Namespace, shootName)
