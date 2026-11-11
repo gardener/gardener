@@ -926,12 +926,6 @@ func GetDomainFromAPIServerURL(url string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(url, "https://"), v1beta1constants.APIServerFQDNPrefix+".")
 }
 
-// LiveMigrationTemporaryVPNDNSName returns the hostname for the temporary VPN DNS record created during live
-// control plane migration.
-func LiveMigrationTemporaryVPNDNSName(internalClusterDomain string) string {
-	return "vpn-tmp." + internalClusterDomain
-}
-
 // IsKubeProxyIPVSMode checks if the shoot is running with kube-proxy in IPVS mode.
 func IsKubeProxyIPVSMode(kubeProxyConfig *gardencorev1beta1.KubeProxyConfig) bool {
 	return kubeProxyConfig != nil && kubeProxyConfig.Enabled != nil && *kubeProxyConfig.Enabled &&
