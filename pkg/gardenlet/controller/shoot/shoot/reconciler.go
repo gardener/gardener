@@ -1202,7 +1202,7 @@ func (r *Reconciler) patchBastions(ctx context.Context, shoot *gardencorev1beta1
 			fns = append(fns, func(ctx context.Context) error {
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
-				if err := r.GardenClient.Patch(ctx, &bastion, patch); err != nil {
+				if err := r.GardenClient.SubResource("metadata").Patch(ctx, &bastion, patch); err != nil {
 					return fmt.Errorf("failed to patch bastion %s: %w", client.ObjectKeyFromObject(&bastion), err)
 				}
 				bastionsPatched = true
