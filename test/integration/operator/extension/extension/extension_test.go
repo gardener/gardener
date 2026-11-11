@@ -429,15 +429,16 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 
 		By("Mark extension bar in runtime cluster as not required")
-		Eventually(func() error {
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
+
 			extensionBar.Status.Conditions = v1beta1helper.MergeConditions(extensionBar.Status.Conditions, gardencorev1beta1.Condition{
 				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				Type:               "RequiredRuntime",
 				Status:             "False",
 			})
-
-			return testClient.Status().Update(ctx, extensionBar)
+			g.Expect(testClient.Status().Update(ctx, extensionBar)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Validate that extension bar is still not deployed in runtime cluster")
@@ -446,15 +447,16 @@ var _ = Describe("Extension controller tests", func() {
 		}).Should(BeNotFoundError())
 
 		By("Deploy extension bar in runtime cluster by marking it as required")
-		Eventually(func() error {
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
+
 			extensionBar.Status.Conditions = v1beta1helper.MergeConditions(extensionBar.Status.Conditions, gardencorev1beta1.Condition{
 				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				Type:               "RequiredRuntime",
 				Status:             "True",
 			})
-
-			return testClient.Status().Update(ctx, extensionBar)
+			g.Expect(testClient.Status().Update(ctx, extensionBar)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Wait for runtime managed resource and set it as applied, healthy and not progressing")
@@ -477,14 +479,16 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 
 		By("Deploy extension foo in runtime cluster by marking it as required")
-		Eventually(func() error {
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
+
 			extensionFoo.Status.Conditions = v1beta1helper.MergeConditions(extensionFoo.Status.Conditions, gardencorev1beta1.Condition{
 				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				Type:               "RequiredRuntime",
 				Status:             "True",
 			})
-			return testClient.Status().Update(ctx, extensionFoo)
+			g.Expect(testClient.Status().Update(ctx, extensionFoo)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Wait for runtime managed resource and set it as applied, healthy and not progressing")
@@ -507,14 +511,16 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 
 		By("Delete extension bar in runtime cluster by marking it as not required")
-		Eventually(func() error {
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
+
 			extensionBar.Status.Conditions = v1beta1helper.MergeConditions(extensionBar.Status.Conditions, gardencorev1beta1.Condition{
 				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				Type:               "RequiredRuntime",
 				Status:             "False",
 			})
-			return testClient.Status().Update(ctx, extensionBar)
+			g.Expect(testClient.Status().Update(ctx, extensionBar)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Wait for runtime managed resource to be deleted")
@@ -560,7 +566,8 @@ var _ = Describe("Extension controller tests", func() {
 		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
 
 		By("Mark extension foo in runtime cluster as not required")
-		Eventually(func() error {
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
 			extensionFoo.Status.Conditions = v1beta1helper.MergeConditions(extensionFoo.Status.Conditions, gardencorev1beta1.Condition{
 				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -568,7 +575,7 @@ var _ = Describe("Extension controller tests", func() {
 				Status:             "False",
 			})
 
-			return testClient.Status().Update(ctx, extensionFoo)
+			g.Expect(testClient.Status().Update(ctx, extensionFoo)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Wait for extension to be gone")
