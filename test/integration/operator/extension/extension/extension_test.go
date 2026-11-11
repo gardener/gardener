@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -280,6 +281,14 @@ var _ = Describe("Extension controller tests", func() {
 			WithReason("NoGardenFound"),
 		))
 
+		By("Verify kstatus conditions are absent when no garden exists")
+		Expect(extensionBar.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type": Equal(gardencorev1beta1.ConditionReconciling),
+		})), "Reconciling must be absent when no garden exists")
+		Expect(extensionBar.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type": Equal(gardencorev1beta1.ConditionStalled),
+		})), "Stalled must be absent when no garden exists")
+
 		By("Create Garden")
 		Expect(testClient.Create(ctx, garden)).To(Succeed())
 		log.Info("Created Garden for test", "garden", garden.Name)
@@ -306,6 +315,18 @@ var _ = Describe("Extension controller tests", func() {
 			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionFoo))).To(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, managedResourceRegistrationFoo))).To(Succeed())
 		})
+
+		By("Verify Stalled=True is set while garden is not yet reconciled")
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
+			g.Expect(extensionBar.Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(gardencorev1beta1.ConditionStalled),
+				"Status": Equal(gardencorev1beta1.ConditionTrue),
+			})), "Stalled=True must be set while garden is not yet reconciled")
+			g.Expect(extensionBar.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type": Equal(gardencorev1beta1.ConditionReconciling),
+			})), "Reconciling must be absent while garden is not yet reconciled")
+		}).Should(Succeed())
 
 		By("Update Garden to ready state")
 		garden.Status = operatorv1alpha1.GardenStatus{
@@ -339,6 +360,14 @@ var _ = Describe("Extension controller tests", func() {
 			WithStatus(gardencorev1beta1.ConditionTrue),
 			WithReason("ReconcileSuccessful"),
 		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionBar.Status.Conditions))
+
+		By("Verify kstatus conditions are absent after successful reconciliation")
+		Expect(extensionBar.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type": Equal(gardencorev1beta1.ConditionReconciling),
+		})), "Reconciling must be absent after successful reconciliation")
+		Expect(extensionBar.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type": Equal(gardencorev1beta1.ConditionStalled),
+		})), "Stalled must be absent after successful reconciliation")
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationBar), managedResourceRegistrationBar)).To(Succeed())
 
