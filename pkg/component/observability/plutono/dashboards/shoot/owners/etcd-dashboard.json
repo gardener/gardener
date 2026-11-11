@@ -34,7 +34,7 @@
     },
     {
       "datasource": "prometheus",
-      "description": "Minimum across all etcd members. A value of 0 means at least one member has no leader \u2014 the cluster may not be quorate.",
+      "description": "Whether a majority of the desired etcd members currently see a leader. Compares the number of members reporting a leader against the majority of the StatefulSet's desired replicas, so it works for single-member and HA clusters. A single member being down does not turn this red as long as quorum is intact. Select a single role for a meaningful result.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -45,11 +45,11 @@
               "options": {
                 "0": {
                   "index": 0,
-                  "text": "No leader"
+                  "text": "No quorum"
                 },
                 "1": {
                   "index": 1,
-                  "text": "Has leader"
+                  "text": "Quorum"
                 }
               },
               "type": "value"
@@ -98,13 +98,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(etcd_server_has_leader{role=~\"etcd-$role\"})",
+          "expr": "(sum(etcd_server_has_leader{role=~\"etcd-$role\"}) or vector(0))\n>= bool\n(floor(max(kube_statefulset_replicas{statefulset=~\"etcd-$role\"}) / 2) + 1)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Leader",
+      "title": "Quorum",
       "type": "stat"
     },
     {
