@@ -32,6 +32,7 @@ type Bastion struct {
 
 	// Spec is the specification of this Bastion.
 	// If the object's deletion timestamp is set, this field is immutable.
+	// +required
 	Spec BastionSpec `json:"spec"`
 	// Status is the bastion's status.
 	// +optional
@@ -56,8 +57,10 @@ type BastionSpec struct {
 	// UserData is the base64-encoded user data for the bastion instance. This should
 	// contain code to provision the SSH key on the bastion instance.
 	// This field is immutable.
+	// +required
 	UserData []byte `json:"userData"`
 	// Ingress controls from where the created bastion host should be reachable.
+	// +required
 	Ingress []BastionIngressPolicy `json:"ingress"`
 	// Image holds information about the machine image to use for the bastion.
 	// +optional
@@ -67,14 +70,17 @@ type BastionSpec struct {
 // BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
 type BastionIngressPolicy struct {
 	// IPBlock defines an IP block that is allowed to access the bastion.
+	// +required
 	IPBlock networkingv1.IPBlock `json:"ipBlock"`
 }
 
 // BastionMachine contains information about the machine type and image.
 type BastionMachine struct {
 	// Type is the machine type of the bastion.
+	// +required
 	Type string `json:"type"`
 	// Image holds information about the machine image to use for the bastion.
+	// +required
 	Image BastionMachineImage `json:"image"`
 }
 
@@ -82,8 +88,10 @@ type BastionMachine struct {
 // defined in the respective CloudProfile.
 type BastionMachineImage struct {
 	// Name is the name of the image.
+	// +required
 	Name string `json:"name"`
 	// Version is the version of the image.
+	// +required
 	Version string `json:"version"`
 }
 
