@@ -407,19 +407,23 @@ var _ = Describe("migration", func() {
 	})
 
 	Describe("#RefreshShootStateForLiveMigration", func() {
+		var gardenAPIFakeClient client.Client
+
 		BeforeEach(func() {
 			gardenFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			gardenAPIFakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden-bar"},
 			}
 
 			botanist.GardenClient = gardenFakeClient
+			botanist.GardenAPIReader = gardenAPIFakeClient
 			botanist.Shoot.SetInfo(shoot)
 		})
 
 		It("should store the fetched ShootState on the in-memory Shoot", func() {
-			Expect(gardenFakeClient.Create(ctx, &gardencorev1beta1.ShootState{
+			Expect(gardenAPIFakeClient.Create(ctx, &gardencorev1beta1.ShootState{
 				ObjectMeta: metav1.ObjectMeta{Name: shoot.Name, Namespace: shoot.Namespace},
 			})).To(Succeed())
 
