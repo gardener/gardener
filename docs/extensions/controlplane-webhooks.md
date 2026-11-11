@@ -132,6 +132,8 @@ The kube-scheduler command line can't contain provider-specific flags, and it ma
 
 To deploy etcd, Gardener **shall** create 2 [Etcd](https://github.com/gardener/etcd-druid/blob/1d427e9167adac1476d1847c0e265c2c09d6bc62/config/samples/druid_v1alpha1_etcd.yaml) named `etcd-main` and `etcd-events` in the Shoot namespace (`virtual-garden-etcd-{main,events}` in the `garden` namespace for the virtual garden). They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
+The `etcd-events` is only created if the events etcd is enabled for the `Shoot` (`.spec.kubernetes.etcd.events.enabled`, defaults to `true`). Hence, webhooks **shall not** rely on the existence of the `etcd-events` resource and related objects like its `StatefulSet`s or `PersistentVolumeClaim`s.
+
 Gardener **shall** configure the `Etcd` resource completely to set up an etcd cluster which uses the default storage class of the seed cluster.
 
 ### cloud-controller-manager

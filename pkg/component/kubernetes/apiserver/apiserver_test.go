@@ -3694,6 +3694,21 @@ anonymous:
 					))
 				})
 
+				It("should not configure etcd servers overrides when etcd-events is disabled", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion:     runtimeVersion,
+							ETCDEventsDisabled: new(true),
+						},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement("--etcd-servers=https://etcd-main-client:2379"))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(HavePrefix("--etcd-servers-overrides=")))
+				})
+
 				It("should configure correctly when run as static pod", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{

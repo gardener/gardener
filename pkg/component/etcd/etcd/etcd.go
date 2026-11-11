@@ -155,6 +155,9 @@ type etcd struct {
 
 // Values are the configuration values for the ETCD.
 type Values struct {
+	// Disabled specifies whether the etcd is disabled. A disabled etcd is destroyed and not deployed anymore, and all
+	// other lifecycle methods become no-ops.
+	Disabled                    bool
 	NamePrefix                  string
 	Role                        string
 	Class                       Class
@@ -235,6 +238,9 @@ type StaticPodConfig struct {
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
+	if e.values.Disabled {
+		return e.Destroy(ctx)
+	}
 	var existingEtcd *druidcorev1alpha1.Etcd
 
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
@@ -937,6 +943,10 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 }
 
 func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
+	if e.values.Disabled {
+		return nil
+	}
+
 	if e.values.BackupConfig == nil {
 		return fmt.Errorf("no backup is configured for this etcd, cannot make a snapshot")
 	}
@@ -973,6 +983,10 @@ func (e *etcd) Get(ctx context.Context) (*druidcorev1alpha1.Etcd, error) {
 func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.values.BackupConfig = backupConfig }
 
 func (e *etcd) Scale(ctx context.Context, replicas int32) error {
+	if e.values.Disabled {
+		return nil
+	}
+
 	etcdObj := &druidcorev1alpha1.Etcd{}
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), etcdObj); err != nil {
 		return err
@@ -1003,6 +1017,10 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
+	if e.values.Disabled {
+		return nil
+	}
+
 	if !e.values.HighAvailabilityEnabled {
 		return nil
 	}
@@ -1043,6 +1061,10 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 }
 
 func (e *etcd) IsPeerCARolledOut(ctx context.Context) (bool, error) {
+	if e.values.Disabled {
+		return true, nil
+	}
+
 	// We read via the API reader (and not the cached client) because the annotation might have been written by us in a
 	// previous reconciliation, and the cache might not have caught up yet.
 	if err := e.apiReader.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
@@ -1054,6 +1076,10 @@ func (e *etcd) IsPeerCARolledOut(ctx context.Context) (bool, error) {
 }
 
 func (e *etcd) MarkAsPeerCARolloutCompleted(ctx context.Context) error {
+	if e.values.Disabled {
+		return nil
+	}
+
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
 		return err
 	}
@@ -1064,6 +1090,10 @@ func (e *etcd) MarkAsPeerCARolloutCompleted(ctx context.Context) error {
 }
 
 func (e *etcd) UnmarkAsPeerCARolloutCompleted(ctx context.Context) error {
+	if e.values.Disabled {
+		return nil
+	}
+
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); client.IgnoreNotFound(err) != nil {
 		return err
 	}

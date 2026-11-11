@@ -80,6 +80,8 @@ type Interface interface {
 	SetServiceAccountConfig(ServiceAccountConfig)
 	// SetSNIConfig sets the SNI field in the Values of the deployer.
 	SetSNIConfig(SNIConfig)
+	// SetETCDEventsDisabled sets whether the ETCD events is deployed.
+	SetETCDEventsDisabled(bool)
 }
 
 // Values contains configuration values for the kube-apiserver resources.
@@ -600,6 +602,10 @@ func (k *kubeAPIServer) EnableStaticTokenKubeconfig(contextName string) {
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
+}
+
+func (k *kubeAPIServer) SetETCDEventsDisabled(disabled bool) {
+	k.values.ETCDEventsDisabled = &disabled
 }
 
 func (k *kubeAPIServer) SetETCDEncryptionConfig(config apiserver.ETCDEncryptionConfig) {

@@ -411,7 +411,9 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	out = append(out, "--enable-aggregator-routing=true")
 	out = append(out, "--enable-bootstrap-token-auth=true")
 	out = append(out, "--bind-address=::")
-	out = append(out, "--etcd-servers-overrides="+k.etcdServersOverrides())
+	if k.values.ETCDEventsDisabled == nil || !*k.values.ETCDEventsDisabled {
+		out = append(out, "--etcd-servers-overrides="+k.etcdServersOverrides())
+	}
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
 
 	if k.values.DefaultNotReadyTolerationSeconds != nil {

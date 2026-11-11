@@ -202,6 +202,25 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
+		Context("etcd-events disabled", func() {
+			BeforeEach(func() {
+				botanist.Shoot.GetInfo().Spec.Kubernetes.ETCD = &gardencorev1beta1.ETCD{Events: &gardencorev1beta1.ETCDEvents{Enabled: new(false)}}
+			})
+
+			It("should disable the etcd-events interface", func() {
+				validator.expectedRole = Equal("events")
+				validator.expectedDisabled = BeTrue()
+
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd(ctx, "events", class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("self-hosted shoot", func() {
 			BeforeEach(func() {
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -627,6 +646,7 @@ type newEtcdValidator struct {
 	expectedMaintenanceTimeWindow     gomegatypes.GomegaMatcher
 	expectedAutoscalingConfiguration  gomegatypes.GomegaMatcher
 	expectedMemberNamePrefix          gomegatypes.GomegaMatcher
+	expectedDisabled                  gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -660,6 +680,9 @@ func (v *newEtcdValidator) NewEtcd(
 	}
 	if v.expectedMemberNamePrefix != nil {
 		Expect(values.MemberNamePrefix).To(v.expectedMemberNamePrefix)
+	}
+	if v.expectedDisabled != nil {
+		Expect(values.Disabled).To(v.expectedDisabled)
 	}
 
 	return v

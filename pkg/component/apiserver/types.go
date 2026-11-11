@@ -34,6 +34,8 @@ type Values struct {
 	DisabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 	// Audit contains information for configuring audit settings for the API server.
 	Audit *AuditConfig
+	// ETCDEventsDisabled states whether storing events in the etcd-events is disabled.
+	ETCDEventsDisabled *bool
 	// ETCDEncryption contains configuration for the encryption of resources in etcd.
 	ETCDEncryption ETCDEncryptionConfig
 	// FeatureGates is the set of feature gates.

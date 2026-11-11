@@ -29,6 +29,10 @@ var (
 )
 
 func (e *etcd) Wait(ctx context.Context) error {
+	if e.values.Disabled {
+		return nil
+	}
+
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		e.client,

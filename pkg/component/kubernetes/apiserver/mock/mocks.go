@@ -161,6 +161,18 @@ func (mr *MockInterfaceMockRecorder) SetETCDEncryptionConfig(arg0 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetETCDEncryptionConfig", reflect.TypeOf((*MockInterface)(nil).SetETCDEncryptionConfig), arg0)
 }
 
+// SetETCDEventsDisabled mocks base method.
+func (m *MockInterface) SetETCDEventsDisabled(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetETCDEventsDisabled", arg0)
+}
+
+// SetETCDEventsDisabled indicates an expected call of SetETCDEventsDisabled.
+func (mr *MockInterfaceMockRecorder) SetETCDEventsDisabled(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetETCDEventsDisabled", reflect.TypeOf((*MockInterface)(nil).SetETCDEventsDisabled), arg0)
+}
+
 // SetExternalHostname mocks base method.
 func (m *MockInterface) SetExternalHostname(arg0 string) {
 	m.ctrl.T.Helper()

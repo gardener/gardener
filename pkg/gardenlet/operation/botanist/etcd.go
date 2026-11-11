@@ -42,6 +42,10 @@ func (b *Botanist) DefaultEtcd(ctx context.Context, role string, class etcd.Clas
 		TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 	}
 
+	if role == v1beta1constants.ETCDRoleEvents && !v1beta1helper.IsETCDEventsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.ETCD) {
+		values.Disabled = true
+	}
+
 	// Prefix etcd member names with the seed name so that members can be distinguished across
 	// control plane migrations between seeds. Self-hosted shoots have no Seed object.
 	// spec.memberNamePrefix requires etcd-druid v0.37+, only available when UpgradeEtcdVersion is enabled.
