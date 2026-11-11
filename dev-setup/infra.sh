@@ -14,11 +14,23 @@ DIR_BACKUP_BUCKET="$(dirname "$0")/../dev/local-backupbuckets"
 DIR_REGISTRY="$(dirname "$0")/../dev/local-registry"
 DIR_REGISTRY_TLS="$(dirname "$0")/infra/registry/tls"
 REGISTRY_HOST="registry.local.gardener.cloud"
+CA_TRUST_ANCHOR_DIRS=("/etc/pki/ca-trust/source/anchors" "/etc/ca-certificates/trust-source/anchors")
 
 SUDO=""
 if [[ "$(id -u)" != "0" ]]; then
   SUDO="sudo "
 fi
+
+ca_trust_anchor_dir() {
+  local dir
+  for dir in "${CA_TRUST_ANCHOR_DIRS[@]}"; do
+    if [[ -d "$dir" ]]; then
+      echo "$dir"
+      return 0
+    fi
+  done
+  return 1
+}
 
 cleanup_registry_ca() {
   if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -50,13 +62,14 @@ cleanup_registry_ca() {
     done <<< "$fingerprints"
 
   elif [[ "$(uname -s)" == "Linux" ]]; then
+    local anchor_dir
     if command -v update-ca-certificates >/dev/null 2>&1; then
       echo "> Removing registry CA from /usr/local/share/ca-certificates/..."
       ${SUDO}rm -f /usr/local/share/ca-certificates/gardener-local-registry-ca.crt
       ${SUDO}update-ca-certificates --fresh >/dev/null 2>&1 || true
-    elif command -v update-ca-trust >/dev/null 2>&1; then
-      echo "> Removing registry CA from /etc/pki/ca-trust/source/anchors/..."
-      ${SUDO}rm -f /etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem
+    elif command -v update-ca-trust >/dev/null 2>&1 && anchor_dir="$(ca_trust_anchor_dir)"; then
+      echo "> Removing registry CA from ${anchor_dir}/..."
+      ${SUDO}rm -f "${anchor_dir}/gardener-local-registry-ca.pem"
       ${SUDO}update-ca-trust extract >/dev/null 2>&1 || true
     fi
   fi
@@ -215,6 +228,7 @@ EOF
         if [[ -n "$SUDO" ]]; then
           echo "> Installing the registry CA into the system trust store may prompt for your sudo password... (run 'make cleanup-local-registry-ca' to undo)"
         fi
+        local anchor_dir
         if command -v update-ca-certificates >/dev/null 2>&1; then
           # Debian/Ubuntu
           local trust_anchor="/usr/local/share/ca-certificates/gardener-local-registry-ca.crt"
@@ -223,16 +237,18 @@ EOF
             ${SUDO}cp "$ca_crt" "$trust_anchor"
             ${SUDO}update-ca-certificates >/dev/null
           fi
-        elif command -v update-ca-trust >/dev/null 2>&1; then
-          # RHEL/Fedora
-          local trust_anchor="/etc/pki/ca-trust/source/anchors/gardener-local-registry-ca.pem"
+        elif command -v update-ca-trust >/dev/null 2>&1 && anchor_dir="$(ca_trust_anchor_dir)"; then
+          # RHEL/Fedora, Arch Linux
+          local trust_anchor="${anchor_dir}/gardener-local-registry-ca.pem"
           if ! cmp -s "$ca_crt" "$trust_anchor" 2>/dev/null; then
             echo "> Installing registry CA into $trust_anchor..."
             ${SUDO}cp "$ca_crt" "$trust_anchor"
             ${SUDO}update-ca-trust extract >/dev/null
           fi
+        elif command -v update-ca-trust >/dev/null 2>&1; then
+          echo "> WARNING: update-ca-trust found, but none of its trust anchor directories exist (${CA_TRUST_ANCHOR_DIRS[*]}); skaffold may not trust the registry. Copy $ca_crt into your distribution's trust anchor directory and run 'update-ca-trust extract'." >&2
         else
-          echo "> WARNING: no supported CA trust tool (update-ca-certificates/update-ca-trust) found; skaffold may not trust the registry."
+          echo "> WARNING: no supported CA trust tool (update-ca-certificates/update-ca-trust) found; skaffold may not trust the registry. Install one (e.g. the 'ca-certificates' package) and run 'make kind-up' again, or add $ca_crt to your system trust store manually." >&2
         fi
       fi
     }
