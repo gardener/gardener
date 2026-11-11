@@ -434,6 +434,176 @@ var _ = Describe("Condition", func() {
 		})
 	})
 
+	Describe("#MergeConditionsKStatus", func() {
+		var (
+			typeFoo = gardencorev1beta1.ConditionType("foo")
+			condFoo = gardencorev1beta1.Condition{Type: typeFoo, Status: gardencorev1beta1.ConditionTrue}
+		)
+
+		It("should add Reconciling=True when reconciling without stalled information", func() {
+			result := MergeConditionsKStatus(fakeClock, nil, true, "", "")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				{
+					Type:               gardencorev1beta1.ConditionReconciling,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "ReconcileInProgress",
+					Message:            "The resource is currently being reconciled.",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+			}))
+		})
+
+		It("should not add Reconciling or Stalled when not reconciling without stalled information", func() {
+			result := MergeConditionsKStatus(fakeClock, nil, false, "", "")
+
+			Expect(result).To(BeEmpty())
+		})
+
+		It("should add Stalled=True with message and reason when stalled and not reconciling", func() {
+			result := MergeConditionsKStatus(fakeClock, nil, false, "StalledReason", "stalled message")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				{
+					Type:               gardencorev1beta1.ConditionStalled,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "StalledReason",
+					Message:            "stalled message",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+			}))
+		})
+
+		It("should set Stalled=True when only stalledMessage is provided", func() {
+			result := MergeConditionsKStatus(fakeClock, nil, false, "", "stalled message")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				{
+					Type:               gardencorev1beta1.ConditionStalled,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "Unspecified",
+					Message:            "stalled message",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+			}))
+		})
+
+		It("should set Stalled=True when only stalledReason is provided", func() {
+			result := MergeConditionsKStatus(fakeClock, nil, false, "StalledReason", "")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				{
+					Type:               gardencorev1beta1.ConditionStalled,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "StalledReason",
+					Message:            "No message given.",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+			}))
+		})
+
+		It("should add both Reconciling=True and Stalled=True when reconciling and stalled", func() {
+			result := MergeConditionsKStatus(fakeClock, nil, true, "StalledReason", "stalled message")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				{
+					Type:               gardencorev1beta1.ConditionReconciling,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "ReconcileInProgress",
+					Message:            "The resource is currently being reconciled.",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+				{
+					Type:               gardencorev1beta1.ConditionStalled,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "StalledReason",
+					Message:            "stalled message",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+			}))
+		})
+
+		It("should preserve existing unrelated conditions and append kstatus conditions", func() {
+			conditions := []gardencorev1beta1.Condition{condFoo}
+
+			result := MergeConditionsKStatus(fakeClock, conditions, true, "", "")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				condFoo,
+				{
+					Type:               gardencorev1beta1.ConditionReconciling,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "ReconcileInProgress",
+					Message:            "The resource is currently being reconciled.",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+			}))
+		})
+
+		It("should remove existing Reconciling and Stalled conditions when not reconciling and not stalled", func() {
+			existingReconciling := gardencorev1beta1.Condition{Type: gardencorev1beta1.ConditionReconciling, Status: gardencorev1beta1.ConditionTrue}
+			existingStalled := gardencorev1beta1.Condition{Type: gardencorev1beta1.ConditionStalled, Status: gardencorev1beta1.ConditionTrue, Message: "oldMsg", Reason: "oldReason"}
+			conditions := []gardencorev1beta1.Condition{existingReconciling, condFoo, existingStalled}
+
+			result := MergeConditionsKStatus(fakeClock, conditions, false, "", "")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				condFoo,
+			}))
+		})
+
+		It("should update existing Reconciling and Stalled conditions in-place", func() {
+			existingReconciling := gardencorev1beta1.Condition{Type: gardencorev1beta1.ConditionReconciling, Status: gardencorev1beta1.ConditionFalse}
+			existingStalled := gardencorev1beta1.Condition{Type: gardencorev1beta1.ConditionStalled, Status: gardencorev1beta1.ConditionFalse, Message: "oldMsg", Reason: "oldReason"}
+			conditions := []gardencorev1beta1.Condition{existingReconciling, condFoo, existingStalled}
+
+			result := MergeConditionsKStatus(fakeClock, conditions, true, "StalledReason", "stalled message")
+
+			Expect(result).To(Equal([]gardencorev1beta1.Condition{
+				{
+					Type:               gardencorev1beta1.ConditionReconciling,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "ReconcileInProgress",
+					Message:            "The resource is currently being reconciled.",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+				condFoo,
+				{
+					Type:               gardencorev1beta1.ConditionStalled,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "StalledReason",
+					Message:            "stalled message",
+					LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+				},
+			}))
+		})
+
+		It("should preserve timestamps when an existing condition does not change", func() {
+			existingReconciling := gardencorev1beta1.Condition{
+				Type:               gardencorev1beta1.ConditionReconciling,
+				Status:             gardencorev1beta1.ConditionTrue,
+				Reason:             "ReconcileInProgress",
+				Message:            "The resource is currently being reconciled.",
+				LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+				LastUpdateTime:     metav1.Time{Time: fakeClock.Now()},
+			}
+			fakeClock.Step(time.Minute)
+
+			result := MergeConditionsKStatus(fakeClock, []gardencorev1beta1.Condition{existingReconciling}, true, "", "")
+
+			Expect(result).To(ConsistOf(existingReconciling))
+		})
+	})
+
 	DescribeTable("#RemoveConditions",
 		func(conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType, expectedResult []gardencorev1beta1.Condition) {
 			Expect(RemoveConditions(conditions, conditionTypes...)).To(Equal(expectedResult))
