@@ -21,6 +21,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -59,6 +60,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentrestriction"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podkubeapiserverloadbalancing"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
@@ -605,6 +607,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, config *resourcem
 				Enabled:                r.values.NodeAgentAuthorizerEnabled,
 				AuthorizeWithSelectors: r.values.NodeAgentAuthorizerAuthorizeWithSelectors,
 				MachineNamespace:       r.values.MachineNamespace,
+			},
+			NodeAgentRestriction: resourcemanagerconfigv1alpha1.NodeAgentRestrictionWebhookConfig{
+				Enabled: r.values.NodeAgentAuthorizerEnabled,
 			},
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
@@ -1262,6 +1267,10 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager + suffix, Namespace: r.namespace}}
 }
 
+func (r *resourceManager) emptyValidatingWebhookConfigurationShoot() *admissionregistrationv1.ValidatingWebhookConfiguration {
+	return &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager + "-shoot"}}
+}
+
 func (r *resourceManager) ensureValidatingWebhookConfiguration(ctx context.Context) error {
 	if SkipWebhookDeployment {
 		return nil
@@ -1321,9 +1330,16 @@ func (r *resourceManager) ensureShootResources(ctx context.Context, config *reso
 	mutatingWebhookConfiguration.Labels = r.appLabel()
 	mutatingWebhookConfiguration.Webhooks = r.newMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig, config)
 
-	data, err := registry.AddAllAndSerialize(
-		mutatingWebhookConfiguration,
-	)
+	objects := []client.Object{mutatingWebhookConfiguration}
+
+	if config.Webhooks.NodeAgentRestriction.Enabled {
+		validatingWebhookConfiguration := r.emptyValidatingWebhookConfigurationShoot()
+		validatingWebhookConfiguration.Labels = r.appLabel()
+		validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{NewNodeAgentRestrictionValidatingWebhook(secretServerCA, r.buildWebhookClientConfig)}
+		objects = append(objects, validatingWebhookConfiguration)
+	}
+
+	data, err := registry.AddAllAndSerialize(objects...)
 	if err != nil {
 		return err
 	}
@@ -1488,6 +1504,40 @@ func NewCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			SideEffects:             &sideEffect,
 			TimeoutSeconds:          new(int32(10)),
 		},
+	}
+}
+
+// NewNodeAgentRestrictionValidatingWebhook returns the ValidatingWebhook for the node-agent-restriction webhook for
+// reuse between the component and integration tests.
+func NewNodeAgentRestrictionValidatingWebhook(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.ValidatingWebhook {
+	return admissionregistrationv1.ValidatingWebhook{
+		Name: "node-agent-restriction.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{corev1.GroupName},
+					APIVersions: []string{corev1.SchemeGroupVersion.Version},
+					Resources:   []string{"nodes"},
+				},
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+			},
+			{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{certificatesv1.GroupName},
+					APIVersions: []string{certificatesv1.SchemeGroupVersion.Version},
+					Resources:   []string{"certificatesigningrequests"},
+				},
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+			},
+		},
+		FailurePolicy:           new(admissionregistrationv1.Fail),
+		NamespaceSelector:       &metav1.LabelSelector{},
+		ObjectSelector:          &metav1.LabelSelector{},
+		ClientConfig:            buildClientConfigFn(secretServerCA, nodeagentrestriction.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		MatchPolicy:             new(admissionregistrationv1.Exact),
+		SideEffects:             new(admissionregistrationv1.SideEffectClassNone),
+		TimeoutSeconds:          new(int32(10)),
 	}
 }
 
@@ -2160,6 +2210,7 @@ func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerconf
 	config.Webhooks.SeccompProfile.Enabled = false
 	config.Webhooks.PodKubeAPIServerLoadBalancing.Enabled = false
 	config.Webhooks.NodeAgentAuthorizer.Enabled = false
+	config.Webhooks.NodeAgentRestriction.Enabled = false
 }
 
 func (r *resourceManager) healthPort() int32 {
