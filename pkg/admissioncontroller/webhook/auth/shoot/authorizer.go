@@ -157,7 +157,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return requestAuthorizer.Check(graph.VertexTypeBackupBucket, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
-				authwebhook.WithAllowedSubresources("status", "finalizers"),
+				authwebhook.WithAllowedSubresources("status", "finalizers", "metadata"),
 				authwebhook.WithFieldSelectors(map[string]string{
 					core.BackupBucketShootRefName:      shootName,
 					core.BackupBucketShootRefNamespace: shootNamespace,
@@ -168,7 +168,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return requestAuthorizer.Check(graph.VertexTypeBackupEntry, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithFieldSelectors(map[string]string{
 					core.BackupEntryShootRefName:      shootName,
 					core.BackupEntryShootRefNamespace: shootNamespace,
@@ -178,7 +178,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case bastionResource:
 			return requestAuthorizer.Check(graph.VertexTypeBastion, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
 				authwebhook.WithFieldSelectors(map[string]string{
 					operations.BastionShootName: shootName,
@@ -208,7 +208,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case controllerInstallationResource:
 			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithFieldSelectors(map[string]string{
 					core.ShootRefName:      shootName,
 					core.ShootRefNamespace: shootNamespace,
@@ -230,7 +230,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return requestAuthorizer.Check(graph.VertexTypeGardenlet, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
 				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: gardenletutils.ResourcePrefixSelfHostedShoot + requestAuthorizer.ToName}),
 			)
@@ -239,6 +239,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return requestAuthorizer.Check(graph.VertexTypeInternalSecret, attrs,
 				authwebhook.WithAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("metadata"),
 			)
 
 		case leaseResource:
@@ -247,7 +248,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case managedSeedResource:
 			return requestAuthorizer.Check(graph.VertexTypeManagedSeed, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithAllowedNamespaces(requestAuthorizer.ToNamespace),
 				authwebhook.WithFieldSelectors(map[string]string{
 					seedmanagement.ManagedSeedShootName: shootName,
@@ -294,19 +295,21 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 			return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
 				authwebhook.WithAllowedVerbs("update", "patch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 			)
 
 		case shootStateResource:
 			return requestAuthorizer.Check(graph.VertexTypeShootState, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("metadata"),
 			)
 
 		case workloadIdentityResource:
 			return requestAuthorizer.Check(graph.VertexTypeWorkloadIdentity, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch"),
 				authwebhook.WithSubresourcesAndVerb([]string{"token"}, []string{"create"}),
+				authwebhook.WithSubresourcesAndVerb([]string{"metadata"}, []string{"update", "patch"}),
 			)
 
 		default:
