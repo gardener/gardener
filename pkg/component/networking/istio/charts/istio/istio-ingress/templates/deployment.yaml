@@ -37,6 +37,7 @@ spec:
         proxy.istio.io/config: |-
           connectionSettings:
             "profile": "EDGE"
+            "globalDownstreamConnectionLimit": "750000"
             # Same value as maximum of x-envoy-upstream-rq-timeout-ms in apiserver-tls-termination-envoyfilter.yaml
             "httpRequestTimeout": "86400s"
             "httpMaxConnectionDuration": "86400s"
@@ -46,7 +47,6 @@ spec:
             "httpStreamIdleTimeout": "21600s"
           protocolDetectionTimeout: 100ms
           runtimeValues:
-            "overload.global_downstream_max_connections": "750000"
             # Limits for mitigating HTTP/2 "Rapid Reset" DoS Vulnerability
             # See also https://github.com/envoyproxy/envoy/security/advisories/GHSA-jhv4-f7mr-xx76
             "overload.premature_reset_total_stream_count": "100"
