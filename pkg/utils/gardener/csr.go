@@ -38,6 +38,22 @@ func IsSeedClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.K
 	return areCSRRequirementsMet(x509cr, usages)
 }
 
+// IsNodeAgentClientCert returns true when the given CSR and usages match the requirements for a client certificate for
+// a gardener-node-agent. If false is returned, a reason will be returned explaining which requirement was not met.
+func IsNodeAgentClientCert(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage) (bool, string) {
+	requiredOrganizations := []string{v1beta1constants.NodeAgentsGroup}
+
+	if !reflect.DeepEqual(requiredOrganizations, x509cr.Subject.Organization) {
+		return false, fmt.Sprintf("subject's organization is not set to %v", requiredOrganizations)
+	}
+
+	if !strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix) {
+		return false, fmt.Sprintf("subject's common name does not start with %q", v1beta1constants.NodeAgentUserNamePrefix)
+	}
+
+	return areCSRRequirementsMet(x509cr, usages)
+}
+
 // IsGardenadmClientCert returns true when the given CSR and usages match the requirements for a client
 // certificate for a self-hosted shoot with the `gardenadm connect` prefix. If false is returned, a reason will be
 // returned explaining which requirement was not met.
