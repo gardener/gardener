@@ -254,7 +254,7 @@ func (b *Botanist) RemoveTaskAnnotation(ctx context.Context, tasksToRemove ...st
 		return nil
 	}
 
-	return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+	return b.Shoot.UpdateInfoMetadata(ctx, b.GardenClient, func(shoot *gardencorev1beta1.Shoot) error {
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
