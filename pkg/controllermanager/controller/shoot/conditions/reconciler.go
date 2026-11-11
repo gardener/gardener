@@ -51,7 +51,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// as opposed to seed conditions. Thus, subtract all shoot conditions to filter out the seed conditions.
 	shootConditions := gardenerutils.GetShootConditionTypes(false)
 
-	conditions := v1beta1helper.RetainConditions(shoot.Status.Conditions, shootConditions...)
+	additionalConditions := []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ConditionReconciling,
+		gardencorev1beta1.ConditionStalled,
+	}
+
+	conditions := v1beta1helper.RetainConditions(shoot.Status.Conditions, append(additionalConditions, shootConditions...)...)
 	if seed != nil {
 		conditions = v1beta1helper.MergeConditions(conditions, seed.Status.Conditions...)
 	}

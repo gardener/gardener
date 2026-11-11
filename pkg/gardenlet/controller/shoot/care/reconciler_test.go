@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +20,7 @@ import (
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -41,7 +43,7 @@ import (
 var _ = Describe("Shoot Care Control", func() {
 	var (
 		ctx           context.Context
-		gardenClient  client.Client
+		gardenClient  client.WithWatch
 		reconciler    reconcile.Reconciler
 		gardenletConf gardenletconfigv1alpha1.GardenletConfiguration
 		fakeClock     *testclock.FakeClock
@@ -552,6 +554,151 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 					})
 				})
+			})
+
+		})
+
+		Describe("kstatus condition preservation", func() {
+			// The shoot care controller must not touch Reconciling or Stalled conditions because those are owned by the shoot reconciler.
+			JustBeforeEach(func() {
+				op := &operation.Operation{
+					GardenClient:  gardenClient,
+					SeedClientSet: fakekubernetes.NewClientSetBuilder().Build(),
+					Shoot:         &shootpkg.Shoot{},
+					Logger:        logr.Discard(),
+				}
+				op.Shoot.SetInfo(shoot)
+
+				DeferCleanup(test.WithVars(
+					&NewOperation, opFunc(op, nil),
+					&NewGarbageCollector, nopGarbageCollectorFunc(),
+					&NewHealthCheck, healthCheckFunc(func(_ ShootConditions) []gardencorev1beta1.Condition {
+						return []gardencorev1beta1.Condition{
+							{
+								Type:   gardencorev1beta1.ShootAPIServerAvailable,
+								Status: gardencorev1beta1.ConditionTrue,
+								Reason: "Available",
+							},
+						}
+					}),
+					&NewConstraintCheck, constraintCheckFunc(func(_ ShootConstraints) []gardencorev1beta1.Condition { return nil }),
+				))
+
+				reconciler = &Reconciler{
+					GardenClient:   gardenClient,
+					SeedClientSet:  fakekubernetes.NewClientSet(),
+					ShootClientMap: fakeclientmap.NewClientMapBuilder().Build(),
+					Config:         gardenletConf,
+					Clock:          fakeClock,
+					SeedName:       seedName,
+				}
+			})
+
+			DescribeTable("preserves pre-existing kstatus conditions updated by the shoot reconciler during health checks", func(conditionType gardencorev1beta1.ConditionType) {
+				kstatusCondition := gardencorev1beta1.Condition{
+					Type:   conditionType,
+					Status: gardencorev1beta1.ConditionTrue,
+					Reason: "ConcurrentUpdate",
+				}
+				shoot.Status.Conditions = []gardencorev1beta1.Condition{{
+					Type:   conditionType,
+					Status: gardencorev1beta1.ConditionFalse,
+					Reason: "BeforeConcurrentUpdate",
+				}}
+				Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+				healthCondition := gardencorev1beta1.Condition{
+					Type:   gardencorev1beta1.ShootAPIServerAvailable,
+					Status: gardencorev1beta1.ConditionTrue,
+					Reason: "Available",
+				}
+				DeferCleanup(test.WithVars(&NewHealthCheck,
+					healthCheckFunc(func(_ ShootConditions) []gardencorev1beta1.Condition {
+						defer GinkgoRecover()
+
+						// The shoot reconciler updates its pre-existing condition after care has read the Shoot.
+						current := &gardencorev1beta1.Shoot{}
+						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), current)).To(Succeed())
+						patch := client.MergeFrom(current.DeepCopy())
+						Expect(current.Status.Conditions).To(HaveLen(1))
+						Expect(current.Status.Conditions[0].Type).To(Equal(conditionType))
+						current.Status.Conditions[0] = kstatusCondition
+						Expect(gardenClient.Status().Patch(ctx, current, patch)).To(Succeed())
+
+						// Return changed health conditions to force care to patch status.conditions.
+						return []gardencorev1beta1.Condition{healthCondition}
+					}),
+				))
+
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+				updated := &gardencorev1beta1.Shoot{}
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updated)).To(Succeed())
+				Expect(updated.Status.Conditions).To(ConsistOf(healthCondition, kstatusCondition))
+			},
+				Entry("Reconciling=True", gardencorev1beta1.ConditionReconciling),
+				Entry("Stalled=True", gardencorev1beta1.ConditionStalled),
+			)
+
+			DescribeTable("preserves pre-existing kstatus conditions updated by the shoot reconciler immediately before the care status patch", func(conditionType gardencorev1beta1.ConditionType) {
+				kstatusCondition := gardencorev1beta1.Condition{
+					Type:   conditionType,
+					Status: gardencorev1beta1.ConditionTrue,
+					Reason: "ConcurrentUpdate",
+				}
+				shoot.Status.Conditions = []gardencorev1beta1.Condition{{
+					Type:   conditionType,
+					Status: gardencorev1beta1.ConditionFalse,
+					Reason: "BeforeConcurrentUpdate",
+				}}
+				Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
+				reconciler.(*Reconciler).GardenClient = interceptor.NewClient(gardenClient, interceptor.Funcs{
+					SubResourcePatch: func(ctx context.Context, c client.Client, subResource string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+						current := &gardencorev1beta1.Shoot{}
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), current)).To(Succeed())
+						Expect(current.Status.Conditions).To(HaveLen(1))
+						Expect(current.Status.Conditions[0].Type).To(Equal(conditionType))
+						current.Status.Conditions[0] = kstatusCondition
+						Expect(c.Status().Update(ctx, current)).To(Succeed())
+						return c.SubResource(subResource).Patch(ctx, obj, patch, opts...)
+					},
+				})
+
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+				updated := &gardencorev1beta1.Shoot{}
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updated)).To(Succeed())
+				Expect(updated.Status.Conditions).To(ConsistOf(kstatusCondition, gardencorev1beta1.Condition{
+					Type:   gardencorev1beta1.ShootAPIServerAvailable,
+					Status: gardencorev1beta1.ConditionTrue,
+					Reason: "Available",
+				}))
+			},
+				Entry("Reconciling=True", gardencorev1beta1.ConditionReconciling),
+				Entry("Stalled=True", gardencorev1beta1.ConditionStalled),
+			)
+
+			It("preserves Stalled=True through a care reconcile", func() {
+				patch := client.MergeFrom(shoot.DeepCopy())
+				shoot.Status.Conditions = []gardencorev1beta1.Condition{
+					{
+						Type:               gardencorev1beta1.ConditionStalled,
+						Status:             gardencorev1beta1.ConditionTrue,
+						Reason:             "Error",
+						Message:            "reconcile error",
+						LastTransitionTime: metav1.NewTime(fakeClock.Now()),
+						LastUpdateTime:     metav1.NewTime(fakeClock.Now()),
+					},
+				}
+				Expect(gardenClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+				updated := &gardencorev1beta1.Shoot{}
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updated)).To(Succeed())
+				Expect(updated.Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(gardencorev1beta1.ConditionStalled),
+					"Status": Equal(gardencorev1beta1.ConditionTrue),
+				})), "care controller must not remove Stalled condition set by the reconciler")
 			})
 		})
 	})
