@@ -35,9 +35,9 @@ import (
 
 var _ = Describe("VPN LiveMigration", func() {
 	Describe("#LiveMigrationTemporaryVPNDNSName", func() {
-		It("should prepend vpn-tmp. to the internal cluster domain", func() {
+		It("should prepend vpn-temp. to the internal cluster domain", func() {
 			Expect(LiveMigrationTemporaryVPNDNSName("foo.bar.internal.example.com")).
-				To(Equal("vpn-tmp.foo.bar.internal.example.com"))
+				To(Equal("vpn-temp.foo.bar.internal.example.com"))
 		})
 	})
 
@@ -125,7 +125,7 @@ var _ = Describe("VPN LiveMigration", func() {
 				Expect(vals.TTL).To(Equal(new(ttlS)))
 				Expect(vals.Type).To(Equal("internal-provider"))
 				Expect(vals.Zone).To(Equal(new("internal-zone")))
-				Expect(vals.DNSName).To(Equal("vpn-tmp." + internalDomainS))
+				Expect(vals.DNSName).To(Equal("vpn-temp." + internalDomainS))
 				Expect(vals.AnnotateOperation).To(BeTrue())
 				Expect(vals.IPStack).To(Equal("ipv4"))
 				Expect(vals.Labels).To(Equal(map[string]string{
