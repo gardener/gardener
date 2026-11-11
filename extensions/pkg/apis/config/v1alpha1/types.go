@@ -16,7 +16,8 @@ type HealthCheckConfig struct {
 	// often the health check of Shoot clusters is performed (only if no operation is
 	// already running on them).
 	// defaults to 30 sec
-	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// +optional
+	SyncPeriod metav1.Duration `json:"syncPeriod,omitempty"`
 	// ShootRESTOptions allow overwriting certain default settings of the shoot rest.Config.
 	// +optional
 	ShootRESTOptions *RESTOptions `json:"shootRESTOptions,omitempty"`
