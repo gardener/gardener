@@ -5,6 +5,7 @@
 package operatingsystemconfig
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -322,7 +323,7 @@ func DeduplicateOSCErrors(err error) error {
 
 	sortedCauses := slices.SortedFunc(maps.Keys(occurrences), func(a, b string) int {
 		// sort by error count - higher counts first
-		return occurrences[b] - occurrences[a]
+		return cmp.Or(occurrences[b]-occurrences[a], strings.Compare(a, b))
 	})
 
 	var deduped *multierror.Error
