@@ -54,6 +54,22 @@ var _ = Describe("csr", func() {
 		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:shoot:test:shoot", Organization: []string{"gardener.cloud:system:shoots"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
 	)
 
+	DescribeTable("#IsNodeAgentClientCert",
+		func(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage, expectedStatus bool, expectedReason gomegatypes.GomegaMatcher) {
+			status, reason := IsNodeAgentClientCert(x509cr, usages)
+			Expect(status).To(Equal(expectedStatus))
+			Expect(reason).To(expectedReason)
+		},
+
+		Entry("org does not match", &x509.CertificateRequest{}, nil, false, ContainSubstring("organization")),
+		Entry("dns names given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:node-agent:machine:test", Organization: []string{"gardener.cloud:node-agents"}}, DNSNames: []string{"foo"}}, nil, false, ContainSubstring("DNSNames")),
+		Entry("email addresses given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:node-agent:machine:test", Organization: []string{"gardener.cloud:node-agents"}}, EmailAddresses: []string{"foo"}}, nil, false, ContainSubstring("EmailAddresses")),
+		Entry("ip addresses given", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:node-agent:machine:test", Organization: []string{"gardener.cloud:node-agents"}}, IPAddresses: []net.IP{{}}}, nil, false, ContainSubstring("IPAddresses")),
+		Entry("key usages do not match", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:node-agent:machine:test", Organization: []string{"gardener.cloud:node-agents"}}}, nil, false, ContainSubstring("key usages")),
+		Entry("common name does not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:node-agents"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("common name does not start with")),
+		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:node-agent:machine:test", Organization: []string{"gardener.cloud:node-agents"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
+	)
+
 	DescribeTable("#IsGardenadmClientCert",
 		func(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage, expectedStatus bool, expectedReason gomegatypes.GomegaMatcher) {
 			status, reason := IsGardenadmClientCert(x509cr, usages)
