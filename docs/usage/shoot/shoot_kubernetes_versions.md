@@ -9,6 +9,10 @@ Breaking changes may be introduced with new Kubernetes versions.
 This documentation describes the Gardener specific differences and requirements for upgrading to a supported Kubernetes version.
 For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [changelogs](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) and release blogs should be considered before upgrade.
 
+## Upgrading to Kubernetes `v1.38`
+
+- The `Shoot`'s `.spec.provider.workers` field must not contain more than 300 worker pools. `Shoot` owners must reduce the number of worker pools to at most 300 before upgrading. Forceful updates to `v1.38` during the maintenance fail until the number of worker pools is reduced. For more information, see [Maximum Worker Pool Count](shoot_limits.md#maximum-worker-pool-count).
+
 ## Upgrading to Kubernetes `v1.37`
 
 No Gardener-specific upgrade notes for this version.
