@@ -492,7 +492,7 @@
     },
     {
       "datasource": "prometheus",
-      "description": "Percentage of the in-use etcd DB not resident in the Linux page cache (worst pod). 0% means all in-use data is cached via mmap \u2014 ideal. Any value above 0% means etcd must read those pages from disk, causing elevated read IOPS. Right after a container or pod restart the cache is cold and this value is high without any eviction having happened. Correlate with Container Read IOPS and DB Page Cache Eviction % graph below.",
+      "description": "Percentage of the in-use etcd DB not resident in the Linux page cache (worst pod). 0% means all in-use data is cached via mmap \u2014 ideal. Any value above 0% means etcd must read those pages from disk, causing elevated read IOPS. Right after a container or pod restart the cache is cold and this value is high without any eviction having happened. Correlate with Container Read IOPS and the DB Not in Page Cache % graph below to tell the two apart.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -552,7 +552,7 @@
           "refId": "A"
         }
       ],
-      "title": "DB Page Cache Eviction %",
+      "title": "DB Not in Page Cache %",
       "type": "stat"
     },
     {
@@ -1298,7 +1298,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DB Page Cache Eviction %",
+      "title": "DB Not in Page Cache %",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1341,7 +1341,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Absolute bytes of etcd's mmap'd file memory resident in the page cache vs. the in-use DB size. When the two lines diverge, pages are being evicted from the cache.",
+      "description": "Absolute bytes of etcd's mmap'd file memory resident in the page cache vs. the in-use DB size. When the two lines diverge, part of the DB is not in the page cache: either pages were evicted under memory pressure, or the cache is still cold after a restart.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1890,7 +1890,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Rate of bytes read from disk by the etcd container(s) as reported by cAdvisor (<pod-name> / <container-name>). Elevated read throughput on the etcd container combined with low DB page cache coverage indicates kernel eviction of mmap'd pages.",
+      "description": "Rate of bytes read from disk by the etcd container(s) as reported by cAdvisor (<pod-name> / <container-name>). Elevated read throughput on the etcd container combined with low DB page cache coverage points to etcd reading mmap'd pages that are not in the page cache, e.g. after eviction under memory pressure.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -2141,7 +2141,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "description": "Rate of filesystem read operations inside the etcd container(s) as reported by cAdvisor. A persistent spike here combined with low DB page cache coverage indicates the kernel is evicting mmap'd pages.",
+      "description": "Rate of filesystem read operations inside the etcd container(s) as reported by cAdvisor. A persistent spike here combined with low DB page cache coverage points to etcd reading mmap'd pages that are not in the page cache, e.g. after eviction under memory pressure.",
       "title": "Container Read IOPS",
       "tooltip": {
         "shared": true,
