@@ -10,12 +10,15 @@ import (
 	"slices"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
@@ -300,10 +303,25 @@ func (a *RequestAuthorizer) hasPathFrom(ctx context.Context, log logr.Logger, fr
 		namespace = ""
 	}
 
-	// If the vertex does not exist in the graph (i.e., the resource does not exist in the system) then we allow the
-	// request.
+	// For delete requests, we allow the request if the object does not exist (anymore) in the system (idempotency). A
+	// missing vertex is not sufficient evidence: for reference-only types (e.g., Secret, ConfigMap) it merely means the
+	// object is currently unreferenced, and even for watched types there is a brief informer-lag window. Hence, confirm
+	// the object's absence with an uncached read before allowing; otherwise fall through to the graph path check.
 	if attrs.GetVerb() == "delete" && !a.Graph.HasVertex(fromType, namespace, attrs.GetName()) {
-		return auth.DecisionAllow, "", nil
+		gvk, err := apiutil.GVKForObject(graph.VertexTypes[fromType].NewObjectFunc(), kubernetes.GardenScheme)
+		if err != nil {
+			return auth.DecisionNoOpinion, "", fmt.Errorf("failed determining GroupVersionKind for vertex type %q: %w", graph.VertexTypes[fromType].Kind, err)
+		}
+
+		object := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: attrs.GetName()}}
+		object.SetGroupVersionKind(gvk)
+
+		switch err := a.Reader.Get(ctx, client.ObjectKeyFromObject(object), object); {
+		case apierrors.IsNotFound(err):
+			return auth.DecisionAllow, "", nil
+		case err != nil:
+			return auth.DecisionNoOpinion, "", fmt.Errorf("failed checking whether object still exists: %w", err)
+		}
 	}
 
 	if !a.Graph.HasPathFrom(fromType, namespace, attrs.GetName(), a.ToType, a.ToNamespace, a.ToName) {
