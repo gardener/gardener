@@ -70,7 +70,7 @@ var _ = Describe("IstioClusterConfiguration controller tests", Serial, func() {
 			},
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
-					{Name: "https-main", Port: 443},
+					{Name: "http2", Port: 443},
 				},
 			},
 		}
@@ -112,22 +112,28 @@ var _ = Describe("IstioClusterConfiguration controller tests", Serial, func() {
 			g.Expect(patch.Match.Context).To(Equal(istioapinetworkingv1alpha3.EnvoyFilter_GATEWAY))
 			g.Expect(patch.Match.GetCluster().Name).To(Equal("outbound|443||" + service.Name + "." + sourceNamespace.Name + ".svc.cluster.local"))
 			g.Expect(patch.Patch.Operation).To(Equal(istioapinetworkingv1alpha3.EnvoyFilter_Patch_MERGE))
-			g.Expect(patch.Patch.Value.Fields["per_connection_buffer_limit_bytes"].GetNumberValue()).To(Equal(float64(32768)))
-			g.Expect(patch.Patch.Value.Fields).NotTo(HaveKey("typed_extension_protocol_options"))
+			g.Expect(patch.Patch.Value.Fields).To(HaveKey("typed_extension_protocol_options"))
 		}).Should(Succeed())
 	})
 
 	It("should update EnvoyFilter when service port name changes to gRPC", func() {
+		By("Update port name to a non-HTTP/2 protocol")
+		patch := client.MergeFrom(service.DeepCopy())
+		service.Spec.Ports[0].Name = "tcp-main"
+		Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+		By("Ensure no EnvoyFilter exists for the non-HTTP/2 port")
 		Eventually(func(g Gomega) {
 			envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
-			g.Expect(testClient.Get(ctx, types.NamespacedName{
+			err := testClient.Get(ctx, types.NamespacedName{
 				Name:      envoyFilterName(sourceNamespace.Name),
 				Namespace: istioIngressNamespace.Name,
-			}, envoyFilter)).To(Succeed())
+			}, envoyFilter)
+			g.Expect(err).To(BeNotFoundError())
 		}).Should(Succeed())
 
 		By("Update port name to grpc")
-		patch := client.MergeFrom(service.DeepCopy())
+		patch = client.MergeFrom(service.DeepCopy())
 		service.Spec.Ports[0].Name = "grpc-main"
 		Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
 
