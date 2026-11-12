@@ -432,6 +432,56 @@ func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 	return g
 }
 
+// taskGroupSourceSeedCleanup is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupSourceSeedCleanup flow.TaskID = "TaskGroupSourceSeedCleanup"
+
+// sourceSeedCleanupTaskGroup migrates and tears down the source-side shoot resources (extensions, infrastructure,
+// control plane, managed resources, machines) and persists the migrated state for the destination to restore.
+func sourceSeedCleanupTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(taskGroupSourceSeedCleanup).
+			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete) != nil)
+	)
+
+	migrateDNSRecordsTaskGroup := b.MigrateDNSRecordsTaskGroup()
+	g = g.AddAll(migrateDNSRecordsTaskGroup.TasksWithDependencies()...)
+
+	migrateManagedResources := b.MigrateAndDeleteManagedResourcesTaskGroup(true)
+	g = g.AddAll(migrateManagedResources.TasksWithDependencies(migrateDNSRecordsTaskGroup)...)
+
+	deleteMachineControllerManager := b.DeleteMachineControllerManagerTaskGroup()
+	g = g.AddAll(deleteMachineControllerManager.TasksWithDependencies(migrateManagedResources)...)
+
+	migrateExtensions := b.MigrateExtensionResourcesTaskGroup()
+	g = g.AddAll(migrateExtensions.TasksWithDependencies(deleteMachineControllerManager)...)
+
+	persistShootState := g.Add(flow.Task{
+		Name:         "Persisting shoot state",
+		Fn:           b.PersistShootState,
+		Dependencies: flow.NewTaskIDs(migrateExtensions),
+	})
+
+	destroyExtensionsAndMachineResources := b.DestroyExtensionsAndMachineResourcesTaskGroup()
+	g = g.AddAll(destroyExtensionsAndMachineResources.TasksWithDependencies(persistShootState)...)
+
+	migrateControlPlane := b.MigrateAndDeleteControlPlaneTaskGroup()
+	g = g.AddAll(migrateControlPlane.TasksWithDependencies(destroyExtensionsAndMachineResources)...)
+
+	migrateExtensionsAfterKubeAPIServerGroup := b.MigrateAndDeleteExtensionsAfterKubeAPIServerTaskGroup()
+	g = g.AddAll(migrateExtensionsAfterKubeAPIServerGroup.TasksWithDependencies(migrateControlPlane)...)
+
+	_ = g.Add(flow.Task{
+		Name:         "Waiting until all extensions have been deleted",
+		Fn:           b.Shoot.Components.Extensions.Extension.WaitCleanup,
+		Dependencies: flow.NewTaskIDs(migrateExtensionsAfterKubeAPIServerGroup),
+	})
+
+	migrateInfrastructureGroup := b.MigrateAndDeleteInfrastructureTaskGroup()
+	g = g.AddAll(migrateInfrastructureGroup.TasksWithDependencies(migrateExtensionsAfterKubeAPIServerGroup)...)
+
+	return g
+}
+
 // taskGroupEtcdMigrationComplete is a flow.TaskID for the etcd migration completion task group.
 const taskGroupEtcdMigrationComplete flow.TaskID = "TaskGroupEtcdMigrationComplete"
 
