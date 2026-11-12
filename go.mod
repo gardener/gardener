@@ -64,7 +64,7 @@ require (
 	golang.org/x/crypto v0.59.0
 	golang.org/x/text v0.44.0
 	golang.org/x/time v0.16.0
-	golang.org/x/tools v0.52.1-0.20261110220427-86b298ceb416 // indirect
+	golang.org/x/tools v0.52.1-0.20261112194858-d8abf824d126 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/protobuf v1.36.12
