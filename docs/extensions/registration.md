@@ -270,7 +270,7 @@ The downloaded chart is cached in memory.
 It is recommended to always specify a digest rather than a tag.
 Besides avoiding a manifest fetch on every reconciliation to compare against the cache, a digest pins the exact chart content that `gardener-operator` and `gardenlet` render and apply with highly privileged clients.
 A tag is mutable: if the content served for it changes at the registry, the next reconciliation pulls and applies the new content.
-Unlike container images that run as `Pod`s, this pull path does not pass through Kubernetes admission, so no admission-time signature verification (e.g., via the [`shoot-lakom-service`](https://github.com/gardener/gardener-extension-shoot-lakom-service) extension) applies to it — pinning a digest is the applicable control.
+The [`shoot-lakom-service`](https://github.com/gardener/gardener-extension-shoot-lakom-service) extension verifies signatures on the `ociRepository` references in `ControllerDeployment`s, `Gardenlet`s, and `Extension`s at admission time, but only if it is deployed and configured; digest pinning is a complementary control that holds regardless and pins the exact bytes end-to-end.
 
 ### Helm Values
 

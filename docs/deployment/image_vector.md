@@ -35,7 +35,6 @@ That means that Gardener will use the `pause-container` with tag `3.4` for all c
 > Several images are not run as `Pod`s but are pulled directly by `containerd` on shoot worker nodes (via `ctr images pull` during node bootstrap and on every self-update), with a binary extracted from them and executed on the node — in some cases as `root`:
 > - `gardener-node-agent` (extracts `/gardener-node-agent`, runs as `root`),
 > - `hyperkube` (extracts `/kubelet`, runs as `root`),
-> - `valitail` (extracts `/usr/bin/valitail`),
 > - `opentelemetry-collector` (extracts `/bin/otelcol`), and
 > - `gardenadm` (pulled via the same `ctr` mechanism during bootstrap).
 >
