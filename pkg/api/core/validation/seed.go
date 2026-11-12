@@ -479,8 +479,12 @@ func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *fie
 func validateSeedInternalDomains(dns core.SeedDNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if !helper.SeedInternalDomainEnabled(dns) && !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("internalDomainEnabled"), fmt.Sprintf("disabling the internal domain requires the %s feature gate", features.MutableShootDomains)))
+	}
+
 	if dns.Internal == nil && len(dns.InternalDomains) == 0 {
-		if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || helper.SeedInternalDomainEnabled(dns) {
+		if helper.SeedInternalDomainEnabled(dns) {
 			allErrs = append(allErrs, field.Required(fldPath.Child("internal"), "internal DNS configuration is required"))
 		}
 		return allErrs
