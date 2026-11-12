@@ -408,6 +408,8 @@ test-e2e-local-simple: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && simple" ./test/e2e/gardener/...
 test-e2e-local-migration: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration" ./test/e2e/gardener/...
+test-e2e-local-force-restore: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-force-restore" ./test/e2e/gardener/...
 test-e2e-local-migration-ha-multi-node: $(GINKGO)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration" ./test/e2e/gardener/...
 test-e2e-local-ha-multi-node: $(GINKGO)
@@ -449,6 +451,8 @@ ci-e2e-kind: $(KIND) $(YQ)
 	./hack/ci-e2e-kind.sh
 ci-e2e-kind-migration: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-migration.sh
+ci-e2e-kind-force-restore: $(KIND) $(YQ)
+	./hack/ci-e2e-kind-force-restore.sh
 ci-e2e-kind-migration-ha-multi-node: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/ci-e2e-kind-migration-ha-multi-node.sh
 ci-e2e-kind-ha-multi-node: $(KIND) $(YQ)

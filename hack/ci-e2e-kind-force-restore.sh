@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#
+# SPDX-FileCopyrightText: Contributors to the Gardener project
+#
+# SPDX-License-Identifier: Apache-2.0
+
+set -o nounset
+set -o pipefail
+set -o errexit
+
+source "$(dirname "${0}")/ci-common.sh"
+
+clamp_mss_to_pmtu
+
+# Enable periodic ShootState backups on local2 for same-Seed recovery.
+export GARDENLET_PROFILE_SUFFIX=force-restore
+
+# test setup
+make kind-up
+make kind2-up
+
+# export all container logs and events after test execution
+trap "
+  set +e
+  ( export_artifacts_host_services; export_artifacts_infra; export_artifacts_load_balancers )
+  ( export KUBECONFIG=$KUBECONFIG_RUNTIME_CLUSTER; export_artifacts 'gardener-local'; export_resource_yamls_for garden )
+  ( export KUBECONFIG=$KUBECONFIG_VIRTUAL_GARDEN_CLUSTER; export cluster_name='virtual-garden'; export_resource_yamls_for seeds shoots bastions.operations.gardener.cloud etcds leases; export_events_for_shoots )
+  ( export KUBECONFIG=$KUBECONFIG_SEED2_CLUSTER; export_artifacts 'gardener-local2' )
+  ( make seed2-down )
+  ( make gardener-down )
+  ( make kind2-down )
+  ( make kind-down )
+" EXIT
+
+make operator-up garden-up
+make seed2-up
+
+make test-e2e-local-force-restore
