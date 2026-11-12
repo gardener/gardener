@@ -37,3 +37,16 @@ Also, when a shoot owner adds another worker pool to a cluster that has already 
 This would cause the shoot to temporarily exceed the configured limit until cluster-autoscaler scales the cluster down again.
 In other words, `CloudProfile.spec.limits.maxNodesTotal` doesn't enforce a hard limit, but rather ensures that shoot clusters stay within a reasonable size that the Gardener operator can and wants to support.
 Shoot owners should keep the limit configured in the `CloudProfile` in mind when configuring the initial node count of new worker pools.
+
+## Maximum Worker Pool Count
+
+Independent of the limits configured in the `CloudProfile`, a shoot cluster must not have more than 300 worker pools in `.spec.provider.workers`.
+This limit is not configurable.
+It ensures that the objects derived from the `Shoot` specification (e.g., the `Cluster` resource in the seed) stay within the size limits of etcd.
+For more information, see [gardener/gardener#16107](https://github.com/gardener/gardener/issues/16107).
+
+The limit is always enforced for new shoot clusters and for shoot clusters with Kubernetes version `v1.38` or higher.
+For existing shoot clusters with Kubernetes versions below `v1.38` which already exceed the limit, the number of worker pools can only be changed to a value of at most 300.
+Other updates of such `Shoot`s are still allowed, but a warning is returned.
+Shoot owners must reduce the number of worker pools to at most 300 before upgrading to Kubernetes `v1.38`.
+Forceful updates to Kubernetes `v1.38` during the maintenance fail until the number of worker pools is reduced.
