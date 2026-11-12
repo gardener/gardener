@@ -54,12 +54,15 @@ func (b *GardenadmBotanist) WriteBootstrapToken(ctx context.Context) error {
 	return b.FS.WriteFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath, []byte(bootstrapToken), kubeletTokenFilePermission)
 }
 
-func emptyTemporaryClusterAdminBinding() *rbacv1.ClusterRoleBinding {
+// EmptyTemporaryClusterAdminBinding returns the temporary cluster-admin ClusterRoleBinding created during
+// bootstrapping. It is exported so that `gardenadm connect` can assert that the binding has been revoked, which
+// indicates that `gardenadm init`/`bootstrap` completed successfully.
+func EmptyTemporaryClusterAdminBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "zzz-temporary-cluster-admin-access-for-bootstrapping"}}
 }
 
 func (b *GardenadmBotanist) reconcileTemporaryClusterAdminBindingForBootstrapping(ctx context.Context) error {
-	clusterRoleBinding := emptyTemporaryClusterAdminBinding()
+	clusterRoleBinding := EmptyTemporaryClusterAdminBinding()
 	_, err := controllerutil.CreateOrUpdate(ctx, b.SeedClientSet.Client(), clusterRoleBinding, func() error {
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -206,7 +209,7 @@ func (b *GardenadmBotanist) ApproveNodeAgentCertificateSigningRequest(ctx contex
 // FinalizeGardenerNodeAgentBootstrapping deletes the temporary cluster-admin ClusterRoleBinding for
 // gardener-node-agent.
 func (b *GardenadmBotanist) FinalizeGardenerNodeAgentBootstrapping(ctx context.Context) error {
-	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), emptyTemporaryClusterAdminBinding())
+	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), EmptyTemporaryClusterAdminBinding())
 }
 
 var (
