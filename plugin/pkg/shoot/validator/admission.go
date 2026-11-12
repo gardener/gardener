@@ -1281,28 +1281,33 @@ func (c *validationContext) validateDNSDomainUniqueness(shootLister gardencorev1
 			continue
 		}
 
-		var domain *string
-		if shoot.Spec.DNS != nil {
-			domain = shoot.Spec.DNS.Domain
-		}
-		if domain == nil {
-			continue
-		}
+		for _, domain := range domainsUsedByShoot(shoot) {
+			// Prevent that this shoot uses the exact same domain of any other shoot in the system.
+			if domain == *dns.Domain {
+				return append(allErrs, field.Duplicate(dnsPath, *dns.Domain)), nil
+			}
 
-		// Prevent that this shoot uses the exact same domain of any other shoot in the system.
-		if *domain == *dns.Domain {
-			allErrs = append(allErrs, field.Duplicate(dnsPath, *dns.Domain))
-			break
-		}
-
-		// Prevent that this shoot uses a subdomain of the domain of any other shoot in the system.
-		if hasDomainIntersection(*domain, *dns.Domain) {
-			allErrs = append(allErrs, field.Forbidden(dnsPath, "the domain is already used by another shoot or it is a subdomain of an already used domain"))
-			break
+			// Prevent that this shoot uses a subdomain of the domain of any other shoot in the system.
+			if hasDomainIntersection(domain, *dns.Domain) {
+				return append(allErrs, field.Forbidden(dnsPath, "the domain is already used by another shoot or it is a subdomain of an already used domain")), nil
+			}
 		}
 	}
 
 	return allErrs, nil
+}
+
+func domainsUsedByShoot(shoot *gardencorev1beta1.Shoot) []string {
+	var domains []string
+	if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil {
+		domains = append(domains, *shoot.Spec.DNS.Domain)
+	}
+	for _, address := range shoot.Status.AdvertisedAddresses {
+		if address.Name == v1beta1constants.AdvertisedAddressExternal || address.Name == v1beta1constants.AdvertisedAddressPriorExternal {
+			domains = append(domains, v1beta1helper.GetDomainFromAPIServerURL(address.URL))
+		}
+	}
+	return domains
 }
 
 // hasDomainIntersection checks if domainA is a suffix of domainB or domainB is a suffix of domainA.

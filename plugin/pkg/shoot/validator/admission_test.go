@@ -2933,6 +2933,67 @@ var _ = Describe("validator", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			Context("another shoot migrates away from the specified domain", func() {
+				var anotherShoot *gardencorev1beta1.Shoot
+
+				validateCreate := func() error {
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(anotherShoot)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					return admissionHandler.Validate(ctx, attrs, nil)
+				}
+
+				advertisedAddress := func(name, domain string) gardencorev1beta1.ShootAdvertisedAddress {
+					return gardencorev1beta1.ShootAdvertisedAddress{Name: name, URL: "https://api." + domain}
+				}
+
+				BeforeEach(func() {
+					anotherShoot = versionedShoot.DeepCopy()
+					anotherShoot.Name = "another-shoot"
+					anotherShoot.Spec.DNS.Domain = new("moved.example.org")
+				})
+
+				It("should reject the domain while the gardenlet has not set up the new domain yet", func() {
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, *shoot.Spec.DNS.Domain),
+					}
+
+					Expect(validateCreate()).To(BeInvalidError())
+				})
+
+				It("should reject the domain while the other shoot still serves it as prior domain", func() {
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, *anotherShoot.Spec.DNS.Domain),
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal, *shoot.Spec.DNS.Domain),
+					}
+
+					Expect(validateCreate()).To(BeInvalidError())
+				})
+
+				It("should reject a subdomain of the prior domain of the other shoot", func() {
+					anotherShoot.Spec.DNS.Domain = new("other.example.com")
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal, "prior.example.com"),
+					}
+					shoot.Spec.DNS.Domain = new("sub.prior.example.com")
+
+					Expect(validateCreate()).To(MatchError(ContainSubstring("the domain is already used by another shoot or it is a subdomain of an already used domain")))
+				})
+
+				It("should allow the domain after the other shoot completed the migration", func() {
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, *anotherShoot.Spec.DNS.Domain),
+					}
+
+					Expect(validateCreate()).To(Succeed())
+				})
+			})
 		})
 
 		Context("kubernetes version checks against CloudProfile", func() {
