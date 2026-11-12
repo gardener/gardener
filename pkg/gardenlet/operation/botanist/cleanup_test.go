@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -260,6 +261,28 @@ var _ = Describe("Cleanup", func() {
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(Succeed())
 			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{}))).To(BeTrue())
 			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(pvc), &corev1.PersistentVolumeClaim{}))).To(BeTrue())
+		})
+	})
+
+	Describe("#ignoreUnknownNamespaces", func() {
+		It("should ignore objects in unknown namespaces", func() {
+			ignore := IgnoreUnknownNamespaces([]string{"test1", "test2"})
+
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test1"}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test2"}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ""}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test3"}})).To(BeTrue())
+		})
+	})
+
+	Describe("#ignoreObjectsCreatedAfter", func() {
+		It("should ignore objects created after the configured time", func() {
+			now := testclock.NewFakeClock(time.Now()).Now()
+			ignore := IgnoreObjectsCreatedAfter(now)
+
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: now.Add(-time.Second)}}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: now}}})).To(BeFalse())
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: now.Add(time.Second)}}})).To(BeTrue())
 		})
 	})
 })

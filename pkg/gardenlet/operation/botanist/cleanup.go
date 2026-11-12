@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kube-aggregator/pkg/controllers/autoregister"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -224,7 +224,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return fmt.Errorf("failed to handle cleanup start time: %w", err)
 	}
 
-	if err := b.addAdditionalCleanOptionsForKubernetesCleanup(ctx, cleanOptions, cleanupStartTime, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds); err != nil {
+	if err := b.addIgnoreLeftoverFuncs(ctx, cleanOptions, cleanupStartTime, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds); err != nil {
 		return fmt.Errorf("failed to add additional clean options %w", err)
 	}
 
@@ -295,7 +295,33 @@ func CleanVolumeAttachments(ctx context.Context, log logr.Logger, c client.Clien
 	return cleanResourceFn(utilclient.DefaultCleanOps(), log, c, &storagev1.VolumeAttachmentList{}, utilclient.DeleteWith{ZeroGracePeriod}, FinalizeAfterFiveMinutes)(ctx)
 }
 
-func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
+// ignoreUnknownNamespaces returns an IgnoreLeftoverFunc that ignores objects in unknown namespaces.
+// Finalizing such objects will fail and block the cleanup process indefinitely, see
+// https://github.com/gardener/gardener/issues/13847 for more information.
+func ignoreUnknownNamespaces(namespaces []string) utilclient.IgnoreLeftoverFunc {
+	namespaceSet := sets.New(namespaces...)
+	return func(log logr.Logger, obj client.Object) bool {
+		ignore := obj.GetNamespace() != "" && !namespaceSet.Has(obj.GetNamespace())
+		if ignore {
+			log.Info("Ignoring leftover object in unknown namespace", "obj", client.ObjectKeyFromObject(obj))
+		}
+		return ignore
+	}
+}
+
+// ignoreObjectsCreatedAfter returns an IgnoreLeftoverFunc that ignores objects created after the given time.
+// This prevents blocking on resources created after the cleanup started which were not meant to be cleaned up.
+func ignoreObjectsCreatedAfter(timeStamp time.Time) utilclient.IgnoreLeftoverFunc {
+	return func(log logr.Logger, obj client.Object) bool {
+		if obj.GetCreationTimestamp().After(timeStamp) {
+			log.Info("Ignoring leftover object created after cleanup start time", "obj", client.ObjectKeyFromObject(obj), "creationTimestamp", obj.GetCreationTimestamp(), "cleanupStartTime", timeStamp.Format(time.RFC3339))
+			return true
+		}
+		return false
+	}
+}
+
+func (b *Botanist) addIgnoreLeftoverFuncs(
 	ctx context.Context,
 	cleanOptions *utilclient.CleanOptions,
 	cleanupStartTime *time.Time,
@@ -303,8 +329,6 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 	customFinalizeAfterAnnotation string,
 ) error {
 	// Kubernetes objects in unknown namespaces should be ignored.
-	// Finalizing such objects will fail and block the cleanup process indefinitely.
-	// See https://github.com/gardener/gardener/issues/13847 for more information.
 	namespaceList := &corev1.NamespaceList{}
 	if err := b.ShootClientSet.Client().List(ctx, namespaceList); err != nil {
 		return fmt.Errorf("could not list namespaces: %w", err)
@@ -315,7 +339,7 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 	}
 
 	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
-		utilclient.IgnoreUnknownNamespaces(namespaces, kubernetes.ShootScheme),
+		ignoreUnknownNamespaces(namespaces),
 	)
 
 	// Kubernetes objects created after the cleanup started + finalize time should be ignored.
@@ -329,7 +353,7 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 	}
 
 	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
-		utilclient.IgnoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second), kubernetes.ShootScheme),
+		ignoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second)),
 	)
 
 	return nil

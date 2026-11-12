@@ -6,9 +6,11 @@ package botanist
 
 import (
 	"context"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 )
 
 // Functions exported for testing.
@@ -27,4 +29,12 @@ var AppendDynamicAdminKubeconfigToFiles = func(b *Botanist, files []extensionsv1
 
 var WorkerPoolsForWorkerResource = func(b *Botanist) []gardencorev1beta1.Worker {
 	return b.workerPoolsForWorkerResource()
+}
+
+var IgnoreUnknownNamespaces = func(namespaces []string) utilclient.IgnoreLeftoverFunc {
+	return ignoreUnknownNamespaces(namespaces)
+}
+
+var IgnoreObjectsCreatedAfter = func(t time.Time) utilclient.IgnoreLeftoverFunc {
+	return ignoreObjectsCreatedAfter(t)
 }
