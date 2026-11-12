@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -79,7 +80,19 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			seedCluster.GetCache(),
 			&extensionsv1alpha1.BackupEntry{},
 			handler.EnqueueRequestsFromMapFunc(r.MapExtensionBackupEntryToCoreBackupEntry(mgr.GetLogger().WithValues("controller", ControllerName))),
-			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
+			predicate.Or(
+				predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
+				predicate.Funcs{
+					CreateFunc:  func(event.CreateEvent) bool { return false },
+					DeleteFunc:  func(event.DeleteEvent) bool { return false },
+					GenericFunc: func(event.GenericEvent) bool { return false },
+					// Restore clears the annotation after updating lastOperation, so observe both events.
+					UpdateFunc: func(e event.UpdateEvent) bool {
+						return e.ObjectOld.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore &&
+							e.ObjectNew.GetAnnotations()[v1beta1constants.GardenerOperation] == ""
+					},
+				},
+			),
 		)).
 		Complete(r)
 }
