@@ -641,6 +641,20 @@ var _ = Describe("VictoriaLogs", func() {
 										},
 									},
 								},
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/stream_field_names",
+										},
+									},
+								},
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/stream_field_values",
+										},
+									},
+								},
 							},
 							Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
 								Destination: &istionetworkingv1alpha3.Destination{

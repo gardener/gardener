@@ -621,6 +621,20 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 						},
 					},
 				},
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/stream_field_names",
+						},
+					},
+				},
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/stream_field_values",
+						},
+					},
+				},
 			},
 			Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
 				Destination: &istioapinetworkingv1beta1.Destination{
