@@ -37,6 +37,12 @@ Failed shoots are only reconciled again if a new Gardener version is deployed, t
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=retry
 ```
 
+## Restore a Control Plane on the Same Seed
+
+Operators can use `gardener.cloud/operation=force-restore` to recover a Shoot control plane after an unmanaged Seed loses its ETCD data. The operation reuses the existing backup bucket without copying backups and is not supported for self-hosted Shoots.
+
+Follow the [Seed disaster recovery procedure](../../operations/disaster_recovery_seed.md), including stopping Shoot reconciliations before bringing the recovered gardenlet online. Do not use this operation for routine reconciliation or migration to another Seed.
+
 ## Force-update a worker pool with InPlace update strategy
 
 Annotate the shoot with `gardener.cloud/operation=force-in-place-update` to force an update for worker pools using the update strategy `AutoInPlaceUpdate` or `ManualInPlaceUpdate`. Without this annotation, any subsequent updates to the same worker pool are denied until the `Shoot` has been successfully reconciled following the current in-place update.
