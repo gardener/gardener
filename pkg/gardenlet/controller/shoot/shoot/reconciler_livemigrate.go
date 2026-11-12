@@ -725,6 +725,64 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	return g
 }
 
+// taskGroupSourceSeedFinalTeardown is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupSourceSeedFinalTeardown flow.TaskID = "TaskGroupSourceSeedFinalTeardown"
+
+// sourceSeedFinalTeardownTaskGroup tears down the remaining source-seed resources that can only be removed after
+// the etcd migration is complete: source etcd, DNS records, and the source backup entry (which depended on the
+// migrated infrastructure). It also removes the VPN server and finally the shoot namespace itself.
+func sourceSeedFinalTeardownTaskGroup(ctx context.Context, b *botanistpkg.Botanist, o *operation.Operation) flow.TaskGroup {
+	if err := checkIfSeedNamespaceExists(ctx, o, b); err != nil {
+		b.Logger.Error(err, "Failed to check if seed namespace exists, assuming it exists")
+	}
+	namespaceExists := b.SeedNamespaceObject != nil && b.SeedNamespaceObject.UID != ""
+
+	g := flow.NewTaskGroup(taskGroupSourceSeedFinalTeardown)
+
+	destroyEtcd := g.Add(flow.Task{
+		Name:   "Destroying source etcd",
+		Fn:     flow.TaskFn(b.DestroyEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		SkipIf: !namespaceExists,
+	})
+	waitUntilEtcdDeleted := g.Add(flow.Task{
+		Name:         "Waiting until source etcd has been destroyed",
+		Fn:           flow.TaskFn(b.WaitUntilEtcdsDeleted).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		Dependencies: flow.NewTaskIDs(destroyEtcd),
+		SkipIf:       !namespaceExists,
+	})
+	destroyEtcdMemberExposure := g.Add(flow.Task{
+		Name:   "Destroying ETCD member exposure",
+		Fn:     b.DestroyEtcdMemberExposure,
+		SkipIf: !namespaceExists,
+	})
+	destroyDNSRecords := g.Add(flow.Task{
+		Name:   "Deleting DNSRecords from the source namespace",
+		Fn:     b.DestroyDNSRecords,
+		SkipIf: !namespaceExists,
+	})
+	destroySourceBackupEntry := g.Add(flow.Task{
+		Name:   "Deleting source backup entry from the source namespace",
+		Fn:     b.DestroySourceBackupEntry,
+		SkipIf: !namespaceExists,
+	})
+	destroyVPNServer := g.Add(flow.Task{
+		Name:   "Deleting vpn-seed-server from the source namespace",
+		Fn:     b.DestroyVPNServer,
+		SkipIf: !namespaceExists,
+	})
+	deleteNamespace := g.Add(flow.Task{
+		Name:         "Deleting shoot namespace in Seed",
+		Fn:           flow.TaskFn(b.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		Dependencies: flow.NewTaskIDs(waitUntilEtcdDeleted, destroyEtcdMemberExposure, destroyDNSRecords, destroySourceBackupEntry, destroyVPNServer),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Waiting until shoot namespace in Seed has been deleted",
+		Fn:           b.WaitUntilSeedNamespaceDeleted,
+		Dependencies: flow.NewTaskIDs(deleteNamespace),
+	})
+	return g
+}
+
 // checkGardenletVersionParity returns an error when the local and peer gardenlet versions differ or are not reported.
 func (r *Reconciler) checkGardenletVersionParity(ctx context.Context, shoot *gardencorev1beta1.Shoot, role v1beta1helper.LiveMigrationRole) error {
 	if r.Config.SeedConfig == nil {
