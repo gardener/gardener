@@ -9,10 +9,12 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/andybalholm/brotli"
 	"go.yaml.in/yaml/v4"
@@ -35,6 +37,19 @@ type Registry struct {
 	codec            runtime.Codec
 	nameToObject     map[string]*object
 	isYAMLSerializer bool
+}
+
+// brotliWriterPool allows reusing brotli writers that allocate multi-MB buffers
+var brotliWriterPool = sync.Pool{
+	New: func() any {
+		return brotli.NewWriterOptions(io.Discard, brotli.WriterOptions{
+			// 6 is the default quality for brotli compression
+			Quality: 6,
+			// 2^20 bytes is about 1 MiB, which is the maximum size of a secret. The smallest window size that still
+			// covers all possible payloads optimizes CPU time and allocations.
+			LGWin: 20,
+		})
+	},
 }
 
 type object struct {
@@ -140,10 +155,14 @@ func (r *Registry) AddSerialized(filename string, serializationYAML []byte) {
 func (r *Registry) SerializedObjects() (map[string][]byte, error) {
 	objectKeys := slices.Sorted(maps.Keys(r.nameToObject))
 
-	var (
-		buf bytes.Buffer
-		w   = brotli.NewWriter(&buf)
-	)
+	var buf bytes.Buffer
+
+	w := brotliWriterPool.Get().(*brotli.Writer)
+	w.Reset(&buf)
+	defer func() {
+		w.Reset(io.Discard)
+		brotliWriterPool.Put(w)
+	}()
 
 	for i, objectKey := range objectKeys {
 		if _, err := w.Write(r.nameToObject[objectKey].serialization); err != nil {
