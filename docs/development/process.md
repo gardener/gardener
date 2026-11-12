@@ -35,7 +35,7 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
  v1.162  | Week 07-08 | February 15, 2027      | February 28, 2027  | [@Velin-Todorov](https://github.com/Velin-Todorov)           |
  v1.163  | Week 09-10 | March 1, 2027          | March 14, 2027     | [@Kostov6](https://github.com/Kostov6)                       |
  v1.164  | Week 11-12 | March 15, 2027         | March 28, 2027     | [@acumino](https://github.com/acumino)                       |
- v1.165  | Week 13-14 | March 29, 2027         | April 11, 2027     | [@DobromirNPeev](https://github.com/DobromirNPeev)             |
+ v1.165  | Week 13-14 | March 29, 2027         | April 11, 2027     | [@DobromirNPeev](https://github.com/DobromirNPeev)           |
  v1.166  | Week 15-16 | April 12, 2027         | April 25, 2027     | [@ialidzhikov](https://github.com/ialidzhikov)               |
  v1.167  | Week 17-18 | April 26, 2027         | May 9, 2027        | [@timuthy](https://github.com/timuthy)                       |
  v1.168  | Week 19-20 | May 10, 2027           | May 23, 2027       | [@moritzfalke](https://github.com/moritzfalke)               |
@@ -47,6 +47,7 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
  v1.174  | Week 31-32 | August 2, 2027         | August 15, 2027    | [@plkokanov](https://github.com/plkokanov)                   |
  v1.175  | Week 33-34 | August 16, 2027        | August 29, 2027    | [@rfranzke](https://github.com/rfranzke)                     |
  v1.176  | Week 35-36 | August 30, 2027        | September 12, 2027 | [@shafeeqes](https://github.com/shafeeqes)                   |
+ v1.177  | Week 37-38 | September 13, 2027     | September 26, 2027 | [@seshachalam-yv](https://github.com/seshachalam-yv)         |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
