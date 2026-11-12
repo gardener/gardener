@@ -842,9 +842,14 @@ var _ = Describe("dnsrecord", func() {
 					internalDNSRecord.EXPECT().WaitMigrate(ctx),
 					internalDNSRecord.EXPECT().Destroy(ctx),
 					internalDNSRecord.EXPECT().WaitCleanup(ctx),
-					internalDNSRecord.EXPECT().Destroy(ctx),
-					internalDNSRecord.EXPECT().WaitCleanup(ctx),
 				)
+
+				Expect(b.DeployOrDestroyInternalDNSRecord(ctx)).To(Succeed())
+			})
+
+			It("should do nothing if the internal domain is disabled and there is no record", func() {
+				b.Shoot.InternalClusterDomain = nil
+				b.Shoot.InternalDomain = nil
 
 				Expect(b.DeployOrDestroyInternalDNSRecord(ctx)).To(Succeed())
 			})

@@ -138,16 +138,19 @@ func (b *Botanist) DeployOrDestroyPriorInternalDNSRecord(ctx context.Context) er
 
 // DeployOrDestroyInternalDNSRecord deploys, restores, or destroys the internal DNSRecord and waits for the operation to complete.
 func (b *Botanist) DeployOrDestroyInternalDNSRecord(ctx context.Context) error {
+	if !b.NeedsInternalDNS() {
+		if b.NeedsPriorInternalDNS() {
+			return b.destroyOutdatedDNSRecordKeepingDNSEntry(ctx, v1beta1constants.DNSRecordInternalName, nil, b.MigrateInternalDNSRecord, b.DestroyInternalDNSRecord)
+		}
+		return b.DestroyInternalDNSRecord(ctx)
+	}
+
 	if b.NeedsPriorInternalDNS() {
 		if err := b.destroyOutdatedDNSRecordKeepingDNSEntry(ctx, v1beta1constants.DNSRecordInternalName, b.Shoot.InternalClusterDomain, b.MigrateInternalDNSRecord, b.DestroyInternalDNSRecord); err != nil {
 			return err
 		}
 	}
-
-	if b.NeedsInternalDNS() {
-		return b.deployInternalDNSRecord(ctx)
-	}
-	return b.DestroyInternalDNSRecord(ctx)
+	return b.deployInternalDNSRecord(ctx)
 }
 
 // deployExternalDNSRecord deploys or restores the external DNSRecord and waits for the operation to complete.
