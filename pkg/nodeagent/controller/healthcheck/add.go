@@ -30,6 +30,10 @@ import (
 // ControllerName is the name of this controller.
 const ControllerName = "health-check"
 
+// DefaultHealthCheckIntervalSeconds is the default interval in which the health checks are performed. It also
+// determines how frequently the critical static pods node condition's heartbeat is refreshed.
+const DefaultHealthCheckIntervalSeconds = 30
+
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.Predicate, addCriticalStaticPodsChecker bool) error {
 	if r.Client == nil {
@@ -45,7 +49,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, nodePredicate predicate.P
 		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))
 	}
 	if r.HealthCheckIntervalSeconds == 0 {
-		r.HealthCheckIntervalSeconds = 30
+		r.HealthCheckIntervalSeconds = DefaultHealthCheckIntervalSeconds
 	}
 	if len(r.HealthCheckers) == 0 {
 		if err := r.setDefaultHealthChecks(addCriticalStaticPodsChecker); err != nil {

@@ -38,6 +38,12 @@ import (
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
+// defaultMachineControllerManagerNodeConditions mirrors the default value of machine-controller-manager's
+// `--node-conditions` flag. We don't set this flag, so machine-controller-manager uses this default for machines
+// without an explicit `.spec.machineConfiguration.nodeConditions`. A unit test guards against drift from the upstream
+// default.
+const defaultMachineControllerManagerNodeConditions = "KernelDeadlock,ReadonlyFilesystem,DiskPressure,NetworkUnavailable"
+
 func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	log = log.WithValues("operation", "reconcile")
 
@@ -342,11 +348,14 @@ func deployMachineDeployment(
 			if machineDeployment.Spec.Template.Spec.MachineConfiguration == nil {
 				machineDeployment.Spec.Template.Spec.MachineConfiguration = &machinev1alpha1.MachineConfiguration{}
 			}
-			if machineDeployment.Spec.Template.Spec.NodeConditions == nil {
-				machineDeployment.Spec.Template.Spec.NodeConditions = new(string(nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy))
-			} else {
-				machineDeployment.Spec.Template.Spec.NodeConditions = new(strings.Join([]string{*machineDeployment.Spec.Template.Spec.NodeConditions, string(nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy)}, ","))
+			// When no node conditions are configured for this pool, machine-controller-manager falls back to its own
+			// default set. Appending to this default (instead of a nil value) prevents the control plane machines from
+			// losing machine-controller-manager's default node conditions.
+			nodeConditions := defaultMachineControllerManagerNodeConditions
+			if machineDeployment.Spec.Template.Spec.NodeConditions != nil {
+				nodeConditions = *machineDeployment.Spec.Template.Spec.NodeConditions
 			}
+			machineDeployment.Spec.Template.Spec.NodeConditions = new(strings.Join([]string{nodeConditions, string(nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy)}, ","))
 		}
 
 		log.Info("Deploying machine deployment", "machineDeployment", client.ObjectKeyFromObject(machineDeployment), "replicas", machineDeployment.Spec.Replicas)
