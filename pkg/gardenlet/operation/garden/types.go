@@ -10,6 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -111,4 +112,10 @@ func SeedInternalDomains(seed *gardencorev1beta1.Seed) []gardencorev1beta1.SeedD
 		return nil
 	}
 	return []gardencorev1beta1.SeedDNSProviderConfig{*seed.Spec.DNS.Internal}
+}
+
+// SeedInternalDomainDisabled returns true if the given seed gives new shoots no internal domain. Without the
+// MutableShootDomains feature gate, the internal domain cannot be disabled.
+func SeedInternalDomainDisabled(seed *gardencorev1beta1.Seed) bool {
+	return features.DefaultFeatureGate.Enabled(features.MutableShootDomains) && !v1beta1helper.SeedInternalDomainEnabled(seed.Spec.DNS)
 }

@@ -34,6 +34,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -279,7 +280,7 @@ func (b *Builder) internalDomainForNewShoots() *gardenerutils.Domain {
 	if len(b.internalDomains) == 0 {
 		return nil
 	}
-	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) && b.seed != nil && !v1beta1helper.SeedInternalDomainEnabled(b.seed.Spec.DNS) {
+	if b.seed != nil && garden.SeedInternalDomainDisabled(b.seed) {
 		return nil
 	}
 	return b.internalDomains[0]

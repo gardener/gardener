@@ -1286,7 +1286,7 @@ func checkIfSeedNamespaceExists(ctx context.Context, o *operation.Operation, bot
 
 func desiredInternalClusterDomain(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, projectName string) *string {
 	seedDomains := garden.SeedInternalDomains(seed)
-	if len(seedDomains) == 0 || !v1beta1helper.SeedInternalDomainEnabled(seed.Spec.DNS) {
+	if len(seedDomains) == 0 || garden.SeedInternalDomainDisabled(seed) {
 		return nil
 	}
 
