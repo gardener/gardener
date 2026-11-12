@@ -400,51 +400,49 @@ var _ = Describe("Warnings", func() {
 			),
 		)
 
-		Describe("spec.provider.workers[].machineControllerManagerSettings.autoPreserveFailedMachineMax", func() {
-			It("should return a warning when autoPreserveFailedMachineMax is less than the number of zones", func() {
-				shoot.Spec.Provider.Workers = []core.Worker{{
-					Name:  "test",
-					Zones: []string{"zone1", "zone2", "zone3"},
-					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
-						AutoPreserveFailedMachineMax: new(int32(2)),
-					},
-				}}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(ContainSubstring("machineControllerManagerSettings.autoPreserveFailedMachineMax")))
-			})
+		DescribeTable("spec.provider.workers",
+			func(kubernetesVersion string, workersCount int, matcher gomegatypes.GomegaMatcher) {
+				shoot.Spec.Kubernetes.Version = kubernetesVersion
+				shoot.Spec.Provider.Workers = make([]core.Worker, workersCount)
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(matcher)
+			},
 
-			It("should not return a warning when autoPreserveFailedMachineMax equals the number of zones", func() {
-				shoot.Spec.Provider.Workers = []core.Worker{{
-					Name:  "test",
-					Zones: []string{"zone1", "zone2"},
-					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
-						AutoPreserveFailedMachineMax: new(int32(2)),
-					},
-				}}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
-			})
+			Entry("should not return a warning when the worker pools count is at the maximum", "1.37.0", 300, BeEmpty()),
+			Entry("should return a warning when the worker pools count is above the maximum for Kubernetes version < 1.38", "1.37.0", 301,
+				ConsistOf(Equal("you are setting the spec.provider.workers field to an invalid value. Invalid value: 301 worker pools, valid values: at most 300 worker pools. Invalid values will no longer be allowed for Kubernetes versions >= 1.38. See: https://github.com/gardener/gardener/issues/16107")),
+			),
+			Entry("should not return a warning when the worker pools count is above the maximum for Kubernetes version >= 1.38 (forbidden by validation)", "1.38.0", 301, BeEmpty()),
+		)
 
-			It("should not return a warning when autoPreserveFailedMachineMax is zero", func() {
+		DescribeTable("spec.provider.workers[].machineControllerManagerSettings.autoPreserveFailedMachineMax",
+			func(zones []string, autoPreserveFailedMachineMax int32, matcher gomegatypes.GomegaMatcher) {
 				shoot.Spec.Provider.Workers = []core.Worker{{
 					Name:  "test",
-					Zones: []string{"zone1", "zone2", "zone3"},
+					Zones: zones,
 					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
-						AutoPreserveFailedMachineMax: new(int32(0)),
+						AutoPreserveFailedMachineMax: &autoPreserveFailedMachineMax,
 					},
 				}}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
-			})
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(matcher)
+			},
 
-			It("should not return a warning when autoPreserveFailedMachineMax is greater than the number of zones", func() {
-				shoot.Spec.Provider.Workers = []core.Worker{{
-					Name:  "test",
-					Zones: []string{"zone1"},
-					MachineControllerManagerSettings: &core.MachineControllerManagerSettings{
-						AutoPreserveFailedMachineMax: new(int32(2)),
-					},
-				}}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
-			})
-		})
+			Entry("should return a warning when autoPreserveFailedMachineMax is less than the number of zones",
+				[]string{"zone1", "zone2", "zone3"}, int32(2),
+				ConsistOf(Equal(`you are setting the spec.provider.workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax field to a value (2) less than the number of zones for worker "test" (3) . This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.`)),
+			),
+			Entry("should not return a warning when autoPreserveFailedMachineMax equals the number of zones",
+				[]string{"zone1", "zone2"}, int32(2),
+				BeEmpty(),
+			),
+			Entry("should not return a warning when autoPreserveFailedMachineMax is greater than the number of zones",
+				[]string{"zone1"}, int32(2),
+				BeEmpty(),
+			),
+			Entry("should not return a warning when autoPreserveFailedMachineMax is zero",
+				[]string{"zone1", "zone2", "zone3"}, int32(0),
+				BeEmpty(),
+			),
+		)
 
 		It("should not return a suppressed secretName warning", func() {
 			shoot.Spec.DNS = &core.DNS{
