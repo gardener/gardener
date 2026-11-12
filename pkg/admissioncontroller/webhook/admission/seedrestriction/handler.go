@@ -248,8 +248,14 @@ func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *garde
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("creation of source BackupEntry is only allowed during shoot Restore or LiveMigrate operation (shoot: %s)", shootName))
 	}
 
-	// If the source BackupEntry already exists, it was validated when it was first created.
-	if err := h.Client.Get(ctx, client.ObjectKey{Namespace: backupEntry.Namespace, Name: backupEntry.Name}, &gardencorev1beta1.BackupEntry{}); err == nil {
+	// If the source BackupEntry already exists, it was validated when it was first created. Its spec must not be changed:
+	// comparing against the shoot's original BackupEntry (below) would wrongly reject a retried CREATE, because the
+	// original's bucketName is repointed from the source to the destination seed during the migration.
+	existingBackupEntry := &gardencorev1beta1.BackupEntry{}
+	if err := h.Client.Get(ctx, client.ObjectKey{Namespace: backupEntry.Namespace, Name: backupEntry.Name}, existingBackupEntry); err == nil {
+		if !apiequality.Semantic.DeepEqual(backupEntry.Spec, existingBackupEntry.Spec) {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("spec of the already existing source BackupEntry %s does not match the incoming spec", backupEntry.Name))
+		}
 		return admission.Allowed("source BackupEntry already exists")
 	} else if !apierrors.IsNotFound(err) {
 		return admission.Errored(http.StatusInternalServerError, err)
