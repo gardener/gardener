@@ -485,9 +485,12 @@ func sourceSeedCleanupTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 // taskGroupEtcdMigrationComplete is a flow.TaskID for the etcd migration completion task group.
 const taskGroupEtcdMigrationComplete flow.TaskID = "TaskGroupEtcdMigrationComplete"
 
-// etcdMigrationCompleteTaskGroup returns the flow.TaskGroup for completing the etcd migration:
-// scaling out the destination etcd to 3 replicas, removing source members, cleaning up
-// the live migration configuration, and taking a full snapshot.
+// etcdMigrationCompleteTaskGroup returns the flow.TaskGroup for completing the etcd migration.
+// It first deploys all destination DNS records and waits for DNS caches to propagate, then scales
+// out the destination etcd to 3 replicas, removes source members, cleans up the live migration
+// configuration, and takes a full snapshot.
+// DNS is deployed here — before source etcd members are removed — so the source kube-apiserver can
+// only go down after all DNS caches have already switched to the destination.
 func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
 		skipIfSourceMembersAlreadyRemoved = func(fn flow.TaskFn) flow.TaskFn {
@@ -499,42 +502,59 @@ func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 				return fn(ctx)
 			}
 		}
-		g = flow.NewTaskGroup(taskGroupEtcdMigrationComplete)
 
-		deployEtcd = g.Add(flow.Task{
-			Name: "Scaling out destination etcd to 3 replicas",
-			Fn:   skipIfSourceMembersAlreadyRemoved(b.DeployEtcd),
-		})
-		waitUntilEtcdReady = g.Add(flow.Task{
-			Name:         "Waiting until etcd is scaled out and ready",
-			Fn:           skipIfSourceMembersAlreadyRemoved(b.WaitUntilEtcdsReady),
-			Dependencies: flow.NewTaskIDs(deployEtcd),
-		})
-		removeSourceMembers = g.Add(flow.Task{
-			Name:         "Removing source etcd members from the joined cluster",
-			Fn:           skipIfSourceMembersAlreadyRemoved(b.RemoveSourceEtcdMembers),
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
-		})
-		waitUntilSourceMembersRemoved = g.Add(flow.Task{
-			Name:         "Waiting until source etcd members are removed",
-			Fn:           b.WaitUntilSourceEtcdMembersRemoved,
-			Dependencies: flow.NewTaskIDs(removeSourceMembers),
-		})
-		deployEtcdWithoutLiveMigration = g.Add(flow.Task{
-			Name: "Removing live migration configuration from etcd",
-			Fn: func(ctx context.Context) error {
-				b.Shoot.Components.ControlPlane.EtcdMain.SetLiveMigration(nil)
-				return b.DeployEtcd(ctx)
-			},
-			Dependencies: flow.NewTaskIDs(waitUntilSourceMembersRemoved),
-		})
-		waitUntilEtcdReadyAfterCleanup = g.Add(flow.Task{
-			Name:         "Waiting until etcds are ready after cleanup",
-			Fn:           b.WaitUntilEtcdsReady,
-			Dependencies: flow.NewTaskIDs(deployEtcdWithoutLiveMigration),
-		})
+		g = flow.NewTaskGroup(taskGroupEtcdMigrationComplete).
+			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown) != nil)
 	)
 
+	// Deploy all DNS records pointing to the destination before scaling out etcd, so the source
+	// kube-apiserver can only go down after DNS records have already switched to the destination.
+	deployDNS := b.ReconcileDNSRecordsTaskGroup()
+	g = g.AddAll(deployDNS.TasksWithDependencies()...)
+
+	waitDNSCacheSync := g.Add(flow.Task{
+		Name:         "Waiting for DNS caches to sync to the destination",
+		Fn:           skipIfSourceMembersAlreadyRemoved(b.WaitForLiveMigrationDNSCacheSync),
+		Dependencies: flow.NewTaskIDs(deployDNS),
+	})
+	deployEtcd := g.Add(flow.Task{
+		Name:         "Scaling out destination etcd to 3 replicas",
+		Fn:           skipIfSourceMembersAlreadyRemoved(b.DeployEtcd),
+		Dependencies: flow.NewTaskIDs(waitDNSCacheSync),
+	})
+	waitUntilEtcdReady := g.Add(flow.Task{
+		Name:         "Waiting until etcd is scaled out and ready",
+		Fn:           skipIfSourceMembersAlreadyRemoved(b.WaitUntilEtcdsReady),
+		Dependencies: flow.NewTaskIDs(deployEtcd),
+	})
+	removeSourceMembers := g.Add(flow.Task{
+		Name:         "Removing source etcd members from the joined cluster",
+		Fn:           skipIfSourceMembersAlreadyRemoved(b.RemoveSourceEtcdMembers),
+		Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
+	})
+	waitUntilSourceMembersRemoved := g.Add(flow.Task{
+		Name:         "Waiting until source etcd members are removed",
+		Fn:           b.WaitUntilSourceEtcdMembersRemoved,
+		Dependencies: flow.NewTaskIDs(removeSourceMembers),
+	})
+	deployEtcdWithoutLiveMigration := g.Add(flow.Task{
+		Name: "Removing live migration configuration from etcd",
+		Fn: func(ctx context.Context) error {
+			b.Shoot.Components.ControlPlane.EtcdMain.SetLiveMigration(nil)
+			return b.DeployEtcd(ctx)
+		},
+		Dependencies: flow.NewTaskIDs(waitUntilSourceMembersRemoved),
+	})
+	waitUntilEtcdReadyAfterCleanup := g.Add(flow.Task{
+		Name:         "Waiting until etcds are ready after cleanup",
+		Fn:           b.WaitUntilEtcdsReady,
+		Dependencies: flow.NewTaskIDs(deployEtcdWithoutLiveMigration),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Destroying ETCD member exposure",
+		Fn:           b.DestroyEtcdMemberExposure,
+		Dependencies: flow.NewTaskIDs(waitUntilEtcdReadyAfterCleanup),
+	})
 	_ = g.Add(flow.Task{
 		Name:         "Taking full etcd snapshot",
 		Fn:           b.SnapshotEtcd,
