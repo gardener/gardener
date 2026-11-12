@@ -588,6 +588,8 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 	// - /select/logsql/field_names
 	// - /select/logsql/field_values
 	// - /select/logsql/streams
+	// - /select/logsql/streams_field_names
+	// - /select/logsql/streams_field_values
 	// Everything else returns 403.
 	virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
 		{
