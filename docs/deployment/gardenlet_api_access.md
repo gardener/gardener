@@ -145,58 +145,6 @@ The `SeedAuthorizer` registers the following metrics related to the mentioned gr
 | `gardener_admission_controller_seed_authorizer_graph_update_duration_seconds` | Histogram of duration of resource dependency graph updates in seed authorizer, i.e., how long does it take to update the graph's vertices/edges when a resource is created, changed, or deleted. |
 | `gardener_admission_controller_seed_authorizer_graph_path_check_duration_seconds` | Histogram of duration of checks whether a path exists in the resource dependency graph in seed authorizer. |
 
-#### Debug Handler
-
-When the `.server.enableDebugHandlers` field in the `gardener-admission-controller`'s component configuration is set to `true`, then it serves a handler that can be used for debugging the resource dependency graph under `/debug/resource-dependency-graph`.
-
-🚨 Only use this setting for development purposes, as it enables unauthenticated users to view all data if they have access to the `gardener-admission-controller` component.
-
-The handler renders an HTML page displaying the current graph with a list of vertices and its associated incoming and outgoing edges to other vertices.
-Depending on the size of the Gardener landscape (and consequently, the size of the graph), it might not be possible to render it in its entirety.
-If there are more than 2000 vertices, then the default filtering will selected for `kind=Seed` to prevent overloading the output.
-
-_Example output_:
-
-```text
--------------------------------------------------------------------------------
-|
-| # Seed:my-seed
-|   <- (11)
-|     BackupBucket:73972fe2-3d7e-4f61-a406-b8f9e670e6b7
-|     BackupEntry:garden-my-project/shoot--dev--my-shoot--4656a460-1a69-4f00-9372-7452cbd38ee3
-|     ControllerInstallation:dns-external-mxt8m
-|     ControllerInstallation:extension-shoot-cert-service-4qw5j
-|     ControllerInstallation:networking-calico-bgrb2
-|     ControllerInstallation:os-gardenlinux-qvb5z
-|     ControllerInstallation:provider-gcp-w4mvf
-|     Secret:garden/backup
-|     Shoot:garden-my-project/my-shoot
-|
--------------------------------------------------------------------------------
-|
-| # Shoot:garden-my-project/my-shoot
-|   <- (5)
-|     CloudProfile:gcp
-|     Namespace:garden-my-project
-|     Secret:garden-my-project/my-dns-secret
-|     SecretBinding:garden-my-project/my-credentials
-|     ShootState:garden-my-project/my-shoot
-|   -> (1)
-|     Seed:my-seed
-|
--------------------------------------------------------------------------------
-|
-| # ShootState:garden-my-project/my-shoot
-|   -> (1)
-|     Shoot:garden-my-project/my-shoot
-|
--------------------------------------------------------------------------------
-
-... (etc., similarly for the other resources)
-```
-
-There are anchor links to easily jump from one resource to another, and the page provides means for filtering the results based on the `kind`, `namespace`, and/or `name`.
-
 #### Pitfalls
 
 When there is a relevant update to an existing resource, i.e., when a reference to another resource is changed, then the corresponding vertex (along with all associated edges) is first deleted from the graph before it gets added again with the up-to-date edges.
