@@ -27,7 +27,7 @@ import (
 )
 
 func prefixedNetworkPolicyName(baseName string) string {
-	return networkpolicycontroller.NetworkPolicyNamePrefixGardenlet + baseName
+	return networkpolicycontroller.NetworkPolicyNamePrefix + baseName
 }
 
 var _ = Describe("NetworkPolicy controller tests", func() {
@@ -389,16 +389,15 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				}).Should(BeNotFoundError())
 			})
 
-			It("should delete a network policy managed by Gardener under a different prefix", func() {
-				// A Gardener prefix is enough to identify a managed NetworkPolicy, no description annotation required.
+			It("should not delete a network policy managed by the shoot's network policy controller", func() {
 				networkPolicy := &networkingv1.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: fooNamespace.Name,
-						Name:      networkpolicycontroller.NetworkPolicyNamePrefixOperator + attrs.networkPolicyName,
+						Name:      "gardener.cloud--" + attrs.networkPolicyName,
 					},
 				}
 
-				By("Create network policy with a different Gardener prefix")
+				By("Create network policy with the shoot prefix")
 				Expect(testClient.Create(ctx, networkPolicy)).To(Succeed())
 
 				DeferCleanup(func() {
@@ -408,10 +407,10 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 
 				triggerReconciliation()
 
-				By("Wait for controller to delete the network policy")
-				Eventually(func() error {
+				By("Ensure controller does not delete the network policy of the shoot's network policy controller")
+				Consistently(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), networkPolicy)
-				}).Should(BeNotFoundError())
+				}).Should(Succeed())
 			})
 		})
 	}

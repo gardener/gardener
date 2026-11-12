@@ -40,7 +40,7 @@ var _ = Describe("Add", func() {
 				Namespace: "bar",
 			},
 		}
-		reconciler = &Reconciler{NetworkPolicyNamePrefix: NetworkPolicyNamePrefixOperator}
+		reconciler = &Reconciler{NetworkPolicyNamePrefix: NetworkPolicyNamePrefix}
 	})
 
 	Describe("#NetworkPolicyPredicate", func() {
@@ -55,7 +55,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return true because the NetworkPolicy is managed by this reconciler", func() {
-			networkPolicy.Name = NetworkPolicyNamePrefixOperator + "allow-to-runtime-apiserver"
+			networkPolicy.Name = NetworkPolicyNamePrefix + "allow-to-runtime-apiserver"
 			Expect(p.Create(event.CreateEvent{Object: networkPolicy})).To(BeTrue())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: networkPolicy})).To(BeTrue())
 			Expect(p.Delete(event.DeleteEvent{Object: networkPolicy})).To(BeTrue())
@@ -78,8 +78,8 @@ var _ = Describe("Add", func() {
 			Expect(p.Generic(event.GenericEvent{Object: networkPolicy})).To(BeFalse())
 		})
 
-		It("should return false because the NetworkPolicy name has a different prefix", func() {
-			networkPolicy.Name = NetworkPolicyNamePrefixGardenlet + "allow-to-runtime-apiserver"
+		It("should return false because the NetworkPolicy has the shoot prefix", func() {
+			networkPolicy.Name = "gardener.cloud--allow-to-runtime-apiserver"
 			Expect(p.Create(event.CreateEvent{Object: networkPolicy})).To(BeFalse())
 			Expect(p.Update(event.UpdateEvent{ObjectNew: networkPolicy})).To(BeFalse())
 			Expect(p.Delete(event.DeleteEvent{Object: networkPolicy})).To(BeFalse())

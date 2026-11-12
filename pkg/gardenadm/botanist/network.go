@@ -65,7 +65,7 @@ func (b *GardenadmBotanist) CheckControlPlaneNodeLabeled(ctx context.Context) er
 func (b *GardenadmBotanist) ApplyNetworkPolicies(ctx context.Context) error {
 	reconciler := &networkpolicy.Reconciler{
 		RuntimeClient:           b.SeedClientSet.Client(),
-		NetworkPolicyNamePrefix: networkpolicy.NetworkPolicyNamePrefixGardenlet,
+		NetworkPolicyNamePrefix: networkpolicy.NetworkPolicyNamePrefix,
 		Resolver:                hostnameresolver.NewNoOpProvider(),
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 			IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
