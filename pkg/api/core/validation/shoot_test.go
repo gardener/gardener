@@ -1255,6 +1255,80 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			Describe("worker pools count", func() {
+				var (
+					tooManyWorkerPoolsError = PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeTooMany),
+						"Field":  Equal("spec.provider.workers"),
+						"Detail": Equal("must have at most 300 items"),
+					}))
+
+					workersWithCount = func(count int) []core.Worker {
+						workers := make([]core.Worker, 0, count)
+						for i := range count {
+							w := worker.DeepCopy()
+							w.Name = fmt.Sprintf("worker-%d", i)
+							workers = append(workers, *w)
+						}
+						return workers
+					}
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.CloudProfileName = nil
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{Kind: "CloudProfile", Name: "test-profile"}
+					shoot.Spec.SecretBindingName = nil
+					shoot.Spec.CredentialsBindingName = new("my-credentials")
+				})
+
+				It("should allow creating a Shoot with the maximum number of worker pools", func() {
+					shoot.Spec.Provider.Workers = workersWithCount(300)
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should forbid creating a Shoot with more than the maximum number of worker pools", func() {
+					shoot.Spec.Provider.Workers = workersWithCount(301)
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(tooManyWorkerPoolsError))
+				})
+
+				DescribeTable("updating a Shoot with Kubernetes version < 1.38",
+					func(oldCount, newCount int, matcher gomegatypes.GomegaMatcher) {
+						shoot.Spec.Kubernetes.Version = "1.37.0"
+						shoot.Spec.Provider.Workers = workersWithCount(oldCount)
+						newShoot := prepareShootForUpdate(shoot)
+						newShoot.Spec.Provider.Workers = workersWithCount(newCount)
+
+						Expect(ValidateShootUpdate(newShoot, shoot)).To(matcher)
+					},
+
+					Entry("should allow increasing the worker pools count up to the maximum", 299, 300, BeEmpty()),
+					Entry("should forbid increasing the worker pools count above the maximum", 300, 301, ConsistOf(tooManyWorkerPoolsError)),
+					Entry("should allow an unchanged worker pools count above the maximum", 301, 301, BeEmpty()),
+					Entry("should forbid increasing a worker pools count which is already above the maximum", 301, 302, ConsistOf(tooManyWorkerPoolsError)),
+					Entry("should forbid decreasing a worker pools count which stays above the maximum", 302, 301, ConsistOf(tooManyWorkerPoolsError)),
+					Entry("should allow decreasing a worker pools count to the maximum", 301, 300, BeEmpty()),
+				)
+
+				It("should forbid an unchanged worker pools count above the maximum for Kubernetes version >= 1.38", func() {
+					shoot.Spec.Kubernetes.Version = "1.38.0"
+					shoot.Spec.Provider.Workers = workersWithCount(301)
+					newShoot := prepareShootForUpdate(shoot)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(tooManyWorkerPoolsError))
+				})
+
+				It("should forbid updating the Kubernetes version to 1.38 when the worker pools count is above the maximum", func() {
+					shoot.Spec.Kubernetes.Version = "1.37.0"
+					shoot.Spec.Provider.Workers = workersWithCount(301)
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.Version = "1.38.0"
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(tooManyWorkerPoolsError))
+				})
+			})
+
 			It("should forbid invalid worker configuration", func() {
 				w := invalidWorker.DeepCopy()
 				shoot.Spec.Provider.Workers = []core.Worker{*w}
