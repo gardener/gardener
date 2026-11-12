@@ -21,7 +21,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"k8s.io/utils/ptr"
@@ -76,19 +75,6 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 	}
 
 	log := h.Logger.WithValues("seedName", seedName, "userType", userType)
-
-	// For CREATE operations, if the object already exists, allow the request since the CREATE must have already been processed by this code previously.
-	// This avoids re-validating the object against CREATE-specific logic that may no longer apply to the current state of the object.
-	if request.Operation == admissionv1.Create {
-		obj := &unstructured.Unstructured{}
-		obj.SetGroupVersionKind(schema.GroupVersionKind{Group: request.Kind.Group, Version: request.Kind.Version, Kind: request.Kind.Kind})
-
-		if err := h.Client.Get(ctx, client.ObjectKey{Name: request.Name, Namespace: request.Namespace}, obj); err == nil {
-			return admissionwebhook.Allowed("object already exists")
-		} else if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get object, continuing with normal admission checks", "requestName", request.Name, "requestNamespace", request.Namespace, "requestGroup", request.Kind.Group, "requestVersion", request.Kind.Version, "requestKind", request.Kind.Kind)
-		}
-	}
 
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
 	switch requestResource {
@@ -260,6 +246,13 @@ func (h *Handler) admitSourceBackupEntry(ctx context.Context, backupEntry *garde
 			shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeLiveMigrate) ||
 		shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateProcessing {
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("creation of source BackupEntry is only allowed during shoot Restore or LiveMigrate operation (shoot: %s)", shootName))
+	}
+
+	// If the source BackupEntry already exists, it was validated when it was first created.
+	if err := h.Client.Get(ctx, client.ObjectKey{Namespace: backupEntry.Namespace, Name: backupEntry.Name}, &gardencorev1beta1.BackupEntry{}); err == nil {
+		return admission.Allowed("source BackupEntry already exists")
+	} else if !apierrors.IsNotFound(err) {
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	// When the source BackupEntry is created it's spec is the same as that of the shoot's original BackupEntry.
