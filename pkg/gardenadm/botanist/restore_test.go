@@ -334,6 +334,15 @@ var _ = Describe("Restore", func() {
 			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
 		})
 
+		It("should delete the restored NodeAgentRestriction ValidatingWebhookConfiguration", func(ctx SpecContext) {
+			webhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-shoot"}}
+			Expect(fakeClient.Create(ctx, webhookConfig)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentCertificateSigningRequests(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(webhookConfig), &admissionregistrationv1.ValidatingWebhookConfiguration{})).To(BeNotFoundError())
+		})
+
 		It("should delete the gardener-node-agent CertificateSigningRequest", func(ctx SpecContext) {
 			csr := csrWithCommonName("node-agent-csr", certificatesv1.KubeAPIServerClientSignerName, v1beta1constants.NodeAgentUserNamePrefix+"machine-1")
 			Expect(fakeClient.Create(ctx, csr)).To(Succeed())
