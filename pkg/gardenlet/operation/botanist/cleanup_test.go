@@ -8,9 +8,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,14 +22,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/api/resources/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 )
 
 var _ = Describe("Cleanup", func() {
@@ -100,6 +104,7 @@ var _ = Describe("Cleanup", func() {
 		It("should delete ValidatingAdmissionPolicyBindings but keep protected ones and the policies", func() {
 			Expect(botanist.CleanWebhooks(ctx)).To(Succeed())
 
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(policy), &admissionregistrationv1.ValidatingAdmissionPolicy{})).To(Succeed())
 			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(policyBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{}))).To(BeTrue())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{})).To(Succeed())
@@ -124,7 +129,7 @@ var _ = Describe("Cleanup", func() {
 			shootClient client.Client
 			botanist    *Botanist
 
-			apiService, noCleanupAPIService, systemAPIService, autoManagedAPIService, crd, noCleanupCRD client.Object
+			apiService, systemAPIService, autoManagedAPIService, crd, noCleanupCRD client.Object
 		)
 
 		BeforeEach(func() {
@@ -143,10 +148,6 @@ var _ = Describe("Cleanup", func() {
 			systemAPIService = &apiregistrationv1.APIService{ObjectMeta: metav1.ObjectMeta{
 				Name:   "v1.system.example.com",
 				Labels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent},
-			}}
-			noCleanupAPIService = &apiregistrationv1.APIService{ObjectMeta: metav1.ObjectMeta{
-				Name:   "v1.system.example.com",
-				Labels: map[string]string{v1beta1constants.ShootNoCleanup: "true"},
 			}}
 			autoManagedAPIService = &apiregistrationv1.APIService{ObjectMeta: metav1.ObjectMeta{
 				Name: "v1.automanaged.example.com",
@@ -170,7 +171,6 @@ var _ = Describe("Cleanup", func() {
 			Expect(botanist.CleanExtendedAPIs(ctx)).To(Succeed())
 
 			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(apiService), &apiregistrationv1.APIService{}))).To(BeTrue())
-			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupAPIService), &apiregistrationv1.APIService{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemAPIService), &apiregistrationv1.APIService{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(autoManagedAPIService), &apiregistrationv1.APIService{})).To(Succeed())
 
@@ -187,7 +187,7 @@ var _ = Describe("Cleanup", func() {
 			botanist    *Botanist
 			fakeClock   *testclock.FakeClock
 
-			controlPlaneNamespace = "shoot--foo--bar"
+			controlPlaneNamespace = gardenerutils.ComputeTechnicalID("foo", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "bar"}})
 
 			deployment, systemDeployment, noCleanupDeployment, service, pvc client.Object
 		)
@@ -283,6 +283,59 @@ var _ = Describe("Cleanup", func() {
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: now.Add(-time.Second)}}})).To(BeFalse())
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: now}}})).To(BeFalse())
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: now.Add(time.Second)}}})).To(BeTrue())
+		})
+	})
+
+	Describe("#ignoreObjectsManagedByManagedResourceInShootCPNamespace", func() {
+		const (
+			clusterID = "some-cluster-id"
+			mrName    = "my-mr"
+		)
+
+		var (
+			ignore         utilclient.IgnoreLeftoverFunc
+			controlPlaneNS = gardenerutils.ComputeTechnicalID("foo", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "bar"}})
+		)
+
+		BeforeEach(func() {
+			ignore = IgnoreObjectsManagedByManagedResourceInNamespace(controlPlaneNS)
+		})
+
+		It("should not ignore objects without the origin annotation", func() {
+			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: "default"}})).To(BeFalse())
+		})
+
+		It("should not ignore objects whose origin points to a ManagedResource in a different namespace", func() {
+			obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+				Name:      "cm",
+				Namespace: "default",
+				Annotations: map[string]string{
+					resourcesv1alpha1.OriginAnnotation: resourcesv1alpha1helper.OriginForManagedResource(clusterID, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: "other-namespace", Name: mrName}}),
+				},
+			}}
+			Expect(ignore(logr.Discard(), obj)).To(BeFalse())
+		})
+
+		It("should ignore objects whose origin points to a ManagedResource in the control-plane namespace", func() {
+			obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+				Name:      "cm",
+				Namespace: "default",
+				Annotations: map[string]string{
+					resourcesv1alpha1.OriginAnnotation: resourcesv1alpha1helper.OriginForManagedResource(clusterID, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNS, Name: mrName}}),
+				},
+			}}
+			Expect(ignore(logr.Discard(), obj)).To(BeTrue())
+		})
+
+		It("should ignore objects whose origin has no clusterID and points to a ManagedResource in the control-plane namespace", func() {
+			obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+				Name:      "cm",
+				Namespace: "default",
+				Annotations: map[string]string{
+					resourcesv1alpha1.OriginAnnotation: resourcesv1alpha1helper.OriginForManagedResource("", &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNS, Name: mrName}}),
+				},
+			}}
+			Expect(ignore(logr.Discard(), obj)).To(BeTrue())
 		})
 	})
 })

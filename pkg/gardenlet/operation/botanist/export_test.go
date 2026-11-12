@@ -38,3 +38,7 @@ var IgnoreUnknownNamespaces = func(namespaces []string) utilclient.IgnoreLeftove
 var IgnoreObjectsCreatedAfter = func(t time.Time) utilclient.IgnoreLeftoverFunc {
 	return ignoreObjectsCreatedAfter(t)
 }
+
+var IgnoreObjectsManagedByManagedResourceInNamespace = func(namespace string) utilclient.IgnoreLeftoverFunc {
+	return ignoreObjectsManagedByManagedResourceInNamespace(namespace)
+}
