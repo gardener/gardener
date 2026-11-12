@@ -30,5 +30,7 @@ func GetWarnings(managedseedset *seedmanagement.ManagedSeedSet) []string {
 		warnings = append(warnings, shoot.GetDNSProviderWarnings(dns, path, nil)...)
 	}
 
+	warnings = append(warnings, shoot.GetProviderWarnings(managedseedset.Spec.ShootTemplate.Spec.Provider, managedseedset.Spec.ShootTemplate.Spec.Kubernetes.Version, field.NewPath("spec", "shootTemplate", "spec", "provider"))...)
+
 	return warnings
 }
