@@ -298,6 +298,11 @@ New tokens have the new issuer, and tokens of the old issuer are accepted until 
 `.status.advertisedAddresses` contains the old issuer as `prior-service-account-issuer`.
 Parties outside of the `Shoot` that trust the old issuer must be updated before the rotation is started.
 
+If the `Shoot` uses a custom or managed issuer, this issuer does not change.
+However, the `kube-apiserver` also accepts tokens of the default issuer, e.g., tokens issued before the custom issuer was configured.
+The default issuer changes with the internal domain as described above, and tokens of the old default issuer are accepted until the rotation is completed.
+Replace such tokens before you complete the rotation.
+
 When you complete the rotation with `rotate-ca-complete`, the old internal domain and the old issuer are removed, and the constraint disappears.
 
 The domain migration of self-hosted `Shoot`s is not supported yet.

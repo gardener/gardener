@@ -345,7 +345,7 @@ var _ = Describe("Reconciler", func() {
 			}))
 		})
 
-		It("should add the internal domain without a prior internal domain if the shoot has no internal domain", func() {
+		It("should keep the default issuer of the external domain as prior issuer if the shoot gets an internal domain", func() {
 			shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{externalAddress}
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
@@ -354,11 +354,12 @@ var _ = Describe("Reconciler", func() {
 			Expect(shoot.Status.AdvertisedAddresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
 				externalAddress,
 				address(v1beta1constants.AdvertisedAddressInternal, "shoot.project.internal.new.example.com"),
+				address(v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, "shoot.example.com"),
 			}))
 		})
 
-		It("should keep the issuer as prior issuer if the shoot gets an internal domain", func() {
-			issuerAddress := address(v1beta1constants.AdvertisedAddressServiceAccountIssuer, "shoot.example.com")
+		It("should keep the default issuer instead of a custom issuer as prior issuer if the shoot gets an internal domain", func() {
+			issuerAddress := gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressServiceAccountIssuer, URL: "https://issuer.example.org"}
 			shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{externalAddress, issuerAddress}
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 

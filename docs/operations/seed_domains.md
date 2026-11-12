@@ -126,6 +126,7 @@ To enable the internal domain again, set `internalDomainEnabled: true` (or remov
 ### Impact on the `ServiceAccount` Issuer
 
 If a `Shoot` uses the default `ServiceAccount` issuer, the migration of its internal domain changes the issuer, see [Migrating the Internal Domain](../usage/shoot-operations/shoot_credentials_rotation.md#migrating-the-internal-domain).
+If a `Shoot` uses a custom or managed issuer, the issuer stays, but tokens of the old default issuer are no longer accepted after the CA rotation is completed.
 
 > [!WARNING]
 > Parties outside of the `Shoot` that trust the old issuer (e.g., an identity federation that validates the `iss` claim of `ServiceAccount` tokens) stop accepting new tokens of the `Shoot` as soon as the migration starts.

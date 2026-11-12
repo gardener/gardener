@@ -1308,14 +1308,14 @@ func startInternalDomainMigration(shoot *gardencorev1beta1.Shoot, desiredDomain 
 	}
 
 	var (
-		addresses     []gardencorev1beta1.ShootAdvertisedAddress
-		issuerAddress *gardencorev1beta1.ShootAdvertisedAddress
+		addresses       []gardencorev1beta1.ShootAdvertisedAddress
+		externalAddress *gardencorev1beta1.ShootAdvertisedAddress
 	)
 	for _, address := range shoot.Status.AdvertisedAddresses {
 		switch address.Name {
 		case v1beta1constants.AdvertisedAddressInternal, v1beta1constants.AdvertisedAddressPriorInternal, v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer:
-		case v1beta1constants.AdvertisedAddressServiceAccountIssuer:
-			issuerAddress = &address
+		case v1beta1constants.AdvertisedAddressExternal:
+			externalAddress = &address
 			addresses = append(addresses, address)
 		default:
 			addresses = append(addresses, address)
@@ -1329,9 +1329,10 @@ func startInternalDomainMigration(shoot *gardencorev1beta1.Shoot, desiredDomain 
 	}
 	if appliedAddress != nil {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressPriorInternal, URL: appliedAddress.URL})
-	} else if issuerAddress != nil {
-		// Without a prior internal domain, the domains do not contain the issuer that the new internal domain replaces.
-		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, URL: issuerAddress.URL})
+	} else if externalAddress != nil {
+		// Without a prior internal domain, the domains do not contain the default issuer that the new internal domain
+		// replaces. It is derived from the external domain, also if the shoot uses a custom or managed issuer.
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, URL: externalAddress.URL})
 	}
 	shoot.Status.AdvertisedAddresses = addresses
 }

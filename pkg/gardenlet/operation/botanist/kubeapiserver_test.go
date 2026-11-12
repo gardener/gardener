@@ -581,6 +581,18 @@ var _ = Describe("KubeAPIServer", func() {
 						AcceptedIssuers: []string{"https://api.prior-internal.foo.bar.com", "https://api.internal.foo.bar.com"},
 					},
 				),
+				Entry("should accept the prior service account issuer besides a custom issuer if the internal domain is enabled during the migration",
+					func() {
+						botanist.Shoot.PriorServiceAccountIssuer = new("https://api.external.foo.bar.com")
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{Issuer: new("foo")},
+						}
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "foo",
+						AcceptedIssuers: []string{"https://api.internal.foo.bar.com", "https://api.external.foo.bar.com"},
+					},
+				),
 				Entry("should set configuration correctly",
 					func() {
 						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
