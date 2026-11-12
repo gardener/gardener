@@ -95,6 +95,11 @@ var (
 	// RequeueAfterLeaseAcquisitionSkipped defines when to requeue in case Lease acquisition is skipped.
 	// Exposed for testing.
 	RequeueAfterLeaseAcquisitionSkipped = time.Minute
+	// StaleThresholdCriticalControlPlanePodsCondition is the duration after which a sibling node's
+	// 'CriticalControlPlanePodsUnhealthy' condition is considered stale (i.e., its gardener-node-agent stopped
+	// refreshing the heartbeat). It is derived from the health check interval so that we do not tolerate a single
+	// missed heartbeat. Exposed for testing.
+	StaleThresholdCriticalControlPlanePodsCondition = healthcheckcontroller.DefaultHealthCheckIntervalSeconds * time.Second
 )
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
@@ -1420,29 +1425,42 @@ func (r *Reconciler) getActualStaticPodHashes(ctx context.Context, log logr.Logg
 	return staticPodNameToHash, staticPodList, nil
 }
 
-// skipLeaseAcquisitionIfEtcdQuorumAtRisk returns the unhealthy node object when another node in the same worker pool
-// has a condition of type 'CriticalControlPlanePodsUnhealthy with status 'True'. This means an etcd pod is broken on
-// another node, i.e., attempting to acquire the Lease and eventually updating our node could break the quorum. Hence,
-// we better don't update until all members are healthy.
+// skipLeaseAcquisitionIfEtcdQuorumAtRisk returns a sibling node object when another node in the same worker pool puts
+// the etcd quorum at risk. This is the case when the sibling reports its critical control plane pods as unhealthy, or
+// when we cannot trust its health report at all: its 'CriticalControlPlanePodsUnhealthy' condition is missing or its
+// heartbeat is stale (indicating the sibling's gardener-node-agent is down, in which case its etcd might be broken
+// without being reported). In all these cases, attempting to acquire the Lease and eventually updating our node could
+// break the quorum, so we better don't update until we are certain all members are healthy.
 func (r *Reconciler) skipLeaseAcquisitionIfEtcdQuorumAtRisk(ctx context.Context, node *corev1.Node) (*corev1.Node, error) {
 	if node == nil {
 		return nil, nil
 	}
 
+	// The manager's Node cache is restricted to this instance's own node, so we must use the uncached APIReader to see
+	// the sibling nodes in this worker pool.
 	nodeList := &corev1.NodeList{}
-	if err := r.Client.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: node.Labels[v1beta1constants.LabelWorkerPool]}); err != nil {
+	if err := r.APIReader.List(ctx, nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: node.Labels[v1beta1constants.LabelWorkerPool]}); err != nil {
 		return nil, fmt.Errorf("failed to list other nodes in this worker pool: %w", err)
 	}
 
+	// A healthy gardener-node-agent refreshes the condition's heartbeat every health check interval. We do not tolerate
+	// a single missed heartbeat, because a sibling which stopped reporting might have a broken etcd we cannot see.
 	for _, n := range nodeList.Items {
 		if n.Name == node.Name {
 			continue
 		}
 
-		for _, condition := range n.Status.Conditions {
-			if condition.Type == nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy && condition.Status == corev1.ConditionTrue {
-				return &n, nil
-			}
+		idx := slices.IndexFunc(n.Status.Conditions, func(condition corev1.NodeCondition) bool {
+			return condition.Type == nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy
+		})
+
+		if idx == -1 {
+			return &n, nil
+		}
+
+		condition := n.Status.Conditions[idx]
+		if condition.Status == corev1.ConditionTrue || r.Clock.Since(condition.LastHeartbeatTime.Time) > StaleThresholdCriticalControlPlanePodsCondition {
+			return &n, nil
 		}
 	}
 

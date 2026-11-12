@@ -81,6 +81,7 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 		DeferCleanup(test.WithVars(
 			&operatingsystemconfig.RequeueAfterRestart, time.Second,
 			&operatingsystemconfig.RequeueAfterLeaseAcquisitionSkipped, time.Second,
+			&operatingsystemconfig.StaleThresholdCriticalControlPlanePodsCondition, time.Hour,
 			&operatingsystemconfig.Exec, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
 				return []byte(""), nil
 			},
@@ -230,8 +231,9 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: hostName1}}
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 		node.Status.Conditions = []corev1.NodeCondition{{
-			Type:   nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
-			Status: corev1.ConditionTrue,
+			Type:              nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
+			Status:            corev1.ConditionTrue,
+			LastHeartbeatTime: metav1.Now(),
 		}}
 		Expect(testClient.Status().Update(ctx, node)).To(Succeed())
 
@@ -255,8 +257,9 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 		By("Mark the critical control plane pods as healthy again")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 		node.Status.Conditions = []corev1.NodeCondition{{
-			Type:   nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
-			Status: corev1.ConditionFalse,
+			Type:              nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
+			Status:            corev1.ConditionFalse,
+			LastHeartbeatTime: metav1.Now(),
 		}}
 		Expect(testClient.Status().Update(ctx, node)).To(Succeed())
 
@@ -268,6 +271,56 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation tests",
 				return exists
 			}).Should(BeTrue())
 		}
+	})
+
+	It("should not update other nodes in the pool while one node's condition is stale", func() {
+		By("Set a stale heartbeat on one node's critical control plane pods condition")
+		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: hostName1}}
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+		node.Status.Conditions = []corev1.NodeCondition{{
+			Type:              nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
+			Status:            corev1.ConditionFalse,
+			LastHeartbeatTime: metav1.NewTime(time.Now().Add(-2 * time.Hour)),
+		}}
+		Expect(testClient.Status().Update(ctx, node)).To(Succeed())
+
+		By("Create Secret containing the operating system config")
+		Expect(testClient.Create(ctx, oscSecret)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, oscSecret)).To(Succeed())
+		})
+
+		By("Ensure the other nodes do not reconcile while the heartbeat is stale")
+		Consistently(func(g Gomega) {
+			for _, remainder := range remainingHosts(hostName1) {
+				exists, err := fakeFS.Exists("/example/file/" + remainder)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(exists).To(BeFalse())
+			}
+		}).Should(Succeed())
+	})
+
+	It("should not update other nodes in the pool while one node's condition is missing", func() {
+		By("Remove the critical control plane pods condition from one node")
+		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: hostName1}}
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+		node.Status.Conditions = nil
+		Expect(testClient.Status().Update(ctx, node)).To(Succeed())
+
+		By("Create Secret containing the operating system config")
+		Expect(testClient.Create(ctx, oscSecret)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, oscSecret)).To(Succeed())
+		})
+
+		By("Ensure the other nodes do not reconcile while the condition is missing")
+		Consistently(func(g Gomega) {
+			for _, remainder := range remainingHosts(hostName1) {
+				exists, err := fakeFS.Exists("/example/file/" + remainder)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(exists).To(BeFalse())
+			}
+		}).Should(Succeed())
 	})
 })
 
@@ -294,6 +347,7 @@ var _ = Describe("OperatingSystemConfig controller serial reconciliation stale L
 
 		DeferCleanup(test.WithVars(
 			&operatingsystemconfig.RequeueAfterRestart, time.Second,
+			&operatingsystemconfig.StaleThresholdCriticalControlPlanePodsCondition, time.Hour,
 			&operatingsystemconfig.Exec, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
 				return []byte(""), nil
 			},
@@ -422,6 +476,14 @@ func startNewOperatingSystemConfigControllerInstance(hostName, oscSecretName str
 		By("Delete Node")
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
 	})
+
+	By("Mark the node's critical control plane pods as healthy")
+	node.Status.Conditions = []corev1.NodeCondition{{
+		Type:              nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy,
+		Status:            corev1.ConditionFalse,
+		LastHeartbeatTime: metav1.Now(),
+	}}
+	Expect(testClient.Status().Update(ctx, node)).To(Succeed())
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
