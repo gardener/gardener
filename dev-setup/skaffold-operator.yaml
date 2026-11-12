@@ -396,6 +396,8 @@ build:
             - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
+            - pkg/admissioncontroller/gardenletidentity
+            - pkg/admissioncontroller/gardenletidentity/seed
             - pkg/api
             - pkg/api/authentication/validation
             - pkg/api/config/gardenlet/v1alpha1/validation
