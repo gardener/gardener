@@ -24,6 +24,8 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
@@ -32,6 +34,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	graphutils "github.com/gardener/gardener/pkg/utils/graph"
@@ -47,6 +50,7 @@ var _ = Describe("Seed", func() {
 
 		log        logr.Logger
 		graph      *mockgraph.MockInterface
+		fakeReader client.Reader
 		authorizer auth.Authorizer
 
 		seedName      string
@@ -61,7 +65,8 @@ var _ = Describe("Seed", func() {
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = mockgraph.NewMockInterface(ctrl)
-		authorizer = NewAuthorizer(log, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+		fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
 
 		seedName = "seed"
 		gardenletUser = &user.DefaultInfo{

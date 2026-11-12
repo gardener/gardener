@@ -36,6 +36,7 @@ func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableD
 			Authorizer: NewAuthorizer(
 				w.Logger,
 				mgr.GetClient(),
+				mgr.GetAPIReader(),
 				g,
 				authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, w.ClientSet, clock.RealClock{}),
 				seedAuthorizer,

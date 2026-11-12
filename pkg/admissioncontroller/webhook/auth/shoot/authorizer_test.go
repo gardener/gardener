@@ -70,7 +70,7 @@ var _ = Describe("Shoot", func() {
 		graph = mockgraph.NewMockInterface(ctrl)
 		fakeClient = fake.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeWithSelectorsChecker = fakeauthorizerwebhook.NewWithSelectorsChecker(true)
-		authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, nil)
+		authorizer = NewAuthorizer(log, fakeClient, fakeClient, graph, fakeWithSelectorsChecker, nil)
 
 		shootNamespace = "shoot-namespace"
 		shootName = "shoot-name"
@@ -153,7 +153,7 @@ var _ = Describe("Shoot", func() {
 				seedAuthorizer := auth.AuthorizerFunc(func(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
 					return auth.DecisionAllow, "", nil
 				})
-				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+				authorizer = NewAuthorizer(log, fakeClient, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
 
 				graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", shootName).Return(true)
 
@@ -174,7 +174,7 @@ var _ = Describe("Shoot", func() {
 				seedAuthorizer := auth.AuthorizerFunc(func(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
 					return auth.DecisionNoOpinion, "", nil
 				})
-				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+				authorizer = NewAuthorizer(log, fakeClient, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
 
 				graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", shootName).Return(true)
 
@@ -196,7 +196,7 @@ var _ = Describe("Shoot", func() {
 					Fail("seed authorizer should not be called")
 					return auth.DecisionNoOpinion, "", nil
 				})
-				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+				authorizer = NewAuthorizer(log, fakeClient, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
 
 				graph.EXPECT().HasVertex(graphutils.VertexTypeSeed, "", shootName).Return(false)
 
@@ -218,7 +218,7 @@ var _ = Describe("Shoot", func() {
 					Fail("seed authorizer should not be called")
 					return auth.DecisionNoOpinion, "", nil
 				})
-				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+				authorizer = NewAuthorizer(log, fakeClient, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
 
 				decision, reason, err := authorizer.Authorize(ctx, auth.AttributesRecord{
 					User:            gardenletUser,
@@ -238,7 +238,7 @@ var _ = Describe("Shoot", func() {
 					Fail("seed authorizer should not be called")
 					return auth.DecisionNoOpinion, "", nil
 				})
-				authorizer = NewAuthorizer(log, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
+				authorizer = NewAuthorizer(log, fakeClient, fakeClient, graph, fakeWithSelectorsChecker, seedAuthorizer)
 
 				decision, reason, err := authorizer.Authorize(ctx, auth.AttributesRecord{
 					User:            extensionUser,

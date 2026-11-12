@@ -5,6 +5,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -13,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
@@ -143,6 +145,10 @@ type RequestAuthorizer struct {
 	Graph                  graph.Interface
 	AuthorizeWithSelectors authorizerwebhook.WithSelectorsChecker
 
+	// Reader is used for live existence checks. It should be uncached (an APIReader) so that the idempotent delete
+	// carve-out in hasPathFrom does not rely on the potentially stale informer cache.
+	Reader client.Reader
+
 	ToType      graph.VertexType
 	ToNamespace string
 	ToName      string
@@ -150,14 +156,14 @@ type RequestAuthorizer struct {
 
 // CheckRead checks if a read request (get, list, watch) is allowed based on the graph relationships and the provided
 // attributes.
-func (a *RequestAuthorizer) CheckRead(fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
-	return a.Check(fromType, attrs,
+func (a *RequestAuthorizer) CheckRead(ctx context.Context, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.Check(ctx, fromType, attrs,
 		WithAllowedVerbs("list", "watch", "get"),
 	)
 }
 
 // Check checks if a request is allowed based on the graph relationships and the provided attributes.
-func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attributes, fns ...configFunc) (auth.Decision, string, error) {
+func (a *RequestAuthorizer) Check(ctx context.Context, fromType graph.VertexType, attrs auth.Attributes, fns ...configFunc) (auth.Decision, string, error) {
 	log := a.Log.WithValues(
 		"fromType", graph.VertexTypes[fromType].Kind,
 		"fromNamespace", attrs.GetNamespace(),
@@ -247,7 +253,7 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 		}
 	}
 
-	return a.hasPathFrom(log, fromType, attrs)
+	return a.hasPathFrom(ctx, log, fromType, attrs)
 }
 
 func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, selector selector) (bool, string) {
@@ -281,7 +287,7 @@ func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, select
 	return false, fmt.Sprintf("must specify field or label selector for name %s", a.ToName)
 }
 
-func (a *RequestAuthorizer) hasPathFrom(log logr.Logger, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *RequestAuthorizer) hasPathFrom(ctx context.Context, log logr.Logger, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
 	if len(attrs.GetName()) == 0 {
 		log.Info("Denying authorization because attributes are missing object name")
 		return auth.DecisionNoOpinion, "No Object name found", nil
