@@ -257,6 +257,14 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 
 	allErrs = append(allErrs, validateSeedInternalDomains(seedSpec.DNS, fldPath.Child("dns"))...)
 
+	internalDomains := sets.New[string]()
+	if seedSpec.DNS.Internal != nil {
+		internalDomains.Insert(seedSpec.DNS.Internal.Domain)
+	}
+	for _, internalDNS := range seedSpec.DNS.InternalDomains {
+		internalDomains.Insert(internalDNS.Domain)
+	}
+
 	defaultDomains := sets.New[string]()
 	for i, defaultDNS := range seedSpec.DNS.Defaults {
 		allErrs = append(allErrs, validateSeedDNSProviderConfig(defaultDNS, fldPath.Child("dns", "defaults").Index(i))...)
@@ -267,8 +275,8 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		defaultDomains.Insert(defaultDNS.Domain)
 
 		// External DNS names point at the internal domain, so the two identities must stay distinct.
-		if internalDNS := seedSpec.DNS.Internal; internalDNS != nil && len(internalDNS.Domain) > 0 && len(defaultDNS.Domain) > 0 && defaultDNS.Domain == internalDNS.Domain {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain, "must differ from the internal domain"))
+		if len(defaultDNS.Domain) > 0 && internalDomains.Has(defaultDNS.Domain) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain, "must differ from the internal domains"))
 		}
 	}
 

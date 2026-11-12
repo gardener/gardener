@@ -707,7 +707,23 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.dns.defaults[0].domain"),
-					"Detail": Equal("must differ from the internal domain"),
+					"Detail": Equal("must differ from the internal domains"),
+				}))))
+			})
+
+			It("should reject a default domain equal to a former internal domain", func() {
+				formerDomain := *seed.Spec.DNS.Internal.DeepCopy()
+				formerDomain.Domain = "internal.former.example.com"
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{*seed.Spec.DNS.Internal, formerDomain}
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{
+					Type:   "foo",
+					Domain: formerDomain.Domain,
+				}}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.defaults[0].domain"),
+					"Detail": Equal("must differ from the internal domains"),
 				}))))
 			})
 
