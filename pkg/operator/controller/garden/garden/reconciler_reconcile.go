@@ -791,8 +791,13 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployPrometheusLongTerm),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying OpenTelemetry Collector",
-			Fn:           c.openTelemetryCollector.Deploy,
+			Name: "Deploying OpenTelemetry Collector",
+			Fn: func(ctx context.Context) error {
+				if isLoggingEnabled(garden.Spec.RuntimeCluster.Logging) {
+					return c.openTelemetryCollector.Deploy(ctx)
+				}
+				return c.openTelemetryCollector.Destroy(ctx)
+			},
 			Dependencies: flow.NewTaskIDs(deployOpenTelemetryOperator),
 		})
 		_ = g.Add(flow.Task{

@@ -87,7 +87,7 @@ DropLogEntryWithoutK8sMetadata true
 )
 
 // GetDefaultClusterOutput returns the default ClusterOutput used by the Fluent Operator.
-func GetDefaultClusterOutput(labels map[string]string) *fluentbitv1alpha2.ClusterOutput {
+func GetDefaultClusterOutput(labels map[string]string, isValiRunning bool) *fluentbitv1alpha2.ClusterOutput {
 	if slices.ContainsFunc(features.DefaultFeatureGate.KnownFeatures(), func(s string) bool {
 		return strings.HasPrefix(s, string(features.OpenTelemetryCollector)+"=")
 	}) && features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
@@ -114,14 +114,15 @@ FallbackToTagWhenMetadataIsMissing false`,
 		}
 	}
 
-	return &fluentbitv1alpha2.ClusterOutput{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   outputNameJournald,
-			Labels: labels,
-		},
-		Spec: fluentbitv1alpha2.OutputSpec{
-			CustomPlugin: &custom.CustomPlugin{
-				Config: `Name ` + pluginNameVali + `
+	if isValiRunning {
+		return &fluentbitv1alpha2.ClusterOutput{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   outputNameJournald,
+				Labels: labels,
+			},
+			Spec: fluentbitv1alpha2.OutputSpec{
+				CustomPlugin: &custom.CustomPlugin{
+					Config: `Name ` + pluginNameVali + `
 Match ` + matchJournald + `
 Labels {origin="` + originSeedJournald + `"}
 RemoveKeys kubernetes,stream,hostname,unit
@@ -129,9 +130,11 @@ LabelMapPath {"hostname":"host_name","unit":"systemd_component"}
 QueueDir ` + bufferDirBase + `
 QueueName ` + queueNameSeedJournald + `
 ` + commonSettings,
+				},
 			},
-		},
+		}
 	}
+	return nil
 }
 
 // GetDynamicClusterOutput returns the dynamic fluent-bit-to-vali output used by the Fluent Operator.
@@ -141,7 +144,7 @@ QueueName ` + queueNameSeedJournald + `
 // scenario) this is the only ClusterOutput deployed for kubernetes.* records — the static
 // ClusterOutput is intentionally skipped there to avoid log duplication, and the seedClient
 // fallback ships garden-namespace records to the local OpenTelemetry Collector.
-func GetDynamicClusterOutput(labels map[string]string) *fluentbitv1alpha2.ClusterOutput {
+func GetDynamicClusterOutput(labels map[string]string, isValiRunning bool) *fluentbitv1alpha2.ClusterOutput {
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
 		return &fluentbitv1alpha2.ClusterOutput{
 			ObjectMeta: metav1.ObjectMeta{
@@ -192,14 +195,15 @@ TagKey                    tag`,
 	// Legacy vali variant (OpenTelemetryCollector feature gate off): the gardenervali plugin filters
 	// records by the `gardener.cloud/role:shoot` namespace label before any seedClient fallback can
 	// run.
-	return &fluentbitv1alpha2.ClusterOutput{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   outputNameVali,
-			Labels: labels,
-		},
-		Spec: fluentbitv1alpha2.OutputSpec{
-			CustomPlugin: &custom.CustomPlugin{
-				Config: `Name ` + pluginNameVali + `
+	if isValiRunning {
+		return &fluentbitv1alpha2.ClusterOutput{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   outputNameVali,
+				Labels: labels,
+			},
+			Spec: fluentbitv1alpha2.OutputSpec{
+				CustomPlugin: &custom.CustomPlugin{
+					Config: `Name ` + pluginNameVali + `
 Match ` + matchKubernetes + `
 Labels {origin="` + originSeed + `"}
 DropSingleKey false
@@ -215,14 +219,16 @@ CleanExpiredClientsPeriod 1h
 ControllerSyncTimeout 120s
 PreservedLabels origin,namespace_name,pod_name
 ` + commonSettings + staticDynamicCommonSettings,
+				},
 			},
-		},
+		}
 	}
+	return nil
 }
 
 // GetStaticClusterOutput returns the static fluent-bit-to-vali output used by the Fluent Operator.
 // This output is present on garden runtime cluster.
-func GetStaticClusterOutput(labels map[string]string) *fluentbitv1alpha2.ClusterOutput {
+func GetStaticClusterOutput(labels map[string]string, isValiRunning bool) *fluentbitv1alpha2.ClusterOutput {
 	if slices.ContainsFunc(features.DefaultFeatureGate.KnownFeatures(), func(s string) bool {
 		return strings.HasPrefix(s, string(features.OpenTelemetryCollector)+"=")
 	}) && features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
@@ -248,21 +254,23 @@ FallbackToTagWhenMetadataIsMissing true`,
 			},
 		}
 	}
-
-	return &fluentbitv1alpha2.ClusterOutput{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   outputNameStaticVali,
-			Labels: labels,
-		},
-		Spec: fluentbitv1alpha2.OutputSpec{
-			CustomPlugin: &custom.CustomPlugin{
-				Config: `Name ` + pluginNameVali + `
+	if isValiRunning {
+		return &fluentbitv1alpha2.ClusterOutput{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   outputNameStaticVali,
+				Labels: labels,
+			},
+			Spec: fluentbitv1alpha2.OutputSpec{
+				CustomPlugin: &custom.CustomPlugin{
+					Config: `Name ` + pluginNameVali + `
 Match ` + matchKubernetes + `
 Labels {origin="` + originGarden + `"}
 QueueDir ` + bufferDirGarden + `
 QueueName ` + queueNameStaticGarden + `
 ` + commonSettings + staticDynamicCommonSettings,
+				},
 			},
-		},
+		}
 	}
+	return nil
 }
