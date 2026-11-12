@@ -90,6 +90,21 @@ var _ = Describe("bootstraptoken", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Data["token-secret"]).To(Equal([]byte(tokenSecret)))
 		})
+
+		It("should fail and leave the secret untouched if an existing token belongs to a different identity", func() {
+			secret, err := ComputeBootstrapTokenWithSecret(ctx, fakeClient, tokenID, tokenSecret, description, validity)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = ComputeBootstrapTokenWithSecret(ctx, fakeClient, tokenID, "", "other-description", validity)
+			Expect(err).To(MatchError(ContainSubstring("belongs to a different identity")))
+
+			By("Ensure the existing secret was not overwritten")
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.Data).To(And(
+				HaveKeyWithValue("token-secret", Equal([]byte(tokenSecret))),
+				HaveKeyWithValue("description", Equal([]byte(description))),
+			))
+		})
 	})
 
 	Describe("#FromSecretData", func() {

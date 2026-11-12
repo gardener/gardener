@@ -31,7 +31,7 @@ const (
 
 var (
 	// ValidBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
-	ValidBootstrapTokenRegex = regexp.MustCompile(fmt.Sprintf(`^[a-z0-9]{%d}.[a-z0-9]{%d}$`, IDLength, SecretLength))
+	ValidBootstrapTokenRegex = regexp.MustCompile(fmt.Sprintf(`^[a-z0-9]{%d}\.[a-z0-9]{%d}$`, IDLength, SecretLength))
 	// validBootstrapTokenSecretRegex is used to check if an existing token can be interpreted as a bootstrap token.
 	validBootstrapTokenSecretRegex = regexp.MustCompile(fmt.Sprintf(`[a-z0-9]{%d}`, SecretLength))
 
@@ -51,6 +51,14 @@ func ComputeBootstrapTokenWithSecret(ctx context.Context, c client.Client, token
 
 	if err = c.Get(ctx, client.ObjectKeyFromObject(secret), secret); client.IgnoreNotFound(err) != nil {
 		return nil, err
+	}
+
+	// The token id is only 6 characters wide, so two callers with distinct identities can derive the same secret
+	// name. Reusing an existing secret's token value and extending its validity is only safe when the stored
+	// description matches the requested one; otherwise we would hand out and prolong a token owned by someone else.
+	// Fail closed in that case instead of adopting or overwriting the foreign token.
+	if existingDescription, ok := secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]; ok && string(existingDescription) != description {
+		return nil, fmt.Errorf("existing bootstrap token secret %s belongs to a different identity", client.ObjectKeyFromObject(secret))
 	}
 
 	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenSecretRegex.Match(existingSecretToken) {
