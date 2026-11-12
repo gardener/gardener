@@ -1790,7 +1790,7 @@ type Provider struct {
 	// definition in the documentation of your provider extension.
 	// +optional
 	InfrastructureConfig *runtime.RawExtension `json:"infrastructureConfig,omitempty" protobuf:"bytes,3,opt,name=infrastructureConfig"`
-	// Workers is a list of worker groups.
+	// Workers is a list of worker groups. At most 300 worker groups are allowed.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
