@@ -185,6 +185,8 @@ type shootValidationOptions struct {
 	KubeAPIServerValidationOptions KubeAPIServerValidationOptions
 	// AddonsValidationOptions are validation options for the Addons fields.
 	AddonsValidationOptions addonsValidationOptions
+	// ProviderValidationOptions are validation options for the Provider fields.
+	ProviderValidationOptions ProviderValidationOptions
 }
 
 // KubeAPIServerValidationOptions are validation options for the KubeAPIServer fields.
@@ -208,6 +210,23 @@ type addonsValidationOptions struct {
 	AllowNginxIngress bool
 }
 
+// ProviderValidationOptions are validation options for the Provider fields.
+type ProviderValidationOptions struct {
+	// AllowInvalidWorkerPoolsCount specifies whether a worker pools count exceeding MaxWorkerPoolsCount is allowed.
+	//
+	// TODO(ialidzhikov): Remove this field once support for Kubernetes < 1.38 is dropped.
+	AllowInvalidWorkerPoolsCount bool
+}
+
+// AllowInvalidWorkerPoolsCount returns true if a worker pools count exceeding MaxWorkerPoolsCount is allowed for an
+// update of the given old to the given new provider and Kubernetes version (ratcheting validation). This is the case when the
+// worker pools count is not changed and the Kubernetes version is < 1.38.
+//
+// TODO(ialidzhikov): Remove this function once support for Kubernetes < 1.38 is dropped.
+func AllowInvalidWorkerPoolsCount(newProvider, oldProvider core.Provider, newKubernetesVersion string) bool {
+	return len(newProvider.Workers) == len(oldProvider.Workers) && versionutils.ConstraintK8sLess138.CheckVersion(newKubernetesVersion)
+}
+
 // ValidateShoot validates a Shoot object.
 func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	opts := shootValidationOptions{
@@ -219,6 +238,9 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 		},
 		AddonsValidationOptions: addonsValidationOptions{
 			AllowNginxIngress: helper.NginxIngressEnabled(nil),
+		},
+		ProviderValidationOptions: ProviderValidationOptions{
+			AllowInvalidWorkerPoolsCount: false,
 		},
 	}
 
@@ -252,6 +274,9 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		},
 		AddonsValidationOptions: addonsValidationOptions{
 			AllowNginxIngress: helper.NginxIngressEnabled(oldShoot.Spec.Addons),
+		},
+		ProviderValidationOptions: ProviderValidationOptions{
+			AllowInvalidWorkerPoolsCount: AllowInvalidWorkerPoolsCount(newShoot.Spec.Provider, oldShoot.Spec.Provider, newShoot.Spec.Kubernetes.Version),
 		},
 	}
 
@@ -298,11 +323,12 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 }
 
 // ValidateShootTemplate validates a ShootTemplate.
-func ValidateShootTemplate(shootTemplate *core.ShootTemplate, opts KubeAPIServerValidationOptions, fldPath *field.Path) field.ErrorList {
+func ValidateShootTemplate(shootTemplate *core.ShootTemplate, kubeAPIServerOpts KubeAPIServerValidationOptions, providerOpts ProviderValidationOptions, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	shootValidationOptions := shootValidationOptions{
-		KubeAPIServerValidationOptions: opts,
+		KubeAPIServerValidationOptions: kubeAPIServerOpts,
+		ProviderValidationOptions:      providerOpts,
 	}
 
 	allErrs = append(allErrs, metav1validation.ValidateLabels(shootTemplate.Labels, fldPath.Child("metadata", "labels"))...)
@@ -339,7 +365,7 @@ func ValidateShootSpec(shoot *core.Shoot, opts shootValidationOptions, fldPath *
 	)
 
 	allErrs = append(allErrs, ValidateCloudProfileReference(shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Spec.Kubernetes.Version, fldPath)...)
-	allErrs = append(allErrs, validateProvider(shoot.Namespace, shoot.Spec.Provider, shoot.Spec.Kubernetes, shoot.Spec.Networking, workerless, shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil, fldPath.Child("provider"), inTemplate)...)
+	allErrs = append(allErrs, validateProvider(shoot.Namespace, shoot.Spec.Provider, shoot.Spec.Kubernetes, shoot.Spec.Networking, workerless, shoot.Spec.CredentialsBindingName != nil || shoot.Spec.SecretBindingName != nil, opts.ProviderValidationOptions, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(shoot.Spec.Addons, shoot.Spec.Purpose, workerless, shoot.Spec.Kubernetes.Version, opts, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(shoot.Spec.DNS, shoot.Spec.Kubernetes.Version, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(shoot.Spec.Extensions, fldPath.Child("extensions"))...)
@@ -2195,7 +2221,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 	return allErrs
 }
 
-func validateProvider(shootNamespace string, provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless, hasManagedInfrastructure bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateProvider(shootNamespace string, provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless, hasManagedInfrastructure bool, opts ProviderValidationOptions, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 		maxPod  int32
@@ -2220,6 +2246,10 @@ func validateProvider(shootNamespace string, provider core.Provider, kubernetes 
 	} else {
 		if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
 			maxPod = *kubernetes.Kubelet.MaxPods
+		}
+
+		if !opts.AllowInvalidWorkerPoolsCount && len(provider.Workers) > MaxWorkerPoolsCount {
+			allErrs = append(allErrs, field.TooMany(fldPath.Child("workers"), len(provider.Workers), MaxWorkerPoolsCount))
 		}
 
 		for i, worker := range provider.Workers {
@@ -2250,6 +2280,10 @@ func validateProvider(shootNamespace string, provider core.Provider, kubernetes 
 }
 
 const (
+	// MaxWorkerPoolsCount is a constant for the maximum number of worker pools of a Shoot.
+	// See https://github.com/gardener/gardener/issues/16107 for the rationale behind this limit.
+	MaxWorkerPoolsCount = 300
+
 	// maxWorkerNameLength is a constant for the maximum length for worker name.
 	maxWorkerNameLength = 15
 
