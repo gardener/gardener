@@ -3034,6 +3034,68 @@ boolean
 </table>
 
 
+<h3 id="logging">Logging
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#runtimecluster">RuntimeCluster</a>)
+</p>
+
+<p>
+Logging contains configuration for the logging stack.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled is used to enable or disable logging stack for clusters.<br />Defaults to true.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>vali</code></br>
+<em>
+<a href="#vali">Vali</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Vali contains configuration for the Vali</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>victoriaLogs</code></br>
+<em>
+<a href="#victorialogs">VictoriaLogs</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VictoriaLogs contains configuration for VictoriaLogs</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
 <h3 id="maintenance">Maintenance
 </h3>
 
@@ -3443,6 +3505,18 @@ RuntimeCluster contains configuration for the runtime cluster.
 <td>
 <em>(Optional)</em>
 <p>Volume contains settings for persistent volumes created in the runtime cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logging</code></br>
+<em>
+<a href="#logging">Logging</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Logging contains configuration for the logging stack.</p>
 </td>
 </tr>
 
@@ -3890,6 +3964,82 @@ string
 <td>
 <em>(Optional)</em>
 <p>ClassName is the name of a storage class.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="vali">Vali
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#logging">Logging</a>)
+</p>
+
+<p>
+Vali contains configuration for the Vali.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled is used to enable or disable the shoot and seed Vali.<br />If FluentBit is used with a custom output the Vali can, Vali is maybe unused and can be disabled.<br />If not set, by default Vali is enabled</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="victorialogs">VictoriaLogs
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#logging">Logging</a>)
+</p>
+
+<p>
+VictoriaLogs contains configuration for the VictoriaLogs.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled is used to enable or disable VictoriaLogs.<br />If not set, by default VictoriaLogs is enabled when the VictoriaLogsBackend feature gate is enabled.</p>
 </td>
 </tr>
 

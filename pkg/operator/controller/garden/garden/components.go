@@ -68,7 +68,7 @@ import (
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
-	"github.com/gardener/gardener/pkg/component/observability/logging"
+	observabilitylogging "github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
@@ -329,6 +329,8 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// observability components
+	loggingEnabled := isLoggingEnabled(garden.Spec.RuntimeCluster.Logging)
+
 	c.gardenerMetricsExporter, err = r.newGardenerMetricsExporter(secretsManager)
 	if err != nil {
 		return
@@ -337,19 +339,19 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.fluentOperator, err = r.newFluentOperator()
+	c.fluentOperator, err = r.newFluentOperator(loggingEnabled)
 	if err != nil {
 		return
 	}
-	c.fluentBit, err = r.newFluentBit()
+	c.fluentBit, err = r.newFluentBit(loggingEnabled)
 	if err != nil {
 		return
 	}
-	c.fluentOperatorCustomResources, err = r.newFluentCustomResources()
+	c.fluentOperatorCustomResources, err = r.newFluentCustomResources(garden.Spec.RuntimeCluster.Logging, loggingEnabled)
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(garden.Spec.RuntimeCluster.Settings, c.istio.GetValues().IngressGateway)
+	c.vali, err = r.newVali(garden.Spec.RuntimeCluster.Settings, garden.Spec.RuntimeCluster.Logging, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -397,7 +399,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
+	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings, garden.Spec.RuntimeCluster.Logging, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1433,48 +1435,49 @@ func virtualGardenAPIServerHost(garden *operatorv1alpha1.Garden) string {
 	return v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)
 }
 
-func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentOperator(loggingEnabled bool) (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentOperator(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
+		loggingEnabled,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }
 
-func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentBit(loggingEnabled bool) (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentBit(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
+		loggingEnabled,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		true,
 	)
 }
 
-func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentCustomResources(logging *operatorv1alpha1.Logging, loggingEnabled bool) (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 
-	// The gardener-operator has no option to disable logging, so the default output is always included.
-	outputs := []*fluentbitv1alpha2.ClusterOutput{fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels)}
+	isValiRunning := isValiEnabled(logging)
+	outputs := []*fluentbitv1alpha2.ClusterOutput{fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels, isValiRunning)}
 
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels))
+		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels, isValiRunning))
 	} else {
-		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels))
+		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels, isValiRunning))
 	}
+	outputs = slices.DeleteFunc(outputs, func(o *fluentbitv1alpha2.ClusterOutput) bool { return o == nil })
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
+		loggingEnabled,
 		"-garden",
-		logging.GardenCentralLoggingConfigurations,
+		observabilitylogging.GardenCentralLoggingConfigurations,
 		outputs,
 	)
 }
 
-func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, logging *operatorv1alpha1.Logging, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the vali config")
 	}
@@ -1501,9 +1504,7 @@ func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGateway
 		return nil, err
 	}
 
-	// Destroy Vali if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
-	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
-		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+	if !isValiEnabled(logging) {
 		return component.OpDestroy(deployer), nil
 	}
 
@@ -1512,6 +1513,7 @@ func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGateway
 
 func (r *Reconciler) newVictoriaLogs(
 	settings *operatorv1alpha1.Settings,
+	logging *operatorv1alpha1.Logging,
 	secretsManager secretsmanager.Interface,
 	ingressDomain string,
 	wildcardCertSecretName *string,
@@ -1548,7 +1550,7 @@ func (r *Reconciler) newVictoriaLogs(
 		return nil, err
 	}
 
-	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+	if !isVictoriaLogsEnabled(logging) {
 		return component.OpDestroyAndWait(deployer), nil
 	}
 
@@ -1774,7 +1776,7 @@ func (r *Reconciler) newPerses(garden *operatorv1alpha1.Garden, secretsManager s
 			// configuring a pod priority class on the Perses resource (see github.com/perses/perses-operator/pull/456).
 			IsGardenCluster:     true,
 			VPAEnabled:          vpaEnabled(garden.Spec.RuntimeCluster.Settings),
-			VictoriaLogsEnabled: features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+			VictoriaLogsEnabled: isVictoriaLogsEnabled(garden.Spec.RuntimeCluster.Logging),
 			// The garden runtime cluster runs istio, so include its dashboards.
 			IncludeIstioDashboards: true,
 			ExternalExposure: &perses.ExposureValues{
