@@ -405,10 +405,29 @@ func (a *authorizer) authorizeSecret(ctx context.Context, requestAuthorizer *aut
 				Namespace: requestAuthorizer.ToNamespace,
 				Name:      requestAuthorizer.ToName,
 			}))
-			if attrs.GetName() == expectedSecretName {
+			if attrs.GetName() != expectedSecretName {
+				return auth.DecisionNoOpinion, fmt.Sprintf("bootstrap token secret name %s does not match expected name %s for shoot %s/%s", attrs.GetName(), expectedSecretName, requestAuthorizer.ToNamespace, requestAuthorizer.ToName), nil
+			}
+
+			// The token id is only 6 characters wide, so two distinct shoot identities can hash to the same secret
+			// name. The name match above is therefore not sufficient on its own: if a secret with this name already
+			// exists, we must additionally confirm that it belongs to the requesting shoot before exposing its data.
+			// The secret may legitimately not exist yet (first bootstrap or renewal of an expired token primes the
+			// watch before the token is created), in which case there is nothing to leak and the read is allowed.
+			shootMeta, found, err := gardenletutils.ShootMetaFromBootstrapToken(ctx, a.client, attrs.GetName())
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return auth.DecisionAllow, "", nil
+				}
+				return auth.DecisionNoOpinion, "", err
+			}
+			if !found {
+				return auth.DecisionNoOpinion, fmt.Sprintf("bootstrap token secret %s does not belong to a self-hosted shoot", attrs.GetName()), nil
+			}
+			if shootMeta.Namespace == requestAuthorizer.ToNamespace && shootMeta.Name == requestAuthorizer.ToName {
 				return auth.DecisionAllow, "", nil
 			}
-			return auth.DecisionNoOpinion, fmt.Sprintf("bootstrap token secret name %s does not match expected name %s for shoot %s/%s", attrs.GetName(), expectedSecretName, requestAuthorizer.ToNamespace, requestAuthorizer.ToName), nil
+			return auth.DecisionNoOpinion, fmt.Sprintf("shoot meta in bootstrap token secret %s does not match with identity of requestor %s/%s", shootMeta, requestAuthorizer.ToNamespace, requestAuthorizer.ToName), nil
 
 		case "delete":
 			// Allow gardenlet to delete bootstrap tokens for its own shoot or for ManagedSeeds referencing its shoot.

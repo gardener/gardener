@@ -2259,7 +2259,7 @@ var _ = Describe("Shoot", func() {
 						attrs.Name = expectedSecretName
 					})
 
-					DescribeTable("should allow for the deterministically derived secret name",
+					DescribeTable("should allow for the deterministically derived secret name if the secret does not exist yet",
 						func(verb string) {
 							attrs.Verb = verb
 
@@ -2267,6 +2267,60 @@ var _ = Describe("Shoot", func() {
 							Expect(err).NotTo(HaveOccurred())
 							Expect(decision).To(Equal(auth.DecisionAllow))
 							Expect(reason).To(BeEmpty())
+						},
+						Entry("get", "get"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+					)
+
+					DescribeTable("should allow for the deterministically derived secret name if the secret belongs to the requesting shoot",
+						func(verb string) {
+							attrs.Verb = verb
+							Expect(fakeClient.Create(ctx, &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: expectedSecretName, Namespace: "kube-system"},
+								Data:       map[string][]byte{"description": fmt.Appendf(nil, "Used for connecting the self-hosted Shoot %s/%s to the Garden cluster", shootNamespace, shootName)},
+							})).To(Succeed())
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionAllow))
+							Expect(reason).To(BeEmpty())
+						},
+						Entry("get", "get"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+					)
+
+					DescribeTable("should not have an opinion if the secret belongs to a different shoot",
+						func(verb string) {
+							attrs.Verb = verb
+							Expect(fakeClient.Create(ctx, &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: expectedSecretName, Namespace: "kube-system"},
+								Data:       map[string][]byte{"description": []byte("Used for connecting the self-hosted Shoot not-the-namespace/not-the-name to the Garden cluster")},
+							})).To(Succeed())
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("shoot meta in bootstrap token secret not-the-namespace/not-the-name does not match with identity of requestor"))
+						},
+						Entry("get", "get"),
+						Entry("list", "list"),
+						Entry("watch", "watch"),
+					)
+
+					DescribeTable("should not have an opinion if the secret is not a self-hosted shoot bootstrap token",
+						func(verb string) {
+							attrs.Verb = verb
+							Expect(fakeClient.Create(ctx, &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: expectedSecretName, Namespace: "kube-system"},
+								Data:       map[string][]byte{"description": []byte("A bootstrap token for some other purpose")},
+							})).To(Succeed())
+
+							decision, reason, err := authorizer.Authorize(ctx, attrs)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(decision).To(Equal(auth.DecisionNoOpinion))
+							Expect(reason).To(ContainSubstring("does not belong to a self-hosted shoot"))
 						},
 						Entry("get", "get"),
 						Entry("list", "list"),
