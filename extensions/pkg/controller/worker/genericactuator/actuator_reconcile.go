@@ -363,7 +363,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines,
-			numNeedUpdateManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace, numPreservedFailed int32
+			numNeedUpdateManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace, numPreservedFailed, numMaintenance int32
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -451,6 +451,11 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 					oldMachineSetsTotalReplicas += oldMachineSet.Status.Replicas
 					machines := machineSetToMachinesMap[oldMachineSet.Name]
 					for _, machine := range machines {
+						// A machine under planned maintenance is intentionally held on the old machine set and is
+						// not a candidate for in-place update while maintenance lasts.
+						if machine.Status.CurrentStatus.Phase == machinev1alpha1.MachineMaintenance {
+							continue
+						}
 						cond := extensionsworkercontroller.GetMachineCondition(&machine, machinev1alpha1.NodeInPlaceUpdate)
 						if cond != nil && cond.Reason != machinev1alpha1.CandidateForUpdate {
 							numOldMachinesNotUpdateCandidateManualInPlace++
@@ -466,17 +471,23 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			numAvailable += deployment.Status.AvailableReplicas
 			numUnavailable += deployment.Status.UnavailableReplicas
 			numPreservedFailed += deployment.Status.PreservedFailedReplicas
+			numMaintenance += deployment.Status.MaintenanceReplicas
 		}
 
 		var msg string
 		switch {
 		case !extensionscontroller.IsHibernationEnabled(cluster):
-			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
-			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
-			// When there are preserved failed machines in the cluster, if numUnavailable <= numPreservedFailed,
-			// it would mean all unavailable machines are preserved failed machines.
-			// In such cases, shoot reconciliation must be allowed to progress.
-			if (numUpdated+numNeedUpdateManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
+			// Reconciliation completes once all machines run the new revision and all machines are up.
+			//
+			// Revision check: machines under planned maintenance are held on the old machine set until maintenance ends,
+			// so they appear awake but not updated. We therefore allow the not-yet-updated remainder to equal the number
+			// of machines in maintenance; those slots update once maintenance is over.
+			//
+			// Availability check: MCM already excludes maintenance machines from the unavailable count, so they must not
+			// be added back to the budget. Preserved failed machines, however, remain counted as unavailable; when every
+			// unavailable machine is a preserved failure, reconciliation may proceed.
+			numNotUpdated := numberOfAwakeMachines - (numUpdated + numNeedUpdateManualInPlace)
+			if numNotUpdated <= numMaintenance && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
 				numOldMachinesNotUpdateCandidateManualInPlace == 0 {
 				if numUnavailable == 0 || (numPreservedFailed > 0 && numUnavailable <= numPreservedFailed) {
 					return retryutils.Ok()
@@ -496,8 +507,8 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				break
 			}
 
-			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d preserved failed machine(s), %d/%d machinedeployments available)...",
-				numAvailable, numDesired, numUpdated+numNeedUpdateManualInPlace, numDesired, numUnavailable, numPreservedFailed, numHealthyDeployments, len(wantedMachineDeployments))
+			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d preserved failed machine(s), %d machine(s) under maintenance, %d/%d machinedeployments available)...",
+				numAvailable, numDesired, numUpdated+numNeedUpdateManualInPlace, numDesired, numUnavailable, numPreservedFailed, numMaintenance, numHealthyDeployments, len(wantedMachineDeployments))
 
 		default:
 			if numberOfAwakeMachines == 0 {

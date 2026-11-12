@@ -737,14 +737,11 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
-	// Compute preserved node names from the already-fetched node map.
-	preservedNodeNames := sets.New[string]()
-	for _, nodes := range workerPoolToNodes {
-		for _, node := range nodes {
-			if health.IsNodePreservedAndUnhealthy(node) {
-				preservedNodeNames.Insert(node.Name)
-			}
-		}
+	// Get the set of intentionally-held nodes (preserved failed machines and nodes under
+	// planned maintenance) whose unhealthiness is tolerated.
+	preservedNodeNames, err := health.GetPreservedNodeNames(ctx, shootClient.Client())
+	if err != nil {
+		return nil, err
 	}
 
 	// preservedNodeFailure holds the first CheckNodes failure attributable entirely to preserved
@@ -923,10 +920,10 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		desiredMachines          = getDesiredMachineCount(machineDeploymentList.Items)
 	)
 
-	var preservedUnhealthyNodes int
+	var heldUnhealthyNodes int
 	for _, node := range nodeList {
-		if health.IsNodePreservedAndUnhealthy(*node) {
-			preservedUnhealthyNodes++
+		if health.IsNodePreservedAndUnhealthy(*node) || health.IsNodeUnderMaintenanceAndNotReady(*node) {
+			heldUnhealthyNodes++
 			continue
 		}
 		if node.Spec.Unschedulable {
@@ -940,10 +937,11 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		}
 	}
 
-	// Skip checks if all shoot nodes are ready and match the target node number and if there are no ongoing node drains.
-	// Preserved unhealthy nodes are intentionally cordoned and not-ready, so they are excluded from readyAndSchedulableNodes
-	// but count toward registeredNodes; treat them as satisfying their "slot" for the purposes of this early-out.
-	if registeredNodes == desiredMachines && readyAndSchedulableNodes+preservedUnhealthyNodes == desiredMachines {
+	// If the node count is at the target and every node is either ready or a held-unhealthy node, nothing is
+	// scaling or rolling, so return early.
+	nodeCountAtTarget := registeredNodes == desiredMachines
+	allNodesReadyOrHeld := readyAndSchedulableNodes+heldUnhealthyNodes == desiredMachines
+	if nodeCountAtTarget && allNodesReadyOrHeld {
 		return "", nil
 	}
 
@@ -983,8 +981,8 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 	}
 
 	// Report reason "NodesRollOutScalingUp" if enough nodes are registered and not enough are ready (still starting required pods, lost connection).
-	// Preserved unhealthy nodes are intentionally not ready; exclude them from this check.
-	if readyAndSchedulableNodes+preservedUnhealthyNodes < desiredMachines {
+	// Held unhealthy nodes (preserved or under maintenance) are intentionally not ready; exclude them from this check.
+	if readyAndSchedulableNodes+heldUnhealthyNodes < desiredMachines {
 		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
 			return "NodesRollOutScalingUp", err
 		}
@@ -1014,8 +1012,7 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 			continue
 		}
 		switch machine.Status.CurrentStatus.Phase {
-		case machinev1alpha1.MachineRunning, machinev1alpha1.MachineAvailable:
-			// machine is already running fine
+		case machinev1alpha1.MachineRunning, machinev1alpha1.MachineAvailable, machinev1alpha1.MachineMaintenance:
 			continue
 		case machinev1alpha1.MachinePending, "": // https://github.com/gardener/machine-controller-manager/issues/466
 			// machine is in the process of being created
@@ -1085,7 +1082,7 @@ func (h *Health) hasPreservedFailedMachines(ctx context.Context) bool {
 		return false
 	}
 	for _, mcd := range machineDeploymentList.Items {
-		if mcd.Status.PreservedFailedReplicas > 0 {
+		if mcd.Status.PreservedFailedReplicas > 0 || mcd.Status.MaintenanceReplicas > 0 {
 			return true
 		}
 	}

@@ -8,8 +8,17 @@ spec:
       interval: 5s
       rules:
         # healthcheck{task="target:down"} is present for each scrape job target that is down.
+        # Exclude scrape targets on nodes under planned maintenance from this health check.
         - record: healthcheck
-          expr: up == 0
+          expr: |2
+              up == 0
+            unless on (kubernetes_io_hostname)
+              max by (kubernetes_io_hostname) (
+                label_replace(
+                  kube_node_status_condition{condition="MaintenanceInProgress", status="true"} == 1,
+                  "kubernetes_io_hostname", "$1", "node", "(.+)"
+                )
+              )
           labels:
             task: target:down
 

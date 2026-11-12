@@ -422,6 +422,11 @@ spec:
                   - type
                   type: object
                 type: array
+              maintenanceReplicas:
+                description: MaintenanceReplicas is the number of machines in Maintenance
+                  phase for this replica set.
+                format: int32
+                type: integer
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   by the controller.
