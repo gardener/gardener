@@ -2877,7 +2877,7 @@ message Provider {
   // +optional
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension infrastructureConfig = 3;
 
-  // Workers is a list of worker groups.
+  // Workers is a list of worker groups. At most 300 worker groups are allowed.
   // +patchMergeKey=name
   // +patchStrategy=merge
   // +optional
