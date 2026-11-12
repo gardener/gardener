@@ -121,10 +121,40 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(sourceEtcdReadyForPeerJoin),
 		})
 
-		_ = g.Add(flow.Task{
+		migrateExtensionsNeededBeforeKubeAPIServer = g.Add(flow.Task{
+			Name:         "Migrating source extensions needed before kube-apiserver",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer, botanist.MigrateExtensionsBeforeKubeAPIServerTaskGroup(false)),
+			Dependencies: flow.NewTaskIDs(destinationEtcdPeersJoined),
+		})
+
+		destinationKubeAPIServerReady = g.Add(flow.Task{
+			Name:         "Deploying destination control plane and temporary VPN",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationDestinationKubeAPIServerReady, destinationKubeAPIServerReadyTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(migrateExtensionsNeededBeforeKubeAPIServer),
+		})
+
+		sourceSeedCleanup = g.Add(flow.Task{
+			Name:         "Cleaning up the source seed",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup, sourceSeedCleanupTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(destinationKubeAPIServerReady),
+		})
+
+		etcdMigrationComplete = g.Add(flow.Task{
 			Name:         "Migrating etcd cluster to destination seed",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup(botanist)),
-			Dependencies: flow.NewTaskIDs(destinationEtcdPeersJoined),
+			Dependencies: flow.NewTaskIDs(sourceSeedCleanup),
+		})
+
+		migrationCompleted = g.Add(flow.Task{
+			Name:         "Completing live migration",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrationCompleted, destinationCompletionTaskGroup(botanist)),
+			Dependencies: flow.NewTaskIDs(etcdMigrationComplete),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Tearing down components and namespace in source seed",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown, sourceSeedFinalTeardownTaskGroup(ctx, botanist, o)),
+			Dependencies: flow.NewTaskIDs(migrationCompleted),
 		})
 	)
 
