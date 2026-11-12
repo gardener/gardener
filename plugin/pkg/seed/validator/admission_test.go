@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/user"
 	kubeinformers "k8s.io/client-go/informers"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -165,6 +166,30 @@ var _ = Describe("validator", func() {
 						oldSeed.Generation = 2
 						oldSeed.Status.ObservedGeneration = 1
 						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("before the gardenlet has observed the current generation")))
+					})
+
+					It("should allow the seed's own gardenlet to remove an internal domain before it observed the current generation", func() {
+						oldSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}, {Domain: "foo.bar"}}
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}}
+						oldSeed.Spec.DNS.Internal.Domain = "bar.foo"
+						oldSeed.Generation = 2
+						oldSeed.Status.ObservedGeneration = 1
+						gardenlet := &user.DefaultInfo{Name: v1beta1constants.SeedUserNamePrefix + seed.Name, Groups: []string{v1beta1constants.SeedsGroup}}
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, gardenlet)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should forbid the gardenlet of another seed to remove an internal domain before the gardenlet observed the current generation", func() {
+						oldSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}, {Domain: "foo.bar"}}
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}}
+						oldSeed.Spec.DNS.Internal.Domain = "bar.foo"
+						oldSeed.Generation = 2
+						oldSeed.Status.ObservedGeneration = 1
+						gardenlet := &user.DefaultInfo{Name: v1beta1constants.SeedUserNamePrefix + "other-seed", Groups: []string{v1beta1constants.SeedsGroup}}
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, gardenlet)
 
 						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("before the gardenlet has observed the current generation")))
 					})
