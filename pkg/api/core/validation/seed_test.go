@@ -529,6 +529,25 @@ var _ = Describe("Seed Validation Tests", func() {
 					}))))
 				})
 
+				It("should forbid disabling the internal domain on update if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					seed.Spec.DNS.InternalDomainEnabled = nil
+					newSeed := prepareSeedForUpdate(seed)
+					newSeed.Spec.DNS.InternalDomainEnabled = new(false)
+
+					Expect(ValidateSeedUpdate(newSeed, seed)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.internalDomainEnabled"),
+					}))))
+				})
+
+				It("should accept a stored disabled internal domain on update if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					newSeed := prepareSeedForUpdate(seed)
+
+					Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+				})
+
 				It("should require an internal domain if the feature gate is disabled and the internal domain is enabled", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
 					seed.Spec.DNS.InternalDomainEnabled = new(true)
