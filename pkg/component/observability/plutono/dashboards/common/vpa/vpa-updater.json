@@ -948,7 +948,7 @@
       "dashes": false,
       "datasource": "${datasource}",
       "decimals": 0,
-      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
+      "description": "These counters are not initialized with 0 by the VPA Updater component. As a result, when only a single sample exists for the selected range, the increase() function has no prior 0 sample to compute the delta from and yields a misleading 0 instead of the actual count.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1181,7 +1181,7 @@
       "dashes": false,
       "datasource": "${datasource}",
       "decimals": 0,
-      "description": "Initial data points are set to 0, because the VPA Updater component does not emit default counter values. This behaviour causes the increase() function to perform its calculation with a single sample, resulting in 0. For more details, see https://github.com/kubernetes/autoscaler/issues/9058.",
+      "description": "These counters are not initialized with 0 by the VPA Updater component. As a result, when only a single sample exists for the selected range, the increase() function has no prior 0 sample to compute the delta from and yields a misleading 0 instead of the actual count.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
