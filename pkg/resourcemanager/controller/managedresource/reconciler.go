@@ -1059,23 +1059,16 @@ func finalizeResourceIfNecessary(ctx context.Context, log logr.Logger, cl client
 // finalizeResource removes metadata.finalizers from the given resource and, for namespace resources,
 // additionally clears spec.finalizers via the /finalize subresource.
 func finalizeResource(ctx context.Context, cl client.Client, obj *unstructured.Unstructured) error {
-	hasFinalizers, _ := utilclient.NewFinalizer().HasFinalizers(obj)
-	isNamespace := obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace"
+	if obj.GetAPIVersion() == "v1" && obj.GetKind() == "Namespace" {
+		return clearNamespaceSpecFinalizers(ctx, cl, obj)
+	}
 
-	if !hasFinalizers && !isNamespace {
+	hasFinalizers, _ := utilclient.NewFinalizer().HasFinalizers(obj)
+	if !hasFinalizers {
 		return nil
 	}
 
-	if hasFinalizers {
-		if err := utilclient.NewFinalizer().Finalize(ctx, cl, obj); err != nil {
-			return err
-		}
-	}
-
-	if isNamespace {
-		return clearNamespaceSpecFinalizers(ctx, cl, obj)
-	}
-	return nil
+	return utilclient.NewFinalizer().Finalize(ctx, cl, obj)
 }
 
 // clearNamespaceSpecFinalizers clears metadata.finalizers and spec.finalizers on namespace resources
