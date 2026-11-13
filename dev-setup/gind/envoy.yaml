@@ -22,8 +22,9 @@ static_resources:
                 text_format_source:
                   inline_string: "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -> %UPSTREAM_HOST% (%BYTES_RECEIVED%/%BYTES_SENT%) %DURATION%ms\n"
   clusters: []
-# The kube_apiserver cluster is read from /etc/gind-lb/cds.yaml, which Envoy polls (file events are not reliably forwarded
-# from the host by Docker Desktop). Use set-api-server-upstream.sh to change the upstream.
+# The kube_apiserver cluster is read from /etc/gind-lb/cds.yaml. Envoy polls it (poll_interval) rather than using
+# watched_directory: over the Docker Desktop (VirtioFS) bind mount Envoy's inotify watch does not fire on host-side
+# changes. Use set-api-server-upstream.sh to change the upstream.
 node:
   id: gind-apiserver-lb
   cluster: gind-apiserver-lb

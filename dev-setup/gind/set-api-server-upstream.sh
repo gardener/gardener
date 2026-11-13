@@ -5,13 +5,15 @@
 
 # Points the GinD API server load balancer (gind-apiserver-lb) to the given upstream host or IP.
 # Usage: set-api-server-upstream.sh <host-or-ip> [directory]
+# directory defaults to <repo-root>/dev/gind-lb
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
 upstream="${1:?usage: $0 <host-or-ip> [directory]}"
-dir="${2:-/etc/gind-lb}"
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+dir="${2:-${repo_root}/dev/gind-lb}"
 
 mkdir -p "$dir"
 tmp="$(mktemp "$dir/.cds.XXXXXX")"
