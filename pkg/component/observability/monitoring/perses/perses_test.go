@@ -893,6 +893,7 @@ var (
 // fakeSecretsManager is a secrets manager which only implements Generate and returns the given secret.
 type fakeSecretsManager struct {
 	secretsmanager.Interface
+
 	secret *corev1.Secret
 }
 
