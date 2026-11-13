@@ -102,6 +102,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return r.liveMigrateShoot(ctx, log, shoot, liveMigrationRole)
 	}
 
+	// If the live-migration annotation is still present but spec.seedName already equals status.seedName, the
+	// annotation is a leftover from a finalizeLiveMigration call where the status patch succeeded but the
+	// annotation removal failed.
+	if v1beta1helper.HasLiveMigrationAnnotation(shoot.Annotations) {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+		if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove stale live migration annotation: %w", err)
+		}
+	}
+
 	if v1beta1helper.ShouldPrepareShootForMigration(shoot) {
 		return r.migrateShoot(ctx, log, shoot)
 	}

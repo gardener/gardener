@@ -234,17 +234,17 @@ func (r *Reconciler) setLiveMigrationStepConditionError(ctx context.Context, sho
 // finalizeLiveMigration switches the shoot's status.seedName to the destination seed and clears the live-migration
 // state and intent annotation, returning the shoot to normal reconciliation on the destination seed.
 func (r *Reconciler) finalizeLiveMigration(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	patch := client.MergeFrom(shoot.DeepCopy())
-	delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
-	if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
-		return fmt.Errorf("failed to remove live migration annotation: %w", err)
-	}
-
 	statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
 	shoot.Status.SeedName = shoot.Spec.SeedName
 	shoot.Status.LiveMigration = nil
 	shoot.Status.MigrationStartTime = nil
-	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
+	if err := r.GardenClient.Status().Patch(ctx, shoot, statusPatch); err != nil {
+		return fmt.Errorf("failed to update live migration status: %w", err)
+	}
+
+	patch := client.MergeFrom(shoot.DeepCopy())
+	delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+	return r.GardenClient.Patch(ctx, shoot, patch)
 }
 
 func (r *Reconciler) patchLiveMigrationConditions(ctx context.Context, shoot *gardencorev1beta1.Shoot, conditions ...gardencorev1beta1.Condition) error {
@@ -539,13 +539,13 @@ func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 
 	// Deploy all DNS records pointing to the destination before scaling out etcd, so the source
 	// kube-apiserver can only go down after DNS records have already switched to the destination.
-	deployDNS := b.ReconcileDNSRecordsTaskGroup()
-	g = g.AddAll(deployDNS.TasksWithDependencies()...)
+	deployDNSRecords := b.ReconcileDNSRecordsTaskGroup()
+	g = g.AddAll(deployDNSRecords.TasksWithDependencies()...)
 
 	waitDNSCacheSync := g.Add(flow.Task{
 		Name:         "Waiting for DNS caches to sync to the destination",
 		Fn:           skipIfSourceMembersAlreadyRemoved(b.WaitForLiveMigrationDNSCacheSync),
-		Dependencies: flow.NewTaskIDs(deployDNS),
+		Dependencies: flow.NewTaskIDs(deployDNSRecords),
 	})
 	deployEtcd := g.Add(flow.Task{
 		Name:         "Scaling out destination etcd to 3 replicas",
@@ -595,8 +595,8 @@ func etcdMigrationCompleteTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	return g
 }
 
-// taskGroupDestinationCompletionTaskGroup is a flow.TaskID for a logical flow.TaskGroup.
-const taskGroupDestinationCompletionTaskGroup flow.TaskID = "TaskGroupDestinationCompletionTaskGroup"
+// taskGroupDestinationCompletion is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupDestinationCompletion flow.TaskID = "TaskGroupDestinationCompletion"
 
 // destinationCompletionTaskGroup returns the group run by the MigrationCompleted step: the restore chain followed by
 // the destination shoot-system layer (system components, resources, addons, observability), run sequentially.
@@ -604,7 +604,7 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		nginxDisabled    = b.Shoot.IsWorkerless || !v1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
-		g                = flow.NewTaskGroup(taskGroupDestinationCompletionTaskGroup)
+		g                = flow.NewTaskGroup(taskGroupDestinationCompletion)
 	)
 
 	refreshShootState := g.Add(flow.Task{
@@ -641,13 +641,14 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	g = g.AddAll(reconcileOperatingSystemConfig.TasksWithDependencies(waitNetwork)...)
 
 	// machine-controller-manager must run before the worker is restored so it adopts the migrated MachineDeployments.
-	mcm := b.ReconcileMachineControllerManagerTaskGroup()
-	g = g.AddAll(mcm.TasksWithDependencies(reconcileOperatingSystemConfig)...)
-	worker := b.ReconcileWorkerTaskGroup(false)
-	g = g.AddAll(worker.TasksWithDependencies(mcm)...)
+	reconcileMCM := b.ReconcileMachineControllerManagerTaskGroup()
+	g = g.AddAll(reconcileMCM.TasksWithDependencies(reconcileOperatingSystemConfig)...)
+
+	reconcileWorker := b.ReconcileWorkerTaskGroup(false)
+	g = g.AddAll(reconcileWorker.TasksWithDependencies(reconcileMCM)...)
 
 	reconcileContainerRuntime := b.ReconcileContainerRuntimeTaskGroup(false)
-	g = g.AddAll(reconcileContainerRuntime.TasksWithDependencies(worker)...)
+	g = g.AddAll(reconcileContainerRuntime.TasksWithDependencies(reconcileWorker)...)
 
 	reconcileExtensionsAfterKubeAPIServer := b.ReconcileExtensionsAfterKubeAPIServerTaskGroup(false)
 	g = g.AddAll(reconcileExtensionsAfterKubeAPIServer.TasksWithDependencies(reconcileContainerRuntime)...)
@@ -703,14 +704,14 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Dependencies: flow.NewTaskIDs(deployAPIServerProxy),
 	})
 
-	shootNamespaces := b.ReconcileShootNamespacesTaskGroup(false)
-	g = g.AddAll(shootNamespaces.TasksWithDependencies(ensureShootClusterIdentity)...)
+	reconcileShootNamespaces := b.ReconcileShootNamespacesTaskGroup(false)
+	g = g.AddAll(reconcileShootNamespaces.TasksWithDependencies(ensureShootClusterIdentity)...)
 
-	systemComponents := b.ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, false)
-	g = g.AddAll(systemComponents.TasksWithDependencies(shootNamespaces)...)
+	reconcileSystemComponents := b.ReconcileSystemComponentsTaskGroup(kubeProxyEnabled, false)
+	g = g.AddAll(reconcileSystemComponents.TasksWithDependencies(reconcileShootNamespaces)...)
 
-	systemResources := b.ReconcileSystemResourcesTaskGroup()
-	g = g.AddAll(systemResources.TasksWithDependencies(systemComponents)...)
+	reconcileSystemResources := b.ReconcileSystemResourcesTaskGroup()
+	g = g.AddAll(reconcileSystemResources.TasksWithDependencies(reconcileSystemComponents)...)
 
 	deployNodeAgent := g.Add(flow.Task{
 		Name: "Deploying gardener-node-agent's OperatingSystemConfig secrets and RBAC resources",
@@ -718,7 +719,7 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 			return b.DeployManagedResourceForGardenerNodeAgent(ctx, false)
 		},
 		SkipIf:       b.Shoot.IsWorkerless,
-		Dependencies: flow.NewTaskIDs(systemResources),
+		Dependencies: flow.NewTaskIDs(reconcileSystemResources),
 	})
 	populateStaticManifests := g.Add(flow.Task{
 		Name:         "Populating static manifests from seed to shoot",
