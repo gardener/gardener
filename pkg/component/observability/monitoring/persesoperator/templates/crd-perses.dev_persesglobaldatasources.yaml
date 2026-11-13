@@ -279,6 +279,18 @@ spec:
                             || has(self.__namespace__)
                     type: object
                 type: object
+                x-kubernetes-validations:
+                - message: kubernetesAuth and oauth are mutually exclusive; both cannot
+                    be enabled simultaneously
+                  rule: '!(has(self.kubernetesAuth) && has(self.kubernetesAuth.enable)
+                    && self.kubernetesAuth.enable == true && has(self.oauth))'
+                - message: kubernetesAuth and basicAuth are mutually exclusive; both
+                    cannot be enabled simultaneously
+                  rule: '!(has(self.kubernetesAuth) && has(self.kubernetesAuth.enable)
+                    && self.kubernetesAuth.enable == true && has(self.basicAuth))'
+                - message: oauth and basicAuth are mutually exclusive; both cannot
+                    be enabled simultaneously
+                  rule: '!(has(self.basicAuth) && has(self.oauth))'
               config:
                 description: config specifies the Perses datasource configuration
                 properties:
