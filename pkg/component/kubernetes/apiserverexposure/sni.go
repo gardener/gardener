@@ -198,6 +198,8 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	ConnectionUpgradeHost            string
 	Port                             int
 	ConnectionUpgradeRouteName       string
+	APIServerRequestHeaderUserName   string
+	APIServerRequestHeaderGroup      string
 }
 
 type istioGatewayConfiguration struct {
@@ -320,6 +322,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 				MutualTLSHost:                    mTLSHostName,
 				ConnectionUpgradeHost:            connectionUpgradeHostName,
 				ConnectionUpgradeRouteName:       connectionUpgradeRouteName,
+				APIServerRequestHeaderUserName:   kubeapiserverconstants.RequestHeaderUserName,
+				APIServerRequestHeaderGroup:      kubeapiserverconstants.RequestHeaderGroup,
 			}); err != nil {
 				return err
 			}
