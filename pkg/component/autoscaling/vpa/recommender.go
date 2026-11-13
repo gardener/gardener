@@ -167,11 +167,6 @@ func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1
 			Resources: []string{"verticalpodautoscalercheckpoints"},
 			Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
 		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"namespaces"},
-			Verbs:     []string{"get", "list"},
-		},
 	}
 }
 
