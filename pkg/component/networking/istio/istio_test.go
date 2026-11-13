@@ -54,6 +54,11 @@ var _ = Describe("istiod", func() {
 		labels                        map[string]string
 		networkLabels                 map[string]string
 		expectAPIServerTLSTermination bool
+		// expectAPIServerTLSTerminationLuaFilter controls whether the gateway-wide apiserver-tls-termination
+		// EnvoyFilter (lua script) is expected. It is only deployed while the migration to the per-shoot lua
+		// filter is not complete.
+		// TODO(oliver-goetz): Remove this when gardener v1.159 has been released.
+		expectAPIServerTLSTerminationLuaFilter bool
 
 		managedResourceIstioName   string
 		managedResourceIstio       *resourcesv1alpha1.ManagedResource
@@ -303,6 +308,7 @@ var _ = Describe("istiod", func() {
 		labels = map[string]string{"foo": "bar"}
 		networkLabels = map[string]string{"to-target": "allowed"}
 		expectAPIServerTLSTermination = true
+		expectAPIServerTLSTerminationLuaFilter = false
 		expectedCPURequests = "1"
 		expectedMinReplicas = 2
 		expectedMaxReplicas = 9
@@ -460,10 +466,14 @@ var _ = Describe("istiod", func() {
 
 			if expectAPIServerTLSTermination {
 				expectedIstioManifests = append(expectedIstioManifests,
-					istioAPIServerTLSTerminationEnvoyFilter(),
 					istioIngressAutoscalerTLSTerminationHPA(minReplicas, maxReplicas),
 					istioStripTrailingDotEnvoyFilter(),
 				)
+
+				// TODO(oliver-goetz): Remove this when gardener v1.159 has been released.
+				if expectAPIServerTLSTerminationLuaFilter {
+					expectedIstioManifests = append(expectedIstioManifests, istioAPIServerTLSTerminationEnvoyFilter())
+				}
 			} else {
 				expectedIstioManifests = append(expectedIstioManifests, istioIngressAutoscaler(minReplicas, maxReplicas))
 			}
@@ -865,6 +875,11 @@ var _ = Describe("istiod", func() {
 				}
 				Expect(c.Create(ctx, &envoyFilter)).To(Succeed())
 				DeferCleanup(func() { Expect(c.Delete(ctx, &envoyFilter)).To(Succeed()) })
+
+				// The existing EnvoyFilter has not been reconciled with the per-shoot lua filter yet, hence the
+				// gateway-wide lua filter must still be deployed.
+				// TODO(oliver-goetz): Remove this when gardener v1.159 has been released.
+				expectAPIServerTLSTerminationLuaFilter = true
 			})
 
 			It("should successfully deploy all resources", func() {

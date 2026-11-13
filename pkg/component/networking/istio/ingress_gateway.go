@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	apinetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,6 +81,39 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			}
 		}
 
+		// TODO(oliver-goetz): Remove this migration code when gardener v1.159 has been released.
+		luaFilterNotMigrated := false
+		if enableAPIServerTLSTermination {
+			var envoyFilters networkingv1alpha3.EnvoyFilterList
+			if err := i.client.List(ctx, &envoyFilters, client.InNamespace(istioIngressGateway.Namespace)); err != nil {
+				return nil, fmt.Errorf("unable to list EnvoyFilters in namespace %s: %w", istioIngressGateway.Namespace, err)
+			}
+
+			for _, envoyFilter := range envoyFilters.Items {
+				if !strings.HasSuffix(envoyFilter.Name, apiserverexposure.IstioTLSTerminationEnvoyFilterSuffix) {
+					continue
+				}
+				luaFilterFound := false
+				for _, configPatch := range envoyFilter.Spec.ConfigPatches {
+					if configPatch.ApplyTo != apinetworkingv1alpha3.EnvoyFilter_HTTP_FILTER {
+						continue
+					}
+					if configPatch.Patch == nil || configPatch.Patch.Value == nil || configPatch.Patch.Value.Fields["name"] == nil {
+						continue
+					}
+					name, ok := configPatch.Patch.Value.Fields["name"].AsInterface().(string)
+					if ok && name == "envoy.filters.http.lua" {
+						luaFilterFound = true
+						break
+					}
+				}
+				if !luaFilterFound {
+					luaFilterNotMigrated = true
+					break
+				}
+			}
+		}
+
 		cpuRequests := "300m"
 		hpaCPUAverageValue := "2"
 		if enableAPIServerTLSTermination {
@@ -127,9 +161,10 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"apiServerRequestHeaderUserName":     kubeapiserverconstants.RequestHeaderUserName,
 			"apiServerRequestHeaderGroup":        kubeapiserverconstants.RequestHeaderGroup,
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
-			"cpuRequests":        cpuRequests,
-			"hpaCPUAverageValue": hpaCPUAverageValue,
-			"kubernetesVersion":  istioIngressGateway.KubernetesVersion,
+			"cpuRequests":          cpuRequests,
+			"hpaCPUAverageValue":   hpaCPUAverageValue,
+			"kubernetesVersion":    istioIngressGateway.KubernetesVersion,
+			"luaFilterNotMigrated": luaFilterNotMigrated,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

@@ -154,7 +154,7 @@ spec:
                 -- connections like forgotten kubectl port-forward or exec commands, and ensures
                 -- requests do not outlive the client certificate.
                 -- See https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#route-timeouts
-                request_handle:headers():add("x-envoy-upstream-rq-timeout-ms", tostring(upstreamTimeoutMilliseconds))
-                request_handle:headers():add("x-envoy-upstream-rq-per-try-timeout-ms", tostring(upstreamTimeoutMilliseconds))
+                request_handle:headers():replace("x-envoy-upstream-rq-timeout-ms", tostring(upstreamTimeoutMilliseconds))
+                request_handle:headers():replace("x-envoy-upstream-rq-per-try-timeout-ms", tostring(upstreamTimeoutMilliseconds))
               end
 {{- end }}
