@@ -75,6 +75,7 @@ spec:
             commonTlsContext:
               alpnProtocols:
               - "http/1.1"
+{{- if .Hosts }}
   - applyTo: HTTP_ROUTE
     match:
       context: GATEWAY
@@ -90,3 +91,21 @@ spec:
           upgrade_configs:
           - upgrade_type: spdy/3.1
           - upgrade_type: websocket
+{{- end }}
+{{- if .WildcardHosts }}
+  - applyTo: HTTP_ROUTE
+    match:
+      context: GATEWAY
+      routeConfiguration:
+        name: "{{ .WildcardRouteConfigurationName }}"
+        vhost:
+          route:
+            name: "{{ .ConnectionUpgradeRouteName }}"
+    patch:
+      operation: MERGE
+      value:
+        route:
+          upgrade_configs:
+          - upgrade_type: spdy/3.1
+          - upgrade_type: websocket
+{{- end }}
