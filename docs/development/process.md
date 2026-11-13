@@ -46,6 +46,8 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
  v1.157  | Week 48-49 | November 23, 2026      | December 6, 2026   | [@rfranzke](https://github.com/rfranzke)                     |
  v1.158  | Week 50-53 | December 7, 2026       | January 3, 2027    | [@shafeeqes](https://github.com/shafeeqes)                   |
 
+<!-- TODO: Add DobromirNPeev to the end of the new release responsible schedule for 2027. -->
+
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
 
