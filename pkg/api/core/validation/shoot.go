@@ -482,7 +482,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		return allErrs
 	}
 
-	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
+	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, newObjectMeta.Annotations, fldPath.Child("provider"))...)
 
 	for i, newWorker := range newSpec.Provider.Workers {
 		oldWorker := newWorker
@@ -535,7 +535,7 @@ func validateWorkerUpdate(newHasWorkers, oldHasWorkers bool, fldPath *field.Path
 }
 
 // ValidateProviderUpdate validates the specification of a Provider object.
-func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
+func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, newShootAnnotations map[string]string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
@@ -590,9 +590,8 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 		}
 
 		if oldWorker.ControlPlane != nil && oldWorker.ControlPlane.Backup != nil {
-			if newWorker.ControlPlane != nil && newWorker.ControlPlane.Backup != nil {
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup.Provider, oldWorker.ControlPlane.Backup.Provider, idxPath.Child("controlPlane").Child("backup", "provider"))...)
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup.Region, oldWorker.ControlPlane.Backup.Region, idxPath.Child("controlPlane").Child("backup", "region"))...)
+			if newWorker.ControlPlane != nil {
+				allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newWorker.ControlPlane.Backup, oldWorker.ControlPlane.Backup, newShootAnnotations, idxPath.Child("controlPlane"))...)
 			} else {
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newWorker.ControlPlane.Backup, oldWorker.ControlPlane.Backup, idxPath.Child("controlPlane", "backup"))...)
 			}
@@ -2953,6 +2952,10 @@ func ValidateWorkerControlPlane(controlPlane *core.WorkerControlPlane, shootName
 			if backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backup.CredentialsRef.Kind == "WorkloadIdentity" {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("backup", "credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet implemented"))
 			}
+		}
+
+		if backup.BucketName != nil && *backup.BucketName == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("bucketName"), backup.BucketName, "bucketName must not be an empty string"))
 		}
 	}
 

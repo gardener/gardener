@@ -68,7 +68,5 @@ func ValidateBackupEntrySpecUpdate(newSpec, oldSpec *extensionsv1alpha1.BackupEn
 		return field.ErrorList{field.Forbidden(fldPath, fmt.Sprintf("cannot update backup entry spec if deletion timestamp is set. Requested changes: %s", strings.Join(diff, ",")))}
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Type, oldSpec.Type, fldPath.Child("type"))...)
-
 	return allErrs
 }

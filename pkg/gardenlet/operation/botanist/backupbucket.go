@@ -15,9 +15,14 @@ func (b *Botanist) DefaultCoreBackupBucket() corebackupbucket.Interface {
 		return nil
 	}
 
+	backupConfig := v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil)
+	name := string(b.Shoot.GetInfo().Status.UID)
+	if backupConfig != nil && backupConfig.BucketName != nil {
+		name = *backupConfig.BucketName
+	}
 	return corebackupbucket.New(b.Logger, b.GardenClient, &corebackupbucket.Values{
-		Name:          string(b.Shoot.GetInfo().Status.UID),
-		Config:        v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil),
+		Name:          name,
+		Config:        backupConfig,
 		DefaultRegion: b.Shoot.GetInfo().Spec.Region,
 		Clock:         b.Clock,
 		Shoot:         b.Shoot.GetInfo(),

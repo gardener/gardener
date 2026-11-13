@@ -22,7 +22,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("DeletionConfirmation", func() {
+var _ = Describe("Confirmation", func() {
 	Describe("#CheckIfDeletionIsConfirmed", func() {
 		It("should prevent the deletion due to missing annotations", func() {
 			obj := &corev1.Namespace{}
@@ -105,6 +105,23 @@ var _ = Describe("DeletionConfirmation", func() {
 			Expect(c.Delete(ctx, obj)).To(Succeed())
 
 			Expect(ConfirmDeletion(ctx, c, obj)).To(BeNotFoundError())
+		})
+	})
+
+	Describe("#CheckIfBackupChangeIsConfirmed", func() {
+		It("should prevent the backup relocation if the annotation is missing", func() {
+			annotations := make(map[string]string)
+			Expect(CheckIfBackupChangeIsConfirmed(annotations)).To(BeFalse())
+		})
+
+		It("should prevent the deletion due annotation value != true", func() {
+			annotations := map[string]string{v1beta1constants.ConfirmationBackupChange: "false"}
+			Expect(CheckIfBackupChangeIsConfirmed(annotations)).To(BeFalse())
+		})
+
+		It("should allow the deletion due annotation value == true", func() {
+			annotations := map[string]string{v1beta1constants.ConfirmationBackupChange: "true"}
+			Expect(CheckIfBackupChangeIsConfirmed(annotations)).To(BeTrue())
 		})
 	})
 })

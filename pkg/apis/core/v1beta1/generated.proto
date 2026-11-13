@@ -168,6 +168,11 @@ message Backup {
   // security.gardener.cloud/v1alpha1.WorkloadIdentity
   // +optional
   optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 5;
+
+  // BucketName is the name of the backup bucket at the provider. Defaults to the seed's UID.
+  // This field can be altered in order to relocate a bucket location.
+  // +optional
+  optional string bucketName = 6;
 }
 
 // BackupBucket holds details about backup bucket

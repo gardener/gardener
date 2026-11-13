@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corebackupentry "github.com/gardener/gardener/pkg/component/garden/backupentry"
@@ -30,13 +31,20 @@ func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 		BucketName:     string(b.Shoot.GetInfo().Status.UID),
 	}
 
-	if !b.Shoot.IsSelfHosted() {
-		values.BucketName = string(b.Seed.GetInfo().UID)
-	}
-
 	if b.Shoot.IsSelfHosted() {
 		values.SeedName = nil
 		values.Shoot = b.Shoot.GetInfo()
+		backup := v1beta1helper.GetBackupConfigForShoot(values.Shoot, nil)
+		if backup != nil && backup.BucketName != nil {
+			values.BucketName = *backup.BucketName
+		}
+	} else {
+		seedInfo := b.Seed.GetInfo()
+		values.BucketName = string(seedInfo.UID)
+
+		if seedInfo.Spec.Backup != nil && seedInfo.Spec.Backup.BucketName != nil {
+			values.BucketName = *seedInfo.Spec.Backup.BucketName
+		}
 	}
 
 	return corebackupentry.New(

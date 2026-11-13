@@ -12,7 +12,7 @@ Now, Gardener commissions an external, provider-specific controller to take over
 ## What Is the Scope of a Bucket?
 
 A bucket will be provisioned per `Seed`. So, a backup of every `Shoot` created on that `Seed` will be stored under a different shoot specific prefix under the bucket.
-For the backup of the `Shoot` rescheduled on different `Seed`, it will continue to use the same bucket.
+A bucket is identified by its name, which is derived from the `Seed`'s UID by default, but can also be set explicitly via `Seed.spec.backup.bucketName`. See [Relocating a Backup Bucket](#relocating-a-backup-bucket) for how the bucket a `Seed` uses can be changed.
 
 ## What Is the Lifespan of a `BackupBucket`?
 
