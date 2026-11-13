@@ -57,9 +57,6 @@ type ServerConfiguration struct {
 	// ResourceAdmissionConfiguration is the configuration for the resource admission.
 	// +optional
 	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`
-	// EnableDebugHandlers determines whether the /debug/ handlers are enabled.
-	// +optional
-	EnableDebugHandlers *bool `json:"enableDebugHandlers,omitempty"`
 }
 
 // ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.

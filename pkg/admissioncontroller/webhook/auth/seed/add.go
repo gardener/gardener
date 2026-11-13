@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/utils/graph"
@@ -23,7 +22,7 @@ const (
 )
 
 // AddToManager adds Handler to the given manager.
-func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableDebugHandlers *bool) error {
+func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	if w.Authorizer == nil {
 		g := graph.New(mgr.GetLogger().WithName("seed-authorizer-graph"), mgr.GetClient(), false)
 		if err := g.Setup(ctx, mgr.GetCache()); err != nil {
@@ -35,11 +34,6 @@ func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager, enableD
 			g,
 			authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, w.ClientSet, clock.RealClock{}),
 		)
-
-		if ptr.Deref(enableDebugHandlers, false) {
-			w.Logger.Info("Registering debug handlers")
-			mgr.GetWebhookServer().Register(graph.DebugHandlerPath, graph.NewDebugHandler(g))
-		}
 	}
 
 	if w.Handler == nil {
