@@ -1,4 +1,3 @@
----
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -18,48 +17,6 @@ spec:
       {{ $k }}: {{ $v }}
 {{- end }}
   configPatches:
-{{- range $v := .Hosts }}
-  - applyTo: HTTP_ROUTE
-    match:
-      context: GATEWAY
-      routeConfiguration:
-        name: "{{ $.RouteConfigurationName }}"
-    patch:
-      operation: INSERT_BEFORE
-      value:
-        match:
-          dynamic_metadata:
-          - filter: envoy.filters.http.lua
-            path:
-            - key: {{ $.AuthenticationDynamicMetadataKey }}
-            value:
-              string_match:
-                exact: {{ $v }}
-          prefix: /
-        route:
-          cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
-{{- end }}
-{{- range $v := .WildcardHosts }}
-  - applyTo: HTTP_ROUTE
-    match:
-      context: GATEWAY
-      routeConfiguration:
-        name: "{{ $.WildcardRouteConfigurationName }}"
-    patch:
-      operation: INSERT_BEFORE
-      value:
-        match:
-          dynamic_metadata:
-          - filter: envoy.filters.http.lua
-            path:
-            - key: {{ $.AuthenticationDynamicMetadataKey }}
-            value:
-              string_match:
-                exact: {{ $v }}
-          prefix: /
-        route:
-          cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
-{{- end }}
   - applyTo: CLUSTER
     match:
       context: GATEWAY
@@ -75,14 +32,36 @@ spec:
             commonTlsContext:
               alpnProtocols:
               - "http/1.1"
+{{- range $routeConfigurationName, $hosts := .HostsByRouteConfigurationName }}
+{{- range $host := $hosts }}
   - applyTo: HTTP_ROUTE
     match:
       context: GATEWAY
       routeConfiguration:
-        name: "{{ .RouteConfigurationName }}"
+        name: "{{ $routeConfigurationName }}"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        match:
+          dynamic_metadata:
+          - filter: envoy.filters.http.lua
+            path:
+            - key: {{ $.AuthenticationDynamicMetadataKey }}
+            value:
+              string_match:
+                exact: {{ $host }}
+          prefix: /
+        route:
+          cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
+{{- end }}
+  - applyTo: HTTP_ROUTE
+    match:
+      context: GATEWAY
+      routeConfiguration:
+        name: "{{ $routeConfigurationName }}"
         vhost:
           route:
-            name: "{{ .ConnectionUpgradeRouteName }}"
+            name: "{{ $.ConnectionUpgradeRouteName }}"
     patch:
       operation: MERGE
       value:
@@ -90,3 +69,92 @@ spec:
           upgrade_configs:
           - upgrade_type: spdy/3.1
           - upgrade_type: websocket
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 9443
+        filterChain:
+          sni: "{{ index $hosts 0 }}"
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: envoy.filters.http.router
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.lua
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+          defaultSourceCode:
+            inlineString: |
+              function envoy_on_request(request_handle)
+                -- Drop headers used by kube-apiserver authentication proxy.
+                local remove = {"{{ $.APIServerRequestHeaderUserName }}", "{{ $.APIServerRequestHeaderGroup }}"}
+                for key, value in pairs(remove) do
+                  request_handle:headers():remove(value)
+                end
+
+                -- Upstream request timeout, capped at 1d (see below). When a client certificate
+                -- is present, it is reduced to the certificate's remaining lifetime further down.
+                local upstreamTimeoutMilliseconds = 86400000
+
+                local streamInfo = request_handle:streamInfo()
+                local ssl = streamInfo:downstreamSslConnection()
+
+                -- Parse client certificate subject.
+                local parsedSubject = ssl:parsedSubjectPeerCertificate()
+                if parsedSubject then
+                  local cn = parsedSubject:commonName()
+                  -- Kill request if CN is empty.
+                  if cn == "" then
+                    request_handle:respond({[":status"] = "400"}, "Invalid certificate subject")
+                    return
+                  end
+
+                  -- Reject the request if the client certificate is expired or not yet valid. Envoy
+                  -- validates the certificate only during the TLS handshake, so without this check a
+                  -- long-lived connection could keep sending requests with an already-expired one.
+                  local now = os.time()
+                  local notBefore = ssl:validFromPeerCertificate()
+                  local notAfter = ssl:expirationPeerCertificate()
+                  if now >= notAfter or now < notBefore then
+                    request_handle:respond({[":status"] = "401"}, "Client certificate is expired or not yet valid")
+                    return
+                  end
+
+                  -- Reduce the upstream request timeout to the remaining certificate lifetime so that
+                  -- in-flight requests cannot outlive the client certificate.
+                  local remainingMilliseconds = (notAfter - now) * 1000
+                  if remainingMilliseconds < upstreamTimeoutMilliseconds then
+                    upstreamTimeoutMilliseconds = remainingMilliseconds
+                  end
+
+                  -- Get the host from the request and set it as dynamic metadata.
+                  local host = streamInfo:requestedServerName()
+                  streamInfo:dynamicMetadata():set("envoy.filters.http.lua", "{{ $.AuthenticationDynamicMetadataKey }}", host)
+
+                  -- Add request headers for kube-apiserver authentication.
+                  -- Istio is an authenticating proxy in this case, so we must set the defined headers accordingly.
+                  -- https://kubernetes.io/docs/reference/access-authn-authz/authentication/#authenticating-proxy
+                  -- CN of the client certificate defines the username, O defines groups.
+                  -- see https://kubernetes.io/docs/setup/best-practices/certificates/#configure-certificates-for-user-accounts
+                  request_handle:headers():add("{{ $.APIServerRequestHeaderUserName }}", cn)
+
+                  local os = parsedSubject:organizationName()
+                  for _, o in ipairs(os) do
+                    if o ~= "" then
+                      request_handle:headers():add("{{ $.APIServerRequestHeaderGroup }}", o)
+                    end
+                  end
+                end
+
+                -- Route timeouts to upstream default to 1d but are reduced to the remaining client
+                -- certificate lifetime above. This allows long sessions but also prevents leaking
+                -- connections like forgotten kubectl port-forward or exec commands, and ensures
+                -- requests do not outlive the client certificate.
+                -- See https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#route-timeouts
+                request_handle:headers():replace("x-envoy-upstream-rq-timeout-ms", tostring(upstreamTimeoutMilliseconds))
+                request_handle:headers():replace("x-envoy-upstream-rq-per-try-timeout-ms", tostring(upstreamTimeoutMilliseconds))
+              end
+{{- end }}

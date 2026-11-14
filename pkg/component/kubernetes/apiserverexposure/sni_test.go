@@ -21,12 +21,14 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -385,6 +387,7 @@ var _ = Describe("#SNI", func() {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceSNI)
 
 				var envoyFilterObjectsMetas []metav1.ObjectMeta
+				envoyFilterDataByKey := map[string]string{}
 				for mrDataSet := range strings.SplitSeq(string(mrData), "---\n") {
 					if mrDataSet == "" {
 						continue
@@ -394,16 +397,40 @@ var _ = Describe("#SNI", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
 					actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
-					// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
+					// cannot validate the Spec via the typed object as there is no meaningful way to unmarshal the data into the Golang structure
 					envoyFilterObjectsMetas = append(envoyFilterObjectsMetas, actualEnvoyFilter.ObjectMeta)
+					envoyFilterDataByKey[actualEnvoyFilter.Namespace+"/"+actualEnvoyFilter.Name] = mrDataSet
 				}
 
-				if istioTLSTermination {
-					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaIstioTLSTermination))
+				Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaIstioTLSTermination))
+				if wildcardConfiguration != nil && wildcardConfiguration.IstioIngressGateway != nil {
+					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedWildcardEnvoyFilterObjectMetaIstioTLSTermination))
+				}
 
-					if wildcardConfiguration != nil && wildcardConfiguration.IstioIngressGateway != nil {
-						Expect(envoyFilterObjectsMetas).To(ContainElement(expectedWildcardEnvoyFilterObjectMetaIstioTLSTermination))
+				// The Lua filter performing kube-apiserver authentication must be scoped to the kube-apiserver
+				// gateways' filter chains only. Filter chains are not named, so the HTTP_FILTER patch matches them
+				// by SNI, using one of the chain's hosts.
+				expectLuaHTTPFilters := func(envoyFilterKey string, expectedFilterChainSNIs ...string) {
+					var filterChainSNIs []string
+					for _, patch := range httpFilterPatches(envoyFilterDataByKey[envoyFilterKey]) {
+						filterChainSNIs = append(filterChainSNIs, patch.FilterChainSNI)
+						Expect(patch.InlineString).To(ContainSubstring("function envoy_on_request(request_handle)"))
+						Expect(patch.InlineString).To(ContainSubstring(kubeapiserverconstants.RequestHeaderUserName))
+						Expect(patch.InlineString).To(ContainSubstring(kubeapiserverconstants.RequestHeaderGroup))
+						Expect(patch.InlineString).To(ContainSubstring(AuthenticationDynamicMetadataKey))
 					}
+					Expect(filterChainSNIs).To(ConsistOf(expectedFilterChainSNIs))
+				}
+
+				mainEnvoyFilterKey := istioNamespace + "/" + namespace + "-istio-tls-termination"
+				switch {
+				case wildcardConfiguration == nil:
+					expectLuaHTTPFilters(mainEnvoyFilterKey, hosts[0])
+				case wildcardConfiguration.IstioIngressGateway == nil:
+					expectLuaHTTPFilters(mainEnvoyFilterKey, hosts[0], wildcardHosts[0])
+				default:
+					expectLuaHTTPFilters(mainEnvoyFilterKey, hosts[0])
+					expectLuaHTTPFilters(istioWildcardNamespace+"/"+namespace+"-istio-tls-termination", wildcardHosts[0])
 				}
 			} else {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError(), "should delete EnvoyFilter for apiserver-proxy")
@@ -1151,4 +1178,52 @@ func validateManagedResourceAndGetData(ctx context.Context, c client.Client, exp
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 	return mrData
+}
+
+type envoyHTTPFilterPatch struct {
+	FilterChainSNI string
+	InlineString   string
+}
+
+// httpFilterPatches parses the HTTP_FILTER config patches of an EnvoyFilter from its serialized YAML. The EnvoyFilter
+// spec cannot be validated via the typed object as there is no meaningful way to unmarshal the data into the Golang
+// structure, hence it is parsed generically.
+func httpFilterPatches(envoyFilterData string) []envoyHTTPFilterPatch {
+	var parsed struct {
+		Spec struct {
+			ConfigPatches []struct {
+				ApplyTo string `json:"applyTo"`
+				Match   struct {
+					Listener struct {
+						FilterChain struct {
+							SNI string `json:"sni"`
+						} `json:"filterChain"`
+					} `json:"listener"`
+				} `json:"match"`
+				Patch struct {
+					Value struct {
+						TypedConfig struct {
+							DefaultSourceCode struct {
+								InlineString string `json:"inlineString"`
+							} `json:"defaultSourceCode"`
+						} `json:"typed_config"`
+					} `json:"value"`
+				} `json:"patch"`
+			} `json:"configPatches"`
+		} `json:"spec"`
+	}
+
+	ExpectWithOffset(1, yaml.Unmarshal([]byte(envoyFilterData), &parsed)).To(Succeed())
+
+	var patches []envoyHTTPFilterPatch
+	for _, configPatch := range parsed.Spec.ConfigPatches {
+		if configPatch.ApplyTo == "HTTP_FILTER" {
+			patches = append(patches, envoyHTTPFilterPatch{
+				FilterChainSNI: configPatch.Match.Listener.FilterChain.SNI,
+				InlineString:   configPatch.Patch.Value.TypedConfig.DefaultSourceCode.InlineString,
+			})
+		}
+	}
+
+	return patches
 }

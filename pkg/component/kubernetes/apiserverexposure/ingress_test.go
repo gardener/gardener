@@ -138,19 +138,15 @@ var _ = Describe("#Ingress", func() {
 		expectedPassthroughVirtualService = expectedVirtualService.DeepCopy()
 
 		expectedHTTPSBackendVirtualService = expectedVirtualService.DeepCopy()
-		expectedHTTPSBackendVirtualService.Spec.Tls[0].Route[0].Destination.Host = "foo." + serviceNamespace + ".svc.cluster.local"
+		expectedHTTPSBackendVirtualService.Spec.Tls = nil
 		expectedHTTPSBackendVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{{
-			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
-				Uri: &istioapinetworkingv1beta1.StringMatch{
-					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{Prefix: "/"},
-				},
-			}},
 			Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
 				Destination: &istioapinetworkingv1beta1.Destination{
 					Host: "foo." + serviceNamespace + ".svc.cluster.local",
 					Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
 				},
 			}},
+			Rewrite: &istioapinetworkingv1beta1.HTTPRewrite{Authority: "foo." + serviceNamespace + ".svc.cluster.local"},
 		}}
 
 		expectedDestinationRule := &istionetworkingv1beta1.DestinationRule{
@@ -201,6 +197,8 @@ var _ = Describe("#Ingress", func() {
 		expectedHTTPSBackendDestinationRule.Namespace = serviceNamespace
 		expectedHTTPSBackendDestinationRule.Spec.Host = "foo." + serviceNamespace + ".svc.cluster.local"
 		expectedHTTPSBackendDestinationRule.Spec.TrafficPolicy.Tls.Mode = istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE
+		expectedHTTPSBackendDestinationRule.Spec.TrafficPolicy.Tls.Sni = "foo." + serviceNamespace + ".svc.cluster.local"
+		expectedHTTPSBackendDestinationRule.Spec.TrafficPolicy.Tls.CaCertificates = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	})
 
 	getDeployer := func(serviceNamespace string, tlsSecretName *string) component.Deployer {

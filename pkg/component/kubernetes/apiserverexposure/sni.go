@@ -188,8 +188,7 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 
 type envoyFilterIstioTLSTerminationTemplateValues struct {
 	AuthenticationDynamicMetadataKey string
-	Hosts                            []string
-	WildcardHosts                    []string
+	HostsByRouteConfigurationName    map[string][]string
 	IngressGatewayLabels             map[string]string
 	Name                             string
 	Namespace                        string
@@ -198,9 +197,9 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	MutualTLSHost                    string
 	ConnectionUpgradeHost            string
 	Port                             int
-	RouteConfigurationName           string
-	WildcardRouteConfigurationName   string
 	ConnectionUpgradeRouteName       string
+	APIServerRequestHeaderUserName   string
+	APIServerRequestHeaderGroup      string
 }
 
 type istioGatewayConfiguration struct {
@@ -303,10 +302,17 @@ func (s *sni) Deploy(ctx context.Context) error {
 				wildcardHosts = configuration.wildcardConfiguration.Hosts
 			}
 
+			hostsByRouteConfigurationName := map[string][]string{}
+			if len(configuration.hosts) > 0 {
+				hostsByRouteConfigurationName[routeConfigurationName] = configuration.hosts
+			}
+			if len(wildcardHosts) > 0 {
+				hostsByRouteConfigurationName[wildcardRouteConfigurationName] = wildcardHosts
+			}
+
 			if err := envoyFilterIstioTLSTerminationTemplate.Execute(&envoyFilterIstioTLSTermination, envoyFilterIstioTLSTerminationTemplateValues{
 				AuthenticationDynamicMetadataKey: AuthenticationDynamicMetadataKey,
-				Hosts:                            configuration.hosts,
-				WildcardHosts:                    wildcardHosts,
+				HostsByRouteConfigurationName:    hostsByRouteConfigurationName,
 				IngressGatewayLabels:             configuration.istioIngressGateway.Labels,
 				Name:                             envoyFilter.Name,
 				Namespace:                        envoyFilter.Namespace,
@@ -315,9 +321,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 				Port:                             kubeapiserverconstants.Port,
 				MutualTLSHost:                    mTLSHostName,
 				ConnectionUpgradeHost:            connectionUpgradeHostName,
-				RouteConfigurationName:           routeConfigurationName,
-				WildcardRouteConfigurationName:   wildcardRouteConfigurationName,
 				ConnectionUpgradeRouteName:       connectionUpgradeRouteName,
+				APIServerRequestHeaderUserName:   kubeapiserverconstants.RequestHeaderUserName,
+				APIServerRequestHeaderGroup:      kubeapiserverconstants.RequestHeaderGroup,
 			}); err != nil {
 				return err
 			}
