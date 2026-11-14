@@ -152,6 +152,7 @@ func (g *gardenerAPIServer) deployment(
 	}
 
 	injectWorkloadIdentitySettings(deployment, g.values.WorkloadIdentityTokenIssuer, secretWorkloadIdentitySigningKey)
+	injectTrustBundleSettings(deployment, g.values.TrustBundleSecretName)
 	apiserver.InjectDefaultSettings(deployment, operatorv1alpha1.VirtualGardenNamePrefix, g.values.Values, secretCAETCD, secretETCDClient, secretServer)
 	apiserver.InjectAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig, g.values.Audit)
 	apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, g.values.Values)
@@ -161,6 +162,45 @@ func (g *gardenerAPIServer) deployment(
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return deployment
+}
+
+func injectTrustBundleSettings(deployment *appsv1.Deployment, secretName *string) {
+	if secretName == nil {
+		return
+	}
+
+	const (
+		volumeName  = "trust-bundle"
+		mountPath   = "/etc/ssl/certs/ca-certificates.crt"
+		subPath     = "ca-certificates.crt"
+		dataKeyName = "ca-certificates.crt"
+	)
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: mountPath,
+			SubPath:   subPath,
+			ReadOnly:  true,
+		},
+	)
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: *secretName,
+					Items: []corev1.KeyToPath{{
+						Key:  dataKeyName,
+						Path: dataKeyName,
+					}},
+				},
+			},
+		},
+	)
 }
 
 func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, issuer string, secret *corev1.Secret) {
