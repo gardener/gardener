@@ -110,7 +110,7 @@ func (r *Reconciler) reconcileBackupEntry(
 ) error {
 	if !controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, backupEntry, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizersViaMetadataSubresource(gardenCtx, r.GardenClient, backupEntry, gardencorev1beta1.GardenerName); err != nil {
 			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -388,7 +388,7 @@ func (r *Reconciler) deleteBackupEntry(
 
 		if controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, backupEntry, gardencorev1beta1.GardenerName); err != nil {
+			if err := controllerutils.RemoveFinalizersViaMetadataSubresource(gardenCtx, r.GardenClient, backupEntry, gardencorev1beta1.GardenerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -737,7 +737,7 @@ func computeGracePeriod(deletionGracePeriodHours int, deletionGracePeriodShootPu
 func removeGardenerOperationAnnotation(ctx context.Context, c client.Client, be *gardencorev1beta1.BackupEntry) error {
 	patch := client.MergeFrom(be.DeepCopy())
 	delete(be.GetAnnotations(), v1beta1constants.GardenerOperation)
-	return c.Patch(ctx, be, patch)
+	return c.SubResource("metadata").Patch(ctx, be, patch)
 }
 
 func workloadIdentitySecretChanged(backupEntry *gardencorev1beta1.BackupEntry, secretToCompareTo *corev1.Secret, workloadIdentity *securityv1alpha1.WorkloadIdentity) (bool, error) {

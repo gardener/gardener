@@ -476,6 +476,7 @@ build:
             - pkg/apiserver/registry/core/shoot/storage
             - pkg/apiserver/registry/core/shootstate
             - pkg/apiserver/registry/core/shootstate/storage
+            - pkg/apiserver/registry/metadata
             - pkg/apiserver/registry/operations/bastion
             - pkg/apiserver/registry/operations/bastion/storage
             - pkg/apiserver/registry/operations/rest

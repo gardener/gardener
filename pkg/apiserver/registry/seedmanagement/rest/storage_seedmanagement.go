@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/apiserver/registry/metadata"
 	gardenletstore "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/gardenlet/storage"
 	managedseedstore "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/managedseed/storage"
 	managedseedsetstore "github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/managedseedset/storage"
@@ -37,16 +38,20 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage := map[string]rest.Storage{}
 
 	gardenletStorage := gardenletstore.NewStorage(restOptionsGetter)
-	managedSeedStorage := managedseedstore.NewStorage(restOptionsGetter)
-	managedSeedSetStorage := managedseedsetstore.NewStorage(restOptionsGetter)
-
 	storage["gardenlets"] = gardenletStorage.Gardenlet
 	storage["gardenlets/status"] = gardenletStorage.Status
+	storage["gardenlets/metadata"] = metadata.NewREST(gardenletStorage.Gardenlet.Store)
+
+	managedSeedStorage := managedseedstore.NewStorage(restOptionsGetter)
 	storage["managedseeds"] = managedSeedStorage.ManagedSeed
 	storage["managedseeds/status"] = managedSeedStorage.Status
+	storage["managedseeds/metadata"] = metadata.NewREST(managedSeedStorage.ManagedSeed.Store)
+
+	managedSeedSetStorage := managedseedsetstore.NewStorage(restOptionsGetter)
 	storage["managedseedsets"] = managedSeedSetStorage.ManagedSeedSet
 	storage["managedseedsets/status"] = managedSeedSetStorage.Status
 	storage["managedseedsets/scale"] = managedSeedSetStorage.Scale
+	storage["managedseedsets/metadata"] = metadata.NewREST(managedSeedSetStorage.ManagedSeedSet.Store)
 
 	return storage
 }

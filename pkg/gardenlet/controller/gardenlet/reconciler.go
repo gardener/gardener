@@ -138,7 +138,7 @@ func (r *Reconciler) deployGardenlet(
 	if gardenlet.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
 		patch := client.MergeFrom(gardenlet.DeepCopy())
 		delete(gardenlet.Annotations, v1beta1constants.GardenerOperation)
-		if err := r.GardenClient.Patch(ctx, gardenlet, patch); err != nil {
+		if err := r.GardenClient.SubResource("metadata").Patch(ctx, gardenlet, patch); err != nil {
 			return fmt.Errorf("failed patching gardenlet annotations: %w", err)
 		}
 	}

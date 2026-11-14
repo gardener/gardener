@@ -196,7 +196,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	if _, ok := b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootSkipReadiness]; ok {
 		b.Logger.Info("Removing skip-readiness annotation")
 
-		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := b.Shoot.UpdateInfoMetadata(ctx, b.GardenClient, func(shoot *gardencorev1beta1.Shoot) error {
 			delete(shoot.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
 			return nil
 		}); err != nil {
@@ -631,7 +631,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 }
 
 func removeShootOperationAnnotation(ctx context.Context, gardenClient client.Client, shootObj *shoot.Shoot, operationAnnotation string) error {
-	return shootObj.UpdateInfo(ctx, gardenClient, false, func(s *gardencorev1beta1.Shoot) error {
+	return shootObj.UpdateInfoMetadata(ctx, gardenClient, func(s *gardencorev1beta1.Shoot) error {
 		remaining := v1beta1helper.RemoveOperation(v1beta1helper.GetShootGardenerOperations(s.Annotations), operationAnnotation)
 		if len(remaining) == 0 {
 			delete(s.Annotations, v1beta1constants.GardenerOperation)

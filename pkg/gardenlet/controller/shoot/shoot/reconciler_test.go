@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -289,12 +288,12 @@ var _ = Describe("Reconciler", func() {
 				WithStatusSubresource(&gardencorev1beta1.Shoot{}).
 				WithInterceptorFuncs(interceptor.Funcs{
 					// Let the status patch ('Delete Succeeded') through, but fail the subsequent finalizer removal
-					// (a merge patch on the Shoot's metadata) to exercise the failure path.
-					Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						if _, ok := obj.(*gardencorev1beta1.Shoot); ok && patch.Type() == types.MergePatchType {
+					// (a merge patch on the Shoot's `metadata` subresource) to exercise the failure path.
+					SubResourcePatch: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+						if subResourceName == "metadata" {
 							return fmt.Errorf("fake patch error")
 						}
-						return c.Patch(ctx, obj, patch, opts...)
+						return c.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
 					},
 				}).
 				Build()

@@ -116,19 +116,19 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return requestAuthorizer.Check(graph.VertexTypeBackupBucket, attrs,
 				authwebhook.WithAllowedVerbs("update", "patch", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("create", "get", "list", "watch"),
-				authwebhook.WithAllowedSubresources("status", "finalizers"),
+				authwebhook.WithAllowedSubresources("status", "finalizers", "metadata"),
 			)
 		case backupEntryResource:
 			return requestAuthorizer.Check(graph.VertexTypeBackupEntry, attrs,
 				authwebhook.WithAllowedVerbs("update", "patch", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("create", "get", "list", "watch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 			)
 		case bastionResource:
 			return requestAuthorizer.Check(graph.VertexTypeBastion, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithFieldSelectors(map[string]string{operations.BastionSeedName: seedName}),
 			)
 		case certificateSigningRequestResource:
@@ -162,7 +162,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case controllerInstallationResource:
 			return requestAuthorizer.Check(graph.VertexTypeControllerInstallation, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithFieldSelectors(map[string]string{gardencore.SeedRefName: seedName}),
 			)
 		case controllerRegistrationResource:
@@ -179,6 +179,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return requestAuthorizer.Check(graph.VertexTypeInternalSecret, attrs,
 				authwebhook.WithAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("metadata"),
 			)
 		case leaseResource:
 			return a.authorizeLease(requestAuthorizer, userType, attrs)
@@ -187,13 +188,13 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
 				authwebhook.WithAllowedNamespaces(v1beta1constants.GardenNamespace),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithFieldSelectors(map[string]string{metav1.ObjectNameField: seedName}),
 			)
 		case managedSeedResource:
 			return requestAuthorizer.Check(graph.VertexTypeManagedSeed, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + seedName: "true"}),
 			)
 		case namespaceResource:
@@ -208,12 +209,13 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return requestAuthorizer.Check(graph.VertexTypeWorkloadIdentity, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch"),
 				authwebhook.WithSubresourcesAndVerb([]string{"token"}, []string{"create"}),
+				authwebhook.WithSubresourcesAndVerb([]string{"metadata"}, []string{"update", "patch"}),
 			)
 		case seedResource:
 			return requestAuthorizer.Check(graph.VertexTypeSeed, attrs,
 				authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch", "delete"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
-				authwebhook.WithAllowedSubresources("status"),
+				authwebhook.WithAllowedSubresources("status", "metadata"),
 				authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + seedName: "true"}),
 			)
 		case serviceAccountResource:
@@ -232,6 +234,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return requestAuthorizer.Check(graph.VertexTypeShootState, attrs,
 				authwebhook.WithAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
 				authwebhook.WithAlwaysAllowedVerbs("create"),
+				authwebhook.WithAllowedSubresources("metadata"),
 			)
 		default:
 			a.logger.Info(
@@ -349,7 +352,7 @@ func (a *authorizer) authorizeShoot(requestAuthorizer *authwebhook.RequestAuthor
 
 	return requestAuthorizer.Check(graph.VertexTypeShoot, attrs,
 		authwebhook.WithAllowedVerbs("get", "list", "watch", "update", "patch"),
-		authwebhook.WithAllowedSubresources("status", "finalizers"),
+		authwebhook.WithAllowedSubresources("status", "finalizers", "metadata"),
 		authwebhook.WithLabelSelectors(map[string]string{v1beta1constants.LabelPrefixSeedName + requestAuthorizer.ToName: "true"}),
 	)
 }

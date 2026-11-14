@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/apiserver/registry/metadata"
 	credentialsbindingstore "github.com/gardener/gardener/pkg/apiserver/registry/security/credentialsbinding/storage"
 	workloadidentitystore "github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity/storage"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -42,6 +43,7 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	credentialsBindingStorage := credentialsbindingstore.NewStorage(restOptionsGetter)
 	storage["credentialsbindings"] = credentialsBindingStorage.CredentialsBinding
+	storage["credentialsbindings/metadata"] = metadata.NewREST(credentialsBindingStorage.CredentialsBinding.Store)
 
 	sharedInformer := p.CoreInformerFactory.Core().V1beta1()
 	workloadIdentityStorage := workloadidentitystore.NewStorage(
@@ -55,6 +57,7 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	)
 	storage["workloadidentities"] = workloadIdentityStorage.WorkloadIdentity
 	storage["workloadidentities/token"] = workloadIdentityStorage.TokenRequest
+	storage["workloadidentities/metadata"] = metadata.NewREST(workloadIdentityStorage.WorkloadIdentity.Store)
 
 	return storage
 }

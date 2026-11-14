@@ -33,6 +33,7 @@ import (
 	seedstore "github.com/gardener/gardener/pkg/apiserver/registry/core/seed/storage"
 	shootstore "github.com/gardener/gardener/pkg/apiserver/registry/core/shoot/storage"
 	shootstatestore "github.com/gardener/gardener/pkg/apiserver/registry/core/shootstate/storage"
+	"github.com/gardener/gardener/pkg/apiserver/registry/metadata"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 )
 
@@ -64,6 +65,7 @@ func (p StorageProvider) v1Storage(restOptionsGetter generic.RESTOptionsGetter) 
 
 	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
 	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
+	storage["controllerdeployments/metadata"] = metadata.NewREST(controllerDeploymentStorage.ControllerDeployment.Store)
 
 	return storage
 }
@@ -74,50 +76,65 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	backupBucketStorage := backupbucketstore.NewStorage(restOptionsGetter)
 	storage["backupbuckets"] = backupBucketStorage.BackupBucket
 	storage["backupbuckets/status"] = backupBucketStorage.Status
+	storage["backupbuckets/metadata"] = metadata.NewREST(backupBucketStorage.BackupBucket.Store)
 
 	backupEntryStorage := backupentrystore.NewStorage(restOptionsGetter)
 	storage["backupentries"] = backupEntryStorage.BackupEntry
 	storage["backupentries/status"] = backupEntryStorage.Status
+	storage["backupentries/metadata"] = metadata.NewREST(backupEntryStorage.BackupEntry.Store)
 
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
 	storage["cloudprofiles/status"] = cloudprofileStorage.Status
+	storage["cloudprofiles/metadata"] = metadata.NewREST(cloudprofileStorage.CloudProfile.Store)
 
 	namespacedcloudprofileStorage := namespacedcloudprofilestore.NewStorage(restOptionsGetter)
 	storage["namespacedcloudprofiles"] = namespacedcloudprofileStorage.NamespacedCloudProfile
 	storage["namespacedcloudprofiles/status"] = namespacedcloudprofileStorage.Status
+	storage["namespacedcloudprofiles/metadata"] = metadata.NewREST(namespacedcloudprofileStorage.NamespacedCloudProfile.Store)
 
 	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
 	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
+	storage["controllerdeployments/metadata"] = metadata.NewREST(controllerDeploymentStorage.ControllerDeployment.Store)
 
 	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
 	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration
+	storage["controllerregistrations/metadata"] = metadata.NewREST(controllerRegistrationStorage.ControllerRegistration.Store)
 
 	controllerInstallationStorage := controllerinstallationstore.NewStorage(restOptionsGetter)
 	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
 	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
+	storage["controllerinstallations/metadata"] = metadata.NewREST(controllerInstallationStorage.ControllerInstallation.Store)
 
 	exposureClassStorage := exposureclassstore.NewStorage(restOptionsGetter)
 	storage["exposureclasses"] = exposureClassStorage.ExposureClass
+	storage["exposureclasses/metadata"] = metadata.NewREST(exposureClassStorage.ExposureClass.Store)
 
-	storage["internalsecrets"] = internalsecretstore.NewREST(restOptionsGetter)
+	internalSecretStorage := internalsecretstore.NewREST(restOptionsGetter)
+	storage["internalsecrets"] = internalSecretStorage
+	storage["internalsecrets/metadata"] = metadata.NewREST(internalSecretStorage.Store)
 
 	projectStorage := projectstore.NewStorage(restOptionsGetter)
 	storage["projects"] = projectStorage.Project
 	storage["projects/status"] = projectStorage.Status
+	storage["projects/metadata"] = metadata.NewREST(projectStorage.Project.Store)
 
 	quotaStorage := quotastore.NewStorage(restOptionsGetter)
 	storage["quotas"] = quotaStorage.Quota
+	storage["quotas/metadata"] = metadata.NewREST(quotaStorage.Quota.Store)
 
 	secretBindingStorage := secretbindingstore.NewStorage(restOptionsGetter)
 	storage["secretbindings"] = secretBindingStorage.SecretBinding
+	storage["secretbindings/metadata"] = metadata.NewREST(secretBindingStorage.SecretBinding.Store)
 
 	seedStorage := seedstore.NewStorage(restOptionsGetter)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
+	storage["seeds/metadata"] = metadata.NewREST(seedStorage.Seed.Store)
 
 	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
 	storage["shootstates"] = shootStateStorage.ShootState
+	storage["shootstates/metadata"] = metadata.NewREST(shootStateStorage.ShootState.Store)
 
 	shootStorage := shootstore.NewStorage(
 		restOptionsGetter,
@@ -134,6 +151,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	storage["shoots/binding"] = shootStorage.Binding
 	storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
 	storage["shoots/viewerkubeconfig"] = shootStorage.ViewerKubeconfig
+	storage["shoots/metadata"] = metadata.NewREST(shootStorage.Shoot.Store)
 
 	return storage
 }

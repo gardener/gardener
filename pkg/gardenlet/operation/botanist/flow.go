@@ -866,7 +866,7 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 				// If there are no pending workers rollouts for in-place updates, we can remove the force in-place update annotation.
 				if (b.Shoot.GetInfo().Status.InPlaceUpdates == nil || b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil) &&
 					kubernetesutils.HasMetaDataAnnotation(b.Shoot.GetInfo(), v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate) {
-					return b.Shoot.UpdateInfo(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+					return b.Shoot.UpdateInfoMetadata(ctx, b.GardenClient, func(shoot *gardencorev1beta1.Shoot) error {
 						delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 						return nil
 					})
