@@ -277,6 +277,7 @@ build:
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
@@ -321,6 +322,7 @@ build:
             - plugin/pkg/bastion/mutator
             - plugin/pkg/bastion/validator
             - plugin/pkg/controllerregistration/resources
+            - plugin/pkg/extensionprofile/validator
             - plugin/pkg/global/customverbauthorizer
             - plugin/pkg/global/deletionconfirmation
             - plugin/pkg/global/extensionlabels
@@ -608,6 +610,7 @@ build:
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
@@ -884,6 +887,7 @@ build:
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/utils
+            - pkg/utils/cel
             - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors

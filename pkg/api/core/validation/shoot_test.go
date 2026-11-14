@@ -301,6 +301,87 @@ var _ = Describe("Shoot Validation Tests", func() {
 			),
 		)
 
+		Context("extension component versions", func() {
+			It("should accept valid extension components", func() {
+				shoot.Spec.Extensions = []core.Extension{
+					{
+						Type: "shoot-traefik",
+						Components: []core.ShootExtensionComponent{
+							{Name: "traefik", Version: new("3.1.4")},
+						},
+					},
+				}
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should reject duplicate component names within one extension", func() {
+				shoot.Spec.Extensions = []core.Extension{
+					{
+						Type: "shoot-traefik",
+						Components: []core.ShootExtensionComponent{
+							{Name: "traefik", Version: new("3.1.4")},
+							{Name: "traefik", Version: new("3.1.4")},
+						},
+					},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.extensions[0].components[1].name"),
+				}))))
+			})
+
+			It("should reject a component entry that pins nothing", func() {
+				shoot.Spec.Extensions = []core.Extension{
+					{
+						Type: "shoot-traefik",
+						Components: []core.ShootExtensionComponent{
+							{Name: "traefik"},
+						},
+					},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.extensions[0].components[0]"),
+				}))))
+			})
+
+			It("should reject an empty pinned version", func() {
+				shoot.Spec.Extensions = []core.Extension{
+					{
+						Type: "shoot-traefik",
+						Components: []core.ShootExtensionComponent{
+							{Name: "traefik", Version: new("")},
+						},
+					},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.extensions[0].components[0].version"),
+				}))))
+			})
+
+			It("should reject an unsupported auto-update strategy", func() {
+				shoot.Spec.Extensions = []core.Extension{
+					{
+						Type: "shoot-traefik",
+						AutoUpdate: &core.ExtensionAutoUpdate{
+							Enabled:        true,
+							UpdateStrategy: new(core.MachineImageUpdateStrategy("weekly")),
+						},
+					},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.extensions[0].autoUpdate.updateStrategy"),
+				}))))
+			})
+		})
+
 		It("should forbid empty Shoot resources", func() {
 			shoot := &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{},

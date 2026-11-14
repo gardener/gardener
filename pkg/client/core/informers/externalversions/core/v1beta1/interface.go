@@ -26,6 +26,8 @@ type Interface interface {
 	ControllerRegistrations() TypedControllerRegistrationInformer
 	// ExposureClasses returns a ExposureClassInformer.
 	ExposureClasses() TypedExposureClassInformer
+	// ExtensionProfiles returns a ExtensionProfileInformer.
+	ExtensionProfiles() TypedExtensionProfileInformer
 	// InternalSecrets returns a InternalSecretInformer.
 	InternalSecrets() TypedInternalSecretInformer
 	// NamespacedCloudProfiles returns a NamespacedCloudProfileInformer.
@@ -88,6 +90,11 @@ func (v *version) ControllerRegistrations() TypedControllerRegistrationInformer 
 // ExposureClasses returns a TypedExposureClassInformer.
 func (v *version) ExposureClasses() TypedExposureClassInformer {
 	return &exposureClassInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ExtensionProfiles returns a TypedExtensionProfileInformer.
+func (v *version) ExtensionProfiles() TypedExtensionProfileInformer {
+	return &extensionProfileInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // InternalSecrets returns a TypedInternalSecretInformer.
