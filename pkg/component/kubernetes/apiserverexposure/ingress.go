@@ -59,17 +59,21 @@ func (i *ingress) Deploy(ctx context.Context) error {
 		virtualService  = i.emptyVirtualService()
 	)
 
-	tlsMode := istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE}
-	if i.values.TLSSecretName != nil {
-		tlsMode = istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE}
-	}
-
 	serviceNamespace := i.namespace
 	if i.values.ServiceNamespace != "" {
 		serviceNamespace = i.values.ServiceNamespace
 	}
 
 	destinationHost := kubernetesutils.FQDNForService(i.values.ServiceName, serviceNamespace)
+
+	tlsMode := istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE}
+	if i.values.TLSSecretName != nil {
+		tlsMode = istioapinetworkingv1beta1.ClientTLSSettings{
+			Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+			Sni:            destinationHost,
+			CaCertificates: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		}
+	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, destinationHost, &tlsMode)); err != nil {
 		return err
@@ -98,24 +102,12 @@ func (i *ingress) Deploy(ctx context.Context) error {
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, virtualService, func() error {
-			if err := istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost)(); err != nil {
+			if err := istio.VirtualServiceForTLSTermination(virtualService, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost, "", "")(); err != nil {
 				return err
 			}
-			virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{{
-				Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
-					Uri: &istioapinetworkingv1beta1.StringMatch{
-						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{Prefix: "/"},
-					},
-				}},
-				Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
-					Destination: &istioapinetworkingv1beta1.Destination{
-						Host: destinationHost,
-						Port: &istioapinetworkingv1beta1.PortSelector{
-							Number: kubeapiserverconstants.Port,
-						},
-					},
-				}},
-			}}
+			if len(virtualService.Spec.Http) > 0 {
+				virtualService.Spec.Http[0].Rewrite = &istioapinetworkingv1beta1.HTTPRewrite{Authority: destinationHost}
+			}
 			return nil
 		}); err != nil {
 			return err
