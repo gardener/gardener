@@ -51,7 +51,7 @@ spec:
     #   scaleDownGpuUtilizationThreshold: 0.5
     #   scaleDownUnneededTime: 30m
     #   scaleDownUnreadyTime: 1h
-    #   maxNodeProvisionTime: 15m
+    #   maxNodeProvisionTime: 15m # This has now been deprecated. Taken from machineControllerManager.machineCreationTimeout instead
       volume:
         type: gp2
         size: 20Gi
@@ -332,7 +332,7 @@ spec:
   # clusterAutoscaler:
   #   expander: "priority,least-waste" # see: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders
   #   maxGracefulTerminationSeconds: 600
-  #   maxNodeProvisionTime: 20m
+  #   maxNodeProvisionTime: 20m # This has now been deprecated. Taken from machineControllerManager.machineCreationTimeout instead
   #   maxBinpackingTime: 5m
   #   initialNodeGroupBackoffDuration: 5m
   #   maxNodeGroupBackoffDuration: 30m
