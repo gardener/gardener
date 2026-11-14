@@ -232,7 +232,7 @@ func (k *kubeAPIServer) reconcileSecretHAVPNSeedClientTLSAuth(ctx context.Contex
 
 	return k.secretsManager.Generate(ctx, &secretsutils.VPNTLSAuthConfig{
 		Name: vpnseedserver.SecretNameTLSAuth,
-	}, secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
 type tlsSNISecret struct {
