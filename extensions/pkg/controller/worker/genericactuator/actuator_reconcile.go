@@ -27,6 +27,7 @@ import (
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -36,6 +37,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
+
+// defaultMachineControllerManagerNodeConditions mirrors the default value of machine-controller-manager's
+// `--node-conditions` flag. We don't set this flag, so machine-controller-manager uses this default for machines
+// without an explicit `.spec.machineConfiguration.nodeConditions`. A unit test guards against drift from the upstream
+// default.
+const defaultMachineControllerManagerNodeConditions = "KernelDeadlock,ReadonlyFilesystem,DiskPressure,NetworkUnavailable"
 
 func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	log = log.WithValues("operation", "reconcile")
@@ -216,15 +223,19 @@ func deployMachineDeployments(
 		}
 	}
 
-	var taskFns = make([]flow.TaskFn, 0, len(wantedMachineDeployments))
+	var (
+		taskFns          = make([]flow.TaskFn, 0, len(wantedMachineDeployments))
+		controlPlanePool = v1beta1helper.ControlPlaneWorkerPoolForShoot(cluster.Shoot.Spec.Provider.Workers)
+	)
 	for _, deployment := range wantedMachineDeployments {
 		var (
-			existingMachineDeployment = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
-			shootIsAwake              = shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments)
+			existingMachineDeployment     = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
+			shootIsAwake                  = shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments)
+			deploymentForControlPlanePool = controlPlanePool != nil && controlPlanePool.Name == deployment.PoolName
 		)
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			return deployMachineDeployment(ctx, log, cl, worker, deployment, existingMachineDeployment, clusterAutoscalerUsed, isHibernated, shootIsAwake)
+			return deployMachineDeployment(ctx, log, cl, worker, deployment, existingMachineDeployment, clusterAutoscalerUsed, isHibernated, shootIsAwake, deploymentForControlPlanePool)
 		})
 	}
 
@@ -241,6 +252,7 @@ func deployMachineDeployment(
 	clusterAutoscalerUsed bool,
 	isHibernationEnabled bool,
 	shootIsAwake bool,
+	deploymentForControlPlanePool bool,
 ) error {
 	var labels = map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
 
@@ -330,6 +342,20 @@ func deployMachineDeployment(
 			for k, v := range existingMachineDeployment.Spec.Template.Annotations {
 				metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, k, v)
 			}
+		}
+
+		if deploymentForControlPlanePool {
+			if machineDeployment.Spec.Template.Spec.MachineConfiguration == nil {
+				machineDeployment.Spec.Template.Spec.MachineConfiguration = &machinev1alpha1.MachineConfiguration{}
+			}
+			// When no node conditions are configured for this pool, machine-controller-manager falls back to its own
+			// default set. Appending to this default (instead of a nil value) prevents the control plane machines from
+			// losing machine-controller-manager's default node conditions.
+			nodeConditions := defaultMachineControllerManagerNodeConditions
+			if machineDeployment.Spec.Template.Spec.NodeConditions != nil {
+				nodeConditions = *machineDeployment.Spec.Template.Spec.NodeConditions
+			}
+			machineDeployment.Spec.Template.Spec.NodeConditions = new(strings.Join([]string{nodeConditions, string(nodeagentconfigv1alpha1.ConditionTypeCriticalControlPlanePodsUnhealthy)}, ","))
 		}
 
 		log.Info("Deploying machine deployment", "machineDeployment", client.ObjectKeyFromObject(machineDeployment), "replicas", machineDeployment.Spec.Replicas)
