@@ -415,6 +415,7 @@ var _ = Describe("migration", func() {
 			}
 
 			botanist.GardenClient = gardenFakeClient
+			botanist.GardenAPIReader = gardenFakeClient
 			botanist.Shoot.SetInfo(shoot)
 		})
 

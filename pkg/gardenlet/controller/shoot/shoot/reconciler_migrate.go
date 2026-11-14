@@ -156,7 +156,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		waitForManagedResourcesDeletion     = g.AddGroup(botanist.MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResources).WithDependencies(wakeUpKubeAPIServer))
 		_                                   = g.AddGroup(botanist.DeleteMachineControllerManagerTaskGroup())
 		waitUntilExtensionResourcesMigrated = g.AddGroup(botanist.MigrateExtensionResourcesTaskGroup())
-		_                                   = g.AddGroup(botanist.MigrateExtensionsBeforeKubeAPIServerTaskGroup())
+		_                                   = g.AddGroup(botanist.MigrateExtensionsBeforeKubeAPIServerTaskGroup(true))
 		persistShootState                   = g.Add(flow.Task{
 			Name:         "Persisting shoot state",
 			Fn:           botanist.PersistShootState,

@@ -31,4 +31,8 @@ trap "
 make gardener-up
 make seed2-up
 
-make test-e2e-local-migration-ha-multi-node
+# make test-e2e-local-migration-ha-multi-node
+
+# TEMP (do NOT merge): piggyback the live control plane migration e2e on this already-registered prow job so it runs in
+# CI before a dedicated job exists. Remove once `ci-e2e-kind-live-migration` is registered as its own prow presubmit.
+make test-e2e-local-live-migration
