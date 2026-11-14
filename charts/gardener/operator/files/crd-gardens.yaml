@@ -228,6 +228,34 @@ spec:
                     required:
                     - controller
                     type: object
+                  logging:
+                    description: Logging contains configuration for the logging stack.
+                    properties:
+                      enabled:
+                        description: |-
+                          Enabled is used to enable or disable logging stack for clusters.
+                          Defaults to true.
+                        type: boolean
+                      vali:
+                        description: Vali contains configuration for the Vali
+                        properties:
+                          enabled:
+                            description: |-
+                              Enabled is used to enable or disable the shoot and seed Vali.
+                              If FluentBit is used with a custom output the Vali can, Vali is maybe unused and can be disabled.
+                              If not set, by default Vali is enabled
+                            type: boolean
+                        type: object
+                      victoriaLogs:
+                        description: VictoriaLogs contains configuration for VictoriaLogs
+                        properties:
+                          enabled:
+                            description: |-
+                              Enabled is used to enable or disable VictoriaLogs.
+                              If not set, by default VictoriaLogs is enabled when the VictoriaLogsBackend feature gate is enabled.
+                            type: boolean
+                        type: object
+                    type: object
                   networking:
                     description: Networking defines the networking configuration of
                       the runtime cluster.
