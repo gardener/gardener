@@ -8100,50 +8100,50 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Describe("#ValidateProviderUpdate", func() {
 			Context("worker pool updateStrategy", func() {
-				It("should forbid changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
+				It("should allow changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate when feature gate is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 
+					newShoot = prepareShootForUpdate(shoot)
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[0].MaxSurge = nil
+					newShoot.Spec.Provider.Workers[0].MaxUnavailable = nil
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should forbid changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate when feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, false))
+					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("cannot switch to AutoInPlaceUpdate/ManualInPlaceUpdate when the InPlaceNodeUpdates feature gate is disabled"),
 					}))))
 
 					newShoot = prepareShootForUpdate(shoot)
-
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("cannot switch to AutoInPlaceUpdate/ManualInPlaceUpdate when the InPlaceNodeUpdates feature gate is disabled"),
 					}))))
 				})
 
-				It("should forbid changing the update strategy from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate", func() {
+				It("should allow changing the update strategy from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate", func() {
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.ManualInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
-
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
-
-					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
-					}))))
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
 					newShoot = prepareShootForUpdate(shoot)
-
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
-
-					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
-					}))))
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
 
 				It("should allow changing the update strategy from AutoInPlaceUpdate to ManualInPlaceUpdate", func() {
@@ -9726,7 +9726,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.disableHealthTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.disableHealthTimeout"),
 					"Detail": Equal("can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
 				}))))
 			})
@@ -9761,7 +9761,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machineDrainTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machineDrainTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9774,7 +9774,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machineHealthTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machineHealthTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9787,7 +9787,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machineCreationTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machineCreationTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9800,7 +9800,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.inPlaceUpdateTimeout"),
 					"Detail": Equal("can only be set when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
 				}))))
 			})
@@ -9826,7 +9826,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.inPlaceUpdateTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.inPlaceUpdateTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9836,7 +9836,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}
 
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
-				Expect(errList).To(ConsistOf(field.Invalid(field.NewPath("workers[0].machineControllerManagerSettings.maxEvictRetries"), int64(-2), "must be greater than or equal to 0").WithOrigin("minimum")))
+				Expect(errList).To(ConsistOf(field.Invalid(field.NewPath("workers[0].machineControllerManager.maxEvictRetries"), int64(-2), "must be greater than or equal to 0").WithOrigin("minimum")))
 			})
 
 			It("should forbid setting machinePreserveTimeout to negative value", func() {
@@ -9847,7 +9847,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.machinePreserveTimeout"),
+					"Field":  Equal("workers[0].machineControllerManager.machinePreserveTimeout"),
 					"Detail": Equal("must be non-negative"),
 				}))))
 			})
@@ -9881,7 +9881,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Field":  Equal("workers[0].machineControllerManager.autoPreserveFailedMachineMax"),
 					"Detail": Equal("must not be greater than maximum value"),
 				}))))
 			})
@@ -9895,7 +9895,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Field":  Equal("workers[0].machineControllerManager.autoPreserveFailedMachineMax"),
 					"Detail": Equal("must not be greater than maximum-1 value when system components are allowed, need at least one machine to run system components"),
 				}))))
 			})
@@ -9919,7 +9919,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, shootNamespace, providerType, fldPath, false, true)
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("workers[0].machineControllerManagerSettings.autoPreserveFailedMachineMax"),
+					"Field":  Equal("workers[0].machineControllerManager.autoPreserveFailedMachineMax"),
 					"Detail": Equal("must not be negative"),
 				}))))
 			})
@@ -11583,6 +11583,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("the worker pool \"worker-3\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
 				})),
 			))
+		})
+
+		It("should allow in-place → rolling switch even when the pool has pending in-place updates", func() {
+			newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
+			// Reset worker-2's spec so it doesn't independently trigger the ongoing-update restriction.
+			newShoot.Spec.Provider.Workers[1].Machine.Image.Version = oldShoot.Spec.Provider.Workers[1].Machine.Image.Version
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
+		})
+
+		It("should allow in-place → rolling switch when the pool has no pending in-place updates", func() {
+			newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
+			newShoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
+		})
+
+		It("should allow in-place → rolling switch with pending updates when the force annotation is set", func() {
+			newShoot.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationForceInPlaceUpdate,
+			}
+			newShoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoRollingUpdate)
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
 		})
 	})
 })

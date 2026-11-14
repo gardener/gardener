@@ -141,6 +141,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return newError
 	}
 
+	// For Rolling → InPlace transitions that completed during the wait above, flip the MachineDeployment
+	// strategy to InPlace now so the MachineDeployment reflects the correct strategy within this reconcile.
+	if err := a.applyCompletedStrategyTransitions(ctx, worker, wantedMachineDeployments); err != nil {
+		return fmt.Errorf("failed to apply completed strategy transitions: %w", err)
+	}
+
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
 	if err := a.cleanupMachineDeployments(ctx, log, existingMachineDeployments, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed to cleanup the machine deployments: %w", err)
@@ -244,6 +250,22 @@ func deployMachineDeployment(
 ) error {
 	var labels = map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
 
+	// For a Rolling → InPlace strategy transition, keep Rolling strategy until all nodes have been
+	// replaced with the new InPlace MachineClass. This ensures the initial replacement happens via
+	// rolling update (new machines created). Once the rollout is complete, flip to InPlace strategy.
+	// getMachineLabels always receives the desired strategy so template labels are set to InPlace from
+	// the start; the subsequent strategy flip therefore does not change the template and avoids a
+	// second MCM rollout.
+	effectiveStrategy := deployment.Strategy
+	if existingMachineDeployment != nil &&
+		existingMachineDeployment.Spec.Strategy.Type == machinev1alpha1.RollingUpdateMachineDeploymentStrategyType &&
+		deployment.Strategy.Type == machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType {
+		if existingMachineDeployment.Spec.Template.Spec.Class.Name != deployment.ClassName ||
+			existingMachineDeployment.Status.UpdatedReplicas < existingMachineDeployment.Status.Replicas {
+			effectiveStrategy = existingMachineDeployment.Spec.Strategy
+		}
+	}
+
 	machineDeployment := &machinev1alpha1.MachineDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deployment.Name,
@@ -300,7 +322,7 @@ func deployMachineDeployment(
 		// and hence causing unnecessary updates to the machineDeployment.Spec.Replicas
 		machineDeployment.Spec.RevisionHistoryLimit = new(int32(0))
 		machineDeployment.Spec.MinReadySeconds = 500
-		machineDeployment.Spec.Strategy = deployment.Strategy
+		machineDeployment.Spec.Strategy = effectiveStrategy
 		machineDeployment.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: labels,
 		}
@@ -338,6 +360,34 @@ func deployMachineDeployment(
 		return fmt.Errorf("could not deploy machine deployment '%s': %w", client.ObjectKeyFromObject(machineDeployment), err)
 	}
 
+	return nil
+}
+
+// applyCompletedStrategyTransitions flips MachineDeployment strategies to InPlace for any
+// Rolling → InPlace transitions that completed during the current reconcile.
+func (a *genericActuator) applyCompletedStrategyTransitions(ctx context.Context, worker *extensionsv1alpha1.Worker, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
+	existingMDs := &machinev1alpha1.MachineDeploymentList{}
+	if err := a.seedClient.List(ctx, existingMDs, client.InNamespace(worker.Namespace)); err != nil {
+		return err
+	}
+
+	for _, deployment := range wantedMachineDeployments {
+		if deployment.Strategy.Type != machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType {
+			continue
+		}
+		existingMD := getExistingMachineDeployment(existingMDs, deployment.Name)
+		if existingMD == nil ||
+			existingMD.Spec.Strategy.Type != machinev1alpha1.RollingUpdateMachineDeploymentStrategyType ||
+			existingMD.Spec.Template.Spec.Class.Name != deployment.ClassName ||
+			existingMD.Status.UpdatedReplicas < existingMD.Status.Replicas {
+			continue
+		}
+		patch := client.MergeFrom(existingMD.DeepCopy())
+		existingMD.Spec.Strategy = deployment.Strategy
+		if err := a.seedClient.Patch(ctx, existingMD, patch); err != nil {
+			return fmt.Errorf("failed to flip strategy for machine deployment %q to InPlace: %w", existingMD.Name, err)
+		}
+	}
 	return nil
 }
 
