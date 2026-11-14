@@ -1,0 +1,12 @@
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+jwt:
+  - issuer:
+      url: https://discovery.local.gardener.cloud/garden/workload-identity/issuer
+      audiences:
+        - provider-local
+      audienceMatchPolicy: MatchAny
+      certificateAuthority: <placeholder>
+    claimMappings:
+      username:
+        expression: 'claims.sub'

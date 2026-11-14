@@ -38,6 +38,6 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
 		ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true"}},
-		Mutator:        genericmutator.NewMutator(mgr, NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
+		Mutator:        genericmutator.NewMutator(mgr, NewEnsurer(mgr.GetClient(), mgr.GetConfig(), logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }
