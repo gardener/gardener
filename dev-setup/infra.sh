@@ -75,6 +75,60 @@ cleanup_registry_ca() {
   fi
 }
 
+docker_desktop_should_install_vmnetd() {
+  # Match only a bounded prefix. Callers also cap the read; this keeps the check itself bounded.
+  local help_text="${4:0:65536}"
+  [[ "$1" == "darwin"* && "$2" == "Docker Desktop" && "$3" == "absent" &&
+     "$help_text" =~ (^|[^[:alnum:]_-])vmnetd([^[:alnum:]_-]|$) ]]
+}
+
+# Docker Desktop 4.89–4.97 can install the privileged helper for binding ports on 172.18.255.*.
+# Docker Desktop 4.98 removed both the helper and the installer subcommand.
+ensure_docker_desktop_vmnetd() {
+  if [[ "$OSTYPE" != "darwin"* ]]; then
+    return 0
+  fi
+  local operating_system
+  # Cap docker info and ignore its failure. This assignment is outside a conditional,
+  # so an unbounded or failing read would abort setup under errexit.
+  operating_system="$(docker info --format '{{.OperatingSystem}}' 2>/dev/null | head -c 256 || true)"
+  if [[ "$operating_system" != "Docker Desktop" ]]; then
+    return 0
+  fi
+  if [[ -S /var/run/com.docker.vmnetd.sock ]]; then
+    return 0
+  fi
+
+  local installer="/Applications/Docker.app/Contents/MacOS/install"
+  if [[ ! -x "$installer" ]]; then
+    echo "Warning: Docker Desktop privileged helper (vmnetd) is missing and $installer was not found. Binding privileged ports may fail."
+    return 0
+  fi
+
+  local installer_help install_output install_status=0
+  local warning='Warning: Docker Desktop 4.98 removed the privileged helper (vmnetd). Privileged port publishing requires Docker Desktop Settings > Advanced > "Allow privileged port forwarding to external machines". These ports still bind on 0.0.0.0 (https://github.com/docker/desktop-feedback/issues/817), so bind9 :53 and load-balancer :443 may fail when those ports are taken. Docker Desktop 4.97 is the last version verified for this setup.'
+  # Cap --help before the capability match so an oversized installer cannot allocate without limit.
+  installer_help="$("$installer" --help 2>&1 | head -c 65536 || true)"
+  if ! docker_desktop_should_install_vmnetd "$OSTYPE" "$operating_system" absent "$installer_help"; then
+    echo "$warning"
+    return 0
+  fi
+
+  echo "> Installing Docker Desktop privileged helper (vmnetd), this may prompt for your sudo password..."
+  # Cap captured output. pipefail still returns the installer status when head exits 0.
+  install_output=$(${SUDO}"$installer" vmnetd 2>&1 | head -c 65536) || install_status=$?
+  if [[ "$install_output" == *'unknown command "vmnetd"'* ]]; then
+    echo "$warning"
+    return 0
+  fi
+  printf '%s\n' "$install_output"
+  return "$install_status"
+}
+
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0
+fi
+
 case "$COMMAND" in
   up)
     check_shell_dependencies() {
@@ -436,30 +490,6 @@ EOF
         echo "Using $key registry cache in prow cluster ($registry_cache_dns) as upstream for local registry cache."
         yq -i ".services.registry-cache-${key}.environment.REGISTRY_PROXY_REMOTEURL = \"${registry_cache_url}\"" "$INFRA_COMPOSE_FILE"
       done
-    }
-
-    # Docker Desktop 4.89+ no longer installs its privileged helper (vmnetd) by default. Without it, binding bind9 and
-    # the load balancer containers to privileged ports on 172.18.255.* fails with "ports are not available".
-    # Install the helper if Docker Desktop is used on macOS and the helper socket is missing.
-    ensure_docker_desktop_vmnetd() {
-      if [[ "$OSTYPE" != "darwin"* ]]; then
-        return
-      fi
-      if [[ "$(docker info --format '{{.OperatingSystem}}' 2>/dev/null)" != "Docker Desktop" ]]; then
-        return
-      fi
-      if [[ -S /var/run/com.docker.vmnetd.sock ]]; then
-        return
-      fi
-
-      local installer="/Applications/Docker.app/Contents/MacOS/install"
-      if [[ ! -x "$installer" ]]; then
-        echo "Warning: Docker Desktop privileged helper (vmnetd) is missing and $installer was not found. Binding privileged ports may fail."
-        return
-      fi
-
-      echo "> Installing Docker Desktop privileged helper (vmnetd), this may prompt for your sudo password..."
-      ${SUDO}"$installer" vmnetd
     }
 
     check_shell_dependencies

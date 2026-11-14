@@ -80,6 +80,8 @@ You need to have docker installed and running. On macOS run
 brew install --cask docker
 ```
 
+> **Warning (macOS):** Docker Desktop 4.98 removed the privileged helper (`vmnetd`). Privileged port publishing requires Docker Desktop Settings > Advanced > "Allow privileged port forwarding to external machines". These ports still bind on `0.0.0.0` ([docker/desktop-feedback#817](https://github.com/docker/desktop-feedback/issues/817)), so bind9 `:53` and load-balancer `:443` may fail when those ports are taken. Docker Desktop 4.97 is the last version verified for this setup.
+
 For other OS please check the [docker installation documentation](https://docs.docker.com/get-docker/).
 
 Ensure you have the [`docker compose` plugin](https://docs.docker.com/compose/install/) installed as well.
