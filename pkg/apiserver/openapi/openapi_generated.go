@@ -108,8 +108,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.DeploymentRef{}.OpenAPIModelName():                                schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
 		v1beta1.DualApprovalForDeletion{}.OpenAPIModelName():                      schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref),
 		v1beta1.ETCD{}.OpenAPIModelName():                                         schema_pkg_apis_core_v1beta1_ETCD(ref),
-		v1beta1.ETCDConfig{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_ETCDConfig(ref),
 		v1beta1.ETCDEncryptionKeyRotation{}.OpenAPIModelName():                    schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
+		v1beta1.ETCDEvents{}.OpenAPIModelName():                                   schema_pkg_apis_core_v1beta1_ETCDEvents(ref),
+		v1beta1.ETCDMain{}.OpenAPIModelName():                                     schema_pkg_apis_core_v1beta1_ETCDMain(ref),
 		v1beta1.EncryptionAtRest{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_EncryptionAtRest(ref),
 		v1beta1.EncryptionConfig{}.OpenAPIModelName():                             schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		v1beta1.EncryptionProvider{}.OpenAPIModelName():                           schema_pkg_apis_core_v1beta1_EncryptionProvider(ref),
@@ -3923,41 +3924,20 @@ func schema_pkg_apis_core_v1beta1_ETCD(ref common.ReferenceCallback) common.Open
 					"main": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Main contains configuration for the main etcd.",
-							Ref:         ref(v1beta1.ETCDConfig{}.OpenAPIModelName()),
+							Ref:         ref(v1beta1.ETCDMain{}.OpenAPIModelName()),
 						},
 					},
 					"events": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Events contains configuration for the events etcd.",
-							Ref:         ref(v1beta1.ETCDConfig{}.OpenAPIModelName()),
+							Ref:         ref(v1beta1.ETCDEvents{}.OpenAPIModelName()),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.ETCDConfig{}.OpenAPIModelName()},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_ETCDConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ETCDConfig contains etcd configuration.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"autoscaling": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Autoscaling contains auto-scaling configuration options for etcd.",
-							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()},
+			v1beta1.ETCDEvents{}.OpenAPIModelName(), v1beta1.ETCDMain{}.OpenAPIModelName()},
 	}
 }
 
@@ -4013,6 +3993,55 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 		},
 		Dependencies: []string{
 			metav1.Time{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ETCDEvents(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCDEvents contains configuration for etcd-events.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for etcd.",
+							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
+						},
+					},
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled specifies whether the events etcd is enabled. Defaults to true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ETCDMain(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCDMain contains configuration for etcd-main.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for etcd.",
+							Ref:         ref(v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			v1beta1.ControlPlaneAutoscaling{}.OpenAPIModelName()},
 	}
 }
 

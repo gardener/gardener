@@ -154,16 +154,26 @@ func (b *Botanist) staticControlPlaneComponents(useBootstrapEtcd, useShootAccess
 		}
 	)
 
+	etcdEventsEnabled := v1beta1helper.IsETCDEventsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.ETCD)
+
 	if useBootstrapEtcd {
 		components = append(components,
 			staticControlPlaneComponent{b.deployBootstrapETCD(v1beta1constants.ETCDRoleMain, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
-			staticControlPlaneComponent{b.deployBootstrapETCD(v1beta1constants.ETCDRoleEvents, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
 		)
+		if etcdEventsEnabled {
+			components = append(components,
+				staticControlPlaneComponent{b.deployBootstrapETCD(v1beta1constants.ETCDRoleEvents, bootstrapEtcdBackupPath), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
+			)
+		}
 	} else {
 		components = append(components,
 			staticControlPlaneComponent{func(_ context.Context) error { return nil }, "etcd-" + v1beta1constants.ETCDRoleMain, &appsv1.StatefulSet{}, mutateETCDPodFn},
-			staticControlPlaneComponent{func(_ context.Context) error { return nil }, "etcd-" + v1beta1constants.ETCDRoleEvents, &appsv1.StatefulSet{}, mutateETCDPodFn},
 		)
+		if etcdEventsEnabled {
+			components = append(components,
+				staticControlPlaneComponent{func(_ context.Context) error { return nil }, "etcd-" + v1beta1constants.ETCDRoleEvents, &appsv1.StatefulSet{}, mutateETCDPodFn},
+			)
+		}
 	}
 
 	return append(components,

@@ -2641,7 +2641,7 @@ string array
 
 
 <p>
-(<em>Appears on:</em><a href="#clusterautoscaler">ClusterAutoscaler</a>, <a href="#etcdconfig">ETCDConfig</a>, <a href="#kubeapiserverconfig">KubeAPIServerConfig</a>)
+(<em>Appears on:</em><a href="#clusterautoscaler">ClusterAutoscaler</a>, <a href="#etcdevents">ETCDEvents</a>, <a href="#etcdmain">ETCDMain</a>, <a href="#kubeapiserverconfig">KubeAPIServerConfig</a>)
 </p>
 
 <p>
@@ -3922,7 +3922,7 @@ ETCD contains configuration for etcds of the shoot cluster.
 <td>
 <code>main</code></br>
 <em>
-<a href="#etcdconfig">ETCDConfig</a>
+<a href="#etcdmain">ETCDMain</a>
 </em>
 </td>
 <td>
@@ -3934,50 +3934,12 @@ ETCD contains configuration for etcds of the shoot cluster.
 <td>
 <code>events</code></br>
 <em>
-<a href="#etcdconfig">ETCDConfig</a>
+<a href="#etcdevents">ETCDEvents</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
 <p>Events contains configuration for the events etcd.</p>
-</td>
-</tr>
-
-</tbody>
-</table>
-
-
-<h3 id="etcdconfig">ETCDConfig
-</h3>
-
-
-<p>
-(<em>Appears on:</em><a href="#etcd">ETCD</a>)
-</p>
-
-<p>
-ETCDConfig contains etcd configuration.
-</p>
-
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-
-<tr>
-<td>
-<code>autoscaling</code></br>
-<em>
-<a href="#controlplaneautoscaling">ControlPlaneAutoscaling</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
 </td>
 </tr>
 
@@ -4075,6 +4037,94 @@ boolean
 <td>
 <em>(Optional)</em>
 <p>AutoCompleteAfterPrepared indicates whether the current ETCD encryption key rotation should be auto completed after the preparation phase has finished.<br />Such rotation can be triggered by the `rotate-etcd-encryption-key` annotation.<br />This field is needed while we support two types of key rotations: two-operation and single operation rotation.<br />Deprecated: This field will be removed in a future release. The field will be no longer needed with<br />the removal `rotate-etcd-encryption-key-start` & `rotate-etcd-encryption-key-complete` annotations.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="etcdevents">ETCDEvents
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#etcd">ETCD</a>)
+</p>
+
+<p>
+ETCDEvents contains configuration for etcd-events.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#controlplaneautoscaling">ControlPlaneAutoscaling</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled specifies whether the events etcd is enabled. Defaults to true.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="etcdmain">ETCDMain
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#etcd">ETCD</a>)
+</p>
+
+<p>
+ETCDMain contains configuration for etcd-main.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#controlplaneautoscaling">ControlPlaneAutoscaling</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
 </td>
 </tr>
 

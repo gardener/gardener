@@ -1159,6 +1159,9 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			}
 		}
 
+		if !helper.IsETCDEventsEnabled(garden) {
+			kubeAPIServer.SetETCDEventsDisabled(true)
+		}
 		return shared.DeployKubeAPIServer(
 			ctx,
 			r.RuntimeClientSet.APIReader(),

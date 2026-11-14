@@ -192,6 +192,7 @@ spec:
   #         cpu: "2"
   #         memory: 6Gi
   #   events:
+  #     enabled: true
   #     autoscaling:
   #       minAllowed:
   #         cpu: "1"

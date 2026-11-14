@@ -13,7 +13,7 @@ makes it an essential part of a [Kubernetes control plane](https://kubernetes.io
 
 Each garden or shoot cluster gets its very own persistence for the control plane.
 It runs in the shoot namespace on the respective seed cluster (or in the `garden` namespace in the garden cluster, respectively).
-Concretely, there are two etcd instances per shoot cluster, which the `kube-apiserver` is configured to use in the following way:
+Concretely, there are two etcd instances per shoot cluster by default, which the `kube-apiserver` is configured to use in the following way:
 
 * `etcd-main`
 
@@ -27,6 +27,25 @@ A store that contains all `Event` objects (`events.k8s.io`) of a cluster.
 
 The setup above prevents both, the critical `etcd-main` is not flooded by Kubernetes `Events`, as well as backup space is not occupied by non-critical data.
 This separation saves time and resources.
+
+### Disabling the Events etcd
+
+This separation comes at the cost of running an additional etcd instance, including its related resources like `StatefulSet`s and `PersistentVolumeClaim`s, in the shoot control plane.
+If this is not desired, e.g., for cost- or resource-constrained scenarios, the events etcd can be disabled for `Shoot` clusters by setting `.spec.kubernetes.etcd.events.enabled` to `false` (defaults to `true`):
+
+```yaml
+spec:
+  kubernetes:
+    etcd:
+      events:
+        enabled: false
+```
+
+In this case, only `etcd-main` is deployed, and the `kube-apiserver` stores all objects, including `Event`s, in it.
+Consequently, `Event`s occupy storage in `etcd-main` and are also included in its backups (see [Backup](#backup)) — the advantages of the separation described above are given up in this case.
+
+> [!WARNING]
+> Changing this option does not migrate any data. Disabling the events etcd deletes it together with all `Event`s already stored in it, i.e., these `Event`s are lost. Likewise, `Event`s that were stored in `etcd-main` while the events etcd was disabled are not moved into it when it is enabled again.
 
 ## etcd Operator
 

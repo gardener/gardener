@@ -208,6 +208,12 @@ func GetETCDMainBackup(garden *operatorv1alpha1.Garden) *operatorv1alpha1.Backup
 	return nil
 }
 
+// IsETCDEventsEnabled returns whether the events etcd is enabled.
+func IsETCDEventsEnabled(garden *operatorv1alpha1.Garden) bool {
+	return garden == nil || garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Events == nil ||
+		ptr.Deref(garden.Spec.VirtualCluster.ETCD.Events.Enabled, true)
+}
+
 // GetDNSProviders returns the DNS providers for the given garden object or nil if non are configured.
 func GetDNSProviders(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSProvider {
 	if garden != nil && garden.Spec.DNS != nil {

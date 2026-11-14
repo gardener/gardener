@@ -564,15 +564,23 @@ type Kubernetes struct {
 // ETCD contains configuration for etcds of the shoot cluster.
 type ETCD struct {
 	// Main contains configuration for the main etcd.
-	Main *ETCDConfig
+	Main *ETCDMain
 	// Events contains configuration for the events etcd.
-	Events *ETCDConfig
+	Events *ETCDEvents
 }
 
-// ETCDConfig contains etcd configuration.
-type ETCDConfig struct {
+// ETCDMain contains etcd configuration for the main etcd.
+type ETCDMain struct {
 	// Autoscaling contains auto-scaling configuration options for etcd.
 	Autoscaling *ControlPlaneAutoscaling
+}
+
+// ETCDEvents contains etcd configuration for the events etcd.
+type ETCDEvents struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	Autoscaling *ControlPlaneAutoscaling
+	// Enabled specifies whether the etcd-events is enabled. Defaults to true.
+	Enabled *bool
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.

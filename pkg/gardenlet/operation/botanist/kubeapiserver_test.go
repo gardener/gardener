@@ -526,6 +526,27 @@ users:
 
 			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 		})
+
+		It("should disable etcd-events when it is disabled in the shoot spec", func() {
+			botanist.Shoot.GetInfo().Spec.Kubernetes.ETCD = &gardencorev1beta1.ETCD{Events: &gardencorev1beta1.ETCDEvents{Enabled: new(false)}}
+
+			kubeAPIServer.EXPECT().AppendAuthorizationWebhook(gomock.Any(), logr.Discard())
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetETCDEventsDisabled(true)
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetSeedPodNetwork(gomock.Any())
+			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+		})
 	})
 
 	Describe("#computeKubeAPIServerServerCertificateConfig", func() {

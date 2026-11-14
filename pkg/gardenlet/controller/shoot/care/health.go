@@ -51,11 +51,6 @@ import (
 )
 
 var (
-	requiredControlPlaneEtcds = sets.New(
-		v1beta1constants.ETCDMain,
-		v1beta1constants.ETCDEvents,
-	)
-
 	commonControlPlaneDeployments = sets.New(
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeAPIServer,
@@ -434,6 +429,13 @@ func (h *Health) checkControlPlane(
 	requiredControlPlaneDeployments, err := ComputeRequiredControlPlaneDeployments(h.shoot.GetInfo())
 	if err != nil {
 		return nil, err
+	}
+
+	requiredControlPlaneEtcds := sets.New(
+		v1beta1constants.ETCDMain,
+	)
+	if v1beta1helper.IsETCDEventsEnabled(h.shoot.GetInfo().Spec.Kubernetes.ETCD) {
+		requiredControlPlaneEtcds.Insert(v1beta1constants.ETCDEvents)
 	}
 
 	if exitCondition, err := h.healthChecker.CheckControlPlane(ctx, h.shoot.ControlPlaneNamespace, requiredControlPlaneDeployments, requiredControlPlaneEtcds, condition); err != nil || exitCondition != nil {

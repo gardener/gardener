@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -34,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
@@ -1741,6 +1743,62 @@ var _ = Describe("health check", func() {
 			}
 			Expect(systemComponentsCond).NotTo(BeNil())
 			Expect(systemComponentsCond.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+		})
+	})
+
+	Describe("#checkControlPlane etcds check", func() {
+		var (
+			shootInfo *gardencorev1beta1.Shoot
+			h         *Health
+		)
+
+		BeforeEach(func() {
+			shootInfo = shoot.DeepCopy()
+
+			Expect(fakeClient.Create(ctx, &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "etcd-main",
+					Namespace: controlPlaneNamespace,
+					Labels:    map[string]string{"gardener.cloud/role": "controlplane"},
+				},
+				Status: druidcorev1alpha1.EtcdStatus{Ready: new(true)},
+			})).To(Succeed())
+
+			shootObj := &shootpkg.Shoot{ControlPlaneNamespace: controlPlaneNamespace}
+			shootObj.SetInfo(shootInfo)
+			seedObj := &seedpkg.Seed{}
+			seedObj.SetInfo(&gardencorev1beta1.Seed{})
+
+			h = NewHealth(
+				logr.Discard(),
+				shootObj,
+				seedObj,
+				fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
+				fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build(),
+				func() (kubernetes.Interface, bool, error) { return nil, false, nil },
+				fakeClock,
+				&gardenletconfigv1alpha1.GardenletConfiguration{},
+				nil,
+			)
+		})
+
+		It("should report etcd-events as missing if it is enabled", func() {
+			resultConditions := h.Check(ctx, nil, NewShootConditions(fakeClock, shootInfo))
+			controlPlaneCond := helper.GetCondition(resultConditions, gardencorev1beta1.ShootControlPlaneHealthy)
+
+			Expect(controlPlaneCond).NotTo(BeNil())
+			Expect(controlPlaneCond.Status).To(Equal(gardencorev1beta1.ConditionProgressing))
+			Expect(controlPlaneCond.Reason).To(Equal("EtcdMissing"))
+		})
+
+		It("should not require etcd-events if it is disabled", func() {
+			shootInfo.Spec.Kubernetes.ETCD = &gardencorev1beta1.ETCD{Events: &gardencorev1beta1.ETCDEvents{Enabled: new(false)}}
+
+			resultConditions := h.Check(ctx, nil, NewShootConditions(fakeClock, shootInfo))
+			controlPlaneCond := helper.GetCondition(resultConditions, gardencorev1beta1.ShootControlPlaneHealthy)
+
+			Expect(controlPlaneCond).NotTo(BeNil())
+			Expect(controlPlaneCond.Reason).To(Equal("DeploymentMissing"), "expected controlplane check to get pass the etcd check, and report missing deployments instead")
 		})
 	})
 

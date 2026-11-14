@@ -729,17 +729,27 @@ type Kubernetes struct {
 type ETCD struct {
 	// Main contains configuration for the main etcd.
 	// +optional
-	Main *ETCDConfig `json:"main,omitempty" protobuf:"bytes,1,opt,name=main"`
+	Main *ETCDMain `json:"main,omitempty" protobuf:"bytes,1,opt,name=main"`
 	// Events contains configuration for the events etcd.
 	// +optional
-	Events *ETCDConfig `json:"events,omitempty" protobuf:"bytes,2,opt,name=events"`
+	Events *ETCDEvents `json:"events,omitempty" protobuf:"bytes,2,opt,name=events"`
 }
 
-// ETCDConfig contains etcd configuration.
-type ETCDConfig struct {
+// ETCDMain contains configuration for etcd-main.
+type ETCDMain struct {
 	// Autoscaling contains auto-scaling configuration options for etcd.
 	// +optional
 	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,1,opt,name=autoscaling"`
+}
+
+// ETCDEvents contains configuration for etcd-events.
+type ETCDEvents struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,1,opt,name=autoscaling"`
+	// Enabled specifies whether the events etcd is enabled. Defaults to true.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" protobuf:"varint,2,opt,name=enabled"`
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.

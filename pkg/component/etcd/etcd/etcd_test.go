@@ -1789,6 +1789,31 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
+		When("etcd is disabled", func() {
+			It("should destroy all expected objects instead of deploying", func() {
+				etcdObj := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}
+				vpaObj := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}
+				Expect(c.Create(ctx, etcdObj)).To(Succeed())
+				Expect(c.Create(ctx, vpaObj)).To(Succeed())
+
+				etcd = New(log, c, c, testNamespace, sm, Values{
+					Disabled:                true,
+					Role:                    testRole,
+					Class:                   class,
+					Replicas:                new(int32(1)),
+					StorageCapacity:         storageCapacity,
+					StorageClassName:        &storageClassName,
+					DefragmentationSchedule: &defragmentationSchedule,
+					PriorityClassName:       priorityClassName,
+				})
+
+				Expect(etcd.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(etcdObj), &druidcorev1alpha1.Etcd{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaObj), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
+			})
+		})
+
 		When("minAllowed is configured", func() {
 			var minAllowed corev1.ResourceList
 

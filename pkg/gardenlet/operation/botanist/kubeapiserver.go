@@ -189,6 +189,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
 	}
 
+	if !v1beta1helper.IsETCDEventsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.ETCD) {
+		b.Shoot.Components.ControlPlane.KubeAPIServer.SetETCDEventsDisabled(true)
+	}
+
 	b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
 		kubeapiserver.AuthorizationWebhook{
 			Name:       "node-agent-authorizer",
