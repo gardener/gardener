@@ -468,6 +468,71 @@ var _ = Describe("managedresources", func() {
 		})
 	})
 
+	Describe("#SetForceDeletion", func() {
+		It("should annotate the managed resource", func() {
+			mr := managedResource(false)
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(SetForceDeletion(ctx, fakeClient, namespace, name)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(mr.Annotations[resourcesv1alpha1.ForceDeletion]).To(Equal("true"))
+		})
+
+		It("should not fail if the managed resource is not found", func() {
+			Expect(SetForceDeletion(ctx, fakeClient, namespace, name)).To(Succeed())
+		})
+
+		It("should fail if the managed resource could not be updated", func() {
+			errClient := &errorClient{err: fakeErr, failMRPatch: true, Client: fakeClient}
+			Expect(SetForceDeletion(ctx, errClient, namespace, name)).To(MatchError(fakeErr))
+		})
+	})
+
+	Describe("ForceDeletionFinalizer", func() {
+		var finalizer *ForceDeletionFinalizer
+
+		BeforeEach(func() {
+			finalizer = &ForceDeletionFinalizer{}
+		})
+
+		Describe("#HasFinalizers", func() {
+			It("should return true if the object has finalizers", func() {
+				mr := managedResource(false)
+				mr.Finalizers = []string{"resources.gardener.cloud/gardener-resource-manager"}
+
+				hasFinalizers, err := finalizer.HasFinalizers(mr)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hasFinalizers).To(BeTrue())
+			})
+
+			It("should return false if the object has no finalizers", func() {
+				mr := managedResource(false)
+
+				hasFinalizers, err := finalizer.HasFinalizers(mr)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hasFinalizers).To(BeFalse())
+			})
+		})
+
+		Describe("#Finalize", func() {
+			It("should set the force-deletion annotation on the managed resource", func() {
+				mr := managedResource(false)
+				Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+				Expect(finalizer.Finalize(ctx, fakeClient, mr)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+				Expect(mr.Annotations[resourcesv1alpha1.ForceDeletion]).To(Equal("true"))
+			})
+
+			It("should not fail if the managed resource is not found", func() {
+				mr := managedResource(false)
+				mr.Name = "non-existent"
+				mr.Namespace = namespace
+				Expect(finalizer.Finalize(ctx, fakeClient, mr)).To(Succeed())
+			})
+		})
+	})
+
 	Describe("#WaitUntilHealthy", func() {
 		It("should fail when the managed resource cannot be read", func() {
 			errClient := &errorClient{err: fakeErr, failMRGet: true, Client: fakeClient}
