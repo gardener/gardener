@@ -6,6 +6,7 @@ package bastion
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -176,6 +177,31 @@ var _ = Describe("PrepareForUpdate", func() {
 				true,
 			),
 		)
+	})
+})
+
+var _ = Describe("StatusStrategy", func() {
+	Describe("PrepareForUpdate", func() {
+		It("should derive the expiration timestamp from the heartbeat", func() {
+			heartbeat := metav1.NewTime(metav1.Now().Add(-time.Minute))
+			newBastion := &operations.Bastion{Status: operations.BastionStatus{LastHeartbeatTimestamp: &heartbeat}}
+			oldBastion := &operations.Bastion{}
+
+			StatusStrategy.PrepareForUpdate(context.TODO(), newBastion, oldBastion)
+
+			Expect(newBastion.Status.ExpirationTimestamp).NotTo(BeNil())
+			Expect(newBastion.Status.ExpirationTimestamp.Time).To(Equal(heartbeat.Add(TimeToLive)))
+		})
+
+		It("should not panic and clear the expiration timestamp when the heartbeat is not set", func() {
+			expires := metav1.NewTime(metav1.Now().Time)
+			newBastion := &operations.Bastion{Status: operations.BastionStatus{ExpirationTimestamp: &expires}}
+			oldBastion := &operations.Bastion{}
+
+			StatusStrategy.PrepareForUpdate(context.TODO(), newBastion, oldBastion)
+
+			Expect(newBastion.Status.ExpirationTimestamp).To(BeNil())
+		})
 	})
 })
 
