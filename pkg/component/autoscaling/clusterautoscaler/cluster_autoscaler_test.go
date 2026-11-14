@@ -21,7 +21,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -48,13 +48,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 		sm                secretsmanager.Interface
 		clusterAutoscaler Interface
 
-		ctx          = context.Background()
-		consistOf    func(...client.Object) gomegatypes.GomegaMatcher
-		fakeErr            = fmt.Errorf("fake error")
-		namespace          = "shoot--foo--bar"
-		namespaceUID       = types.UID("1234567890")
-		image              = "registry.k8s.io/cluster-autoscaler:v1.2.3"
-		replicas     int32 = 1
+		ctx       = context.Background()
+		consistOf func(...client.Object) gomegatypes.GomegaMatcher
+		fakeErr         = fmt.Errorf("fake error")
+		namespace       = "shoot--foo--bar"
+		image           = "registry.k8s.io/cluster-autoscaler:v1.2.3"
+		replicas  int32 = 1
 
 		machineDeployment1Name           = "pool1"
 		machineDeployment1Min      int32 = 2
@@ -167,7 +166,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		serviceAccountName               = "cluster-autoscaler"
 		secretName                       = "shoot-access-cluster-autoscaler"
-		clusterRoleBindingName           = "cluster-autoscaler-" + namespace
 		vpaName                          = "cluster-autoscaler-vpa"
 		pdbName                          = "cluster-autoscaler"
 		serviceName                      = "cluster-autoscaler"
@@ -222,23 +220,35 @@ var _ = Describe("ClusterAutoscaler", func() {
 				UnhealthyPodEvictionPolicy: new(policyv1.AlwaysAllow),
 			},
 		}
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: clusterRoleBindingName,
-				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion:         "v1",
-					Kind:               "Namespace",
-					Name:               namespace,
-					UID:                namespaceUID,
-					Controller:         new(true),
-					BlockOwnerDeletion: new(true),
-				}},
+				Name:            "cluster-autoscaler",
+				Namespace:       namespace,
+				ResourceVersion: "1",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"machine.sapcloud.io"},
+					Resources: []string{"machineclasses", "machinedeployments", "machines", "machinesets"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "cluster-autoscaler",
+				Namespace:       namespace,
 				ResourceVersion: "1",
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "system:cluster-autoscaler-seed",
+				Kind:     "Role",
+				Name:     "cluster-autoscaler",
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      "ServiceAccount",
@@ -696,7 +706,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
 		clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil, semver.MustParse("1.35.0"))
-		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
 
@@ -723,7 +732,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				}
 
 				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.33.1"), semver.MustParse(shootVersion))
-				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
 				Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
@@ -744,9 +752,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
 				Expect(actualServiceAccount).To(DeepEqual(serviceAccount))
 
-				actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
-				Expect(actualClusterRoleBinding).To(DeepEqual(clusterRoleBinding))
+				actualRole := &rbacv1.Role{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), actualRole)).To(Succeed())
+				Expect(actualRole).To(DeepEqual(role))
+
+				actualRoleBinding := &rbacv1.RoleBinding{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), actualRoleBinding)).To(Succeed())
+				Expect(actualRoleBinding).To(DeepEqual(roleBinding))
 
 				actualService := &corev1.Service{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), actualService)).To(Succeed())
@@ -795,7 +807,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				}
 
 				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, nil, semver.MustParse("1.33.1"), semver.MustParse("1.33.1"))
-				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
 				Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
@@ -815,13 +826,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 	Describe("#Destroy", func() {
 		BeforeEach(func() {
 			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil, semver.MustParse("1.35.0"))
-			clusterAutoscaler.SetNamespaceUID(namespaceUID)
 			clusterAutoscaler.SetMachineDeployments(machineDeployments)
 			Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.Role{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.RoleBinding{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploymentFor(false, false)), &appsv1.Deployment{})).To(Succeed())
@@ -842,7 +853,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			}).Build()
 
 			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil, semver.MustParse("1.35.0"))
-			clusterAutoscaler.SetNamespaceUID(namespaceUID)
 			clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
 			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
@@ -853,7 +863,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.Role{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.RoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploymentFor(false, false)), &appsv1.Deployment{})).To(BeNotFoundError())
@@ -873,6 +884,40 @@ var _ = Describe("ClusterAutoscaler", func() {
 	Describe("#WaitCleanup", func() {
 		It("should return nil as it's not implemented as of now", func() {
 			Expect(clusterAutoscaler.WaitCleanup(ctx)).To(Succeed())
+		})
+	})
+
+	Describe("#MigrateRBAC", func() {
+		var oldClusterRoleBinding *rbacv1.ClusterRoleBinding
+
+		BeforeEach(func() {
+			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, workerConfig, nil, semver.MustParse("1.35.0"))
+			oldClusterRoleBinding = &rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler-" + namespace},
+			}
+		})
+
+		It("should create the namespaced Role/RoleBinding and delete the obsolete ClusterRoleBinding", func() {
+			Expect(fakeClient.Create(ctx, oldClusterRoleBinding)).To(Succeed())
+
+			Expect(clusterAutoscaler.MigrateRBAC(ctx)).To(Succeed())
+
+			actualRole := &rbacv1.Role{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), actualRole)).To(Succeed())
+			Expect(actualRole).To(DeepEqual(role))
+
+			actualRoleBinding := &rbacv1.RoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), actualRoleBinding)).To(Succeed())
+			Expect(actualRoleBinding).To(DeepEqual(roleBinding))
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(oldClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+		})
+
+		It("should succeed when the obsolete ClusterRoleBinding does not exist", func() {
+			Expect(clusterAutoscaler.MigrateRBAC(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.Role{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.RoleBinding{})).To(Succeed())
 		})
 	})
 })
