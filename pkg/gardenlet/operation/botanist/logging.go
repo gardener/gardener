@@ -233,8 +233,8 @@ func (b *Botanist) DefaultOtelCollector() (collector.Interface, error) {
 			IsGardenCluster:              false,
 			IstioIngressGatewayLabels:    istioLabels,
 			IstioIngressGatewayNamespace: istioNamespace,
-			VictoriaLogsBackend:          features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
-			RemoveVali:                   features.DefaultFeatureGate.Enabled(features.RemoveVali),
+			VictoriaLogsBackend:          gardenlethelper.IsVictoriaLogsEnabled(b.Config) && features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+			RemoveVali:                   !gardenlethelper.IsValiEnabled(b.Config) || features.DefaultFeatureGate.Enabled(features.RemoveVali),
 		},
 	), nil
 }
