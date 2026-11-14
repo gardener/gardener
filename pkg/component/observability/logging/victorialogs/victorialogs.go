@@ -583,17 +583,61 @@ func (v *victoriaLogs) istioResources(ctx context.Context) ([]client.Object, err
 		return nil, fmt.Errorf("failed to create virtual service resource: %w", err)
 	}
 
-	// Allowlist: only /select/logsql/query is accessible; everything else returns 403.
+	// Allowlist:
+	// - /select/logsql/query
+	// - /select/logsql/field_names
+	// - /select/logsql/field_values
+	// - /select/logsql/streams
+	// - /select/logsql/streams_field_names
+	// - /select/logsql/streams_field_values
+	// Everything else returns 403.
 	virtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
 		{
 			Name: "query",
-			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{{
-				Uri: &istioapinetworkingv1beta1.StringMatch{
-					MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
-						Prefix: "/select/logsql/query",
+			Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/query",
+						},
 					},
 				},
-			}},
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/field_names",
+						},
+					},
+				},
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/field_values",
+						},
+					},
+				},
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/streams",
+						},
+					},
+				},
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/stream_field_names",
+						},
+					},
+				},
+				{
+					Uri: &istioapinetworkingv1beta1.StringMatch{
+						MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+							Prefix: "/select/logsql/stream_field_values",
+						},
+					},
+				},
+			},
 			Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
 				Destination: &istioapinetworkingv1beta1.Destination{
 					Host: destinationHost,

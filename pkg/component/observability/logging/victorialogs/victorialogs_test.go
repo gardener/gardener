@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -611,11 +612,50 @@ var _ = Describe("VictoriaLogs", func() {
 					Http: []*istionetworkingv1alpha3.HTTPRoute{
 						{
 							Name: "query",
-							Match: []*istionetworkingv1alpha3.HTTPMatchRequest{{
-								Uri: &istionetworkingv1alpha3.StringMatch{
-									MatchType: &istionetworkingv1alpha3.StringMatch_Prefix{Prefix: "/select/logsql/query"},
+							Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/query",
+										},
+									},
 								},
-							}},
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/field_names",
+										},
+									},
+								},
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/field_values",
+										},
+									},
+								},
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/streams",
+										},
+									},
+								},
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/stream_field_names",
+										},
+									},
+								},
+								{
+									Uri: &istioapinetworkingv1beta1.StringMatch{
+										MatchType: &istioapinetworkingv1beta1.StringMatch_Prefix{
+											Prefix: "/select/logsql/stream_field_values",
+										},
+									},
+								},
+							},
 							Route: []*istionetworkingv1alpha3.HTTPRouteDestination{{
 								Destination: &istionetworkingv1alpha3.Destination{
 									Host: destinationFQDN,
