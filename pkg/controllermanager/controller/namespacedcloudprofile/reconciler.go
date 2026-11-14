@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -115,6 +116,8 @@ func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedC
 	old := namespacedCloudProfile.DeepCopy()
 
 	MergeCloudProfiles(namespacedCloudProfile, parentCloudProfile)
+	status := v1beta1helper.CalculateCloudProfileStatus(&namespacedCloudProfile.Status.CloudProfileSpec)
+	namespacedCloudProfile.Status.CloudProfileStatus = &status
 	namespacedCloudProfile.Status.ObservedGeneration = namespacedCloudProfile.Generation
 
 	if equality.Semantic.DeepEqual(old.Status, namespacedCloudProfile.Status) {
