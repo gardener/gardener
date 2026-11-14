@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/security"
 	"github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	workloadidentityutils "github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
@@ -36,12 +37,13 @@ func NewStorage(
 	projectLister gardencorev1beta1listers.ProjectLister,
 	backupBucketLister gardencorev1beta1listers.BackupBucketLister,
 	backupEntryLister gardencorev1beta1listers.BackupEntryLister,
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister,
 ) WorkloadIdentityStorage {
 	workloadIdentityRest := NewREST(optsGetter)
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
-		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, tokenIssuer, shootListers, seedLister, projectLister, backupBucketLister, backupEntryLister),
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, tokenIssuer, shootListers, seedLister, projectLister, backupBucketLister, backupEntryLister, credentialsBindingLister),
 	}
 }
 

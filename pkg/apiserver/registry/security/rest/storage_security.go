@@ -16,13 +16,15 @@ import (
 	credentialsbindingstore "github.com/gardener/gardener/pkg/apiserver/registry/security/credentialsbinding/storage"
 	workloadidentitystore "github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity/storage"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // StorageProvider is an empty struct.
 type StorageProvider struct {
-	TokenIssuer         workloadidentity.TokenIssuer
-	CoreInformerFactory gardencoreinformers.SharedInformerFactory
+	TokenIssuer             workloadidentity.TokenIssuer
+	CoreInformerFactory     gardencoreinformers.SharedInformerFactory
+	SecurityInformerFactory securityinformers.SharedInformerFactory
 }
 
 // NewRESTStorage creates a new API group info object and registers the v1alpha1 Garden storage.
@@ -52,6 +54,7 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 		sharedInformer.Projects().Lister(),
 		sharedInformer.BackupBuckets().Lister(),
 		sharedInformer.BackupEntries().Lister(),
+		p.SecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Lister(),
 	)
 	storage["workloadidentities"] = workloadIdentityStorage.WorkloadIdentity
 	storage["workloadidentities/token"] = workloadIdentityStorage.TokenRequest

@@ -211,6 +211,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		return nil, err
 	}
 	o.SecurityInformerFactory = securityinformers.NewSharedInformerFactory(securityClient, protobufLoopbackConfig.Timeout)
+	apiConfig.SecurityInformerFactory = o.SecurityInformerFactory
 
 	// dynamic client
 	dynamicClient, err := dynamic.NewForConfig(kubeAPIServerConfig)
