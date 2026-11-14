@@ -10,7 +10,7 @@ services:
       - "[fd00:ff::53]:53:53/udp"
     volumes:
       # Mount the config as read-only.
-      - ./bind:/etc/bind:ro
+      - ./bind:/etc/bind:ro,z
       # Mount the volume storing the zone state (ensure persistence across container restarts).
       # We don't want bind to update our zone files on the host (resulting in git changes and persistence after stopping
       # the local setup). Instead, we copy the zone file to the volume on start up and destroy the volume when running
@@ -34,9 +34,9 @@ services:
       REGISTRY_HTTP_TLS_CERTIFICATE: /etc/distribution/tls/registry.crt
       REGISTRY_HTTP_TLS_KEY: /etc/distribution/tls/registry.key
     volumes:
-      - ../../dev/local-registry/localhost:/var/lib/registry
-      - ./registry/config.yaml:/etc/distribution/config.yml
-      - ./registry/tls:/etc/distribution/tls:ro
+      - ../../dev/local-registry/localhost:/var/lib/registry:z
+      - ./registry/config.yaml:/etc/distribution/config.yml:z
+      - ./registry/tls:/etc/distribution/tls:ro,z
     networks:
       kind:
         aliases:
@@ -48,8 +48,8 @@ services:
     environment:
       REGISTRY_PROXY_REMOTEURL: https://gcr.io
     volumes:
-      - ../../dev/local-registry/gcr:/var/lib/registry
-      - ./registry/config.yaml:/etc/distribution/config.yml
+      - ../../dev/local-registry/gcr:/var/lib/registry:z
+      - ./registry/config.yaml:/etc/distribution/config.yml:z
     networks:
       kind:
         aliases:
@@ -61,8 +61,8 @@ services:
     environment:
       REGISTRY_PROXY_REMOTEURL: https://registry.k8s.io
     volumes:
-      - ../../dev/local-registry/k8s:/var/lib/registry
-      - ./registry/config.yaml:/etc/distribution/config.yml
+      - ../../dev/local-registry/k8s:/var/lib/registry:z
+      - ./registry/config.yaml:/etc/distribution/config.yml:z
     networks:
       kind:
         aliases:
@@ -74,8 +74,8 @@ services:
     environment:
       REGISTRY_PROXY_REMOTEURL: https://quay.io
     volumes:
-      - ../../dev/local-registry/quay:/var/lib/registry
-      - ./registry/config.yaml:/etc/distribution/config.yml
+      - ../../dev/local-registry/quay:/var/lib/registry:z
+      - ./registry/config.yaml:/etc/distribution/config.yml:z
     networks:
       kind:
         aliases:
@@ -87,8 +87,8 @@ services:
     environment:
       REGISTRY_PROXY_REMOTEURL: https://europe-docker.pkg.dev
     volumes:
-      - ../../dev/local-registry/europe-docker-pkg-dev:/var/lib/registry
-      - ./registry/config.yaml:/etc/distribution/config.yml
+      - ../../dev/local-registry/europe-docker-pkg-dev:/var/lib/registry:z
+      - ./registry/config.yaml:/etc/distribution/config.yml:z
     networks:
       kind:
         aliases:

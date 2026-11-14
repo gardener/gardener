@@ -351,7 +351,7 @@ nameserver $dns_ip
 nameserver $dns_ipv6
 EOF
         fi
-      elif [[ "$OSTYPE" == "linux"* && -f /etc/systemd/resolved.conf ]]; then
+      elif [[ "$OSTYPE" == "linux"* ]] && systemctl is-active --quiet systemd-resolved; then
         if [[ ! -d /etc/systemd/resolved.conf.d ]]; then
           ${SUDO}mkdir -p /etc/systemd/resolved.conf.d
         fi
