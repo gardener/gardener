@@ -1556,7 +1556,19 @@ boolean
 </td>
 <td>
 <em>(Optional)</em>
-<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload<br />resources.</p>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload<br />resources of the extension running on seed clusters. The value is propagated to the generated<br />ControllerDeployment and evaluated by gardenlet when deploying the extension via a ControllerInstallation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>injectGardenKubeconfigInRuntimeCluster</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload<br />resources of the extension running in the garden runtime cluster.</p>
 </td>
 </tr>
 

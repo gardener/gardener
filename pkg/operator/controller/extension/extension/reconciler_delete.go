@@ -16,6 +16,8 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
@@ -23,13 +25,21 @@ import (
 func (r *Reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
+	garden *gardenInfo,
 	extension *operatorv1alpha1.Extension,
 	conditions Conditions,
 ) (
 	reconcile.Result,
 	error,
 ) {
+	apiServerDeploymentsFound, err := r.gardenAPIServersAvailable(ctx)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to check if the garden API servers are available: %w", err)
+	}
+
 	var (
+		virtualClusterClientSet kubernetes.Interface
+
 		reconcileResult reconcile.Result
 		g               = flow.NewGraph("Extension deletion")
 
@@ -47,13 +57,27 @@ func (r *Reconciler) delete(
 			},
 		})
 
+		createVirtualGardenClientSet = g.Add(flow.Task{
+			Name: "Creating virtual garden-client",
+			Fn: func(ctx context.Context) error {
+				clientSet, err := r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden.garden))
+				if err != nil {
+					return fmt.Errorf("error retrieving virtual cluster client set: %w", err)
+				}
+
+				virtualClusterClientSet = clientSet
+				return nil
+			},
+			SkipIf: !apiServerDeploymentsFound || garden.garden == nil,
+		})
+
 		_ = g.Add(flow.Task{
 			Name: "Handling Extension in runtime cluster",
 			Fn: func(ctx context.Context) error {
-				var err error
-				reconcileResult, err = r.deployExtensionInRuntime(ctx, log, extension)
+				_, err := r.deployExtensionInRuntime(ctx, log, virtualClusterClientSet, extension)
 				return err
 			},
+			Dependencies: flow.NewTaskIDs(createVirtualGardenClientSet),
 		})
 	)
 

@@ -100,9 +100,14 @@ type ExtensionDeploymentSpec struct {
 	// +optional
 	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty"`
 	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
-	// resources.
+	// resources of the extension running on seed clusters. The value is propagated to the generated
+	// ControllerDeployment and evaluated by gardenlet when deploying the extension via a ControllerInstallation.
 	// +optional
 	InjectGardenKubeconfig *bool `json:"injectGardenKubeconfig,omitempty"`
+	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+	// resources of the extension running in the garden runtime cluster.
+	// +optional
+	InjectGardenKubeconfigInRuntimeCluster *bool `json:"injectGardenKubeconfigInRuntimeCluster,omitempty"`
 }
 
 // AdmissionDeploymentSpec contains the deployment specification for the admission controller of an extension.
