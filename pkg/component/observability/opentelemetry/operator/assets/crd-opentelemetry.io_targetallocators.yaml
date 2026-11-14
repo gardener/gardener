@@ -4918,7 +4918,6 @@ spec:
                               a ConfigMap.
                             properties:
                               key:
-                                default: ca.crt
                                 description: Key within the ConfigMap's data. Defaults
                                   to ca.crt when omitted.
                                 type: string
