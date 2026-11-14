@@ -6,13 +6,21 @@ package operatingsystemconfig
 
 import (
 	"context"
+	"fmt"
+	"net"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
+	"github.com/gardener/gardener/pkg/nodeagent"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("etcd", func() {
@@ -73,6 +81,93 @@ var _ = Describe("etcd", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(found).To(BeTrue())
 			Expect(data).To(BeNil())
+		})
+	})
+
+	Describe("#mutateETCDStaticPodManifest", func() {
+		var (
+			originalLookupIP func(string) ([]net.IP, error)
+			machineIPv4      = net.ParseIP("1.2.3.4")
+		)
+
+		BeforeEach(func() {
+			originalLookupIP = utils.LookupIP
+			DeferCleanup(func() { utils.LookupIP = originalLookupIP })
+			utils.LookupIP = func(string) ([]net.IP, error) {
+				return []net.IP{machineIPv4}, nil
+			}
+			reconciler.HostName = "node1"
+		})
+
+		podManifest := func(containers ...corev1.Container) []byte {
+			pod := &corev1.Pod{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Pod"},
+				ObjectMeta: metav1.ObjectMeta{Name: "etcd-main"},
+				Spec:       corev1.PodSpec{Containers: containers},
+			}
+			data, err := runtime.Encode(nodeagent.Codec, pod)
+			Expect(err).NotTo(HaveOccurred())
+			return data
+		}
+
+		It("should set POD_IP on the backup-restore container only", func() {
+			data := podManifest(
+				corev1.Container{Name: etcdconstants.ContainerNameEtcd},
+				corev1.Container{Name: etcdconstants.ContainerNameBackupRestore},
+			)
+
+			result, err := reconciler.mutateETCDStaticPodManifest(data)
+			Expect(err).NotTo(HaveOccurred())
+
+			pod := &corev1.Pod{}
+			Expect(runtime.DecodeInto(nodeagent.Codec, result, pod)).To(Succeed())
+
+			var etcdEnvVars, backupRestoreEnvVars []corev1.EnvVar
+			for _, c := range pod.Spec.Containers {
+				switch c.Name {
+				case etcdconstants.ContainerNameEtcd:
+					etcdEnvVars = c.Env
+				case etcdconstants.ContainerNameBackupRestore:
+					backupRestoreEnvVars = c.Env
+				}
+			}
+
+			Expect(etcdEnvVars).To(BeEmpty())
+			Expect(backupRestoreEnvVars).To(ContainElement(corev1.EnvVar{Name: "POD_IP", Value: machineIPv4.String()}))
+		})
+
+		It("should overwrite an existing POD_IP on the backup-restore container", func() {
+			data := podManifest(
+				corev1.Container{
+					Name: etcdconstants.ContainerNameBackupRestore,
+					Env:  []corev1.EnvVar{{Name: "POD_IP", Value: "0.0.0.0"}},
+				},
+			)
+
+			result, err := reconciler.mutateETCDStaticPodManifest(data)
+			Expect(err).NotTo(HaveOccurred())
+
+			pod := &corev1.Pod{}
+			Expect(runtime.DecodeInto(nodeagent.Codec, result, pod)).To(Succeed())
+
+			Expect(pod.Spec.Containers).To(HaveLen(1))
+			Expect(pod.Spec.Containers[0].Env).To(ConsistOf(corev1.EnvVar{Name: "POD_IP", Value: machineIPv4.String()}))
+		})
+
+		It("should return an error when the machine IP cannot be determined", func() {
+			utils.LookupIP = func(string) ([]net.IP, error) {
+				return nil, fmt.Errorf("lookup failed")
+			}
+
+			_, err := reconciler.mutateETCDStaticPodManifest(podManifest(
+				corev1.Container{Name: etcdconstants.ContainerNameBackupRestore},
+			))
+			Expect(err).To(MatchError(ContainSubstring("failed determining the machine IP")))
+		})
+
+		It("should return an error for invalid manifest data", func() {
+			_, err := reconciler.mutateETCDStaticPodManifest([]byte("not-valid-yaml"))
+			Expect(err).To(MatchError(ContainSubstring("failed decoding the data into a corev1.Pod object")))
 		})
 	})
 

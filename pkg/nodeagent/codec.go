@@ -5,6 +5,7 @@
 package nodeagent
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -16,17 +17,20 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-// Codec can encode or decode OperatingSystemConfig, KubeletConfiguration, or NodeAgentConfiguration objects to or from raw bytes.
+// Codec can encode or decode OperatingSystemConfig, KubeletConfiguration, or NodeAgentConfiguration objects to or from
+// raw bytes.
 var Codec runtime.Codec
 
 func init() {
 	scheme := runtime.NewScheme()
+	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
 	utilruntime.Must(nodeagentconfigv1alpha1.AddToScheme(scheme))
 
 	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	versions := schema.GroupVersions([]schema.GroupVersion{
+		corev1.SchemeGroupVersion,
 		extensionsv1alpha1.SchemeGroupVersion,
 		kubeletconfigv1beta1.SchemeGroupVersion,
 		nodeagentconfigv1alpha1.SchemeGroupVersion,
