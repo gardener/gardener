@@ -15,7 +15,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -78,15 +77,11 @@ func (a *Actuator) ForceDelete(ctx context.Context, log logr.Logger, dnsRecord *
 	return a.Delete(ctx, log, dnsRecord, cluster)
 }
 
-// Migrate removes the DNS record if the shoot is not self-hosted.
-func (a *Actuator) Migrate(ctx context.Context, log logr.Logger, dnsRecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {
-	if v1beta1helper.IsShootSelfHosted(cluster.Shoot.Spec.Provider.Workers) {
-		// Do nothing when migrating DNSRecord of self-hosted shoot with managed infrastructure. The DNS
-		// records are still needed for the control plane machines to resolve the kube-apiserver domain.
-		return nil
-	}
-
-	return a.Delete(ctx, log, dnsRecord, cluster)
+// Migrate skips the infrastructure deletion that Delete performs so the actual DNS record is left untouched in the
+// BIND9 server. The generic DNSRecord reconciler removes the resource's finalizers once this returns, shallow-deleting
+// the DNSRecord object while the real record survives the migration for the destination seed to take over.
+func (a *Actuator) Migrate(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.DNSRecord, _ *extensionscontroller.Cluster) error {
+	return nil
 }
 
 // Restore is the same as Reconcile for the local DNS provider.

@@ -74,14 +74,16 @@ func (g TaskGroup) Tasks() []Task {
 // TasksWithDependencies returns the group's tasks (like `Tasks`) with the given dependencies added to each task, gating
 // them all behind a common dependency within a single flow step.
 //
-// Unlike `Graph.AddGroup`, the group's own `WithDependencies` and `SkipIf` are dropped. Those may reference other
-// groups by alias, which only resolve if those groups were added too; dropping them keeps the flattened tasks from
-// depending on anything outside the current graph.
+// Unlike `Graph.AddGroup`, the group's own `WithDependencies` is dropped. It may reference other groups by alias,
+// which only resolve if those groups were added too; dropping it keeps the flattened tasks from depending on anything
+// outside the current graph. The group's `SkipIf` is propagated to each task because it is a plain boolean that needs
+// no alias resolution.
 func (g TaskGroup) TasksWithDependencies(dependencies ...TaskIDer) []Task {
 	deps := NewTaskIDs(dependencies...)
 	tasks := g.Tasks()
 	for i := range tasks {
 		tasks[i].Dependencies = tasks[i].Dependencies.Copy().Insert(deps)
+		tasks[i].SkipIf = tasks[i].SkipIf || g.skipIf
 	}
 	return tasks
 }
