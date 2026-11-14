@@ -143,6 +143,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		case core.LastOperationStateFailed:
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRetry {
 				mustIncrease, mustRemoveOperationAnnotation = true, true
+			} else if val == v1beta1constants.GardenerOperationForceRestore {
+				mustIncrease = true
 			}
 
 		default:
@@ -207,6 +209,10 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 					// The annotation will be removed later by gardenlet once the in-place update is finished.
 					// The generation will be increased if there really is a spec change in the object.
 					mustIncrease, mustRemoveOperationAnnotation = false, false
+
+				case v1beta1constants.GardenerOperationForceRestore:
+					// Trigger restoration; gardenlet removes the annotation after ETCD is ready.
+					mustIncrease = true
 				}
 
 				if strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) ||

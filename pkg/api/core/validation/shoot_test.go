@@ -5968,6 +5968,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			DescribeTable("allow specifying some operation annotations",
 				func(key, value string) {
 					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeCreate, State: core.LastOperationStateSucceeded}
+					if value == v1beta1constants.GardenerOperationForceRestore {
+						shoot.Spec.SeedName = new("seed")
+						shoot.Status.SeedName = new("seed")
+					}
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
 					Expect(ValidateShoot(shoot)).To(BeEmpty())
 				},
@@ -5978,7 +5982,47 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("maintenance.gardener.cloud/operation=rotate-credentials-start-without-workers-rollout", "maintenance.gardener.cloud/operation", "rotate-credentials-start-without-workers-rollout"),
 				Entry("maintenance.gardener.cloud/operation=rotate-ca-start-without-workers-rollout", "maintenance.gardener.cloud/operation", "rotate-ca-start-without-workers-rollout"),
 				Entry("maintenance.gardener.cloud/operation=rotate-serviceaccount-key-start-without-workers-rollout", "maintenance.gardener.cloud/operation", "rotate-serviceaccount-key-start-without-workers-rollout"),
+				Entry("gardener.cloud/operation=force-restore", "gardener.cloud/operation", "force-restore"),
 			)
+
+			DescribeTable("force-restore requires an unchanged Seed assignment",
+				func(specSeedName, statusSeedName *string, deleting, allowed bool) {
+					shoot.Spec.SeedName = specSeedName
+					shoot.Status.SeedName = statusSeedName
+					if deleting {
+						shoot.DeletionTimestamp = &metav1.Time{}
+					}
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationForceRestore)
+					if allowed {
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					} else {
+						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Detail": Equal("force-restore requires spec.seedName and status.seedName to reference the same seed"),
+						}))))
+					}
+				},
+				Entry("same Seed", new("seed"), new("seed"), false, true),
+				Entry("different Seeds", new("destination"), new("source"), false, false),
+				Entry("no assigned Seed", (*string)(nil), new("seed"), false, false),
+				Entry("no previously assigned Seed", new("seed"), (*string)(nil), false, false),
+				Entry("no Seed assignment", (*string)(nil), (*string)(nil), false, false),
+				Entry("deletion is not blocked by a retained annotation", new("seed"), (*string)(nil), true, true),
+			)
+
+			It("should prevent specifying force-restore for self-hosted shoots", func() {
+				shoot.Namespace = "garden"
+				shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+				shoot.Spec.Provider.Workers[0].UpdateStrategy = new(core.AutoInPlaceUpdate)
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "force-restore")
+
+				Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("force-restore is not supported for self-hosted shoot clusters"),
+				}))))
+			})
 
 			DescribeTable("validate specifying valid rollout worker operation annotations",
 				func(key, value string) {

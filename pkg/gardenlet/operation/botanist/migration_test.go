@@ -228,6 +228,13 @@ var _ = Describe("migration", func() {
 			Expect(copyRequired).To(BeFalse())
 		})
 
+		It("should return false if operation is force-restore", func() {
+			botanist.Shoot.GetInfo().Annotations = map[string]string{"gardener.cloud/operation": "force-restore"}
+			copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(copyRequired).To(BeFalse())
+		})
+
 		It("should return false if seed backup is not set", func() {
 			botanist.Seed.GetInfo().Spec.Backup = nil
 			copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
