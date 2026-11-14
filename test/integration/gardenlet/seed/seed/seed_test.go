@@ -547,6 +547,7 @@ var _ = Describe("Seed controller tests", func() {
 						"workloadentries.networking.istio.io",
 						"workloadgroups.networking.istio.io",
 						"telemetries.telemetry.istio.io",
+						"trafficextensions.extensions.istio.io",
 						"wasmplugins.extensions.istio.io",
 						// vertical-pod-autoscaler
 						"verticalpodautoscalers.autoscaling.k8s.io",

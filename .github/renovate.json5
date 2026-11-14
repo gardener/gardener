@@ -147,7 +147,7 @@
         'go',
       ],
       matchPackageNames: [
-        '/gcr\\.io/istio-release/.+/',
+        '/europe-docker\\.pkg\\.dev/gardener-project/releases/3rd/istio/.+/',
         '/istio\\.io/api/',
         '/istio\\.io/client-go/',
       ],
@@ -366,7 +366,7 @@
       dependencyDashboardApproval: true,
       matchPackageNames: [
         '/fluent/.+/',
-        '/gcr\\.io/istio-release/.+/',
+        '/europe-docker\\.pkg\\.dev/gardener-project/releases/3rd/istio/.+/',
         '/europe-docker\\.pkg\\.dev/gardener-project/releases/3rd/credativ/valitail/',
       ],
     },
