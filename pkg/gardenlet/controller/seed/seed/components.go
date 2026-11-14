@@ -776,7 +776,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
 		Replicas:          1,
 		RetentionSize:     "85GB",
-		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
+		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("200Mi")},
 		HealthCheckBy:     prometheus.Gardenlet,
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:            v1beta1constants.LabelNetworkPolicyAllowed,
@@ -815,7 +815,7 @@ func (r *Reconciler) newAggregatePrometheus(
 		Retention:         new(monitoringv1.Duration("30d")),
 		RetentionSize:     "15GB",
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
-		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
+		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("256Mi")},
 		HealthCheckBy:     prometheus.Gardenlet,
 		CentralConfigs: prometheus.CentralConfigs{
 			PrometheusRules: aggregateprometheus.CentralPrometheusRules(seedIsGarden),
