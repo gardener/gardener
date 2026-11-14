@@ -2005,60 +2005,108 @@ var _ = Describe("Etcd", func() {
 				DefragmentationSchedule: &defragmentationSchedule,
 				PriorityClassName:       priorityClassName,
 				HighAvailabilityEnabled: highAvailability,
+				StaticPodConfig:         staticPodConfig,
 			})
 		})
 
-		Context("when HA control-plane is not requested", func() {
-			BeforeEach(func() {
-				replicas = new(int32(1))
-			})
-
-			It("should do nothing and succeed without expectations", func() {
-				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
-			})
-		})
-
-		Context("when HA control-plane is requested", func() {
-			BeforeEach(func() {
-				highAvailability = true
-			})
-
-			createEtcdObj := func(caName string) *druidcorev1alpha1.Etcd {
-				return &druidcorev1alpha1.Etcd{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       etcdName,
-						Namespace:  testNamespace,
-						Generation: 1,
-					},
-					Spec: druidcorev1alpha1.EtcdSpec{
-						Etcd: druidcorev1alpha1.EtcdConfig{
-							PeerUrlTLS: &druidcorev1alpha1.PeerTLSConfig{
-								TLSConfig: druidcorev1alpha1.TLSConfig{
-									TLSCASecretRef: druidcorev1alpha1.SecretReference{
-										SecretReference: corev1.SecretReference{
-											Name:      caName,
-											Namespace: testNamespace,
-										},
-										DataKey: new(secretsutils.DataKeyCertificateBundle),
+		createEtcdObj := func(caName string) *druidcorev1alpha1.Etcd {
+			return &druidcorev1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       etcdName,
+					Namespace:  testNamespace,
+					Generation: 1,
+				},
+				Spec: druidcorev1alpha1.EtcdSpec{
+					Etcd: druidcorev1alpha1.EtcdConfig{
+						PeerUrlTLS: &druidcorev1alpha1.PeerTLSConfig{
+							TLSConfig: druidcorev1alpha1.TLSConfig{
+								TLSCASecretRef: druidcorev1alpha1.SecretReference{
+									SecretReference: corev1.SecretReference{
+										Name:      caName,
+										Namespace: testNamespace,
 									},
+									DataKey: new(secretsutils.DataKeyCertificateBundle),
 								},
 							},
 						},
 					},
-					Status: druidcorev1alpha1.EtcdStatus{
-						ObservedGeneration: new(int64(1)),
-						Ready:              new(true),
-						Conditions: []druidcorev1alpha1.Condition{
-							{
-								Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
-								Status: druidcorev1alpha1.ConditionTrue,
-							},
+				},
+				Status: druidcorev1alpha1.EtcdStatus{
+					ObservedGeneration: new(int64(1)),
+					Ready:              new(true),
+					Conditions: []druidcorev1alpha1.Condition{
+						{
+							Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+							Status: druidcorev1alpha1.ConditionTrue,
 						},
 					},
-				}
+				},
 			}
+		}
 
+		When("HA control-plane is not requested and the shoot is hosted", func() {
 			BeforeEach(func() {
+				replicas = new(int32(1))
+			})
+
+			It("should do nothing because a hosted non-HA shoot has no peer CA", func() {
+				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
+			})
+		})
+
+		When("HA control-plane is not requested and the shoot is self-hosted", func() {
+			BeforeEach(func() {
+				replicas = new(int32(1))
+				staticPodConfig = &StaticPodConfig{}
+			})
+
+			It("should patch the etcd resource with the new peer CA secret name because a self-hosted shoot always has a peer CA", func() {
+				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
+
+				existingEtcd := createEtcdObj("old-ca")
+				Expect(c.Create(ctx, existingEtcd)).To(Succeed())
+
+				var patchData []byte
+				callCount := 0
+				c = fakeclient.NewClientBuilder().WithScheme(c.Scheme()).WithObjects(existingEtcd).WithStatusSubresource(&druidcorev1alpha1.Etcd{}).WithInterceptorFuncs(interceptor.Funcs{
+					Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+						if e, ok := obj.(*druidcorev1alpha1.Etcd); ok {
+							var err error
+							patchData, err = patch.Data(e)
+							Expect(err).ToNot(HaveOccurred())
+						}
+						return cl.Patch(ctx, obj, patch, opts...)
+					},
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if err := cl.Get(ctx, key, obj, opts...); err != nil {
+							return err
+						}
+						if e, ok := obj.(*druidcorev1alpha1.Etcd); ok {
+							callCount++
+							if callCount > 1 {
+								delete(e.Annotations, v1beta1constants.GardenerOperation)
+							}
+						}
+						return nil
+					},
+				}).Build()
+				Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
+
+				etcd = New(log, c, c, testNamespace, sm, Values{
+					Role: role, Class: class, Replicas: replicas, PriorityClassName: priorityClassName,
+					StorageCapacity: storageCapacity, StorageClassName: &storageClassName,
+					DefragmentationSchedule: &defragmentationSchedule, StaticPodConfig: staticPodConfig,
+				})
+
+				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
+
+				Expect(patchData).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01T00:00:00Z\"}},\"spec\":{\"etcd\":{\"peerUrlTls\":{\"tlsCASecretRef\":{\"name\":\"ca-etcd-peer\"}}}}}"))
+			})
+		})
+
+		When("HA control-plane is requested", func() {
+			BeforeEach(func() {
+				highAvailability = true
 				replicas = new(int32(3))
 			})
 

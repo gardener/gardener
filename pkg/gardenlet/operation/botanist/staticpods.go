@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -28,14 +29,19 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	"github.com/gardener/gardener/pkg/component/etcd/bootstrap/backuprestore"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/kubernetes/adminaccess"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -283,7 +289,10 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
-	files = b.appendEtcdCAsToFiles(files)
+	files, err = b.appendEtcdCAsToFiles(ctx, files)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed appending ETCD CAs to list of files: %w", err)
+	}
 
 	if err := b.deployOperatingSystemConfig(ctx, apiServerAddress); err != nil {
 		return nil, nil, fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
@@ -324,6 +333,10 @@ func (b *Botanist) DeployOperatingSystemConfigWithStaticPods(ctx context.Context
 		if err := b.Shoot.Components.Extensions.OperatingSystemConfig.Wait(ctx); err != nil {
 			return nil, nil, fmt.Errorf("failed waiting for OperatingSystemConfig to be ready: %w", err)
 		}
+	}
+
+	if err := b.reconcileStaticPodFilesInOldOperatingSystemConfigs(ctx, oscData.OldOriginals, files); err != nil {
+		return nil, nil, fmt.Errorf("failed reconciling static pod files in old OperatingSystemConfigs: %w", err)
 	}
 
 	return &oscData.Original, controlPlaneWorkerPool, nil
@@ -380,7 +393,7 @@ func (b *Botanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File,
 	}), nil
 }
 
-func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []extensionsv1alpha1.File {
+func (b *Botanist) appendEtcdCAsToFiles(ctx context.Context, files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
 	filesForCA := func(data map[string][]byte, path string) []extensionsv1alpha1.File {
 		return []extensionsv1alpha1.File{
 			{
@@ -396,6 +409,11 @@ func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []exten
 		}
 	}
 
+	maskOldCAsAsCurrent, err := b.mustMaskOldEtcdCAsAsCurrent(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed checking whether old ETCD CAs must be marked as 'current': %w", err)
+	}
+
 	for _, ca := range []struct {
 		name     string
 		basePath string
@@ -403,15 +421,57 @@ func (b *Botanist) appendEtcdCAsToFiles(files []extensionsv1alpha1.File) []exten
 		{name: v1beta1constants.SecretNameCAETCD, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCD},
 		{name: v1beta1constants.SecretNameCAETCDPeer, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer},
 	} {
-		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
-			files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
-		}
-		if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
-			files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderOld))...)
+		if !maskOldCAsAsCurrent {
+			if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
+				files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
+			}
+			if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
+				files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderOld))...)
+			}
+		} else {
+			var data map[string][]byte
+			if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Old); found {
+				data = secret.Data
+			} else if secret, found = b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
+				data = secret.Data
+			}
+			files = append(files, filesForCA(data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
 		}
 	}
 
-	return files
+	return files, nil
+}
+
+func (b *Botanist) mustMaskOldEtcdCAsAsCurrent(ctx context.Context) (bool, error) {
+	// During the Preparing phase of certificate authority rotation, we are rolling out ETCD twice: First, to only
+	// populate the new CAs (so that all peers and clients know and trust them). Second, to regenerate the peer and
+	// server certificates (now that everyone knows the new CAs, we can issue new certificates signed by them).
+	// gardener-node-agent always signs the peer certificates with the current etcd peer CA and the server
+	// certificate with the current etcd CA. If we already populated the new CAs in the first rollout, GNA would
+	// issue the new certificates before all peers and clients know and trust the new CAs – this regeneration should
+	// only happen in the second rollout.
+	// Hence, the return value is true in the first rollout only. If so, we put the old CAs into the respective
+	// /current folders such that GNA keeps signing with them, and only in the second rollout it gets false such that
+	// GNA uses the new CAs and regenerates the certificates.
+	if !sets.New(
+		gardencorev1beta1.RotationPreparing,
+		gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+	).Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials)) {
+		return false, nil
+	}
+
+	for name, component := range map[string]etcd.Interface{
+		"etcd-main":   b.Shoot.Components.ControlPlane.EtcdMain,
+		"etcd-events": b.Shoot.Components.ControlPlane.EtcdEvents,
+	} {
+		if peerCARolloutCompleted, err := component.IsPeerCARolledOut(ctx); err != nil {
+			return false, fmt.Errorf("failed to check if peer CA rollout is completed for %s: %w", name, err)
+		} else if !peerCARolloutCompleted {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 type staticPod struct {
@@ -484,4 +544,116 @@ func (b *Botanist) useShootAccessTokensForSelfHostedShootControlPlane(ctx contex
 	}
 
 	return !deployment.Spec.Template.Spec.HostNetwork, nil
+}
+
+func (b *Botanist) reconcileStaticPodFilesInOldOperatingSystemConfigs(ctx context.Context, oldOSCData []operatingsystemconfig.Data, files []extensionsv1alpha1.File) error {
+	taskFns := make([]flow.TaskFn, 0, len(oldOSCData))
+
+	for _, oscData := range oldOSCData {
+		osc := oscData.Object
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.MergeFrom(osc.DeepCopy())
+			metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			metav1.SetMetaDataAnnotation(&osc.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().Format(time.RFC3339Nano))
+			if err := mergeFilesIntoOSC(osc, files); err != nil {
+				return fmt.Errorf("failed merging static pod files into OperatingSystemConfig %s: %w", client.ObjectKeyFromObject(osc), err)
+			}
+			if err := b.SeedClientSet.Client().Patch(ctx, osc, patch); err != nil {
+				return fmt.Errorf("failed patching OperatingSystemConfig %s with additional files for static control plane pods: %w", client.ObjectKeyFromObject(osc), err)
+			}
+
+			if err := extensions.WaitUntilExtensionObjectReady(ctx,
+				b.SeedClientSet.Client(),
+				b.Logger,
+				osc,
+				extensionsv1alpha1.OperatingSystemConfigResource,
+				operatingsystemconfig.DefaultInterval,
+				operatingsystemconfig.DefaultSevereThreshold,
+				operatingsystemconfig.DefaultTimeout,
+				nil,
+			); err != nil {
+				return fmt.Errorf("failed waiting for OperatingSystemConfig %s to be ready: %w", client.ObjectKeyFromObject(osc), err)
+			}
+
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// mergeFilesIntoOSC updates files in osc.Spec.Files that share a path with entries in files, and appends new ones.
+// Static pod manifests under kubelet.FilePathKubernetesManifests are a special case: their spec belongs to the OSC's
+// own (possibly outdated) generation and must not be overwritten with the current generation's manifest. Instead, only
+// the hash annotation is carried over so that gardener-node-agent restarts the static pod to pick up the updated
+// content of its referenced files (e.g., rotated CA certificates).
+func mergeFilesIntoOSC(osc *extensionsv1alpha1.OperatingSystemConfig, files []extensionsv1alpha1.File) error {
+	for _, file := range files {
+		var (
+			idx                 = slices.IndexFunc(osc.Spec.Files, func(f extensionsv1alpha1.File) bool { return f.Path == file.Path })
+			isStaticPodManifest = filepath.Dir(file.Path) == kubelet.FilePathKubernetesManifests && filepath.Ext(file.Path) == ".yaml"
+		)
+
+		if isStaticPodManifest {
+			if idx >= 0 {
+				merged, err := mergeStaticPodHashAnnotation(osc.Spec.Files[idx], file)
+				if err != nil {
+					return fmt.Errorf("failed merging hash annotation for static pod manifest %q: %w", file.Path, err)
+				}
+				osc.Spec.Files[idx] = merged
+			}
+			continue
+		}
+
+		if idx >= 0 {
+			osc.Spec.Files[idx] = file
+		} else {
+			osc.Spec.Files = append(osc.Spec.Files, file)
+		}
+	}
+
+	return nil
+}
+
+// mergeStaticPodHashAnnotation returns oldFile with its static pod's hash annotation set to the value from newFile,
+// keeping the rest of the old pod spec unchanged.
+func mergeStaticPodHashAnnotation(oldFile, newFile extensionsv1alpha1.File) (extensionsv1alpha1.File, error) {
+	oldPod, err := decodeStaticPodFile(oldFile)
+	if err != nil {
+		return extensionsv1alpha1.File{}, fmt.Errorf("failed decoding existing manifest: %w", err)
+	}
+
+	newPod, err := decodeStaticPodFile(newFile)
+	if err != nil {
+		return extensionsv1alpha1.File{}, fmt.Errorf("failed decoding current manifest: %w", err)
+	}
+
+	metav1.SetMetaDataAnnotation(&oldPod.ObjectMeta, staticpod.AnnotationKeyHash, newPod.Annotations[staticpod.AnnotationKeyHash])
+
+	manifest, err := kubernetesutils.Serialize(oldPod, kubernetes.ShootScheme)
+	if err != nil {
+		return extensionsv1alpha1.File{}, fmt.Errorf("failed serializing manifest: %w", err)
+	}
+
+	oldFile.Content.Inline.Data = utils.EncodeBase64([]byte(manifest))
+	return oldFile, nil
+}
+
+func decodeStaticPodFile(file extensionsv1alpha1.File) (*corev1.Pod, error) {
+	if file.Content.Inline == nil {
+		return nil, fmt.Errorf("file %q has no inline content", file.Path)
+	}
+
+	data, err := utils.DecodeBase64(file.Content.Inline.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed decoding base64 content: %w", err)
+	}
+
+	pod := &corev1.Pod{}
+	if _, _, err := serializer.NewCodecFactory(kubernetes.ShootScheme).UniversalDeserializer().Decode(data, nil, pod); err != nil {
+		return nil, fmt.Errorf("failed decoding into Pod: %w", err)
+	}
+
+	return pod, nil
 }
