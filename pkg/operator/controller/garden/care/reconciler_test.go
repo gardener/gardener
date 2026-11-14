@@ -11,11 +11,14 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -39,7 +42,7 @@ const (
 var _ = Describe("Garden Care Control", func() {
 	var (
 		ctx             context.Context
-		runtimeClient   client.Client
+		runtimeClient   client.WithWatch
 		operatorConfig  operatorconfigv1alpha1.OperatorConfiguration
 		gardenClientMap *fakeclientmap.ClientMap
 		reconciler      *Reconciler
@@ -193,6 +196,123 @@ var _ = Describe("Garden Care Control", func() {
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), updatedGarden)).To(Succeed())
 					Expect(updatedGarden.Status.Conditions).To(ConsistOf(conditions))
 				})
+			})
+		})
+
+		Describe("kstatus condition preservation", func() {
+			// The garden care controller must not touch Reconciling or Stalled conditions because those are owned by the garden reconciler.
+			It("preserves Reconciling=True added during a care reconcile", func() {
+				reconcilingCondition := gardencorev1beta1.Condition{
+					Type:               gardencorev1beta1.ConditionReconciling,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "ReconcileInProgress",
+					Message:            "The resource is currently being reconciled.",
+					LastTransitionTime: metav1.NewTime(fakeClock.Now().Truncate(time.Second)),
+					LastUpdateTime:     metav1.NewTime(fakeClock.Now().Truncate(time.Second)),
+				}
+				healthCondition := gardencorev1beta1.Condition{
+					Type:   operatorv1alpha1.RuntimeComponentsHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+					Reason: "RuntimeComponentsRunning",
+				}
+
+				DeferCleanup(test.WithVars(&NewHealthCheck,
+					healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition {
+						defer GinkgoRecover()
+
+						// Simulate the garden reconciler adding Reconciling after care has read the Garden.
+						current := &operatorv1alpha1.Garden{}
+						Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), current)).To(Succeed())
+						patch := client.MergeFrom(current.DeepCopy())
+						current.Status.Conditions = append(current.Status.Conditions, reconcilingCondition)
+						Expect(runtimeClient.Status().Patch(ctx, current, patch)).To(Succeed())
+
+						// Return changed health conditions to force care to patch status.conditions.
+						return []gardencorev1beta1.Condition{healthCondition}
+					}),
+				))
+
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+				updated := &operatorv1alpha1.Garden{}
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: gardenName}, updated)).To(Succeed())
+				Expect(updated.Status.Conditions).To(ContainElement(healthCondition))
+				Expect(updated.Status.Conditions).To(ContainElement(reconcilingCondition), "care controller must preserve Reconciling condition set by the reconciler")
+			})
+
+			It("preserves Stalled=True through a care reconcile", func() {
+				patch := client.MergeFrom(garden.DeepCopy())
+				garden.Status.Conditions = []gardencorev1beta1.Condition{
+					{
+						Type:               gardencorev1beta1.ConditionStalled,
+						Status:             gardencorev1beta1.ConditionTrue,
+						Reason:             "Error",
+						Message:            "reconcile error",
+						LastTransitionTime: metav1.NewTime(fakeClock.Now()),
+						LastUpdateTime:     metav1.NewTime(fakeClock.Now()),
+					},
+				}
+				Expect(runtimeClient.Status().Patch(ctx, garden, patch)).To(Succeed())
+
+				DeferCleanup(test.WithVars(&NewHealthCheck,
+					healthCheckFunc(func(cond GardenConditions) []gardencorev1beta1.Condition {
+						return cond.ConvertToSlice()
+					}),
+				))
+
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+				updated := &operatorv1alpha1.Garden{}
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: gardenName}, updated)).To(Succeed())
+				Expect(updated.Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(gardencorev1beta1.ConditionStalled),
+					"Status": Equal(gardencorev1beta1.ConditionTrue),
+				})), "care controller must preserve Stalled condition set by the reconciler")
+			})
+
+			It("returns a conflict when conditions change between the latest read and the patch", func() {
+				reconcilingCondition := gardencorev1beta1.Condition{
+					Type:   gardencorev1beta1.ConditionReconciling,
+					Status: gardencorev1beta1.ConditionTrue,
+					Reason: "ReconcileInProgress",
+				}
+				healthCondition := gardencorev1beta1.Condition{
+					Type:   operatorv1alpha1.RuntimeComponentsHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+					Reason: "RuntimeComponentsRunning",
+				}
+				DeferCleanup(test.WithVars(&NewHealthCheck,
+					healthCheckFunc(func(_ GardenConditions) []gardencorev1beta1.Condition {
+						return []gardencorev1beta1.Condition{healthCondition}
+					}),
+				))
+
+				concurrentUpdate := true
+				reconciler.RuntimeClient = interceptor.NewClient(runtimeClient, interceptor.Funcs{
+					SubResourcePatch: func(ctx context.Context, c client.Client, subResource string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+						if concurrentUpdate {
+							concurrentUpdate = false
+							current := &operatorv1alpha1.Garden{}
+							Expect(c.Get(ctx, client.ObjectKeyFromObject(garden), current)).To(Succeed())
+							current.Status.Conditions = append(current.Status.Conditions, reconcilingCondition)
+							Expect(c.Status().Update(ctx, current)).To(Succeed())
+						}
+						return c.SubResource(subResource).Patch(ctx, obj, patch, opts...)
+					},
+				})
+
+				result, err := reconciler.Reconcile(ctx, req)
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(apierrors.IsConflict, "a conflict error"))
+
+				updated := &operatorv1alpha1.Garden{}
+				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), updated)).To(Succeed())
+				Expect(updated.Status.Conditions).To(ConsistOf(reconcilingCondition))
+
+				By("reconciling again with the latest status")
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), updated)).To(Succeed())
+				Expect(updated.Status.Conditions).To(ConsistOf(reconcilingCondition, healthCondition))
 			})
 		})
 	})

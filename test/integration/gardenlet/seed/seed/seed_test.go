@@ -374,6 +374,13 @@ var _ = Describe("Seed controller tests", func() {
 				g.Expect(seed.Status.LastOperation).NotTo(BeNil())
 				g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
 				g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("failed to get seed namespace in garden cluster"))
+				g.Expect(seed.Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(gardencorev1beta1.ConditionStalled),
+					"Status": Equal(gardencorev1beta1.ConditionTrue),
+				})), "Stalled=True must be set on reconcile error")
+				g.Expect(seed.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(gardencorev1beta1.ConditionReconciling),
+				})), "Reconciling must be absent after error")
 			}).Should(Succeed())
 		})
 	})
@@ -820,6 +827,12 @@ var _ = Describe("Seed controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 					g.Expect(seed.Status.LastOperation).NotTo(BeNil())
 					g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(seed.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(gardencorev1beta1.ConditionReconciling),
+					})), "Reconciling must be absent after successful reconciliation")
+					g.Expect(seed.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(gardencorev1beta1.ConditionStalled),
+					})), "Stalled must be absent after successful reconciliation")
 				}).Should(Succeed())
 
 				By("Delete Seed")
@@ -1180,6 +1193,12 @@ var _ = Describe("Seed controller tests", func() {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
 						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
 						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+						g.Expect(seed.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+							"Type": Equal(gardencorev1beta1.ConditionReconciling),
+						})), "Reconciling must be absent after successful reconciliation")
+						g.Expect(seed.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+							"Type": Equal(gardencorev1beta1.ConditionStalled),
+						})), "Stalled must be absent after successful reconciliation")
 					}).Should(Succeed())
 
 					By("Delete Seed")

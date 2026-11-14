@@ -588,6 +588,8 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		description           string
 	)
 
+	shoot.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, shoot.Status.Conditions, true, "", "")
+
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Reconciliation of Shoot cluster initialized."
@@ -1023,6 +1025,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		}
 	}
 
+	shoot.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, shoot.Status.Conditions, false, "", "")
 	return r.GardenClient.Status().Patch(ctx, shoot, patch)
 }
 
@@ -1060,6 +1063,7 @@ func (r *Reconciler) patchShootStatusOperationError(
 	shoot.Status.LastOperation.Description = description
 	shoot.Status.LastOperation.LastUpdateTime = now
 
+	shoot.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, shoot.Status.Conditions, false, string(operationType)+string(shoot.Status.LastOperation.State), shoot.Status.LastOperation.Description)
 	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
 }
 

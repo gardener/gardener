@@ -6,6 +6,7 @@ package managedseed_test
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
@@ -176,65 +178,72 @@ var _ = Describe("Reconciler", func() {
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
 				Expect(&managedSeed.Status).To(Equal(status))
-			})
-		})
-
-		Context("delete", func() {
-			BeforeEach(func() {
-				managedSeed.Finalizers = []string{gardencorev1beta1.GardenerName}
-				Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-
-				// Create a Shoot
-				Expect(fakeClient.Create(ctx, &gardencorev1beta1.Shoot{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       name,
-						Namespace:  namespace,
-						Generation: 1,
-					},
-					Status: gardencorev1beta1.ShootStatus{
-						LastOperation: &gardencorev1beta1.LastOperation{
-							State: gardencorev1beta1.LastOperationStateSucceeded,
-						},
-						ObservedGeneration: 1,
-					},
-				})).To(Succeed())
-
-				// Delete the managed seed (sets DeletionTimestamp)
-				Expect(fakeClient.Delete(ctx, managedSeed)).To(Succeed())
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				Expect(managedSeed.Status.Conditions).NotTo(ContainCondition(OfType(gardencorev1beta1.ConditionReconciling)))
+				Expect(managedSeed.Status.Conditions).NotTo(ContainCondition(OfType(gardencorev1beta1.ConditionStalled)))
 			})
 
-			It("should reconcile the ManagedSeed deletion and update the status (no wait)", func() {
-				actuator.EXPECT().Delete(gomock.Any(), gomock.AssignableToTypeOf(logr.Logger{}), managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &managedSeed.Spec.Gardenlet.Config, seedmanagementv1alpha1.BootstrapNone, false).Return(nil, false, false, nil)
-
-				result, err := reconciler.Reconcile(ctx, request)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriod}))
-
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				Expect(&managedSeed.Status).To(Equal(status))
-			})
-
-			It("should reconcile the ManagedSeed deletion and update the status (wait)", func() {
-				actuator.EXPECT().Delete(gomock.Any(), gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any(), gomock.Any(), gomock.Any(), seedmanagementv1alpha1.BootstrapNone, false).Return(nil, true, false, nil)
+			It("should set Reconciling while waiting for the Shoot", func() {
+				shoot := &gardencorev1beta1.Shoot{}
+				Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, shoot)).To(Succeed())
+				shoot.Status.ObservedGeneration = 0
+				Expect(fakeClient.Update(ctx, shoot)).To(Succeed())
 
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{RequeueAfter: waitSyncPeriod}))
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				Expect(&managedSeed.Status).To(Equal(status))
+				Expect(managedSeed.Status.Conditions).To(ContainCondition(
+					OfType(gardencorev1beta1.ConditionReconciling),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+				))
+				Expect(managedSeed.Status.Conditions).NotTo(ContainCondition(OfType(gardencorev1beta1.ConditionStalled)))
 			})
 
-			It("should reconcile the ManagedSeed deletion, remove the finalizer, and not update the status", func() {
-				actuator.EXPECT().Delete(gomock.Any(), gomock.AssignableToTypeOf(logr.Logger{}), managedSeed, managedSeed.Status.Conditions, managedSeed.Spec.Gardenlet.Deployment, &managedSeed.Spec.Gardenlet.Config, seedmanagementv1alpha1.BootstrapNone, false).Return(nil, false, true, nil)
+			It("should replace Reconciling with Stalled when reconciliation fails", func() {
+				testErr := errors.New("reconciliation failed")
+				actuator.EXPECT().Reconcile(gomock.Any(), gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.AssignableToTypeOf([]gardencorev1beta1.Condition{}), managedSeed.Spec.Gardenlet.Deployment, gomock.Any(), seedmanagementv1alpha1.BootstrapNone, false).Return(managedSeed.Status.Conditions, testErr)
 
 				result, err := reconciler.Reconcile(ctx, request)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring(testErr.Error())))
 				Expect(result).To(Equal(reconcile.Result{}))
 
-				// ManagedSeed should be fully deleted (no finalizer, so it gets cleaned up)
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(BeNotFoundError())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				Expect(managedSeed.Status.ObservedGeneration).To(Equal(managedSeed.Generation))
+				Expect(managedSeed.Status.Conditions).NotTo(ContainCondition(OfType(gardencorev1beta1.ConditionReconciling)))
+				Expect(managedSeed.Status.Conditions).To(ContainCondition(
+					OfType(gardencorev1beta1.ConditionStalled),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+					WithReason(gardencorev1beta1.EventReconcileError),
+					WithMessage(testErr.Error()),
+				))
+				Expect(managedSeed.Status.Conditions).To(ContainCondition(
+					OfType(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+					WithStatus(gardencorev1beta1.ConditionTrue),
+				))
+			})
+
+			It("should replace a stale Stalled condition with the current error", func() {
+				managedSeed.Status.Conditions = v1beta1helper.MergeConditions(managedSeed.Status.Conditions, gardencorev1beta1.Condition{
+					Type:               gardencorev1beta1.ConditionStalled,
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             gardencorev1beta1.EventReconcileError,
+					Message:            "old error",
+					LastTransitionTime: metav1.NewTime(fakeClock.Now()),
+					LastUpdateTime:     metav1.NewTime(fakeClock.Now()),
+				})
+				Expect(fakeClient.Status().Update(ctx, managedSeed)).To(Succeed())
+
+				testErr := errors.New("current error")
+				actuator.EXPECT().Reconcile(gomock.Any(), gomock.AssignableToTypeOf(logr.Logger{}), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.AssignableToTypeOf([]gardencorev1beta1.Condition{}), managedSeed.Spec.Gardenlet.Deployment, gomock.Any(), seedmanagementv1alpha1.BootstrapNone, false).Return(managedSeed.Status.Conditions, testErr)
+
+				_, _ = reconciler.Reconcile(ctx, request)
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				Expect(managedSeed.Status.Conditions).To(ContainCondition(
+					OfType(gardencorev1beta1.ConditionStalled),
+					WithMessage(testErr.Error()),
+				))
 			})
 		})
 	})

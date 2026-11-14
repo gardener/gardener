@@ -135,28 +135,38 @@ func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, exten
 // Conditions contains all conditions of the extension status subresource.
 type Conditions struct {
 	installed gardencorev1beta1.Condition
+	kStatus   []gardencorev1beta1.Condition
 }
 
-// ConvertToSlice returns the garden conditions as a slice.
+// ConvertToSlice returns the extension conditions as a slice.
 func (c Conditions) ConvertToSlice() []gardencorev1beta1.Condition {
-	return []gardencorev1beta1.Condition{
+	conditions := []gardencorev1beta1.Condition{
 		c.installed,
 	}
+	conditions = append(conditions, c.kStatus...)
+	return conditions
 }
 
-// ConditionTypes returns all garden condition types.
+// ConditionTypes returns all extension condition types.
 func (c Conditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 	return []gardencorev1beta1.ConditionType{
 		c.installed.Type,
+		gardencorev1beta1.ConditionReconciling,
+		gardencorev1beta1.ConditionStalled,
 	}
 }
 
-// NewConditions returns a new instance of Conditions.
-// All conditions are retrieved from the given 'status' or newly initialized.
+// NewConditions returns a new instance of Conditions based on the given status.
 func NewConditions(clock clock.Clock, status operatorv1alpha1.ExtensionStatus) Conditions {
-	return Conditions{
+	conditions := Conditions{
 		installed: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.ExtensionInstalled),
 	}
+	for _, conditionType := range []gardencorev1beta1.ConditionType{gardencorev1beta1.ConditionReconciling, gardencorev1beta1.ConditionStalled} {
+		if condition := v1beta1helper.GetCondition(status.Conditions, conditionType); condition != nil {
+			conditions.kStatus = append(conditions.kStatus, *condition)
+		}
+	}
+	return conditions
 }
 
 type gardenInfo struct {

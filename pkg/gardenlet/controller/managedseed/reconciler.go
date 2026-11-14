@@ -159,6 +159,7 @@ func (r *Reconciler) reconcile(
 	// Initialize status
 	status := ms.Status.DeepCopy()
 	status.ObservedGeneration = ms.Generation
+	status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, true, "", "")
 
 	// Check if shoot is reconciled and update ShootReconciled condition
 	if !shootReconciled(shoot) {
@@ -177,6 +178,7 @@ func (r *Reconciler) reconcile(
 	log.V(1).Info("Reconciling")
 	status.Conditions, err = actuator.Reconcile(ctx, log, ms, status.Conditions, ms.Spec.Gardenlet.Deployment, &ms.Spec.Gardenlet.Config, helper.GetBootstrap(ms.Spec.Gardenlet.Bootstrap), ptr.Deref(ms.Spec.Gardenlet.MergeWithParent, false))
 	if err != nil {
+		status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, false, gardencorev1beta1.EventReconcileError, err.Error())
 		if updateErr := r.updateStatus(ctx, ms, status); updateErr != nil {
 			log.Error(updateErr, "Could not update status", "status", status)
 		}
@@ -184,6 +186,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.V(1).Info("Reconciliation finished")
+	status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, false, "", "")
 	return reconcile.Result{RequeueAfter: r.Config.Controllers.ManagedSeed.SyncPeriod.Duration}, r.updateStatus(ctx, ms, status)
 }
 

@@ -71,4 +71,9 @@ const (
 
 	// GardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
 	GardenletReady ConditionType = "GardenletReady"
+
+	// ConditionReconciling is a constant for a kstatus-compliant condition type indicating that the resource is reconciling.
+	ConditionReconciling ConditionType = "Reconciling"
+	// ConditionStalled is a constant for a kstatus-compliant condition type indicating that the resource is stalled.
+	ConditionStalled ConditionType = "Stalled"
 )
