@@ -114,3 +114,5 @@ webhooks:
     enabled: true
     machineNamespace: shoot--foo--bar
     authorizeWithSelectors: false
+  nodeAgentRestriction:
+    enabled: true

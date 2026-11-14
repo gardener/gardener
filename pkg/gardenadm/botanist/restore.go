@@ -181,7 +181,18 @@ func (b *GardenadmBotanist) DeleteStaleEtcdMemberLeases(ctx context.Context, rea
 // snapshot. A CSR is considered a gardener-node-agent CSR if it targets the kube-apiserver-client signer and its
 // embedded x509 CommonName carries the gardener-node-agent user-name prefix (the same predicate the init flow's
 // approval step uses). Removing them ensures the approval step only ever sees the CSR created during the current run.
+//
+// The restored gardener-resource-manager NodeAgentRestriction ValidatingWebhookConfiguration is deleted first: it
+// intercepts certificatesigningrequests/CREATE with FailurePolicy=Fail but is unreachable while the
+// gardener-resource-manager is down, so the fresh gardener-node-agent could not create its bootstrap CSR. The init
+// flow's gardener-resource-manager deployment recreates it.
 func (b *GardenadmBotanist) DeleteNodeAgentCertificateSigningRequests(ctx context.Context, realClient client.Client) error {
+	webhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager + "-shoot"}}
+	b.Logger.Info("Deleting gardener-resource-manager NodeAgentRestriction ValidatingWebhookConfiguration", "validatingWebhookConfiguration", client.ObjectKeyFromObject(webhookConfig))
+	if err := realClient.Delete(ctx, webhookConfig); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("failed deleting gardener-resource-manager NodeAgentRestriction ValidatingWebhookConfiguration %s: %w", client.ObjectKeyFromObject(webhookConfig), err)
+	}
+
 	csrList := &certificatesv1.CertificateSigningRequestList{}
 	if err := realClient.List(ctx, csrList); err != nil {
 		return fmt.Errorf("failed listing CertificateSigningRequests: %w", err)
