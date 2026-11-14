@@ -216,9 +216,12 @@ rules:
 			secretWebhookKubeconfig := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "audit-webhook"}}
 
 			InjectAuditSettings(deployment, configMapAuditPolicy, secretWebhookKubeconfig, &AuditConfig{Webhook: &AuditWebhook{
-				Kubeconfig:   []byte("foo"),
-				BatchMaxSize: new(int32(2)),
-				Version:      new("bar"),
+				Kubeconfig:           []byte("foo"),
+				BatchMaxSize:         new(int32(2)),
+				TruncateEnabled:      new(false),
+				TruncateMaxBatchSize: new(int64(10 * 1024 * 1024)),
+				TruncateMaxEventSize: new(int64(100 * 1024)),
+				Version:              new("bar"),
 			}})
 
 			Expect(deployment).To(Equal(&appsv1.Deployment{
@@ -230,6 +233,9 @@ rules:
 									"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
 									"--audit-webhook-config-file=/etc/kubernetes/webhook/audit/kubeconfig.yaml",
 									"--audit-webhook-batch-max-size=2",
+									"--audit-webhook-truncate-enabled=false",
+									"--audit-webhook-truncate-max-batch-size=10485760",
+									"--audit-webhook-truncate-max-event-size=102400",
 									"--audit-webhook-version=bar",
 								},
 								VolumeMounts: []corev1.VolumeMount{
@@ -267,6 +273,18 @@ rules:
 						},
 					},
 				},
+			}))
+		})
+
+		It("should omit unspecified webhook truncation settings", func() {
+			deployment := &appsv1.Deployment{}
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{})
+
+			configMapAuditPolicy := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "audit-policy"}}
+			InjectAuditSettings(deployment, configMapAuditPolicy, nil, &AuditConfig{Webhook: &AuditWebhook{}})
+
+			Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(Equal([]string{
+				"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
 			}))
 		})
 	})
