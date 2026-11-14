@@ -43,6 +43,12 @@ type Handler struct {
 	TargetClient client.Reader
 	Config       resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig
 	Decoder      admission.Decoder
+	// ZoneCapNodeSelector, when non-nil, enables capping the zones derived from the namespace annotation to those of
+	// actually schedulable nodes matching the selector. Must only be set when the target cluster hosts the pods mutated
+	// by this webhook. For shoot-targeting GRMs (hosted and self-hosted) this should be
+	// `client.MatchingLabels{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}`; for runtime/seed GRMs it
+	// should be an empty `client.MatchingLabels{}` (all nodes, no label filter).
+	ZoneCapNodeSelector client.MatchingLabels
 }
 
 // Handle defaults the high availability settings of the provided resource.
@@ -71,6 +77,21 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 
 	if v, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
 		zones = sets.List(sets.New(strings.Split(v, ",")...).Delete(""))
+	}
+
+	if h.ZoneCapNodeSelector != nil {
+		availableZones, err := kubernetesutils.AvailableZones(ctx, h.TargetClient, h.ZoneCapNodeSelector)
+		if err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		// The zones annotation is the configured ceiling, e.g. after enabling the `zone` failure tolerance or during a
+		// (self-hosted shoot) bootstrap the cluster may only have nodes in a subset of those zones. Cap `zones` to what is
+		// actually available so that we neither pin pods to an empty zone nor enforce a zone spread that cannot be satisfied
+		// yet. We only do this as long as less than two zones are available because otherwise the regular spreading applies.
+		if availableZones.Len() < 2 {
+			zones = sets.List(sets.New(zones...).Intersection(availableZones))
+		}
 	}
 
 	if v, err := strconv.ParseBool(namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZonePinning]); err == nil {

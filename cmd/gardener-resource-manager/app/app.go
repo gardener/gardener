@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	eventsv1beta1 "k8s.io/api/events/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
@@ -37,6 +38,8 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/resourcemanager/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
@@ -45,6 +48,7 @@ import (
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Name is a const for the name of this component.
@@ -233,8 +237,13 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
+	zoneCapNodeSelector, err := computeZoneCapNodeSelector(ctx, cfg, targetCluster.GetAPIReader())
+	if err != nil {
+		return fmt.Errorf("failed determining zone cap node selector: %w", err)
+	}
+
 	log.Info("Adding webhook handlers to manager")
-	if err := webhook.AddToManager(mgr, mgr, targetCluster, cfg); err != nil {
+	if err := webhook.AddToManager(mgr, mgr, targetCluster, cfg, zoneCapNodeSelector); err != nil {
 		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
 	}
 
@@ -242,7 +251,9 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager:            mgr,
 		BootstrapRunnables: []manager.Runnable{&bootstrappers.IdentityDeterminer{Logger: log, SourceClient: mgr.GetClient(), Config: cfg}},
-		ActualRunnables:    []manager.Runnable{manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(ctx, mgr, mgr, targetCluster, cfg) })},
+		ActualRunnables: []manager.Runnable{manager.RunnableFunc(func(context.Context) error {
+			return controller.AddToManager(ctx, mgr, mgr, targetCluster, cfg, zoneCapNodeSelector)
+		})},
 	}); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
@@ -273,4 +284,40 @@ func getCacheConfig(namespaces []string) map[string]cache.Config {
 	}
 
 	return cacheConfig
+}
+
+// computeZoneCapNodeSelector determines the node label selector used to cap the zones derived from the HA config
+// namespace annotation to the zones of actually schedulable nodes. In shoot-targeting GRMs (hosted or self-hosted)
+// only nodes labeled with `worker.gardener.cloud/system-components=true` are considered; in seed/runtime GRMs all
+// nodes are considered (no label filter); in GRMs targeting a non-shoot cluster (e.g. the virtual garden) zone
+// capping is disabled entirely (nil).
+func computeZoneCapNodeSelector(ctx context.Context, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration, targetClient client.Reader) (client.MatchingLabels, error) {
+	if !cfg.Webhooks.HighAvailabilityConfig.Enabled {
+		return nil, nil
+	}
+
+	if cfg.TargetClientConnection != nil {
+		// Two-cluster mode. Shoot clusters (hosted and self-hosted) have their `kube-system` namespace labeled with
+		// `high-availability-config.resources.gardener.cloud/consider=true` by the shoot namespaces component. GRMs
+		// targeting a non-shoot cluster such as the virtual garden do not have this label and must not cap zones
+		// (their target has no system-component worker nodes).
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
+		if err := targetClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+			return nil, fmt.Errorf("failed to read %q namespace in target cluster: %w", namespace.Name, err)
+		}
+		if namespace.Labels[resourcesv1alpha1.HighAvailabilityConfigConsider] == "true" {
+			return client.MatchingLabels{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}, nil
+		}
+		return nil, nil
+	}
+
+	// Single-cluster mode: check whether the cluster is a self-hosted shoot.
+	if isSelfHostedShoot, err := gardenerutils.ClusterIsSelfHostedShoot(ctx, targetClient); err != nil {
+		return nil, fmt.Errorf("failed to determine whether cluster is a self-hosted shoot: %w", err)
+	} else if isSelfHostedShoot {
+		return client.MatchingLabels{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}, nil
+	}
+
+	// Single-cluster mode targeting a non-shoot (seed/runtime GRM): consider all nodes.
+	return client.MatchingLabels{}, nil
 }

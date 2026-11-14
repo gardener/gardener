@@ -7,6 +7,7 @@ package webhook
 import (
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -26,7 +27,7 @@ import (
 )
 
 // AddToManager adds all webhook handlers to the given manager.
-func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration, zoneCapNodeSelector client.MatchingLabels) error {
 	if cfg.Webhooks.CRDDeletionProtection.Enabled {
 		if err := (&crddeletionprotection.Handler{
 			Logger:       mgr.GetLogger().WithName("webhook").WithName(crddeletionprotection.HandlerName),
@@ -45,10 +46,11 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
 		if err := (&highavailabilityconfig.Handler{
-			Logger:       mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
-			TargetClient: targetCluster.GetClient(),
-			Config:       cfg.Webhooks.HighAvailabilityConfig,
-			Decoder:      admission.NewDecoder(mgr.GetScheme()),
+			Logger:              mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
+			TargetClient:        targetCluster.GetClient(),
+			Config:              cfg.Webhooks.HighAvailabilityConfig,
+			Decoder:             admission.NewDecoder(mgr.GetScheme()),
+			ZoneCapNodeSelector: zoneCapNodeSelector,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
 		}
