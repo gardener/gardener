@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -158,6 +159,19 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 			// We call Deploy to trigger the valuesFunc and ensure it doesn't panic.
 			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(context.TODO())).To(Succeed())
+		})
+
+		It("should route the prior external domain while a domain migration is running", func() {
+			botanist.Shoot.ExternalClusterDomain = new("external.foo.bar")
+			botanist.Shoot.PriorExternalClusterDomain = new("prior.foo.bar")
+
+			Expect(botanist.DefaultKubeAPIServerService().Deploy(context.TODO())).To(Succeed())
+			Expect(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(context.TODO())).To(Succeed())
+
+			gateway := &istionetworkingv1beta1.Gateway{}
+			Expect(botanist.SeedClientSet.Client().Get(context.TODO(), client.ObjectKey{Namespace: botanist.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, gateway)).To(Succeed())
+			Expect(gateway.Spec.Servers).NotTo(BeEmpty())
+			Expect(gateway.Spec.Servers[0].Hosts).To(ConsistOf("api.internal.foo.bar", "api.external.foo.bar", "api.prior.foo.bar"))
 		})
 
 		It("should not panic when ExternalClusterDomain is not nil", func() {

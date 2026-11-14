@@ -100,6 +100,11 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Fn:     botanist.DestroyExternalDNSRecord,
 			SkipIf: !nonTerminatingNamespace,
 		})
+		destroyPriorExternalDomainDNSRecord = g.Add(flow.Task{
+			Name:   "Destroying prior external domain DNS record",
+			Fn:     botanist.DestroyPriorExternalDNSRecord,
+			SkipIf: !nonTerminatingNamespace,
+		})
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:   "Destroying internal domain DNS record",
 			Fn:     botanist.DestroyInternalDNSRecord,
@@ -150,7 +155,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 		deleteCluster = g.Add(flow.Task{
 			Name:         "Deleting Cluster resource",
 			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, destroyIngressDomainDNSRecord, destroyExternalDomainDNSRecord, destroyInternalDomainDNSRecord, waitUntilManagedResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, destroyIngressDomainDNSRecord, destroyExternalDomainDNSRecord, destroyPriorExternalDomainDNSRecord, destroyInternalDomainDNSRecord, waitUntilManagedResourcesDeleted),
 		})
 
 		syncPoint = flow.NewTaskIDs(
