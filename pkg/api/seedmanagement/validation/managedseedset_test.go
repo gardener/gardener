@@ -5,6 +5,8 @@
 package validation_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -68,6 +70,21 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		}
 
 		managedSeedSet *seedmanagement.ManagedSeedSet
+
+		tooManyWorkerPoolsError = PointTo(MatchFields(IgnoreExtras, Fields{
+			"Type":  Equal(field.ErrorTypeTooMany),
+			"Field": Equal("spec.shootTemplate.spec.provider.workers"),
+		}))
+
+		workersWithCount = func(count int) []core.Worker {
+			workers := make([]core.Worker, 0, count)
+			for i := range count {
+				w := shoot.Spec.Provider.Workers[0].DeepCopy()
+				w.Name = fmt.Sprintf("worker-%d", i)
+				workers = append(workers, *w)
+			}
+			return workers
+		}
 	)
 
 	BeforeEach(func() {
@@ -333,6 +350,12 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				})),
 			))
 		})
+
+		It("should forbid more than the maximum number of worker pools in shootTemplate", func() {
+			managedSeedSet.Spec.ShootTemplate.Spec.Provider.Workers = workersWithCount(301)
+
+			Expect(ValidateManagedSeedSet(managedSeedSet)).To(ConsistOf(tooManyWorkerPoolsError))
+		})
 	})
 
 	Describe("#ValidateManagedSeedSetUpdate", func() {
@@ -471,6 +494,22 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 
 			Expect(ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)).To(BeEmpty())
 		})
+
+		DescribeTable("worker pools count in shootTemplate",
+			func(kubernetesVersion string, oldCount, newCount int, matcher gomegatypes.GomegaMatcher) {
+				managedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.Version = kubernetesVersion
+				managedSeedSet.Spec.ShootTemplate.Spec.Provider.Workers = workersWithCount(oldCount)
+				newManagedSeedSet = managedSeedSet.DeepCopy()
+				newManagedSeedSet.ResourceVersion = "1"
+				newManagedSeedSet.Spec.ShootTemplate.Spec.Provider.Workers = workersWithCount(newCount)
+
+				Expect(ValidateManagedSeedSetUpdate(newManagedSeedSet, managedSeedSet)).To(matcher)
+			},
+
+			Entry("should allow an unchanged worker pools count above the maximum for Kubernetes version < 1.38", "1.18.14", 301, 301, BeEmpty()),
+			Entry("should forbid changing a worker pools count which stays above the maximum for Kubernetes version < 1.38", "1.18.14", 301, 302, ConsistOf(tooManyWorkerPoolsError)),
+			Entry("should forbid an unchanged worker pools count above the maximum for Kubernetes version >= 1.38", "1.38.0", 301, 301, ContainElement(tooManyWorkerPoolsError)),
+		)
 	})
 
 	Describe("#ValidateManagedSeedSetStatusUpdate", func() {
