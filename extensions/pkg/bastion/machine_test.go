@@ -6,10 +6,12 @@ package bastion_test
 
 import (
 	"slices"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/gardener/gardener/extensions/pkg/bastion"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -168,6 +170,25 @@ var _ = Describe("Bastion VM Details", func() {
 			Expect(details).To(DeepEqual(desired))
 		})
 
+		It("should discover the architecture of an implicitly supported image", func() {
+			cloudProfile.Spec.Bastion.MachineType = nil
+			cloudProfile.Spec.MachineImages[0].Versions[0].Classification = nil
+			cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{desired.Architecture}
+			cloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors = cloudProfile.Spec.MachineImages[0].Versions[0].CapabilityFlavors[:1]
+			cloudProfile.Spec.MachineTypes = append([]gardencorev1beta1.MachineType{{
+				CPU:          resource.MustParse("8"),
+				Name:         "arm_machine",
+				Architecture: new(v1beta1constants.ArchitectureARM64),
+				Capabilities: gardencorev1beta1.Capabilities{
+					"architecture": []string{v1beta1constants.ArchitectureARM64},
+				},
+			}}, cloudProfile.Spec.MachineTypes...)
+
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details).To(DeepEqual(desired))
+		})
+
 		It("should find smallest machine", func() {
 			cloudProfile.Spec.Bastion.MachineType = nil
 			cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes, gardencorev1beta1.MachineType{
@@ -240,6 +261,50 @@ var _ = Describe("Bastion VM Details", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(details).To(DeepEqual(desired))
 		})
+
+		It("should allow an explicitly selected implicitly supported version", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[0].Classification = nil
+			cloudProfile.Spec.Bastion.MachineImage.Version = new(desired.ImageVersion)
+
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details).To(DeepEqual(desired))
+		})
+
+		It("should allow an explicitly selected lifecycle-supported version", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[0].Classification = nil
+			cloudProfile.Spec.MachineImages[0].Versions[0].Lifecycle = []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationSupported}}
+			cloudProfile.Spec.Bastion.MachineImage.Version = new(desired.ImageVersion)
+
+			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(details).To(DeepEqual(desired))
+		})
+
+		DescribeTable("should reject explicitly selected versions that are not currently supported", func(version gardencorev1beta1.ExpirableVersion) {
+			version.Version = desired.ImageVersion
+			cloudProfile.Spec.MachineImages[0].Versions[0].ExpirableVersion = version
+			cloudProfile.Spec.Bastion.MachineImage.Version = new(desired.ImageVersion)
+
+			_, err := GetMachineSpecFromCloudProfile(cloudProfile)
+			Expect(err).To(MatchError(ContainSubstring("is not classified supported")))
+		},
+			Entry("legacy preview", gardencorev1beta1.ExpirableVersion{Classification: new(gardencorev1beta1.ClassificationPreview)}),
+			Entry("legacy deprecated", gardencorev1beta1.ExpirableVersion{Classification: new(gardencorev1beta1.ClassificationDeprecated)}),
+			Entry("expired implicit support", gardencorev1beta1.ExpirableVersion{ExpirationDate: new(metav1.NewTime(time.Now().Add(-time.Hour)))}),
+			Entry("lifecycle preview", gardencorev1beta1.ExpirableVersion{Lifecycle: []gardencorev1beta1.LifecycleStage{{Classification: gardencorev1beta1.ClassificationPreview}}}),
+			Entry("lifecycle deprecated", gardencorev1beta1.ExpirableVersion{Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationDeprecated, StartTime: new(metav1.NewTime(time.Now().Add(-time.Hour)))},
+			}}),
+			Entry("lifecycle expired", gardencorev1beta1.ExpirableVersion{Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported},
+				{Classification: gardencorev1beta1.ClassificationExpired, StartTime: new(metav1.NewTime(time.Now().Add(-time.Hour)))},
+			}}),
+			Entry("lifecycle unavailable", gardencorev1beta1.ExpirableVersion{Lifecycle: []gardencorev1beta1.LifecycleStage{
+				{Classification: gardencorev1beta1.ClassificationSupported, StartTime: new(metav1.NewTime(time.Now().Add(time.Hour)))},
+			}}),
+		)
 
 		It("should not allow preview image even if version is specified", func() {
 			addImageToCloudProfile(desired.ImageBaseName, "1.2.4", gardencorev1beta1.ClassificationPreview, []string{"amd64"}, gardencorev1beta1.Capabilities{"architecture": []string{v1beta1constants.ArchitectureAMD64}})
