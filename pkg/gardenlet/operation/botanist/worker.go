@@ -159,10 +159,10 @@ func WorkerPoolToOperatingSystemConfigSecretNameToChecksum(ctx context.Context, 
 	return workerPoolToSecretNameToChecksumMap, nil
 }
 
-// OperatingSystemConfigUpdatedForAllWorkerPools checks if all the non-preserved nodes for all the provided worker pools have successfully
+// OperatingSystemConfigUpdatedForAllWorkerPools checks if all the non-held nodes for all the provided worker pools have successfully
 // applied the desired version of their cloud-config user data.
-// Since preserved unhealthy nodes are intentionally preserved and may not get their cloud-config updated, they are skipped in the check
-// to avoid blocking shoot reconciliation.
+// Intentionally-held unhealthy nodes (preserved failed machines and nodes under planned maintenance) may not get their
+// cloud-config updated, so they are skipped in the check to avoid blocking shoot reconciliation.
 func OperatingSystemConfigUpdatedForAllWorkerPools(
 	workers []gardencorev1beta1.Worker,
 	workerPoolToNodes map[string][]corev1.Node,
@@ -182,9 +182,10 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 				continue
 			}
 
-			// Skip preserved unhealthy nodes - these nodes may not get their OSC
-			// updated for an extended period of time and should not block shoot reconciliation.
-			if health.IsNodePreservedAndUnhealthy(node) {
+			// Skip intentionally-held unhealthy nodes (preserved failed machines or nodes under
+			// planned maintenance). These nodes may not get their OSC updated for an extended
+			// period of time and should not block shoot reconciliation.
+			if health.IsNodePreservedAndUnhealthy(node) || health.IsNodeUnderMaintenanceAndNotReady(node) {
 				continue
 			}
 

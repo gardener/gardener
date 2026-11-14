@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -997,6 +998,18 @@ var _ = Describe("HealthChecker", func() {
 			}
 		}
 
+		preservedNode := func(name string) corev1.Node {
+			node := unhealthyNode(name)
+			node.Status.Conditions = append(node.Status.Conditions, corev1.NodeCondition{Type: machinev1alpha1.NodePreserved, Status: corev1.ConditionTrue})
+			return node
+		}
+
+		maintenanceNode := func(name string) corev1.Node {
+			node := unhealthyNode(name)
+			node.Status.Conditions = append(node.Status.Conditions, corev1.NodeCondition{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue})
+			return node
+		}
+
 		healthyNode := func(name string) corev1.Node {
 			return corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -1020,16 +1033,25 @@ var _ = Describe("HealthChecker", func() {
 			Expect(result).NotTo(BeNil())
 			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 			Expect(result.Message).To(ContainSubstring(`Node "node-unpreserved" in worker group "worker" is unhealthy`))
-			Expect(result.Message).NotTo(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(result.Message).NotTo(ContainSubstring("intentionally held by MCM"))
 			Expect(isPreserved).To(BeFalse())
 		})
 
 		It("returns false with preservation suffix when the unhealthy node is preserved", func() {
 			preserved := sets.New("node-preserved")
-			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{unhealthyNode("node-preserved")}, "worker", kubernetesVersion, preserved)
+			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{preservedNode("node-preserved")}, "worker", kubernetesVersion, preserved)
 			Expect(result).NotTo(BeNil())
 			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 			Expect(result.Message).To(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(isPreserved).To(BeTrue())
+		})
+
+		It("returns false with maintenance suffix when the unhealthy node is under planned maintenance", func() {
+			held := sets.New("node-maintenance")
+			result, isPreserved := checker.CheckNodes(nodeCondition, []corev1.Node{maintenanceNode("node-maintenance")}, "worker", kubernetesVersion, held)
+			Expect(result).NotTo(BeNil())
+			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
+			Expect(result.Message).To(ContainSubstring("node and backing machine under planned maintenance by MCM"))
 			Expect(isPreserved).To(BeTrue())
 		})
 
@@ -1039,18 +1061,18 @@ var _ = Describe("HealthChecker", func() {
 			Expect(result).NotTo(BeNil())
 			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 			Expect(result.Message).To(ContainSubstring(`Node "node-unpreserved" in worker group "worker" is unhealthy`))
-			Expect(result.Message).NotTo(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(result.Message).NotTo(ContainSubstring("intentionally held by MCM"))
 			Expect(isPreserved).To(BeFalse())
 		})
 
 		It("reports only the non-preserved unhealthy node in a mix", func() {
 			preserved := sets.New("node-preserved")
-			nodes := []corev1.Node{unhealthyNode("node-preserved"), unhealthyNode("node-unpreserved")}
+			nodes := []corev1.Node{preservedNode("node-preserved"), unhealthyNode("node-unpreserved")}
 			result, isPreserved := checker.CheckNodes(nodeCondition, nodes, "worker", kubernetesVersion, preserved)
 			Expect(result).NotTo(BeNil())
 			Expect(result.Status).To(Equal(gardencorev1beta1.ConditionFalse))
 			Expect(result.Message).To(ContainSubstring(`Node "node-unpreserved"`))
-			Expect(result.Message).NotTo(ContainSubstring("node and backing machine preserved by MCM"))
+			Expect(result.Message).NotTo(ContainSubstring("preserved by MCM"))
 			Expect(isPreserved).To(BeFalse())
 		})
 	})

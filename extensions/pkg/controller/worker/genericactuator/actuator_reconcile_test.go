@@ -839,6 +839,89 @@ var _ = Describe("ActuatorReconcile", func() {
 				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(Succeed())
 		})
 
+		It("should succeed when the only non-available machine is under maintenance", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:            3,
+				UpdatedReplicas:     3,
+				AvailableReplicas:   2,
+				UnavailableReplicas: 0, // MCM excludes maintenance from UnavailableReplicas
+				MaintenanceReplicas: 1,
+				Conditions:          healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(Succeed())
+		})
+
+		It("should succeed when a held maintenance slot is not yet updated but the rest of the rollout is done", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:            2,
+				UpdatedReplicas:     1,
+				AvailableReplicas:   1,
+				UnavailableReplicas: 0,
+				MaintenanceReplicas: 1,
+				Conditions:          healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(Succeed())
+		})
+
+		It("should succeed when a preserved failed and a maintenance machine are both present", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:                4,
+				UpdatedReplicas:         4,
+				AvailableReplicas:       2,
+				UnavailableReplicas:     1, // MCM excludes maintenance from UnavailableReplicas
+				PreservedFailedReplicas: 1,
+				MaintenanceReplicas:     1,
+				Conditions:              healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(Succeed())
+		})
+
+		It("should not succeed when an unavailable machine is a genuine failure masked by a maintenance slot", func() {
+			// One slot is held under planned maintenance (carved out of UnavailableReplicas by MCM), one
+			// machine is a tolerated preserved failure, and one machine is a genuine, unexpected failure.
+			// Both failures remain in UnavailableReplicas (MCM does not subtract preserved failed), so
+			// UnavailableReplicas = Replicas - AvailableReplicas - MaintenanceReplicas = 3 - 0 - 1 = 2.
+			// Only the preserved failed machine is a tolerated hold reason, so the genuine failure must keep
+			// the wait from succeeding. Maintenance must not lend availability slack to unrelated failures.
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:                3,
+				UpdatedReplicas:         3,
+				AvailableReplicas:       0,
+				UnavailableReplicas:     2,
+				PreservedFailedReplicas: 1,
+				MaintenanceReplicas:     1,
+				Conditions:              healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
+		})
+
+		It("should not succeed when machines are unavailable beyond the maintenance carve-out and there is no preserved failed budget", func() {
+			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
+				Replicas:            3,
+				UpdatedReplicas:     3,
+				AvailableReplicas:   1,
+				UnavailableReplicas: 1, // MCM excludes maintenance from UnavailableReplicas
+				MaintenanceReplicas: 1,
+				Conditions:          healthyConditions,
+			})
+			buildMachineSet(machineSetName, machineClassName)
+
+			Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
+		})
+
 		It("should not succeed when more machines are unavailable than preserved failed machines", func() {
 			buildMachineDeployment(machinev1alpha1.MachineDeploymentStatus{
 				Replicas:                3,
@@ -913,5 +996,83 @@ var _ = Describe("ActuatorReconcile", func() {
 				&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(MatchError(ContainSubstring("Waiting until machines are available")))
 		})
 
+		Context("manual in-place update with a machine under planned maintenance", func() {
+			const oldMachineSetName = "test-machine-set-old"
+
+			buildManualInPlaceDeployment := func(status machinev1alpha1.MachineDeploymentStatus) {
+				mcd := &machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: namespace},
+					Spec: machinev1alpha1.MachineDeploymentSpec{
+						Replicas: status.Replicas,
+						Strategy: machinev1alpha1.MachineDeploymentStrategy{
+							Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+							InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+								OrchestrationType: machinev1alpha1.OrchestrationTypeManual,
+							},
+						},
+						Template: machinev1alpha1.MachineTemplateSpec{
+							Spec: machinev1alpha1.MachineSpec{Class: machinev1alpha1.ClassSpec{Name: machineClassName}},
+						},
+					},
+					Status: status,
+				}
+				Expect(seedClient.Create(ctx, mcd)).To(Succeed())
+				Expect(seedClient.Status().Update(ctx, mcd)).To(Succeed())
+			}
+
+			buildMachineSetWithReplicas := func(name, className string, replicas int32) {
+				ms := &machinev1alpha1.MachineSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            name,
+						Namespace:       namespace,
+						OwnerReferences: []metav1.OwnerReference{{Name: deploymentName, Kind: "MachineDeployment"}},
+					},
+					Spec: machinev1alpha1.MachineSetSpec{
+						Template: machinev1alpha1.MachineTemplateSpec{
+							Spec: machinev1alpha1.MachineSpec{Class: machinev1alpha1.ClassSpec{Name: className}},
+						},
+					},
+					Status: machinev1alpha1.MachineSetStatus{Replicas: replicas},
+				}
+				Expect(seedClient.Create(ctx, ms)).To(Succeed())
+			}
+
+			buildMaintenanceMachineOnOldSet := func(name string) {
+				m := &machinev1alpha1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            name,
+						Namespace:       namespace,
+						OwnerReferences: []metav1.OwnerReference{{Name: oldMachineSetName, Kind: "MachineSet"}},
+					},
+					Status: machinev1alpha1.MachineStatus{
+						CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineMaintenance},
+						// Stale in-place update condition on a machine under maintenance should not be treated
+						// as an old machine still needing update.
+						Conditions: []corev1.NodeCondition{{
+							Type:   machinev1alpha1.NodeInPlaceUpdate,
+							Reason: machinev1alpha1.SelectedForUpdate,
+						}},
+					},
+				}
+				Expect(seedClient.Create(ctx, m)).To(Succeed())
+			}
+
+			It("should succeed: the held maintenance machine on the old set is not treated as an old machine still needing update", func() {
+				buildManualInPlaceDeployment(machinev1alpha1.MachineDeploymentStatus{
+					Replicas:            2,
+					UpdatedReplicas:     1,
+					AvailableReplicas:   1,
+					UnavailableReplicas: 0, // MCM excludes maintenance from UnavailableReplicas
+					MaintenanceReplicas: 1,
+					Conditions:          healthyConditions,
+				})
+				buildMachineSetWithReplicas(machineSetName, machineClassName, 1)
+				buildMachineSetWithReplicas(oldMachineSetName, "old-machine-class", 1)
+				buildMaintenanceMachineOnOldSet("maintenance-machine")
+
+				Expect(actuator.waitUntilWantedMachineDeploymentsAvailable(ctx, logr.Discard(), cluster, worker,
+					&machinev1alpha1.MachineDeploymentList{}, existingMachineClassNames, wantedMachineDeployments)).To(Succeed())
+			})
+		})
 	})
 })

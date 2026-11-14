@@ -525,6 +525,11 @@ spec:
                       type: string
                   type: object
                 type: array
+              maintenanceReplicas:
+                description: MaintenanceReplicas is the number of machines in Maintenance
+                  phase targeted by this MachineDeployment.
+                format: int32
+                type: integer
               observedGeneration:
                 description: The generation observed by the MachineDeployment controller.
                 format: int64

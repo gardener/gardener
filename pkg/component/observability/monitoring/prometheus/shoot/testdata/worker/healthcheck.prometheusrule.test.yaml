@@ -322,3 +322,43 @@ tests:
       - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
         values: 1+1x10
     promql_expr_test: *promql_expr_test
+
+  # The focus of this test is a target that is down because its node is under planned maintenance.
+  #
+  # This test shows that healthcheck:up stays healthy when the only down targets belong to a node
+  # carrying the MaintenanceInProgress=True condition.
+  - input_series:
+      - series: indentation
+        values: stale stale stale stale stale stale stale stale stale stale stale
+      - series: eval_time
+        values: 0     1     2     3     4     5     6     7     8     9     10
+
+      # cadvisor target on the maintenance node is down the whole time, but excluded.
+      - series: up{job="cadvisor", kubernetes_io_hostname="maintenance-node"}
+        values: 0     0     0     0     0     0     0     0     0     0     0
+      - series: kube_node_status_condition{condition="MaintenanceInProgress", status="true", node="maintenance-node"}
+        values: 1     1     1     1     1     1     1     1     1     1     1
+      # a target down on a normal node (interval 3) must still be reported.
+      - series: up{job="cadvisor", kubernetes_io_hostname="healthy-node"}
+        values: 1     1     1     0     1     1     1     1     1     1     1
+      - series: expected_healthcheck:up{task="target:down", job="cadvisor"}
+        values: stale stale stale 0     stale stale stale stale stale stale stale
+
+      - series: expected_healthcheck:up
+        values: 1     1     1     stale 1     1     1     1     1     1     1
+
+      - series: container_cpu_usage_seconds_total{pod="apiserver-proxy-abc"}
+        values: 100x10
+      - series: container_cpu_usage_seconds_total{pod="prometheus-shoot-0"}
+        values: 100x10
+      - series: kube_pod_container_resource_requests{pod="apiserver-proxy-abc"}
+        values: 100x10
+      - series: kube_pod_container_resource_requests{pod="prometheus-shoot-0"}
+        values: 100x10
+      - series: apiserver_request_total
+        values: 1x10
+      - series: metering:cpu_requests:sum_by_namespace
+        values: 1x10
+      - series: prometheus_rule_group_iterations_total{rule_group="x;healthcheck"}
+        values: 1+1x10
+    promql_expr_test: *promql_expr_test
