@@ -11,12 +11,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 )
@@ -35,7 +38,7 @@ var _ = Describe("ExtensionValidator", func() {
 		admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 	})
 
-	It("should do nothing because the resource is not BackupBucket, BackupEntry, Seed, or Shoot", func() {
+	It("should do nothing because the resource is not BackupBucket, BackupEntry, Seed, ManagedSeed, Gardenlet, or Shoot", func() {
 		attrs := admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), "", "", core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 		err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -287,6 +290,242 @@ var _ = Describe("ExtensionValidator", func() {
 		It("should do nothing because the spec has not changed", func() {
 			attrs := admission.NewAttributesRecord(seed, seed, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+		})
+	})
+
+	Context("ManagedSeed", func() {
+		var (
+			seedSpec = gardencorev1beta1.SeedSpec{
+				Provider: gardencorev1beta1.SeedProvider{
+					Type: "foo",
+				},
+				Backup: &gardencorev1beta1.Backup{
+					Provider: "bar",
+				},
+			}
+
+			newManagedSeed = func(seedSpec *gardencorev1beta1.SeedSpec) *seedmanagement.ManagedSeed {
+				gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+				if seedSpec != nil {
+					gardenletConfig.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: *seedSpec},
+					}
+				}
+
+				return &seedmanagement.ManagedSeed{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "managedseed",
+						Namespace: "garden",
+					},
+					Spec: seedmanagement.ManagedSeedSpec{
+						Gardenlet: seedmanagement.GardenletConfig{
+							Config: gardenletConfig,
+						},
+					},
+				}
+			}
+
+			newAttributes = func(managedSeed, oldManagedSeed *seedmanagement.ManagedSeed) admission.Attributes {
+				var (
+					oldObj    runtime.Object
+					operation                = admission.Create
+					options   runtime.Object = &metav1.CreateOptions{}
+				)
+				if oldManagedSeed != nil {
+					oldObj, operation, options = oldManagedSeed, admission.Update, &metav1.UpdateOptions{}
+				}
+
+				return admission.NewAttributesRecord(managedSeed, oldObj, seedmanagement.Kind("ManagedSeed").WithVersion("version"), managedSeed.Namespace, managedSeed.Name, seedmanagement.Resource("managedseeds").WithVersion("version"), "", operation, options, false, nil)
+			}
+
+			registerExtension = func(extensionKind, extensionType string) {
+				controllerRegistration := createControllerRegistrationForKindType(extensionKind, extensionType, true, nil)
+				Expect(coreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
+			}
+		)
+
+		BeforeEach(func() {
+			registerExtension(extensionsv1alpha1.ControlPlaneResource, "foo")
+		})
+
+		It("should allow to create the object", func() {
+			registerExtension(extensionsv1alpha1.BackupBucketResource, "bar")
+			registerExtension(extensionsv1alpha1.BackupEntryResource, "bar")
+
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(newManagedSeed(&seedSpec), nil), nil)).To(Succeed())
+		})
+
+		It("should prevent the object from being created because the seed config uses a non-registered extension", func() {
+			err := admissionHandler.Validate(context.TODO(), newAttributes(newManagedSeed(&seedSpec), nil), nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`given ManagedSeed uses non-registered backup provider type: spec.gardenlet.config.seedConfig.spec.backup.provider ("bar")`)))
+		})
+
+		It("should report each non-registered extension at its path in the seed config", func() {
+			seedSpec := &gardencorev1beta1.SeedSpec{
+				Provider:   gardencorev1beta1.SeedProvider{Type: "qux"},
+				Backup:     &gardencorev1beta1.Backup{Provider: "bar"},
+				Ingress:    &gardencorev1beta1.Ingress{},
+				DNS:        gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{Type: "baz"}},
+				Extensions: []gardencorev1beta1.Extension{{Type: "foo1"}},
+			}
+
+			err := admissionHandler.Validate(context.TODO(), newAttributes(newManagedSeed(seedSpec), nil), nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`given ManagedSeed uses non-registered provider type: spec.gardenlet.config.seedConfig.spec.provider.type ("qux")`)))
+			Expect(err).To(MatchError(ContainSubstring(`given ManagedSeed uses non-registered backup provider type: spec.gardenlet.config.seedConfig.spec.backup.provider ("bar")`)))
+			Expect(err).To(MatchError(ContainSubstring(`given ManagedSeed uses non-registered extension type: spec.gardenlet.config.seedConfig.spec.dns.provider.type ("baz")`)))
+			Expect(err).To(MatchError(ContainSubstring(`given ManagedSeed uses non-registered extension type: spec.gardenlet.config.seedConfig.spec.extensions[0].type ("foo1")`)))
+		})
+
+		It("should prevent adding a backup with a non-registered provider type", func() {
+			oldSeedSpec := seedSpec.DeepCopy()
+			oldSeedSpec.Backup = nil
+
+			err := admissionHandler.Validate(context.TODO(), newAttributes(newManagedSeed(&seedSpec), newManagedSeed(oldSeedSpec)), nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`given ManagedSeed uses non-registered backup provider type: spec.gardenlet.config.seedConfig.spec.backup.provider ("bar")`)))
+		})
+
+		It("should do nothing because the seed spec has not changed", func() {
+			managedSeed := newManagedSeed(&seedSpec)
+			oldManagedSeed := managedSeed.DeepCopy()
+			managedSeed.Labels = map[string]string{"foo": "bar"}
+
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(managedSeed, oldManagedSeed), nil)).To(Succeed())
+		})
+
+		It("should do nothing because only the gardenlet config outside of the seed config has changed", func() {
+			managedSeed := newManagedSeed(&seedSpec)
+			oldManagedSeed := managedSeed.DeepCopy()
+			managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration).LogLevel = "debug"
+
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(managedSeed, oldManagedSeed), nil)).To(Succeed())
+		})
+
+		It("should do nothing because the gardenlet config has no seed config", func() {
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(newManagedSeed(nil), nil), nil)).To(Succeed())
+		})
+
+		It("should do nothing because the seed config is removed", func() {
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(newManagedSeed(nil), newManagedSeed(&seedSpec)), nil)).To(Succeed())
+		})
+	})
+
+	Context("Gardenlet", func() {
+		var (
+			seedSpec = gardencorev1beta1.SeedSpec{
+				Provider: gardencorev1beta1.SeedProvider{
+					Type: "foo",
+				},
+				Backup: &gardencorev1beta1.Backup{
+					Provider: "bar",
+				},
+			}
+
+			newGardenlet = func(seedSpec *gardencorev1beta1.SeedSpec) *seedmanagement.Gardenlet {
+				gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+				if seedSpec != nil {
+					gardenletConfig.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: *seedSpec},
+					}
+				}
+
+				return &seedmanagement.Gardenlet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardenlet",
+						Namespace: "garden",
+					},
+					Spec: seedmanagement.GardenletSpec{
+						Config: gardenletConfig,
+					},
+				}
+			}
+
+			newAttributes = func(gardenlet, oldGardenlet *seedmanagement.Gardenlet) admission.Attributes {
+				var (
+					oldObj    runtime.Object
+					operation                = admission.Create
+					options   runtime.Object = &metav1.CreateOptions{}
+				)
+				if oldGardenlet != nil {
+					oldObj, operation, options = oldGardenlet, admission.Update, &metav1.UpdateOptions{}
+				}
+
+				return admission.NewAttributesRecord(gardenlet, oldObj, seedmanagement.Kind("Gardenlet").WithVersion("version"), gardenlet.Namespace, gardenlet.Name, seedmanagement.Resource("gardenlets").WithVersion("version"), "", operation, options, false, nil)
+			}
+
+			registerExtension = func(extensionKind, extensionType string) {
+				controllerRegistration := createControllerRegistrationForKindType(extensionKind, extensionType, true, nil)
+				Expect(coreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
+			}
+		)
+
+		BeforeEach(func() {
+			registerExtension(extensionsv1alpha1.ControlPlaneResource, "foo")
+		})
+
+		It("should allow to create the object", func() {
+			registerExtension(extensionsv1alpha1.BackupBucketResource, "bar")
+			registerExtension(extensionsv1alpha1.BackupEntryResource, "bar")
+
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(newGardenlet(&seedSpec), nil), nil)).To(Succeed())
+		})
+
+		It("should prevent the object from being created because the seed config uses a non-registered extension", func() {
+			err := admissionHandler.Validate(context.TODO(), newAttributes(newGardenlet(&seedSpec), nil), nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`given Gardenlet uses non-registered backup provider type: spec.config.seedConfig.spec.backup.provider ("bar")`)))
+		})
+
+		It("should report each non-registered extension at its path in the seed config", func() {
+			seedSpec := &gardencorev1beta1.SeedSpec{
+				Provider:   gardencorev1beta1.SeedProvider{Type: "qux"},
+				Backup:     &gardencorev1beta1.Backup{Provider: "bar"},
+				Ingress:    &gardencorev1beta1.Ingress{},
+				DNS:        gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{Type: "baz"}},
+				Extensions: []gardencorev1beta1.Extension{{Type: "foo1"}},
+			}
+
+			err := admissionHandler.Validate(context.TODO(), newAttributes(newGardenlet(seedSpec), nil), nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`given Gardenlet uses non-registered provider type: spec.config.seedConfig.spec.provider.type ("qux")`)))
+			Expect(err).To(MatchError(ContainSubstring(`given Gardenlet uses non-registered backup provider type: spec.config.seedConfig.spec.backup.provider ("bar")`)))
+			Expect(err).To(MatchError(ContainSubstring(`given Gardenlet uses non-registered extension type: spec.config.seedConfig.spec.dns.provider.type ("baz")`)))
+			Expect(err).To(MatchError(ContainSubstring(`given Gardenlet uses non-registered extension type: spec.config.seedConfig.spec.extensions[0].type ("foo1")`)))
+		})
+
+		It("should prevent adding a backup with a non-registered provider type", func() {
+			oldSeedSpec := seedSpec.DeepCopy()
+			oldSeedSpec.Backup = nil
+
+			err := admissionHandler.Validate(context.TODO(), newAttributes(newGardenlet(&seedSpec), newGardenlet(oldSeedSpec)), nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`given Gardenlet uses non-registered backup provider type: spec.config.seedConfig.spec.backup.provider ("bar")`)))
+		})
+
+		It("should do nothing because the seed spec has not changed", func() {
+			gardenlet := newGardenlet(&seedSpec)
+			oldGardenlet := gardenlet.DeepCopy()
+			gardenlet.Labels = map[string]string{"foo": "bar"}
+
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(gardenlet, oldGardenlet), nil)).To(Succeed())
+		})
+
+		It("should do nothing because only the gardenlet config outside of the seed config has changed", func() {
+			gardenlet := newGardenlet(&seedSpec)
+			oldGardenlet := gardenlet.DeepCopy()
+			gardenlet.Spec.Config.(*gardenletconfigv1alpha1.GardenletConfiguration).LogLevel = "debug"
+
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(gardenlet, oldGardenlet), nil)).To(Succeed())
+		})
+
+		It("should do nothing because the gardenlet config has no seed config", func() {
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(newGardenlet(nil), nil), nil)).To(Succeed())
+		})
+
+		It("should do nothing because the seed config is removed", func() {
+			Expect(admissionHandler.Validate(context.TODO(), newAttributes(newGardenlet(nil), newGardenlet(&seedSpec)), nil)).To(Succeed())
 		})
 	})
 
