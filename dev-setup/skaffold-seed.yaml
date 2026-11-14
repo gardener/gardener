@@ -69,6 +69,7 @@ build:
             - pkg/api/extensions/v1alpha1/helper
             - pkg/api/extensions/validation
             - pkg/api/indexer
+            - pkg/api/resources/v1alpha1/helper
             - pkg/api/seedmanagement/v1alpha1/helper
             - pkg/apis/authentication
             - pkg/apis/authentication/install

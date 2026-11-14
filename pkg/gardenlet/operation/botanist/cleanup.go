@@ -23,15 +23,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kube-aggregator/pkg/controllers/autoregister"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/api/resources/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -224,7 +226,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return fmt.Errorf("failed to handle cleanup start time: %w", err)
 	}
 
-	if err := b.addAdditionalCleanOptionsForKubernetesCleanup(ctx, cleanOptions, cleanupStartTime, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds); err != nil {
+	if err := b.addIgnoreLeftoverFuncs(ctx, cleanOptions, cleanupStartTime, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds); err != nil {
 		return fmt.Errorf("failed to add additional clean options %w", err)
 	}
 
@@ -295,16 +297,62 @@ func CleanVolumeAttachments(ctx context.Context, log logr.Logger, c client.Clien
 	return cleanResourceFn(utilclient.DefaultCleanOps(), log, c, &storagev1.VolumeAttachmentList{}, utilclient.DeleteWith{ZeroGracePeriod}, FinalizeAfterFiveMinutes)(ctx)
 }
 
-func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
+// ignoreUnknownNamespaces returns an IgnoreLeftoverFunc that ignores objects in unknown namespaces.
+// Finalizing such objects will fail and block the cleanup process indefinitely, see
+// https://github.com/gardener/gardener/issues/13847 for more information.
+func ignoreUnknownNamespaces(namespaces []string) utilclient.IgnoreLeftoverFunc {
+	namespaceSet := sets.New(namespaces...)
+	return func(log logr.Logger, obj client.Object) bool {
+		ignore := obj.GetNamespace() != "" && !namespaceSet.Has(obj.GetNamespace())
+		if ignore {
+			log.Info("Ignoring leftover object in unknown namespace", "obj", client.ObjectKeyFromObject(obj))
+		}
+		return ignore
+	}
+}
+
+// ignoreObjectsCreatedAfter returns an IgnoreLeftoverFunc that ignores objects created after the given time.
+// This prevents blocking on resources created after the cleanup started which were not meant to be cleaned up.
+func ignoreObjectsCreatedAfter(timeStamp time.Time) utilclient.IgnoreLeftoverFunc {
+	return func(log logr.Logger, obj client.Object) bool {
+		if obj.GetCreationTimestamp().After(timeStamp) {
+			log.Info("Ignoring leftover object created after cleanup start time", "obj", client.ObjectKeyFromObject(obj), "creationTimestamp", obj.GetCreationTimestamp(), "cleanupStartTime", timeStamp.Format(time.RFC3339))
+			return true
+		}
+		return false
+	}
+}
+
+// ignoreObjectsManagedByManagedResourceInNamespace returns an IgnoreLeftoverFunc that ignores objects whose
+// resources.gardener.cloud/origin annotation points to a ManagedResource in the given namespace.
+// This ensures that resources managed by a gardener-resource-manager deployed into the shoot control plane
+// are excluded from cleanup during shoot deletion — the resource manager itself is responsible for cleaning
+// them up.
+func ignoreObjectsManagedByManagedResourceInNamespace(namespace string) utilclient.IgnoreLeftoverFunc {
+	return func(log logr.Logger, obj client.Object) bool {
+		origin, ok := obj.GetAnnotations()[resourcesv1alpha1.OriginAnnotation]
+		if !ok {
+			return false
+		}
+		_, key, err := resourcesv1alpha1helper.SplitOrigin(origin)
+		if err != nil {
+			return false
+		}
+		if key.Namespace == namespace {
+			log.Info("Ignoring leftover object managed by ManagedResource in control-plane namespace", "obj", client.ObjectKeyFromObject(obj), "managedResource", key)
+			return true
+		}
+		return false
+	}
+}
+
+func (b *Botanist) addIgnoreLeftoverFuncs(
 	ctx context.Context,
 	cleanOptions *utilclient.CleanOptions,
 	cleanupStartTime *time.Time,
 	defaultFinalizeAfter utilclient.FinalizeGracePeriodSeconds,
 	customFinalizeAfterAnnotation string,
 ) error {
-	// Kubernetes objects in unknown namespaces should be ignored.
-	// Finalizing such objects will fail and block the cleanup process indefinitely.
-	// See https://github.com/gardener/gardener/issues/13847 for more information.
 	namespaceList := &corev1.NamespaceList{}
 	if err := b.ShootClientSet.Client().List(ctx, namespaceList); err != nil {
 		return fmt.Errorf("could not list namespaces: %w", err)
@@ -314,11 +362,6 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 		namespaces = append(namespaces, ns.Name)
 	}
 
-	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
-		utilclient.IgnoreUnknownNamespaces(namespaces, kubernetes.ShootScheme),
-	)
-
-	// Kubernetes objects created after the cleanup started + finalize time should be ignored.
 	finalizeSeconds := int64(defaultFinalizeAfter)
 	if v, ok := b.Shoot.GetInfo().Annotations[customFinalizeAfterAnnotation]; ok {
 		seconds, err := strconv.Atoi(v)
@@ -328,8 +371,11 @@ func (b *Botanist) addAdditionalCleanOptionsForKubernetesCleanup(
 		finalizeSeconds = int64(seconds)
 	}
 
-	cleanOptions.IgnoreLeftovers = append(cleanOptions.IgnoreLeftovers,
-		utilclient.IgnoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second), kubernetes.ShootScheme),
+	cleanOptions.IgnoreLeftovers = append(
+		cleanOptions.IgnoreLeftovers,
+		ignoreUnknownNamespaces(namespaces),
+		ignoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second)),
+		ignoreObjectsManagedByManagedResourceInNamespace(b.Shoot.ControlPlaneNamespace),
 	)
 
 	return nil

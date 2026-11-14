@@ -5,11 +5,7 @@
 package client
 
 import (
-	"time"
-
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -96,27 +92,4 @@ type TolerateErrors []TolerateErrorFunc
 // ApplyToClean specifies errors to be tolerated for a clean operation.
 func (m TolerateErrors) ApplyToClean(opts *CleanOptions) {
 	opts.ErrorToleration = append(opts.ErrorToleration, m...)
-}
-
-// IgnoreUnknownNamespaces returns an IgnoreLeftoverFunc that ignores objects in unknown namespaces.
-func IgnoreUnknownNamespaces(namespaces []string, scheme *runtime.Scheme) IgnoreLeftoverFunc {
-	namespaceSet := sets.New(namespaces...)
-	return func(log logr.Logger, obj client.Object) bool {
-		ignore := obj.GetNamespace() != "" && !namespaceSet.Has(obj.GetNamespace())
-		if ignore {
-			log.Info("Ignoring leftover object in unknown namespace", "obj", client.ObjectKeyFromObject(obj), "gvk", GVKStringForObject(obj, scheme))
-		}
-		return ignore
-	}
-}
-
-// IgnoreObjectsCreatedAfter returns an IgnoreLeftoverFunc that ignores objects created after the given time.
-func IgnoreObjectsCreatedAfter(timeStamp time.Time, scheme *runtime.Scheme) IgnoreLeftoverFunc {
-	return func(log logr.Logger, obj client.Object) bool {
-		if obj.GetCreationTimestamp().After(timeStamp) {
-			log.Info("Ignoring leftover object created after cleanup start time", "obj", client.ObjectKeyFromObject(obj), "gvk", GVKStringForObject(obj, scheme), "creationTimestamp", obj.GetCreationTimestamp(), "cleanupStartTime", timeStamp.Format(time.RFC3339))
-			return true
-		}
-		return false
-	}
 }
