@@ -12,6 +12,8 @@ GOOS="${GOOS:-$(go env GOOS)}"
 GOARCH="${GOARCH:-$(go env GOARCH)}"
 LD_FLAGS="${LD_FLAGS:-$($(dirname $0)/get-build-ld-flags.sh)}"
 
+# -s removes symbol table and DWARF debug information to reduce the binary size
+# -trimpath removes local file system paths from the binary to improve reproducibility
 CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" GO111MODULE=on \
-  go build -ldflags "$LD_FLAGS" \
+  go build -trimpath -ldflags "-s $LD_FLAGS" \
   $@
