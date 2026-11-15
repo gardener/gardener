@@ -362,7 +362,7 @@ func validateRuntimeClusterNetworking(runtimeNetworking operatorv1alpha1.Runtime
 	for i, pods := range runtimeNetworking.Pods {
 		for _, services := range runtimeNetworking.Services {
 			if cidrvalidation.NetworksIntersect(pods, services) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("pods").Index(i), services, "pod network of runtime cluster intersects with service network of runtime cluster"))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("pods").Index(i), pods, "pod network of runtime cluster intersects with service network of runtime cluster"))
 			}
 		}
 	}
@@ -477,6 +477,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 	for i, services := range virtualCluster.Networking.Services {
 		if _, _, err := net.ParseCIDR(services); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services").Index(i), services, "cannot parse service network cidr: "+err.Error()))
+			continue
 		}
 		for _, runtimePods := range runtimeCluster.Networking.Pods {
 			if cidrvalidation.NetworksIntersect(runtimePods, services) {

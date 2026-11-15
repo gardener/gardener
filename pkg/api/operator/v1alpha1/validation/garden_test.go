@@ -1278,11 +1278,12 @@ var _ = Describe("Validation Tests", func() {
 				})
 
 				It("should complain when pod network of runtime cluster intersects with service network of runtime cluster", func() {
-					garden.Spec.RuntimeCluster.Networking.Pods = garden.Spec.RuntimeCluster.Networking.Services
+					garden.Spec.RuntimeCluster.Networking.Pods = []string{"10.2.0.0/24"}
 
 					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.runtimeCluster.networking.pods[0]"),
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("spec.runtimeCluster.networking.pods[0]"),
+						"BadValue": Equal("10.2.0.0/24"),
 					}))))
 				})
 
@@ -1636,9 +1637,10 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain about an invalid service CIDR", func() {
 					garden.Spec.VirtualCluster.Networking.Services = []string{"not-parseable-cidr"}
 
-					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.virtualCluster.networking.services[0]"),
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.virtualCluster.networking.services[0]"),
+						"Detail": ContainSubstring("cannot parse service network cidr"),
 					}))))
 				})
 
