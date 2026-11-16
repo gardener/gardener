@@ -250,11 +250,11 @@
       "links": [
         {
           "dashboard": "etcd",
-          "params": "?orgId=1&var-cluster=main",
+          "params": "?orgId=1&var-role=etcd-main",
           "targetBlank": true,
           "title": "etcd",
           "type": "dashboard",
-          "url": "/d/etcd/etcd"
+          "url": "/d/shoot-etcd/etcd"
         }
       ],
       "mappingType": 1,
@@ -351,11 +351,11 @@
       "links": [
         {
           "dashboard": "etcd",
-          "params": "?orgId=1&var-cluster=events",
+          "params": "?orgId=1&var-role=etcd-events",
           "targetBlank": true,
           "title": "etcd",
           "type": "dashboard",
-          "url": "/d/etcd/etcd"
+          "url": "/d/shoot-etcd/etcd"
         }
       ],
       "mappingType": 1,

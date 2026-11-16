@@ -372,7 +372,7 @@
         {
           "targetBlank": true,
           "title": "etcd",
-          "url": "/d/etcd/etcd??orgId=1&var-cluster=main"
+          "url": "/d/shoot-etcd/etcd?orgId=1&var-role=etcd-main"
         }
       ],
       "mappingType": 1,
@@ -474,7 +474,7 @@
         {
           "targetBlank": true,
           "title": "etcd",
-          "url": "/d/etcd/etcd??orgId=1&var-cluster=events"
+          "url": "/d/shoot-etcd/etcd?orgId=1&var-role=etcd-events"
         }
       ],
       "mappingType": 1,
