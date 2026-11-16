@@ -8,6 +8,8 @@ import (
 	"context"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
@@ -39,6 +41,6 @@ var IgnoreObjectsCreatedAfter = func(t time.Time) utilclient.IgnoreLeftoverFunc 
 	return ignoreObjectsCreatedAfter(t)
 }
 
-var IgnoreObjectsManagedByManagedResourceInNamespace = func(namespace string) utilclient.IgnoreLeftoverFunc {
-	return ignoreObjectsManagedByManagedResourceInNamespace(namespace)
+var IgnoreObjectsManagedByManagedResourceInNamespace = func(ctx context.Context, c client.Reader, namespace string) utilclient.IgnoreLeftoverFunc {
+	return ignoreObjectsManagedByManagedResourceInNamespace(ctx, c, namespace)
 }

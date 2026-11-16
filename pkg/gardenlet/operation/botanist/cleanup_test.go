@@ -6,6 +6,7 @@ package botanist_test
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -21,6 +22,7 @@ import (
 	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/api/resources/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -286,23 +288,50 @@ var _ = Describe("Cleanup", func() {
 		})
 	})
 
-	Describe("#ignoreObjectsManagedByManagedResourceInShootCPNamespace", func() {
+	Describe("#ignoreObjectsManagedByManagedResourceInNamespace", func() {
 		const (
 			clusterID = "some-cluster-id"
 			mrName    = "my-mr"
 		)
 
 		var (
-			ignore         utilclient.IgnoreLeftoverFunc
-			controlPlaneNS = gardenerutils.ComputeTechnicalID("foo", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "bar"}})
+			ctx             = context.Background()
+			seedClient      client.Client
+			managedResource *resourcesv1alpha1.ManagedResource
+			ignore          utilclient.IgnoreLeftoverFunc
+			controlPlaneNS  = gardenerutils.ComputeTechnicalID("foo", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "bar"}})
 		)
 
 		BeforeEach(func() {
-			ignore = IgnoreObjectsManagedByManagedResourceInNamespace(controlPlaneNS)
+			managedResource = &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNS, Name: mrName}}
+			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(managedResource).Build()
+			ignore = IgnoreObjectsManagedByManagedResourceInNamespace(ctx, seedClient, controlPlaneNS)
 		})
 
 		It("should not ignore objects without the origin annotation", func() {
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: "default"}})).To(BeFalse())
+		})
+
+		It("should no longer ignore objects after their ManagedResource is deleted", func() {
+			obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{resourcesv1alpha1.OriginAnnotation: resourcesv1alpha1helper.OriginForManagedResource(clusterID, managedResource)},
+			}}
+			Expect(ignore(logr.Discard(), obj)).To(BeTrue())
+			Expect(seedClient.Delete(ctx, managedResource)).To(Succeed())
+			Expect(ignore(logr.Discard(), obj)).To(BeFalse())
+		})
+
+		It("should not ignore objects when checking their ManagedResource fails", func() {
+			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+					return errors.New("cannot get ManagedResource")
+				},
+			}).Build()
+			ignore = IgnoreObjectsManagedByManagedResourceInNamespace(ctx, seedClient, controlPlaneNS)
+			obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{resourcesv1alpha1.OriginAnnotation: resourcesv1alpha1helper.OriginForManagedResource(clusterID, managedResource)},
+			}}
+			Expect(ignore(logr.Discard(), obj)).To(BeFalse())
 		})
 
 		It("should not ignore objects whose origin points to a ManagedResource in a different namespace", func() {
@@ -317,17 +346,6 @@ var _ = Describe("Cleanup", func() {
 		})
 
 		It("should ignore objects whose origin points to a ManagedResource in the control-plane namespace", func() {
-			obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
-				Name:      "cm",
-				Namespace: "default",
-				Annotations: map[string]string{
-					resourcesv1alpha1.OriginAnnotation: resourcesv1alpha1helper.OriginForManagedResource(clusterID, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNS, Name: mrName}}),
-				},
-			}}
-			Expect(ignore(logr.Discard(), obj)).To(BeTrue())
-		})
-
-		It("should ignore objects whose origin has no clusterID and points to a ManagedResource in the control-plane namespace", func() {
 			obj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
 				Name:      "cm",
 				Namespace: "default",

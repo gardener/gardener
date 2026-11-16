@@ -20,6 +20,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -324,11 +325,11 @@ func ignoreObjectsCreatedAfter(timeStamp time.Time) utilclient.IgnoreLeftoverFun
 }
 
 // ignoreObjectsManagedByManagedResourceInNamespace returns an IgnoreLeftoverFunc that ignores objects whose
-// resources.gardener.cloud/origin annotation points to a ManagedResource in the given namespace.
+// resources.gardener.cloud/origin annotation points to an existing ManagedResource in the given namespace.
 // This ensures that resources managed by a gardener-resource-manager deployed into the shoot control plane
 // are excluded from cleanup during shoot deletion — the resource manager itself is responsible for cleaning
 // them up.
-func ignoreObjectsManagedByManagedResourceInNamespace(namespace string) utilclient.IgnoreLeftoverFunc {
+func ignoreObjectsManagedByManagedResourceInNamespace(ctx context.Context, c client.Reader, namespace string) utilclient.IgnoreLeftoverFunc {
 	return func(log logr.Logger, obj client.Object) bool {
 		origin, ok := obj.GetAnnotations()[resourcesv1alpha1.OriginAnnotation]
 		if !ok {
@@ -338,11 +339,17 @@ func ignoreObjectsManagedByManagedResourceInNamespace(namespace string) utilclie
 		if err != nil {
 			return false
 		}
-		if key.Namespace == namespace {
-			log.Info("Ignoring leftover object managed by ManagedResource in control-plane namespace", "obj", client.ObjectKeyFromObject(obj), "managedResource", key)
-			return true
+		if key.Namespace != namespace {
+			return false
 		}
-		return false
+		if err := c.Get(ctx, key, &resourcesv1alpha1.ManagedResource{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Could not check whether ManagedResource exists", "managedResource", key)
+			}
+			return false
+		}
+		log.Info("Ignoring leftover object managed by ManagedResource in control-plane namespace", "obj", client.ObjectKeyFromObject(obj), "managedResource", key)
+		return true
 	}
 }
 
@@ -375,7 +382,7 @@ func (b *Botanist) addIgnoreLeftoverFuncs(
 		cleanOptions.IgnoreLeftovers,
 		ignoreUnknownNamespaces(namespaces),
 		ignoreObjectsCreatedAfter(cleanupStartTime.Add(time.Duration(finalizeSeconds)*time.Second)),
-		ignoreObjectsManagedByManagedResourceInNamespace(b.Shoot.ControlPlaneNamespace),
+		ignoreObjectsManagedByManagedResourceInNamespace(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace),
 	)
 
 	return nil
