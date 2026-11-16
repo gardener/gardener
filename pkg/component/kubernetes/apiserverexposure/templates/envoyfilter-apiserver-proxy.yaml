@@ -121,6 +121,7 @@ spec:
                           -- Kill request if CN is empty.
                           if cn == "" then
                             request_handle:respond({[":status"] = "400"}, "Invalid certificate subject")
+                            streamInfo:drainConnectionUponCompletion()
                             return
                           end
 
@@ -132,6 +133,7 @@ spec:
                           local notAfter = ssl:expirationPeerCertificate()
                           if now >= notAfter or now < notBefore then
                             request_handle:respond({[":status"] = "401"}, "Client certificate is expired or not yet valid")
+                            streamInfo:drainConnectionUponCompletion()
                             return
                           end
 
