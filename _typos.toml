@@ -4,6 +4,7 @@ extend-ignore-re = [
     "(?Rm)^.*(#|//)\\s*spellchecker:disable-line$",
     # This enables # spellchecker:off/on
     "(?s)(#|//)\\s*spellchecker:off.*?\\n\\s*(#|//)\\s*spellchecker:on",
+    "david-hass",
 ]
 
 [default.extend-words]
