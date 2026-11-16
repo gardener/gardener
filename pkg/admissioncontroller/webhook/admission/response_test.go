@@ -5,6 +5,7 @@
 package admission_test
 
 import (
+	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -41,6 +42,38 @@ var _ = Describe("Response", func() {
 					},
 				},
 			}))
+		})
+	})
+
+	Describe("#ForbidsRestrictedOperationAnnotation", func() {
+		It("should forbid newly setting the operation annotation to force-redeploy", func() {
+			response := ForbidsRestrictedOperationAnnotation(nil, map[string]string{"gardener.cloud/operation": "force-redeploy"}, "Gardenlet")
+
+			Expect(response).NotTo(BeNil())
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Message).To(Equal(fmt.Sprintf("gardenlet must not set the %q annotation to %q on Gardenlet", "gardener.cloud/operation", "force-redeploy")))
+		})
+
+		It("should forbid newly setting the operation annotation to renew-kubeconfig", func() {
+			response := ForbidsRestrictedOperationAnnotation(nil, map[string]string{"gardener.cloud/operation": "renew-kubeconfig"}, "ManagedSeed")
+
+			Expect(response).NotTo(BeNil())
+			Expect(response.Allowed).To(BeFalse())
+			Expect(response.Result.Message).To(Equal(fmt.Sprintf("gardenlet must not set the %q annotation to %q on ManagedSeed", "gardener.cloud/operation", "renew-kubeconfig")))
+		})
+
+		It("should allow if no operation annotation is set", func() {
+			Expect(ForbidsRestrictedOperationAnnotation(nil, map[string]string{"foo": "bar"}, "Gardenlet")).To(BeNil())
+		})
+
+		It("should allow if the operation annotation has a non-restricted value", func() {
+			Expect(ForbidsRestrictedOperationAnnotation(nil, map[string]string{"gardener.cloud/operation": "reconcile"}, "Gardenlet")).To(BeNil())
+		})
+
+		It("should allow if the restricted operation annotation was already present and is unchanged", func() {
+			annotations := map[string]string{"gardener.cloud/operation": "force-redeploy"}
+
+			Expect(ForbidsRestrictedOperationAnnotation(annotations, annotations, "Gardenlet")).To(BeNil())
 		})
 	})
 })
