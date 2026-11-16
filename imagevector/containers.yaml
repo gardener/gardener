@@ -77,7 +77,7 @@ images:
   - name: etcd
     sourceRepository: github.com/etcd-io/etcd
     repository: gcr.io/etcd-development/etcd
-    tag: "v3.5.27"
+    tag: "v3.6.16"
   - name: etcd-backup-restore
     sourceRepository: github.com/gardener/etcd-backup-restore
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl
