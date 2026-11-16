@@ -331,6 +331,8 @@ var _ = Describe("KubeStateMetrics", func() {
 							"^kube_pod_container_status_restarts_total$," +
 							"^kube_pod_info$," +
 							"^kube_pod_status_phase$," +
+							"^kube_pod_container_resource_requests$," +
+							"^kube_statefulset_replicas$," +
 							"^kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu$," +
 							"^kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory$," +
 							"^kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_cpu$," +
