@@ -253,25 +253,20 @@ func (v *ExtensionProfileValidator) validateShoot(ctx context.Context, a admissi
 	}
 
 	for _, extension := range shoot.Spec.Extensions {
-		// The profile only depends on the extension type, so it is fetched at most once per extension
-		// (and not at all for extensions without any pinned component).
-		var (
-			profile        *gardencore.ExtensionProfile
-			profileErr     error
-			profileFetched bool
-		)
+		// The profile only depends on the extension type, so it is fetched once per extension that pins
+		// at least one component version (and not at all for extensions without any pinned component).
+		if !gardencorehelper.ExtensionPinsAnyComponentVersion(extension) {
+			continue
+		}
+
+		profile, err := v.getProfile(extension.Type)
+		if err != nil {
+			return err
+		}
 
 		for _, component := range extension.Components {
 			if component.Version == nil {
 				continue
-			}
-
-			if !profileFetched {
-				profile, profileErr = v.getProfile(extension.Type)
-				profileFetched = true
-			}
-			if profileErr != nil {
-				return profileErr
 			}
 
 			versionEntry, found := findVersion(profile, component.Name, *component.Version)

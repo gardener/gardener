@@ -727,13 +727,22 @@ func (m *MutateShoot) resolveExtensionComponentVersions(shoot *core.Shoot) field
 	for i := range shoot.Spec.Extensions {
 		extension := &shoot.Spec.Extensions[i]
 
-		// The profile only depends on the extension type, so it is fetched at most once per extension
-		// (and not at all for extensions without any pinned component).
-		var (
-			profile        *gardencorev1beta1.ExtensionProfile
-			profileErr     error
-			profileFetched bool
-		)
+		// The profile only depends on the extension type, so it is fetched once per extension that pins
+		// at least one component version (and not at all for extensions without any pinned component).
+		if !helper.ExtensionPinsAnyComponentVersion(*extension) {
+			continue
+		}
+
+		typePath := extensionsPath.Index(i).Child("type")
+		profile, err := m.extensionProfileLister.Get(extension.Type)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				allErrs = append(allErrs, field.Invalid(typePath, extension.Type, fmt.Sprintf("no ExtensionProfile found for extension type %q", extension.Type)))
+			} else {
+				allErrs = append(allErrs, field.InternalError(typePath, fmt.Errorf("could not get ExtensionProfile %q: %w", extension.Type, err)))
+			}
+			continue
+		}
 
 		for j := range extension.Components {
 			component := &extension.Components[j]
@@ -743,19 +752,6 @@ func (m *MutateShoot) resolveExtensionComponentVersions(shoot *core.Shoot) field
 			}
 
 			versionPath := extensionsPath.Index(i).Child("components").Index(j).Child("version")
-
-			if !profileFetched {
-				profile, profileErr = m.extensionProfileLister.Get(extension.Type)
-				profileFetched = true
-			}
-			if profileErr != nil {
-				if apierrors.IsNotFound(profileErr) {
-					allErrs = append(allErrs, field.Invalid(versionPath, *component.Version, fmt.Sprintf("no ExtensionProfile found for extension type %q", extension.Type)))
-				} else {
-					allErrs = append(allErrs, field.InternalError(versionPath, fmt.Errorf("could not get ExtensionProfile %q: %w", extension.Type, profileErr)))
-				}
-				continue
-			}
 
 			resolved, err := resolveComponentVersion(profile, component.Name, *component.Version)
 			if err != nil {

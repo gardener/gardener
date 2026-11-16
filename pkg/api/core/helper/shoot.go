@@ -22,6 +22,16 @@ func HibernationIsEnabled(shoot *core.Shoot) bool {
 	return shoot.Spec.Hibernation != nil && ptr.Deref(shoot.Spec.Hibernation.Enabled, false)
 }
 
+// ExtensionPinsAnyComponentVersion reports whether the extension pins at least one component version.
+func ExtensionPinsAnyComponentVersion(extension core.Extension) bool {
+	for _, component := range extension.Components {
+		if component.Version != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // IsShootInHibernation checks if the given shoot is in hibernation or is waking up.
 func IsShootInHibernation(shoot *core.Shoot) bool {
 	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
