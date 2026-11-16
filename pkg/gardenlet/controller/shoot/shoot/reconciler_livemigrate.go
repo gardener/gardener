@@ -231,15 +231,14 @@ func (r *Reconciler) setLiveMigrationStepConditionError(ctx context.Context, sho
 	return r.patchLiveMigrationConditions(ctx, shoot, condition)
 }
 
-// finalizeLiveMigration switches the shoot's status.seedName to the destination seed and clears the live-migration
-// state and intent annotation, returning the shoot to normal reconciliation on the destination seed.
+// finalizeLiveMigration advances status.seedName so the destination gardenlet takes ownership,
+// then removes the live-migration intent annotation.
 func (r *Reconciler) finalizeLiveMigration(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
 	shoot.Status.SeedName = shoot.Spec.SeedName
-	shoot.Status.LiveMigration = nil
 	shoot.Status.MigrationStartTime = nil
 	if err := r.GardenClient.Status().Patch(ctx, shoot, statusPatch); err != nil {
-		return fmt.Errorf("failed to update live migration status: %w", err)
+		return fmt.Errorf("failed to update live migration seed name: %w", err)
 	}
 
 	patch := client.MergeFrom(shoot.DeepCopy())
