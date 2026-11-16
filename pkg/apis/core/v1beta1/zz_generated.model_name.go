@@ -400,13 +400,68 @@ func (in Extension) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionAutoUpdate) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionAutoUpdate"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionCompatibility) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionCompatibility"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionCompatibilityValidation) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionCompatibilityValidation"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in ExtensionExposure) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionExposure"
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionProfile) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionProfile"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionProfileComponent) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionProfileComponent"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionProfileComponentStatus) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionProfileComponentStatus"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionProfileList) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionProfileList"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionProfileSpec) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionProfileSpec"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionProfileStatus) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionProfileStatus"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in ExtensionResourceState) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionResourceState"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionUpdateStrategy) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionUpdateStrategy"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ExtensionVersion) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ExtensionVersion"
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
@@ -987,6 +1042,11 @@ func (in ShootCredentials) OpenAPIModelName() string {
 // OpenAPIModelName returns the OpenAPI model name for this type.
 func (in ShootCredentialsRotation) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ShootCredentialsRotation"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
+func (in ShootExtensionComponent) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.ShootExtensionComponent"
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.

@@ -20,6 +20,8 @@ type ControllerRegistrationExpansion interface{}
 
 type ExposureClassExpansion interface{}
 
+type ExtensionProfileExpansion interface{}
+
 type InternalSecretExpansion interface{}
 
 type NamespacedCloudProfileExpansion interface{}
