@@ -12,7 +12,7 @@ set -o nounset
 set -o pipefail
 
 upstream="${1:?usage: $0 <host-or-ip> [directory]}"
-repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+repo_root="$(git rev-parse --show-toplevel)"
 dir="${2:-${repo_root}/dev/gind-lb}"
 
 mkdir -p "$dir"
