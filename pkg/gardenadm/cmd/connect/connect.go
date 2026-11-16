@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
@@ -123,6 +124,12 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed checking if bootstrap etcd is still running: %w", err)
 	} else if bootstrapEtcdExists {
 		return fmt.Errorf("bootstrap etcd is still running in the self-hosted shoot cluster, please run 'gardenadm init --use-bootstrap-etcd=false' first")
+	}
+
+	if bindingExists, err := temporaryClusterAdminBindingStillExists(ctx, b.SeedClientSet.Client()); err != nil {
+		return fmt.Errorf("failed checking if the temporary cluster-admin binding for bootstrapping still exists: %w", err)
+	} else if bindingExists {
+		return fmt.Errorf("the temporary cluster-admin binding for bootstrapping still exists in the self-hosted shoot cluster, indicating that 'gardenadm init'/'bootstrap' did not complete successfully, please re-run it")
 	}
 
 	if alreadyConnected, err := cmd.IsGardenletDeployed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace); err != nil {
@@ -255,6 +262,18 @@ func isBootstrapEtcdStillRunning(ctx context.Context, b *botanist.GardenadmBotan
 	}
 
 	return false, nil
+}
+
+func temporaryClusterAdminBindingStillExists(ctx context.Context, c client.Client) (bool, error) {
+	clusterRoleBinding := botanist.EmptyTemporaryClusterAdminBinding()
+	if err := c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), clusterRoleBinding); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
 
 func prepareGardenerResources(ctx context.Context, b *botanist.GardenadmBotanist) error {
