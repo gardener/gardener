@@ -72,8 +72,10 @@ type ExtensionSpec struct {
 // extension-managed component.
 type ExtensionComponent struct {
 	// Name is the name of the component.
+	// +required
 	Name string `json:"name"`
 	// Version is the resolved concrete version of the component.
+	// +required
 	Version string `json:"version"`
 	// ProviderConfig is optional, opaque, extension-owned per-version configuration copied verbatim from
 	// the matching ExtensionProfile version entry.
