@@ -176,6 +176,7 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	APIServerClusterIPPrefixLen               int
 	APIServerRequestHeaderUserName            string
 	APIServerRequestHeaderGroup               string
+	APIServerRequestHeaderPrefixExtra         string
 	APIServerAuthenticationDynamicMetadataKey string
 	IstioTLSSecret                            string
 	TargetClusterAPIServerProxy               string
@@ -187,19 +188,20 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 }
 
 type envoyFilterIstioTLSTerminationTemplateValues struct {
-	AuthenticationDynamicMetadataKey string
-	HostsByRouteConfigurationName    map[string][]string
-	IngressGatewayLabels             map[string]string
-	Name                             string
-	Namespace                        string
-	ControlPlaneNamespace            string
-	ControlPlaneNamespaceUID         string
-	MutualTLSHost                    string
-	ConnectionUpgradeHost            string
-	Port                             int
-	ConnectionUpgradeRouteName       string
-	APIServerRequestHeaderUserName   string
-	APIServerRequestHeaderGroup      string
+	AuthenticationDynamicMetadataKey  string
+	HostsByRouteConfigurationName     map[string][]string
+	IngressGatewayLabels              map[string]string
+	Name                              string
+	Namespace                         string
+	ControlPlaneNamespace             string
+	ControlPlaneNamespaceUID          string
+	MutualTLSHost                     string
+	ConnectionUpgradeHost             string
+	Port                              int
+	ConnectionUpgradeRouteName        string
+	APIServerRequestHeaderUserName    string
+	APIServerRequestHeaderGroup       string
+	APIServerRequestHeaderPrefixExtra string
 }
 
 type istioGatewayConfiguration struct {
@@ -252,20 +254,21 @@ func (s *sni) Deploy(ctx context.Context) error {
 		var envoyFilterAPIServerProxy bytes.Buffer
 
 		if err := envoyFilterAPIServerProxyTemplate.Execute(&envoyFilterAPIServerProxy, envoyFilterAPIServerProxyTemplateValues{
-			APIServerProxy:                 values.APIServerProxy,
-			IngressGatewayLabels:           values.IstioIngressGateway.Labels,
-			Name:                           envoyFilter.Name,
-			Namespace:                      envoyFilter.Namespace,
-			ControlPlaneNamespace:          namespace.Name,
-			ControlPlaneNamespaceUID:       string(namespace.UID),
-			Host:                           hostName,
-			MutualTLSHost:                  mTLSHostName,
-			ConnectionUpgradeHost:          connectionUpgradeHostName,
-			ConnectionUpgradeRegex:         istio.ConnectionUpgradeRegex,
-			Port:                           kubeapiserverconstants.Port,
-			APIServerClusterIPPrefixLen:    apiServerClusterIPPrefixLen,
-			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
-			APIServerRequestHeaderGroup:    kubeapiserverconstants.RequestHeaderGroup,
+			APIServerProxy:                    values.APIServerProxy,
+			IngressGatewayLabels:              values.IstioIngressGateway.Labels,
+			Name:                              envoyFilter.Name,
+			Namespace:                         envoyFilter.Namespace,
+			ControlPlaneNamespace:             namespace.Name,
+			ControlPlaneNamespaceUID:          string(namespace.UID),
+			Host:                              hostName,
+			MutualTLSHost:                     mTLSHostName,
+			ConnectionUpgradeHost:             connectionUpgradeHostName,
+			ConnectionUpgradeRegex:            istio.ConnectionUpgradeRegex,
+			Port:                              kubeapiserverconstants.Port,
+			APIServerClusterIPPrefixLen:       apiServerClusterIPPrefixLen,
+			APIServerRequestHeaderUserName:    kubeapiserverconstants.RequestHeaderUserName,
+			APIServerRequestHeaderGroup:       kubeapiserverconstants.RequestHeaderGroup,
+			APIServerRequestHeaderPrefixExtra: kubeapiserverconstants.RequestHeaderPrefixExtra,
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
 			IstioTLSSecret:                   s.emptyIstioTLSSecret().Name,
 			TargetClusterAPIServerProxy:      targetClusterAPIServerProxy,
@@ -311,19 +314,20 @@ func (s *sni) Deploy(ctx context.Context) error {
 			}
 
 			if err := envoyFilterIstioTLSTerminationTemplate.Execute(&envoyFilterIstioTLSTermination, envoyFilterIstioTLSTerminationTemplateValues{
-				AuthenticationDynamicMetadataKey: AuthenticationDynamicMetadataKey,
-				HostsByRouteConfigurationName:    hostsByRouteConfigurationName,
-				IngressGatewayLabels:             configuration.istioIngressGateway.Labels,
-				Name:                             envoyFilter.Name,
-				Namespace:                        envoyFilter.Namespace,
-				ControlPlaneNamespace:            namespace.Name,
-				ControlPlaneNamespaceUID:         string(namespace.UID),
-				Port:                             kubeapiserverconstants.Port,
-				MutualTLSHost:                    mTLSHostName,
-				ConnectionUpgradeHost:            connectionUpgradeHostName,
-				ConnectionUpgradeRouteName:       connectionUpgradeRouteName,
-				APIServerRequestHeaderUserName:   kubeapiserverconstants.RequestHeaderUserName,
-				APIServerRequestHeaderGroup:      kubeapiserverconstants.RequestHeaderGroup,
+				AuthenticationDynamicMetadataKey:  AuthenticationDynamicMetadataKey,
+				HostsByRouteConfigurationName:     hostsByRouteConfigurationName,
+				IngressGatewayLabels:              configuration.istioIngressGateway.Labels,
+				Name:                              envoyFilter.Name,
+				Namespace:                         envoyFilter.Namespace,
+				ControlPlaneNamespace:             namespace.Name,
+				ControlPlaneNamespaceUID:          string(namespace.UID),
+				Port:                              kubeapiserverconstants.Port,
+				MutualTLSHost:                     mTLSHostName,
+				ConnectionUpgradeHost:             connectionUpgradeHostName,
+				ConnectionUpgradeRouteName:        connectionUpgradeRouteName,
+				APIServerRequestHeaderUserName:    kubeapiserverconstants.RequestHeaderUserName,
+				APIServerRequestHeaderGroup:       kubeapiserverconstants.RequestHeaderGroup,
+				APIServerRequestHeaderPrefixExtra: kubeapiserverconstants.RequestHeaderPrefixExtra,
 			}); err != nil {
 				return err
 			}

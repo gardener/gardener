@@ -34,6 +34,7 @@ kubernetesVersion: "1.33.0"
 # Istio Ingress Configuration Resources
 apiServerRequestHeaderUserName: X-Remote-User
 apiServerRequestHeaderGroup: X-Remote-Group
+apiServerRequestHeaderPrefixExtra: X-Remote-Extra-
 apiServerAuthenticationDynamicMetadataKey: authenticated-kube-apiserver-host
 terminateAPIServerTLS: false
 terminateLoadBalancerProxyProtocol: false

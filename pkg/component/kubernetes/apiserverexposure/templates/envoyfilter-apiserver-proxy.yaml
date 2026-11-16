@@ -95,6 +95,18 @@ spec:
                           request_handle:headers():remove(value)
                         end
 
+                        -- Drop all extra headers (keys prefixed with "{{ .APIServerRequestHeaderPrefixExtra }}") used by the kube-apiserver authentication proxy.
+                        local extraPrefix = string.lower("{{ .APIServerRequestHeaderPrefixExtra }}")
+                        local removeExtra = {}
+                        for key, value in pairs(request_handle:headers()) do
+                          if string.sub(string.lower(key), 1, string.len(extraPrefix)) == extraPrefix then
+                            table.insert(removeExtra, key)
+                          end
+                        end
+                        for key, value in pairs(removeExtra) do
+                          request_handle:headers():remove(value)
+                        end
+
                         -- Upstream request timeout, capped at 1d (see below). When a client certificate
                         -- is present, it is reduced to the certificate's remaining lifetime further down.
                         local upstreamTimeoutMilliseconds = 86400000

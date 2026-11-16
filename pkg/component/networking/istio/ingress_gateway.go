@@ -160,6 +160,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"enforceSpreadAcrossHosts":           istioIngressGateway.EnforceSpreadAcrossHosts,
 			"apiServerRequestHeaderUserName":     kubeapiserverconstants.RequestHeaderUserName,
 			"apiServerRequestHeaderGroup":        kubeapiserverconstants.RequestHeaderGroup,
+			"apiServerRequestHeaderPrefixExtra":  kubeapiserverconstants.RequestHeaderPrefixExtra,
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
 			"cpuRequests":          cpuRequests,
 			"hpaCPUAverageValue":   hpaCPUAverageValue,
