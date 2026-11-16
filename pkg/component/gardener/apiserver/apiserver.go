@@ -91,6 +91,10 @@ type Values struct {
 	ShootAdminKubeconfigMaxExpiration *metav1.Duration
 	// TargetVersion is the version of the kube-apiserver the gardener-apiserver is connecting to.
 	TargetVersion *semver.Version
+	// TrustBundleSecretName is the name of a Secret in the same namespace holding a custom CA trust bundle under the
+	// key `ca-certificates.crt`. If set, the bundle is mounted at `/etc/ssl/certs/ca-certificates.crt` (subPath) so the
+	// custom CAs are trusted for outbound TLS connections honouring the system trust store.
+	TrustBundleSecretName *string
 }
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the API server.
