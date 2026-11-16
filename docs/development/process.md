@@ -38,8 +38,8 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
  v1.165  | Week 13-14 | March 29, 2027         | April 11, 2027     | [@DobromirNPeev](https://github.com/DobromirNPeev)           |
  v1.166  | Week 15-16 | April 12, 2027         | April 25, 2027     | [@ialidzhikov](https://github.com/ialidzhikov)               |
  v1.167  | Week 17-18 | April 26, 2027         | May 9, 2027        | [@timuthy](https://github.com/timuthy)                       |
- v1.168  | Week 19-20 | May 10, 2027           | May 23, 2027       | [@moritzfalke](https://github.com/moritzfalke)               |
- v1.169  | Week 21-22 | May 24, 2027           | June 6, 2027       | [@LucaBernstein](https://github.com/LucaBernstein)           |
+ v1.168  | Week 19-20 | May 10, 2027           | May 23, 2027       | [@LucaBernstein](https://github.com/LucaBernstein)           |
+ v1.169  | Week 21-22 | May 24, 2027           | June 6, 2027       | [@moritzfalke](https://github.com/moritzfalke)               |
  v1.170  | Week 23-24 | June 7, 2027           | June 20, 2027      | [@david-hass](https://github.com/david-hass)                 |
  v1.171  | Week 25-26 | June 21, 2027          | July 4, 2027       | [@ary1992](https://github.com/ary1992)                       |
  v1.172  | Week 27-28 | July 5, 2027           | July 18, 2027      | [@ScheererJ](https://github.com/ScheererJ)                   |
@@ -48,8 +48,6 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
  v1.175  | Week 33-34 | August 16, 2027        | August 29, 2027    | [@rfranzke](https://github.com/rfranzke)                     |
  v1.176  | Week 35-36 | August 30, 2027        | September 12, 2027 | [@shafeeqes](https://github.com/shafeeqes)                   |
  v1.177  | Week 37-38 | September 13, 2027     | September 26, 2027 | [@seshachalam-yv](https://github.com/seshachalam-yv)         |
-
-<!-- TODO: Add DobromirNPeev to the end of the new release responsible schedule for 2027. -->
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
