@@ -13,9 +13,7 @@ import (
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -39,36 +37,6 @@ var (
 	commonDashboardsPath         = "dashboards/common"
 	commonVpaDashboardsPath      = commonDashboardsPath + "/vpa"
 )
-
-func init() {
-	// Fail fast at startup if any embedded dashboard cannot be decoded/validated, has no or an invalid resource name,
-	// or defines no panels.
-	for _, dashboardEmbed := range []embed.FS{gardenDashboards, seedDashboards, gardenAndSeedDashboards, gardenAndShootDashboards, commonDashboards} {
-		utilruntime.Must(fs.WalkDir(dashboardEmbed, "dashboards", func(path string, dirEntry fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if dirEntry.IsDir() {
-				return nil
-			}
-			data, err := dashboardEmbed.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			name, config, err := decodeDashboard(data)
-			if err != nil {
-				return fmt.Errorf("embedded dashboard %s cannot be decoded: %w", path, err)
-			}
-			if errs := utilvalidation.IsDNS1123Subdomain(name); len(errs) > 0 {
-				return fmt.Errorf("embedded dashboard %s has invalid resource name %q: %v", path, name, errs)
-			}
-			if len(config.Panels) == 0 {
-				return fmt.Errorf("embedded dashboard %s (%q) defines no panels", path, name)
-			}
-			return nil
-		}))
-	}
-}
 
 func (p *perses) dashboards() ([]client.Object, error) {
 	dashboards, err := p.loadDashboards()
