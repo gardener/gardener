@@ -459,7 +459,22 @@ func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 	deployControlPlaneComponents := b.DeployControlPlaneComponentsTaskGroup(false)
 	g = g.AddAll(deployControlPlaneComponents.TasksWithDependencies(waitUntilGardenerResourceManagerReady)...)
 
-	// TODO(GEP-39): Deploy temporary VPN shoot client and live migration VPN DNS record as part of the live migration process.
+	// The temporary VPN gives the restored destination kube-apiserver a tunnel into the shoot network while DNS still
+	// points at the source. The DNS record resolves vpn-temp.<internalDomain> to the destination Istio LB
+	// (b.APIServerAddress, set by the kube-apiserver service Wait); the temporary vpn-shoot client dials it and is
+	// applied into the shoot by the gardener-resource-manager. Not needed for workerless shoots.
+	deployLiveMigrationVPNDNSRecord := g.Add(flow.Task{
+		Name:         "Deploying temporary VPN DNS record",
+		Fn:           b.DeployLiveMigrationVPNDNSRecord,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+	})
+	deployTemporaryVPNShoot := g.Add(flow.Task{
+		Name:         "Deploying temporary VPN shoot client to destination",
+		Fn:           b.DeployTemporaryVPNShoot,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployLiveMigrationVPNDNSRecord),
+	})
 
 	deployGardenerAccess := g.Add(flow.Task{
 		Name:         "Deploying Gardener shoot access resources",
@@ -468,13 +483,18 @@ func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 	})
 	// WaitUntilTemporaryTunnelConnectionExists lists pods through b.ShootClientSet, which is nil until the shoot client
 	// is initialized against the freshly deployed destination kube-apiserver.
-	_ = g.Add(flow.Task{
+	initializeShootClients := g.Add(flow.Task{
 		Name:         "Initializing connection to shoot",
 		Fn:           flow.TaskFn(b.InitializeDesiredShootClients).RetryUntilTimeout(5*time.Second, 2*time.Minute),
 		Dependencies: flow.NewTaskIDs(deployGardenerAccess),
 	})
 
-	// TODO(GEP-39): Wait until the temporary VPN tunnel connection to the destination is established.
+	_ = g.Add(flow.Task{
+		Name:         "Waiting until the temporary VPN tunnel connection to the destination is established",
+		Fn:           b.WaitUntilTemporaryTunnelConnectionExists,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(initializeShootClients, deployTemporaryVPNShoot),
+	})
 
 	return g
 }
@@ -721,7 +741,20 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Dependencies: flow.NewTaskIDs(initializeShootClients),
 	})
 
-	// TODO(GEP-39): Destroy the temporary VPN shoot client and live migration VPN DNS record after the permanent tunnel is established.
+	// Tear down the temporary VPN only after the permanent tunnel is confirmed, so apiserver->shoot connectivity is
+	// never interrupted (per GEP-39). Not needed for workerless shoots.
+	destroyTemporaryVPNShoot := g.Add(flow.Task{
+		Name:         "Destroying temporary VPN shoot client",
+		Fn:           b.DestroyTemporaryVPNShoot,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(waitTunnelConnection),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Destroying temporary VPN DNS record",
+		Fn:           b.DestroyLiveMigrationVPNDNSRecord,
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(destroyTemporaryVPNShoot),
+	})
 
 	_ = g.Add(flow.Task{
 		Name: "Waiting until all shoot worker nodes have updated the operating system config",
