@@ -509,7 +509,7 @@ var _ = Describe("Authorizer", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionDeny))
-					Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only write leases %v in %q namespace", []string{"gardener-node-agent-" + nodeName}, "kube-system")))
+					Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent is not allowed to write lease %q in %q namespace", "gardener-node-agent-pool-1", "kube-system")))
 				},
 					Entry("update", "update"),
 					Entry("patch", "patch"),
@@ -551,7 +551,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only write leases %v in %q namespace", []string{"gardener-node-agent-" + nodeName}, "kube-system")))
+				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent is not allowed to write lease %q in %q namespace", "gardener-node-agent-other-bar-node", "kube-system")))
 			},
 				Entry("update", "update"),
 				Entry("patch", "patch"),
