@@ -54,9 +54,6 @@ var _ = Describe("istiod", func() {
 		labels                        map[string]string
 		networkLabels                 map[string]string
 		expectAPIServerTLSTermination bool
-		// expectAPIServerTLSTerminationLuaFilter controls whether the gateway-wide apiserver-tls-termination
-		// EnvoyFilter (lua script) is expected. It is only deployed while the migration to the per-shoot lua
-		// filter is not complete.
 		// TODO(oliver-goetz): Remove this when gardener v1.159 has been released.
 		expectAPIServerTLSTerminationLuaFilter bool
 

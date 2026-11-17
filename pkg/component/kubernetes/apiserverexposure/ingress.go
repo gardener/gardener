@@ -105,9 +105,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 			if err := istio.VirtualServiceForTLSTermination(virtualService, getLabels(), []string{i.values.IstioIngressGatewayNamespaceFunc()}, []string{i.values.Host}, gateway.Name, kubeapiserverconstants.Port, destinationHost, "", "")(); err != nil {
 				return err
 			}
-			if len(virtualService.Spec.Http) > 0 {
-				virtualService.Spec.Http[0].Rewrite = &istioapinetworkingv1beta1.HTTPRewrite{Authority: destinationHost}
-			}
+			virtualService.Spec.Http[0].Rewrite = &istioapinetworkingv1beta1.HTTPRewrite{Authority: destinationHost}
 			return nil
 		}); err != nil {
 			return err
