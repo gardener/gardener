@@ -18,7 +18,7 @@ import (
 // BrotliCompression compresses the passed data with the Brotli compression algorithm.
 func BrotliCompression(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	w := brotli.NewWriter(&buf)
+	w := brotli.NewWriterOptions(&buf, brotli.WriterOptions{Quality: 6, LGWin: 20}) // must match managedresources.Registry
 
 	if _, err := w.Write(data); err != nil {
 		return nil, err

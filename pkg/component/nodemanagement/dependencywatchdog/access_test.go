@@ -149,13 +149,13 @@ users:
 				Name:            "shoot-core-dependency-watchdog",
 				Namespace:       namespace,
 				Labels:          map[string]string{"origin": "gardener"},
-				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-e3a35806": "managedresource-shoot-core-dependency-watchdog-3cb55785"},
+				Annotations:     map[string]string{"reference.resources.gardener.cloud/secret-07af3d05": "managedresource-shoot-core-dependency-watchdog-a55185c6"},
 				ResourceVersion: "1",
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
 					{
-						Name: "managedresource-shoot-core-dependency-watchdog-3cb55785",
+						Name: "managedresource-shoot-core-dependency-watchdog-a55185c6",
 					},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
@@ -164,7 +164,7 @@ users:
 		}
 		expectedManagedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "managedresource-shoot-core-dependency-watchdog-3cb55785",
+				Name:      "managedresource-shoot-core-dependency-watchdog-a55185c6",
 				Namespace: namespace,
 				Labels: map[string]string{
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
@@ -191,7 +191,7 @@ users:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
 			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
 
-			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-3cb55785", Namespace: namespace}}
+			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-shoot-core-dependency-watchdog-a55185c6", Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
 			Expect(reconciledManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(reconciledManagedResourceSecret.Immutable).To(Equal(new(true)))
