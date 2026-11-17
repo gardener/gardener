@@ -218,12 +218,12 @@ type ProviderValidationOptions struct {
 	AllowInvalidWorkerPoolsCount bool
 }
 
-// AllowInvalidWorkerPoolsCount returns true if a worker pools count exceeding MaxWorkerPoolsCount is allowed for an
+// ShouldAllowInvalidWorkerPoolsCount returns true if a worker pools count exceeding MaxWorkerPoolsCount is allowed for an
 // update of the given old to the given new provider and Kubernetes version (ratcheting validation). This is the case when the
 // worker pools count is not changed and the Kubernetes version is < 1.38.
 //
 // TODO(ialidzhikov): Remove this function once support for Kubernetes < 1.38 is dropped.
-func AllowInvalidWorkerPoolsCount(newProvider, oldProvider core.Provider, newKubernetesVersion string) bool {
+func ShouldAllowInvalidWorkerPoolsCount(newProvider, oldProvider core.Provider, newKubernetesVersion string) bool {
 	return len(newProvider.Workers) == len(oldProvider.Workers) && versionutils.ConstraintK8sLess138.CheckVersion(newKubernetesVersion)
 }
 
@@ -276,7 +276,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 			AllowNginxIngress: helper.NginxIngressEnabled(oldShoot.Spec.Addons),
 		},
 		ProviderValidationOptions: ProviderValidationOptions{
-			AllowInvalidWorkerPoolsCount: AllowInvalidWorkerPoolsCount(newShoot.Spec.Provider, oldShoot.Spec.Provider, newShoot.Spec.Kubernetes.Version),
+			AllowInvalidWorkerPoolsCount: ShouldAllowInvalidWorkerPoolsCount(newShoot.Spec.Provider, oldShoot.Spec.Provider, newShoot.Spec.Kubernetes.Version),
 		},
 	}
 
