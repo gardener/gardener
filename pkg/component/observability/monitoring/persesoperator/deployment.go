@@ -39,10 +39,11 @@ func (p *persesOperator) deployment() *appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:                v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel("perses-garden", 8080): v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel("perses-seed", 8080):   v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:                                                                       v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                                                          v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel("perses-garden", 8080):                                                        v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel("perses-seed", 8080):                                                          v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-perses-shoot", 8080): v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
