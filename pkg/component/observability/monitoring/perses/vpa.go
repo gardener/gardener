@@ -11,10 +11,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+
+	"github.com/gardener/gardener/pkg/component"
 )
 
 func (p *perses) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	if !p.values.VPAEnabled {
+	// Seeds always run the VPA for shoot control plane components, independent of the shoot's own VPA setting.
+	if !p.values.VPAEnabled && p.values.ClusterType != component.ClusterTypeShoot {
 		return nil
 	}
 

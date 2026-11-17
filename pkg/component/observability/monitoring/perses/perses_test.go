@@ -643,6 +643,149 @@ var _ = Describe("Perses", func() {
 				})
 			})
 
+			Context("shoot cluster", func() {
+				BeforeEach(func() {
+					values.ClusterType = component.ClusterTypeShoot
+					values.PriorityClassName = "gardener-system-100"
+
+					persesCR.Name = "perses-shoot"
+					persesCR.Labels["app.kubernetes.io/instance"] = "perses-shoot"
+					persesCR.Spec.PriorityClassName = new("gardener-system-100")
+					persesCR.Spec.Service = &persesv1alpha2.PersesService{
+						Annotations: map[string]string{
+							"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
+							"networking.resources.gardener.cloud/pod-label-selector-namespace-alias":    "all-shoots",
+							"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+						},
+					}
+					persesCR.Spec.Metadata.Labels = map[string]string{
+						v1beta1constants.LabelObservabilityApplication:             "perses",
+						v1beta1constants.LabelNetworkPolicyToDNS:                   v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:      v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelRole:                                 v1beta1constants.LabelMonitoring,
+						gardenerutils.NetworkPolicyLabel("prometheus-shoot", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+					}
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResource).To(containsObjs(
+						persesCR,
+						newExpectedDatasource("prometheus-shoot", "PrometheusDatasource", "http://prometheus-shoot:80", true, "perses-shoot"),
+						// The VPA is deployed although the shoot does not use the VPA itself.
+						&vpaautoscalingv1.VerticalPodAutoscaler{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "perses-shoot",
+								Namespace: namespace,
+								Labels: map[string]string{
+									"app":  "perses",
+									"role": "monitoring",
+								},
+							},
+							Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+								TargetRef: &autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "apps/v1",
+									Kind:       "Deployment",
+									Name:       "perses-shoot",
+								},
+								UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+									UpdateMode: new(vpaautoscalingv1.UpdateModeInPlaceOrRecreate),
+								},
+								ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+									ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+										{
+											ContainerName: "perses",
+											MinAllowed: corev1.ResourceList{
+												corev1.ResourceMemory: resource.MustParse("32Mi"),
+											},
+											ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+										},
+										{
+											ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+											Mode:          new(vpaautoscalingv1.ContainerScalingModeOff),
+										},
+									},
+								},
+							},
+						},
+						&monitoringv1.ServiceMonitor{
+							ObjectMeta: monitoringutils.ConfigObjectMeta("perses", namespace, "shoot"),
+							Spec: monitoringv1.ServiceMonitorSpec{
+								Selector: metav1.LabelSelector{MatchLabels: map[string]string{
+									"app.kubernetes.io/instance": "perses-shoot",
+								}},
+								Endpoints: []monitoringv1.Endpoint{{
+									TargetPort: new(intstr.FromInt32(8080)),
+								}},
+							},
+						},
+					))
+				})
+
+				Context("with VictoriaLogs enabled", func() {
+					BeforeEach(func() {
+						values.VictoriaLogsEnabled = true
+
+						persesCR.Spec.Metadata.Labels[gardenerutils.NetworkPolicyLabel("logging-vl", 9428)] = v1beta1constants.LabelNetworkPolicyAllowed
+					})
+
+					It("should include the VictoriaLogs datasource without making it the default", func() {
+						Expect(managedResource).To(containsObjs(
+							persesCR,
+							newExpectedDatasource("prometheus-shoot", "PrometheusDatasource", "http://prometheus-shoot:80", true, "perses-shoot"),
+							newExpectedDatasource("victorialogs", "VictoriaLogsDatasource", "http://logging-vl."+namespace+".svc:9428", false, "perses-shoot"),
+						))
+					})
+				})
+
+				Context("with external exposure", func() {
+					BeforeEach(func() {
+						Expect(fakeClient.Create(ctx, &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "wildcard-tls", Namespace: namespace},
+						})).To(Succeed())
+
+						values.ExternalExposure = &ExposureValues{
+							AuthSecretName:               "observability-ingress-users",
+							AuthSecretManaged:            true,
+							Host:                         "perses-foo--bar.example.com",
+							IstioIngressGatewayLabels:    map[string]string{"istio": "ingressgateway"},
+							IstioIngressGatewayNamespace: "istio-ingress",
+							WildcardCertSecretName:       new("wildcard-tls"),
+						}
+					})
+
+					It("should name the Gateway and VirtualService uniquely per shoot namespace", func() {
+						secret := &corev1.Secret{}
+						secret.Name = managedResource.Spec.SecretRefs[0].Name
+						secret.Namespace = namespace
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+						objs, err := managedresources.ExtractObjectsFromSecret(kubernetes.SeedCodec.UniversalDeserializer(), secret)
+						Expect(err).NotTo(HaveOccurred())
+
+						var (
+							gateways        []*istionetworkingv1beta1.Gateway
+							virtualServices []*istionetworkingv1beta1.VirtualService
+						)
+						for _, obj := range objs {
+							switch o := obj.(type) {
+							case *istionetworkingv1beta1.Gateway:
+								gateways = append(gateways, o)
+							case *istionetworkingv1beta1.VirtualService:
+								virtualServices = append(virtualServices, o)
+							}
+						}
+
+						Expect(gateways).To(HaveLen(1))
+						Expect(gateways[0].Name).To(Equal("perses-shoot-" + namespace))
+
+						Expect(virtualServices).To(HaveLen(1))
+						Expect(virtualServices[0].Name).To(Equal("perses-shoot-" + namespace))
+						Expect(virtualServices[0].Spec.Hosts).To(ConsistOf("perses-foo--bar.example.com"))
+						Expect(virtualServices[0].Spec.Gateways).To(ConsistOf("perses-shoot-" + namespace))
+					})
+				})
+			})
+
 			Context("dashboards", func() {
 				Context("seed cluster", func() {
 					It("should deploy the seed and common dashboards without istio and vpa", func() {
@@ -670,6 +813,38 @@ var _ = Describe("Perses", func() {
 							"client-go", "controller-details", "controllers", "shoot-control-plane-resource-usage-by-owner-container",
 							"victorialogs", "webhook-details", "webhooks",
 							"istio-control-plane", "istio-ingress-gateway", "istio-mesh", "istio-service", "istio-workload",
+							"vpa-admission-controller", "vpa", "vpa-recommender", "vpa-updater",
+						)
+					})
+				})
+
+				Context("shoot cluster", func() {
+					BeforeEach(func() {
+						values.ClusterType = component.ClusterTypeShoot
+					})
+
+					It("should deploy the garden-shoot and common dashboards without vpa", func() {
+						expectDashboards(
+							"apiserver-overview", "apiserver-request-duration-and-response-size", "apiserver-watch-details",
+							"apiserver-admission-details", "apiserver-request-details", "apiserver-storage-details",
+							"client-go", "controller-details", "controllers", "shoot-control-plane-resource-usage-by-owner-container",
+							"victorialogs", "webhook-details", "webhooks",
+						)
+					})
+				})
+
+				Context("shoot cluster with VPA enabled", func() {
+					BeforeEach(func() {
+						values.ClusterType = component.ClusterTypeShoot
+						values.VPAEnabled = true
+					})
+
+					It("should additionally deploy the vpa dashboards", func() {
+						expectDashboards(
+							"apiserver-overview", "apiserver-request-duration-and-response-size", "apiserver-watch-details",
+							"apiserver-admission-details", "apiserver-request-details", "apiserver-storage-details",
+							"client-go", "controller-details", "controllers", "shoot-control-plane-resource-usage-by-owner-container",
+							"victorialogs", "webhook-details", "webhooks",
 							"vpa-admission-controller", "vpa", "vpa-recommender", "vpa-updater",
 						)
 					})

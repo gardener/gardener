@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/istio"
@@ -37,6 +38,11 @@ func (p *perses) istioResources(ctx context.Context) ([]client.Object, error) {
 		ingressNamespace = p.values.ExternalExposure.IstioIngressGatewayNamespace
 		gatewayName      = p.persesName()
 	)
+	// Shoot control planes share the istio ingress gateway, so the names of the Gateway and VirtualService must be
+	// unique across shoot namespaces.
+	if p.values.ClusterType == component.ClusterTypeShoot {
+		gatewayName = fmt.Sprintf("%s-%s", gatewayName, p.namespace)
+	}
 
 	tlsSecretName := ptr.Deref(p.values.ExternalExposure.WildcardCertSecretName, "")
 	if tlsSecretName == "" && p.values.ExternalExposure.SecretsManager != nil {

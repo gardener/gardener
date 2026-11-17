@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"github.com/gardener/gardener/pkg/component"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
 
@@ -16,6 +17,8 @@ func (p *perses) serviceMonitor() *monitoringv1.ServiceMonitor {
 	prometheusLabel := "seed"
 	if p.values.IsGardenCluster {
 		prometheusLabel = "garden"
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
+		prometheusLabel = "shoot"
 	}
 
 	return &monitoringv1.ServiceMonitor{

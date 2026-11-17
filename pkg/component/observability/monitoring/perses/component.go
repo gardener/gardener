@@ -40,7 +40,8 @@ type Values struct {
 	Replicas int32
 	// PriorityClassName is the name of the priority class for the Perses pods. If empty, no priority class is set.
 	PriorityClassName string
-	// VPAEnabled states whether VerticalPodAutoscaler is enabled.
+	// VPAEnabled states whether VerticalPodAutoscaler is enabled. For shoot control planes it only controls whether
+	// the VPA dashboards are deployed, since seeds always autoscale control plane components.
 	VPAEnabled bool
 	// IsGardenCluster specifies whether the cluster is a garden cluster.
 	IsGardenCluster bool
