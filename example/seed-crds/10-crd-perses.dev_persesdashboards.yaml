@@ -191,6 +191,55 @@ spec:
                           type: string
                         spec:
                           properties:
+                            annotations:
+                              items:
+                                properties:
+                                  display:
+                                    properties:
+                                      color:
+                                        type: string
+                                      description:
+                                        type: string
+                                      hidden:
+                                        type: boolean
+                                      name:
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  plugin:
+                                    properties:
+                                      kind:
+                                        description: Kind is the type of the plugin
+                                          (e.g., Panel, Variable, Datasource, etc.).
+                                        type: string
+                                      metadata:
+                                        description: Metadata is an optional field
+                                          that contains additional information such
+                                          as version and registry of the plugin.
+                                        properties:
+                                          registry:
+                                            description: 'Registry is optional. If
+                                              not provided, it means the default registry
+                                              is: "perses.dev".'
+                                            type: string
+                                          version:
+                                            description: |-
+                                              Version is optional. If not provided, it means the latest version available in the Perses instance.
+                                              Version needs to follow the semantic versioning format (e.g., "1.0.0" or "v1.0.0")
+                                            type: string
+                                        type: object
+                                      spec:
+                                        x-kubernetes-preserve-unknown-fields: true
+                                    required:
+                                    - kind
+                                    - spec
+                                    type: object
+                                required:
+                                - display
+                                - plugin
+                                type: object
+                              type: array
                             display:
                               properties:
                                 description:
