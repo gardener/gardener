@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -39,7 +40,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		r.RuntimeCluster = mgr
 	}
 	if r.VirtualConfig == nil {
-		r.VirtualConfig = virtualCluster.GetConfig()
+		virtualConfig, err := gardenClientRestConfigWithInlineCA(virtualCluster.GetConfig())
+		if err != nil {
+			return fmt.Errorf("failed preparing virtual garden REST config: %w", err)
+		}
+		r.VirtualConfig = virtualConfig
 	}
 	if r.VirtualClient == nil {
 		r.VirtualClient = virtualCluster.GetClient()
@@ -77,6 +82,26 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 			r.OperatorResponsiblePredicate(ctx),
 		)).
 		Complete(r)
+}
+
+// gardenClientRestConfigWithInlineCA returns a copy of the given REST config with the virtual garden's CA bundle
+// inlined as CAData. The virtual cluster's REST config references the CA via a file on disk (so that client-go can
+// reload it after a credentials rotation), but that file only exists in the gardener-operator's filesystem.
+func gardenClientRestConfigWithInlineCA(config *rest.Config) (*rest.Config, error) {
+	gardenConfig := rest.CopyConfig(config)
+	if gardenConfig.CAFile == "" {
+		return gardenConfig, nil
+	}
+
+	// LoadTLSFiles reads the CAFile (and any cert/key files) into their respective *Data fields.
+	if err := rest.LoadTLSFiles(gardenConfig); err != nil {
+		return nil, fmt.Errorf("failed loading CA file %q: %w", gardenConfig.CAFile, err)
+	}
+	// Clear the file reference so consumers serializing this config into a kubeconfig use the inline CAData instead of
+	// the operator-local file path.
+	gardenConfig.CAFile = ""
+
+	return gardenConfig, nil
 }
 
 // OperatorResponsiblePredicate is a predicate for checking whether the Seed object has already been created for the
