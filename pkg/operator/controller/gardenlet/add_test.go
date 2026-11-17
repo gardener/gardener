@@ -6,12 +6,15 @@ package gardenlet_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -78,6 +81,40 @@ var _ = Describe("Add", func() {
 				metav1.SetMetaDataAnnotation(&gardenlet.ObjectMeta, "gardener.cloud/operation", "foo")
 				test(gardenlet, BeFalse())
 			})
+		})
+	})
+
+	Describe("#GardenClientRestConfigWithInlineCA", func() {
+		var caBundle = []byte("ca-data")
+
+		It("should keep the config unchanged when no CA file is referenced", func() {
+			config := &rest.Config{Host: "https://api.gardener.test", TLSClientConfig: rest.TLSClientConfig{CAData: caBundle}}
+
+			result, err := GardenClientRestConfigWithInlineCA(config)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.CAFile).To(BeEmpty())
+			Expect(result.CAData).To(Equal(caBundle))
+		})
+
+		It("should inline the CA bundle from the referenced file and clear the file path", func() {
+			caFile := filepath.Join(GinkgoT().TempDir(), "ca.crt")
+			Expect(os.WriteFile(caFile, caBundle, 0o600)).To(Succeed())
+
+			config := &rest.Config{Host: "https://api.gardener.test", TLSClientConfig: rest.TLSClientConfig{CAFile: caFile}}
+
+			result, err := GardenClientRestConfigWithInlineCA(config)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.CAFile).To(BeEmpty())
+			Expect(result.CAData).To(Equal(caBundle))
+			Expect(config.CAFile).To(Equal(caFile))
+			Expect(config.CAData).To(BeEmpty())
+		})
+
+		It("should return an error when the referenced CA file does not exist", func() {
+			config := &rest.Config{Host: "https://api.gardener.test", TLSClientConfig: rest.TLSClientConfig{CAFile: "/does/not/exist"}}
+
+			_, err := GardenClientRestConfigWithInlineCA(config)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
