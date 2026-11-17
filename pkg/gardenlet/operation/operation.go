@@ -486,6 +486,11 @@ func (o *Operation) ComputePlutonoHost() string {
 	return o.ComputeIngressHost("gu")
 }
 
+// ComputePersesHost computes the host for Perses.
+func (o *Operation) ComputePersesHost() string {
+	return o.ComputeIngressHost("perses")
+}
+
 // ComputeAlertManagerHost computes the host for alert manager.
 func (o *Operation) ComputeAlertManagerHost() string {
 	return o.ComputeIngressHost("au")
