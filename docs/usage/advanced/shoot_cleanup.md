@@ -36,3 +36,7 @@ In some cases, even with the described cleanup logic, shoot deletion may still b
 To address this, Gardener ignores any remaining resources in the following situations:
 - Objects that belong to namespaces which have already been deleted (finalized).
 - Objects that were created after the cleanup process began for the first time, plus the finalize grace period.
+- Objects whose `resources.gardener.cloud/origin` annotation references an existing `ManagedResource` in the shoot's control-plane namespace in the seed cluster.
+
+For objects whose origin annotation references an existing ManagedResource in the shoot’s control-plane namespace in the seed cluster, Gardener skips waiting for them to disappear during Kubernetes resource cleanup.
+Later in shoot deletion, Gardener (or the owning extension) requests deletion of the ManagedResource. The gardener-resource-manager deployed in the shoot’s control plane then deletes the objects it manages in the shoot cluster before allowing the ManagedResource itself to disappear.
