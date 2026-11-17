@@ -348,7 +348,7 @@ func ignoreObjectsManagedByManagedResourceInNamespace(ctx context.Context, c cli
 			}
 			return false
 		}
-		log.Info("Ignoring leftover object managed by ManagedResource in control-plane namespace", "obj", client.ObjectKeyFromObject(obj), "managedResource", key)
+		log.V(1).Info("Ignoring leftover object managed by ManagedResource in control-plane namespace", "obj", client.ObjectKeyFromObject(obj), "managedResource", key)
 		return true
 	}
 }
