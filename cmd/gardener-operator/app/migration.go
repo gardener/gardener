@@ -25,7 +25,7 @@ import (
 
 func runMigrations(ctx context.Context, c client.Client, log logr.Logger) manager.RunnableFunc {
 	return func(context.Context) error {
-		// TODO(timuthy): Remove migration after Gardener v1.155 has been released.
+		// TODO(timuthy): Remove migration after Gardener v1.156 has been released.
 		if err := DeleteStaleShootAccessSecrets(ctx, c, log); err != nil {
 			return err
 		}
