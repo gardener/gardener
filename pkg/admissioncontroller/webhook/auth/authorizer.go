@@ -5,15 +5,20 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/graph"
 	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
@@ -143,6 +148,10 @@ type RequestAuthorizer struct {
 	Graph                  graph.Interface
 	AuthorizeWithSelectors authorizerwebhook.WithSelectorsChecker
 
+	// Reader is used for live existence checks. It should be uncached (an APIReader) so that the idempotent delete
+	// carve-out in hasPathFrom does not rely on the potentially stale informer cache.
+	Reader client.Reader
+
 	ToType      graph.VertexType
 	ToNamespace string
 	ToName      string
@@ -150,14 +159,14 @@ type RequestAuthorizer struct {
 
 // CheckRead checks if a read request (get, list, watch) is allowed based on the graph relationships and the provided
 // attributes.
-func (a *RequestAuthorizer) CheckRead(fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
-	return a.Check(fromType, attrs,
+func (a *RequestAuthorizer) CheckRead(ctx context.Context, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.Check(ctx, fromType, attrs,
 		WithAllowedVerbs("list", "watch", "get"),
 	)
 }
 
 // Check checks if a request is allowed based on the graph relationships and the provided attributes.
-func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attributes, fns ...configFunc) (auth.Decision, string, error) {
+func (a *RequestAuthorizer) Check(ctx context.Context, fromType graph.VertexType, attrs auth.Attributes, fns ...configFunc) (auth.Decision, string, error) {
 	log := a.Log.WithValues(
 		"fromType", graph.VertexTypes[fromType].Kind,
 		"fromNamespace", attrs.GetNamespace(),
@@ -247,7 +256,7 @@ func (a *RequestAuthorizer) Check(fromType graph.VertexType, attrs auth.Attribut
 		}
 	}
 
-	return a.hasPathFrom(log, fromType, attrs)
+	return a.hasPathFrom(ctx, log, fromType, attrs)
 }
 
 func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, selector selector) (bool, string) {
@@ -281,7 +290,7 @@ func (a *RequestAuthorizer) checkListWatchRequests(attrs auth.Attributes, select
 	return false, fmt.Sprintf("must specify field or label selector for name %s", a.ToName)
 }
 
-func (a *RequestAuthorizer) hasPathFrom(log logr.Logger, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *RequestAuthorizer) hasPathFrom(ctx context.Context, log logr.Logger, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
 	if len(attrs.GetName()) == 0 {
 		log.Info("Denying authorization because attributes are missing object name")
 		return auth.DecisionNoOpinion, "No Object name found", nil
@@ -294,10 +303,25 @@ func (a *RequestAuthorizer) hasPathFrom(log logr.Logger, fromType graph.VertexTy
 		namespace = ""
 	}
 
-	// If the vertex does not exist in the graph (i.e., the resource does not exist in the system) then we allow the
-	// request.
+	// For delete requests, we allow the request if the object does not exist (anymore) in the system (idempotency). A
+	// missing vertex is not sufficient evidence: for reference-only types (e.g., Secret, ConfigMap) it merely means the
+	// object is currently unreferenced, and even for watched types there is a brief informer-lag window. Hence, confirm
+	// the object's absence with an uncached read before allowing; otherwise fall through to the graph path check.
 	if attrs.GetVerb() == "delete" && !a.Graph.HasVertex(fromType, namespace, attrs.GetName()) {
-		return auth.DecisionAllow, "", nil
+		gvk, err := apiutil.GVKForObject(graph.VertexTypes[fromType].NewObjectFunc(), kubernetes.GardenScheme)
+		if err != nil {
+			return auth.DecisionNoOpinion, "", fmt.Errorf("failed determining GroupVersionKind for vertex type %q: %w", graph.VertexTypes[fromType].Kind, err)
+		}
+
+		object := &metav1.PartialObjectMetadata{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: attrs.GetName()}}
+		object.SetGroupVersionKind(gvk)
+
+		switch err := a.Reader.Get(ctx, client.ObjectKeyFromObject(object), object); {
+		case apierrors.IsNotFound(err):
+			return auth.DecisionAllow, "", nil
+		case err != nil:
+			return auth.DecisionNoOpinion, "", fmt.Errorf("failed checking whether object still exists: %w", err)
+		}
 	}
 
 	if !a.Graph.HasPathFrom(fromType, namespace, attrs.GetName(), a.ToType, a.ToNamespace, a.ToName) {

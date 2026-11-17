@@ -24,6 +24,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
@@ -32,6 +35,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	graphutils "github.com/gardener/gardener/pkg/utils/graph"
@@ -47,6 +51,7 @@ var _ = Describe("Seed", func() {
 
 		log        logr.Logger
 		graph      *mockgraph.MockInterface
+		fakeReader client.Reader
 		authorizer auth.Authorizer
 
 		seedName      string
@@ -61,7 +66,8 @@ var _ = Describe("Seed", func() {
 
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		graph = mockgraph.NewMockInterface(ctrl)
-		authorizer = NewAuthorizer(log, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+		fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
 
 		seedName = "seed"
 		gardenletUser = &user.DefaultInfo{
@@ -258,14 +264,18 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(BeEmpty())
 				})
 
-				It("should allow when verb is delete and resource does not exist", func() {
+				It("should have no opinion when verb is delete and vertex is absent but object still exists (reference-only type)", func() {
 					attrs.Verb = "delete"
 
+					fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}).Build()
+					authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+
 					graph.EXPECT().HasVertex(graphutils.VertexTypeConfigMap, namespace, name).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeConfigMap, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionAllow))
-					Expect(reason).To(BeEmpty())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(Equal("no relationship found"))
 				})
 
 				DescribeTable("should return correct result if path exists",
@@ -654,14 +664,18 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(BeEmpty())
 				})
 
-				It("should allow when verb is delete and resource does not exist", func() {
+				It("should have no opinion when verb is delete and vertex is absent but object still exists (reference-only type)", func() {
 					attrs.Verb = "delete"
 
+					fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(&gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}).Build()
+					authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+
 					graph.EXPECT().HasVertex(graphutils.VertexTypeShootState, namespace, name).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeShootState, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionAllow))
-					Expect(reason).To(BeEmpty())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(Equal("no relationship found"))
 				})
 
 				DescribeTable("should return correct result if path exists",
@@ -1015,13 +1029,44 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [finalizers status]"))
 				})
 
-				It("should allow when verb is delete and resource does not exist", func() {
+				It("should allow when verb is delete and vertex is absent and object is gone (watched type)", func() {
 					attrs.Verb = "delete"
 
 					graph.EXPECT().HasVertex(graphutils.VertexTypeBackupBucket, "", name).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				It("should have no opinion when verb is delete and vertex is absent but object still exists (watched type, informer lag)", func() {
+					attrs.Verb = "delete"
+
+					fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(&gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}).Build()
+					authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+
+					graph.EXPECT().HasVertex(graphutils.VertexTypeBackupBucket, "", name).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeBackupBucket, "", name, graphutils.VertexTypeSeed, "", seedName).Return(false)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(Equal("no relationship found"))
+				})
+
+				It("should have no opinion and surface the error when the existence check fails (watched type)", func() {
+					attrs.Verb = "delete"
+
+					fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+							return fmt.Errorf("fake")
+						},
+					}).Build()
+					authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+
+					graph.EXPECT().HasVertex(graphutils.VertexTypeBackupBucket, "", name).Return(false)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).To(MatchError(ContainSubstring("failed checking whether object still exists")))
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(BeEmpty())
 				})
 
@@ -2324,14 +2369,18 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 				})
 
-				It("should allow when verb is delete and resource does not exist", func() {
+				It("should have no opinion when verb is delete and vertex is absent but object still exists (reference-only type)", func() {
 					attrs.Verb = "delete"
 
+					fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}).Build()
+					authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+
 					graph.EXPECT().HasVertex(graphutils.VertexTypeSecret, namespace, name).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeSecret, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionAllow))
-					Expect(reason).To(BeEmpty())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(Equal("no relationship found"))
 				})
 
 				DescribeTable("should return correct result if path exists",
@@ -2390,14 +2439,18 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(BeEmpty())
 				})
 
-				It("should allow when verb is delete and resource does not exist", func() {
+				It("should have no opinion when verb is delete and vertex is absent but object still exists (reference-only type)", func() {
 					attrs.Verb = "delete"
 
+					fakeReader = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(&gardencorev1beta1.InternalSecret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}).Build()
+					authorizer = NewAuthorizer(log, fakeReader, graph, fakeauthorizerwebhook.NewWithSelectorsChecker(true))
+
 					graph.EXPECT().HasVertex(graphutils.VertexTypeInternalSecret, namespace, name).Return(false)
+					graph.EXPECT().HasPathFrom(graphutils.VertexTypeInternalSecret, namespace, name, graphutils.VertexTypeSeed, "", seedName).Return(false)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionAllow))
-					Expect(reason).To(BeEmpty())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(Equal("no relationship found"))
 				})
 
 				DescribeTable("should return correct result if path exists",

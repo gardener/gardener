@@ -31,6 +31,7 @@ func (w *Webhook) AddToManager(ctx context.Context, mgr manager.Manager) error {
 
 		w.Authorizer = NewAuthorizer(
 			w.Logger,
+			mgr.GetAPIReader(),
 			g,
 			authorizerwebhook.NewWithSelectorsChecker(ctx, w.Logger, w.ClientSet, clock.RealClock{}),
 		)
