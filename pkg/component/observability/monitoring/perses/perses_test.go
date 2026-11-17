@@ -353,6 +353,18 @@ var _ = Describe("Perses", func() {
 				})
 			})
 
+			Context("seed cluster with priority class", func() {
+				BeforeEach(func() {
+					values.PriorityClassName = "some-priority-class"
+
+					persesCR.Spec.PriorityClassName = new("some-priority-class")
+				})
+
+				It("should set the priority class on the Perses resource", func() {
+					Expect(managedResource).To(containsObjs(persesCR))
+				})
+			})
+
 			Context("seed cluster with external exposure", func() {
 				var (
 					tlsSecret       *corev1.Secret

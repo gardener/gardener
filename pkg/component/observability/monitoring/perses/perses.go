@@ -84,6 +84,10 @@ func (p *perses) perses() *persesv1alpha2.Perses {
 		},
 	}
 
+	if p.values.PriorityClassName != "" {
+		obj.Spec.PriorityClassName = &p.values.PriorityClassName
+	}
+
 	return obj
 }
 
