@@ -68,7 +68,7 @@ func ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet *seedmana
 		},
 	}
 	providerOpts := gardencorevalidation.ProviderValidationOptions{
-		AllowInvalidWorkerPoolsCount: gardencorevalidation.AllowInvalidWorkerPoolsCount(newManagedSeedSet.Spec.ShootTemplate.Spec.Provider, oldManagedSeedSet.Spec.ShootTemplate.Spec.Provider, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.Version),
+		AllowInvalidWorkerPoolsCount: gardencorevalidation.ShouldAllowInvalidWorkerPoolsCount(newManagedSeedSet.Spec.ShootTemplate.Spec.Provider, oldManagedSeedSet.Spec.ShootTemplate.Spec.Provider, newManagedSeedSet.Spec.ShootTemplate.Spec.Kubernetes.Version),
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeedSet.ObjectMeta, &oldManagedSeedSet.ObjectMeta, field.NewPath("metadata"))...)
