@@ -13,5 +13,5 @@ import (
 
 func TestHighAvailabilityConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceManager Node HighAvailabilityConfig Suite")
+	RunSpecs(t, "ResourceManager Controller Node HighAvailabilityConfig Suite")
 }

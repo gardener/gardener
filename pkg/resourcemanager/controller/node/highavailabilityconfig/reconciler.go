@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -68,7 +67,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		hasMultipleZones = availableZones.Len() > 1
 	}
 
-	if ptr.Deref(r.lastHasMultipleNodes, false) == hasMultipleNodes && ptr.Deref(r.lastHasMultipleZones, false) == hasMultipleZones {
+	if r.lastHasMultipleNodes != nil && *r.lastHasMultipleNodes == hasMultipleNodes &&
+		r.lastHasMultipleZones != nil && *r.lastHasMultipleZones == hasMultipleZones {
 		log.V(1).Info("Neither node nor zone count crossed their threshold, nothing to do",
 			"hasMultipleNodes", hasMultipleNodes,
 			"hasMultipleZones", hasMultipleZones,
