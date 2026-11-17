@@ -145,9 +145,7 @@ func (h *Handler) handleDeployment(
 	}
 
 	h.mutateNodeAffinity(
-		// TODO(ScheererJ): Remove the "failureToleranceType != nil" fallback after annotating all shoot namespaces with
-		//  zone-pinning=true for at least 3 releases (i.e., after v1.154 has been released).
-		ptr.Deref(zonePinning, failureToleranceType != nil),
+		ptr.Deref(zonePinning, false),
 		zones,
 		&deployment.Spec.Template,
 	)
@@ -203,9 +201,7 @@ func (h *Handler) handleStatefulSet(
 	}
 
 	h.mutateNodeAffinity(
-		// TODO(ScheererJ): Remove the "failureToleranceType != nil" fallback after annotating all shoot namespaces with
-		//  zone-pinning=true for at least 3 releases (i.e., after v1.154 has been released).
-		ptr.Deref(zonePinning, failureToleranceType != nil),
+		ptr.Deref(zonePinning, false),
 		zones,
 		&statefulSet.Spec.Template,
 	)
