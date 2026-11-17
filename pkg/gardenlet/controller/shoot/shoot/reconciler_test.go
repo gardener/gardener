@@ -21,8 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -308,6 +310,62 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).To(MatchError(ContainSubstring("failed to remove finalizer")))
 
 			Eventually(fakeRecorder.Events).Should(Receive(ContainSubstring("failed to remove finalizer")))
+		})
+	})
+
+	Describe("#schedulePeriodicRetryForFailedShoot", func() {
+		BeforeEach(func() {
+			gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).Build()
+
+			fakeDateAndTime, _ := time.Parse(time.DateTime, "2023-11-25 05:59:39")
+			fakeClock = testclock.NewFakeClock(fakeDateAndTime)
+
+			reconciler = &Reconciler{
+				GardenClient: gardenClient,
+				Clock:        fakeClock,
+			}
+		})
+
+		It("should return false if LastOperation is nil", func() {
+			shoot.Status.LastOperation = nil
+			result, done := reconciler.schedulePeriodicRetryForFailedShoot(ctx, logr.Discard(), shoot)
+			Expect(done).To(BeFalse())
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should return false if shoot is not failed", func() {
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.NewTime(fakeClock.Now().Add(-25 * time.Hour)),
+			}
+			result, done := reconciler.schedulePeriodicRetryForFailedShoot(ctx, logr.Discard(), shoot)
+			Expect(done).To(BeFalse())
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should requeue if failed for less than 24 hours", func() {
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateFailed,
+				LastUpdateTime: metav1.NewTime(fakeClock.Now().Add(-20 * time.Hour)),
+			}
+			result, done := reconciler.schedulePeriodicRetryForFailedShoot(ctx, logr.Discard(), shoot)
+			Expect(done).To(BeTrue())
+			Expect(result.RequeueAfter).To(Equal(4 * time.Hour))
+		})
+
+		It("should set retry annotation if failed for more than 24 hours", func() {
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateFailed,
+				LastUpdateTime: metav1.NewTime(fakeClock.Now().Add(-25 * time.Hour)),
+			}
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
+
+			result, done := reconciler.schedulePeriodicRetryForFailedShoot(ctx, logr.Discard(), shoot)
+			Expect(done).To(BeTrue())
+			Expect(result).To(Equal(reconcile.Result{}))
+
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 		})
 	})
 })
