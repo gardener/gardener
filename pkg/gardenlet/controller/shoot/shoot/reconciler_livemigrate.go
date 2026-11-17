@@ -135,7 +135,7 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 
 		sourceSeedCleanup = g.Add(flow.Task{
 			Name:         "Cleaning up the source seed",
-			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup, sourceSeedCleanupTaskGroup(botanist)),
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup, migrateSourceSeedComponentsTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(destinationKubeAPIServerReady),
 		})
 
@@ -153,7 +153,7 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 
 		_ = g.Add(flow.Task{
 			Name:         "Tearing down components and namespace in source seed",
-			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown, sourceSeedFinalTeardownTaskGroup(ctx, botanist, o)),
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown, sourceSeedFinalTeardownTaskGroup(botanist, o)),
 			Dependencies: flow.NewTaskIDs(migrationCompleted),
 		})
 	)
@@ -236,7 +236,6 @@ func (r *Reconciler) setLiveMigrationStepConditionError(ctx context.Context, sho
 func (r *Reconciler) finalizeLiveMigration(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
 	shoot.Status.SeedName = shoot.Spec.SeedName
-	shoot.Status.MigrationStartTime = nil
 	if err := r.GardenClient.Status().Patch(ctx, shoot, statusPatch); err != nil {
 		return fmt.Errorf("failed to update live migration seed name: %w", err)
 	}
@@ -464,9 +463,9 @@ func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 // taskGroupSourceSeedCleanup is a flow.TaskID for a logical flow.TaskGroup.
 const taskGroupSourceSeedCleanup flow.TaskID = "TaskGroupSourceSeedCleanup"
 
-// sourceSeedCleanupTaskGroup migrates and tears down the source-side shoot resources (extensions, infrastructure,
+// migrateSourceSeedComponentsTaskGroup migrates and tears down the source-side shoot resources (extensions, infrastructure,
 // control plane, managed resources, machines) and persists the migrated state for the destination to restore.
-func sourceSeedCleanupTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+func migrateSourceSeedComponentsTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(taskGroupSourceSeedCleanup).
 			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete) != nil)
@@ -666,6 +665,9 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		SkipIf:       b.Shoot.IsWorkerless,
 		Dependencies: flow.NewTaskIDs(deployVPNShoot),
 	})
+	// Re-deploying GardenerAccess here (it was also deployed in destinationKubeAPIServerReadyTaskGroup for the
+	// temporary tunnel) ensures the access resources are refreshed before InitializeDesiredShootClients re-establishes
+	// the connection through the permanent VPN tunnel.
 	deployGardenerAccess := g.Add(flow.Task{
 		Name:         "Deploying Gardener access resources",
 		Fn:           b.Shoot.Components.GardenerAccess.Deploy,
@@ -761,44 +763,56 @@ const taskGroupSourceSeedFinalTeardown flow.TaskID = "TaskGroupSourceSeedFinalTe
 // sourceSeedFinalTeardownTaskGroup tears down the remaining source-seed resources that can only be removed after
 // the etcd migration is complete: source etcd, DNS records, and the source backup entry (which depended on the
 // migrated infrastructure). It also removes the VPN server and finally the shoot namespace itself.
-func sourceSeedFinalTeardownTaskGroup(ctx context.Context, b *botanistpkg.Botanist, o *operation.Operation) flow.TaskGroup {
-	if err := checkIfSeedNamespaceExists(ctx, o, b); err != nil {
-		b.Logger.Error(err, "Failed to check if seed namespace exists, assuming it exists")
-	}
-	namespaceExists := b.SeedNamespaceObject != nil && b.SeedNamespaceObject.UID != ""
+func sourceSeedFinalTeardownTaskGroup(b *botanistpkg.Botanist, o *operation.Operation) flow.TaskGroup {
+	var (
+		skipIfAbsent = func(fn flow.TaskFn) flow.TaskFn {
+			return func(ctx context.Context) error {
+				if b.SeedNamespaceObject == nil || b.SeedNamespaceObject.UID == "" {
+					return nil
+				}
+				return fn(ctx)
+			}
+		}
 
-	g := flow.NewTaskGroup(taskGroupSourceSeedFinalTeardown)
+		g = flow.NewTaskGroup(taskGroupSourceSeedFinalTeardown)
+	)
 
+	checkNamespace := g.Add(flow.Task{
+		Name: "Checking if shoot namespace exists in source seed",
+		Fn: func(ctx context.Context) error {
+			return checkIfSeedNamespaceExists(ctx, o, b)
+		},
+	})
 	destroyEtcd := g.Add(flow.Task{
-		Name:   "Destroying source etcd",
-		Fn:     flow.TaskFn(b.DestroyEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		SkipIf: !namespaceExists,
+		Name:         "Destroying source etcd",
+		Fn:           skipIfAbsent(flow.TaskFn(b.DestroyEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout)),
+		Dependencies: flow.NewTaskIDs(checkNamespace),
 	})
 	waitUntilEtcdDeleted := g.Add(flow.Task{
 		Name:         "Waiting until source etcd has been destroyed",
-		Fn:           flow.TaskFn(b.WaitUntilEtcdsDeleted).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		Fn:           skipIfAbsent(flow.TaskFn(b.WaitUntilEtcdsDeleted).RetryUntilTimeout(defaultInterval, defaultTimeout)),
 		Dependencies: flow.NewTaskIDs(destroyEtcd),
-		SkipIf:       !namespaceExists,
 	})
 	destroyEtcdMemberExposure := g.Add(flow.Task{
-		Name:   "Destroying ETCD member exposure",
-		Fn:     b.DestroyEtcdMemberExposure,
-		SkipIf: !namespaceExists,
+		Name:         "Destroying ETCD member exposure",
+		Fn:           skipIfAbsent(b.DestroyEtcdMemberExposure),
+		Dependencies: flow.NewTaskIDs(checkNamespace),
 	})
 	destroyDNSRecords := g.Add(flow.Task{
-		Name:   "Deleting DNSRecords from the source namespace",
-		Fn:     b.DestroyDNSRecords,
-		SkipIf: !namespaceExists,
+		Name:         "Deleting DNSRecords from the source namespace",
+		Fn:           skipIfAbsent(b.DestroyDNSRecords),
+		Dependencies: flow.NewTaskIDs(checkNamespace),
 	})
 	destroySourceBackupEntry := g.Add(flow.Task{
-		Name:   "Deleting source backup entry from the source namespace",
-		Fn:     b.DestroySourceBackupEntry,
-		SkipIf: !namespaceExists,
+		Name:         "Deleting source backup entry from the source namespace",
+		Fn:           skipIfAbsent(b.DestroySourceBackupEntry),
+		Dependencies: flow.NewTaskIDs(checkNamespace),
 	})
 	destroyVPNServer := g.Add(flow.Task{
-		Name:   "Deleting vpn-seed-server from the source namespace",
-		Fn:     b.DestroyVPNServer,
-		SkipIf: !namespaceExists,
+		Name:         "Deleting vpn-seed-server from the source namespace",
+		Fn:           skipIfAbsent(b.DestroyVPNServer),
+		Dependencies: flow.NewTaskIDs(checkNamespace),
+		SkipIf:       b.Shoot.IsWorkerless,
 	})
 	deleteNamespace := g.Add(flow.Task{
 		Name:         "Deleting shoot namespace in Seed",
