@@ -675,10 +675,10 @@ var _ = Describe("Perses", func() {
 							"container-runtime", "garden-alertmanager", "garden-alerts", "garden-availability", "garden-resource",
 							"garden-seed-resource-usage", "gardener-admission-controller", "gardener-admission-controller-seedauthorizer-details",
 							"gardener-controlplane", "kubernetes-pods", "resource-usage-by-container", "shoot-availability", "shoot-details",
-							"shoot-sla", "shoot-sli", "virtual-garden-etcd-backup", "virtual-garden-etcd",
+							"shoot-sla", "shoot-sli", "virtual-garden-etcd-backup",
 							"istio-control-plane", "istio-ingress-gateway", "istio-mesh", "istio-service", "istio-workload",
 							"apiserver-overview", "apiserver-request-duration-and-response-size", "apiserver-watch-details",
-							"apiserver-admission-details", "apiserver-request-details", "apiserver-storage-details",
+							"apiserver-admission-details", "apiserver-request-details", "apiserver-storage-details", "etcd",
 							"vpa-admission-controller", "vpa", "vpa-recommender", "vpa-updater",
 						)
 					})
