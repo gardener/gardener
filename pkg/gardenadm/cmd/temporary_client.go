@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -57,9 +59,20 @@ func InitializeTemporaryClientSet(ctx context.Context, b *botanist.GardenadmBota
 			return nil, fmt.Errorf("failed to request short-lived bootstrap kubeconfig via CertificateSigningRequest API: %w", err)
 		}
 
-		if err := b.FS.WriteFile(cachePath, bootstrapKubeconfig, 0600); err != nil {
+		if err := writeCachedBootstrapKubeconfig(b.FS, cachePath, bootstrapKubeconfig); err != nil {
 			return nil, fmt.Errorf("failed writing the retrieved bootstrap kubeconfig to a temporary file: %w", err)
 		}
+	}
+
+	// The kubeconfig bytes come from a cache file that an unprivileged local user might be able to plant, so we must
+	// not hand them to NewClientFromBytes unchecked - it skips Gardener's kubeconfig field validation and would honor,
+	// e.g., an exec credential plugin (local code execution) or a foreign API server.
+	config, err := clientcmd.Load(bootstrapKubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed loading bootstrap kubeconfig: %w", err)
+	}
+	if err := kubernetes.ValidateConfig(*config); err != nil {
+		return nil, fmt.Errorf("bootstrap kubeconfig failed validation: %w", err)
 	}
 
 	return NewClientFromBytes(
@@ -69,11 +82,39 @@ func InitializeTemporaryClientSet(ctx context.Context, b *botanist.GardenadmBota
 	)
 }
 
-// CachedBootstrapKubeconfigPath returns the path of the file caching the short-lived bootstrap kubeconfig. The file
-// name is specific to the target API server and the requested user, so that executing gardenadm against different
-// clusters (e.g., when running `gardenadm connect` outside the control plane machines) never reuses foreign credentials.
+// writeCachedBootstrapKubeconfig writes the bootstrap kubeconfig to its cache file. The parent directory is created
+// with mode 0700 and the file with O_EXCL, so that an unprivileged local user sharing the temporary directory can
+// neither plant a file at the predictable path nor have a planted file be trusted on the next read.
+func writeCachedBootstrapKubeconfig(fs afero.Afero, path string, bootstrapKubeconfig []byte) error {
+	if err := fs.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return fmt.Errorf("failed creating cache directory: %w", err)
+	}
+
+	// On a cache miss any pre-existing file is either expired or foreign, hence we remove it before the O_EXCL create.
+	if err := fs.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed removing stale cache file: %w", err)
+	}
+
+	file, err := fs.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if _, err := file.Write(bootstrapKubeconfig); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CachedBootstrapKubeconfigPath returns the path of the file caching the short-lived bootstrap kubeconfig. It lives in
+// an owner-only `gardenadm` directory (see writeCachedBootstrapKubeconfig) so that unprivileged local users sharing the
+// temporary directory cannot plant a file. The file name is specific to the target API server and the requested user,
+// so that executing gardenadm against different clusters (e.g., when running `gardenadm connect` outside the control
+// plane machines) never reuses foreign credentials.
 func CachedBootstrapKubeconfigPath(fs afero.Afero, host, commonName string) string {
-	return filepath.Join(fs.GetTempDir(""), "gardenadm-bootstrap-kubeconfig-"+utils.ComputeSHA256Hex([]byte(host + "\n" + commonName))[:16])
+	return filepath.Join(fs.GetTempDir(""), "gardenadm", "bootstrap-kubeconfig-"+utils.ComputeSHA256Hex([]byte(host + "\n" + commonName))[:16])
 }
 
 const bootstrapKubeconfigValidity = 10 * time.Minute
