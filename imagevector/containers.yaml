@@ -914,8 +914,8 @@ images:
   # Istio
   - name: istio-proxy
     sourceRepository: github.com/istio/istio
-    repository: gcr.io/istio-release/proxyv2
-    tag: "1.29.10-distroless"
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/istio/proxyv2
+    tag: "1.32.0-distroless"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:
@@ -931,8 +931,8 @@ images:
             teamname: 'gardener/gardener-core-networking-maintainers'
   - name: istio-istiod
     sourceRepository: github.com/istio/istio
-    repository: gcr.io/istio-release/pilot
-    tag: "1.29.10-distroless"
+    repository: europe-docker.pkg.dev/gardener-project/releases/3rd/istio/pilot
+    tag: "1.32.0-distroless"
     labels:
       - name: 'gardener.cloud/cve-categorisation'
         value:

@@ -28,16 +28,25 @@ spec:
 {{ toYaml .Values.labels | indent 8 }}
 {{ toYaml .Values.networkPolicyLabels | indent 8 }}
         service.istio.io/canonical-name: "istio-ingressgateway"
-        service.istio.io/canonical-revision: "1.29"
+        service.istio.io/canonical-revision: "1.32"
       annotations:
         sidecar.istio.io/inject: "false"
         # Evict stale metrics (e.g. for old kube-apiserver pods) after inactivity to prevent unbounded metric growth.
         # Replaces the deprecated METRIC_ROTATION_INTERVAL env var removed in Istio v1.28.
         sidecar.istio.io/statsEvictionInterval: "6m"
         proxy.istio.io/config: |-
+          connectionSettings:
+            "profile": "EDGE"
+            "globalDownstreamConnectionLimit": "750000"
+            # Same value as maximum of x-envoy-upstream-rq-timeout-ms in apiserver-tls-termination-envoyfilter.yaml
+            "httpRequestTimeout": "86400s"
+            "httpMaxConnectionDuration": "86400s"
+            "httpMaxStreamDuration": "86400s"
+            # Limit idle HTTP streams and connections to 6 hours
+            "httpIdleTimeout": "21600s"
+            "httpStreamIdleTimeout": "21600s"
           protocolDetectionTimeout: 100ms
           runtimeValues:
-            "overload.global_downstream_max_connections": "750000"
             # Limits for mitigating HTTP/2 "Rapid Reset" DoS Vulnerability
             # See also https://github.com/envoyproxy/envoy/security/advisories/GHSA-jhv4-f7mr-xx76
             "overload.premature_reset_total_stream_count": "100"

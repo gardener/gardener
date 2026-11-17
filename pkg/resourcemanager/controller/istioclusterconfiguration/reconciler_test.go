@@ -105,27 +105,13 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	Describe("#Reconcile", func() {
-		It("should create an EnvoyFilter with buffer limit only when port is not HTTP/2", func() {
+		It("should not create an EnvoyFilter when port is not HTTP/2", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
 
 			envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
-			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(Succeed())
-
-			Expect(envoyFilter.Labels).To(HaveKeyWithValue("resources.gardener.cloud/managed-by", "istio-cluster-configuration"))
-			Expect(envoyFilter.OwnerReferences).To(HaveLen(1))
-			Expect(envoyFilter.OwnerReferences[0].Name).To(Equal(sourceNamespace.Name))
-			Expect(envoyFilter.OwnerReferences[0].Kind).To(Equal("Namespace"))
-
-			Expect(envoyFilter.Spec.ConfigPatches).To(HaveLen(1))
-			patch := envoyFilter.Spec.ConfigPatches[0]
-			Expect(patch.ApplyTo).To(Equal(istioapinetworkingv1alpha3.EnvoyFilter_CLUSTER))
-			Expect(patch.Match.Context).To(Equal(istioapinetworkingv1alpha3.EnvoyFilter_GATEWAY))
-			Expect(patch.Match.GetCluster().Name).To(Equal("outbound|443||" + service.Name + "." + sourceNamespace.Name + ".svc.cluster.local"))
-			Expect(patch.Patch.Operation).To(Equal(istioapinetworkingv1alpha3.EnvoyFilter_Patch_MERGE))
-			Expect(patch.Patch.Value.Fields["per_connection_buffer_limit_bytes"].GetNumberValue()).To(Equal(float64(32768)))
-			Expect(patch.Patch.Value.Fields).NotTo(HaveKey("typed_extension_protocol_options"))
+			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(matchers.BeNotFoundError())
 		})
 
 		It("should create an EnvoyFilter with explicit HTTP/2 when port name indicates grpc", func() {
@@ -141,7 +127,6 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(envoyFilter.Spec.ConfigPatches).To(HaveLen(1))
 			patch := envoyFilter.Spec.ConfigPatches[0]
-			Expect(patch.Patch.Value.Fields["per_connection_buffer_limit_bytes"].GetNumberValue()).To(Equal(float64(32768)))
 
 			typedOpts := patch.Patch.Value.Fields["typed_extension_protocol_options"].GetStructValue()
 			Expect(typedOpts).NotTo(BeNil())
@@ -312,7 +297,8 @@ var _ = Describe("Reconciler", func() {
 
 		It("should handle multiple service ports", func() {
 			service.Spec.Ports = []corev1.ServicePort{
-				{Name: "https-main", Port: 443},
+				{Name: "http-main", Port: 80},
+				{Name: "http2-main", Port: 443},
 				{Name: "grpc-metrics", Port: 9090},
 			}
 			Expect(fakeClient.Update(ctx, service)).To(Succeed())
@@ -328,13 +314,16 @@ var _ = Describe("Reconciler", func() {
 
 			fqdn := service.Name + "." + sourceNamespace.Name + ".svc.cluster.local"
 			Expect(envoyFilter.Spec.ConfigPatches[0].Match.GetCluster().Name).To(Equal("outbound|443||" + fqdn))
-			Expect(envoyFilter.Spec.ConfigPatches[0].Patch.Value.Fields).NotTo(HaveKey("typed_extension_protocol_options"))
+			Expect(envoyFilter.Spec.ConfigPatches[0].Patch.Value.Fields).To(HaveKey("typed_extension_protocol_options"))
 
 			Expect(envoyFilter.Spec.ConfigPatches[1].Match.GetCluster().Name).To(Equal("outbound|9090||" + fqdn))
 			Expect(envoyFilter.Spec.ConfigPatches[1].Patch.Value.Fields).To(HaveKey("typed_extension_protocol_options"))
 		})
 
 		It("should handle multiple DestinationRules in one namespace", func() {
+			service.Spec.Ports[0].Name = "http2"
+			Expect(fakeClient.Update(ctx, service)).To(Succeed())
+
 			service2 := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "vpn-seed-server",
@@ -380,17 +369,14 @@ var _ = Describe("Reconciler", func() {
 			))
 
 			for _, patch := range envoyFilter.Spec.ConfigPatches {
-				if patch.Match.GetCluster().Name == "outbound|443||"+service.Name+"."+sourceNamespace.Name+".svc.cluster.local" {
-					Expect(patch.Patch.Value.Fields).NotTo(HaveKey("typed_extension_protocol_options"))
-				}
-				if patch.Match.GetCluster().Name == "outbound|9443||vpn-seed-server."+sourceNamespace.Name+".svc.cluster.local" {
-					Expect(patch.Patch.Value.Fields).To(HaveKey("typed_extension_protocol_options"))
-				}
+				Expect(patch.Patch.Value.Fields).To(HaveKey("typed_extension_protocol_options"))
 			}
 		})
 
 		It("should skip DestinationRules whose host does not match a service", func() {
+			service.Spec.Ports[0].Name = "http2"
 			destinationRule.Spec.Host = "non-existent.other-ns.svc.cluster.local"
+			Expect(fakeClient.Update(ctx, service)).To(Succeed())
 			Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
@@ -403,7 +389,9 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should skip DestinationRules with external hosts", func() {
+			service.Spec.Ports[0].Name = "http2"
 			destinationRule.Spec.Host = "external.example.com"
+			Expect(fakeClient.Update(ctx, service)).To(Succeed())
 			Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
@@ -416,7 +404,9 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should resolve short host names using the DR namespace", func() {
+			service.Spec.Ports[0].Name = "http2"
 			destinationRule.Spec.Host = service.Name
+			Expect(fakeClient.Update(ctx, service)).To(Succeed())
 			Expect(fakeClient.Update(ctx, destinationRule)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: sourceNamespace.Name}})
@@ -434,6 +424,8 @@ var _ = Describe("Reconciler", func() {
 			var exposureClassNamespace *corev1.Namespace
 
 			BeforeEach(func() {
+				service.Spec.Ports[0].Name = "http2"
+
 				exposureClassNamespace = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "istio-ingress--exposure-class",
@@ -501,6 +493,8 @@ var _ = Describe("Reconciler", func() {
 			var istioIngressNamespace2 *corev1.Namespace
 
 			BeforeEach(func() {
+				service.Spec.Ports[0].Name = "http2"
+
 				istioIngressNamespace2 = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "istio-ingress--extra",
@@ -585,6 +579,8 @@ var _ = Describe("Reconciler", func() {
 			var istioIngressNamespace2 *corev1.Namespace
 
 			BeforeEach(func() {
+				service.Spec.Ports[0].Name = "http2"
+
 				istioIngressNamespace2 = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "istio-ingress--extra",
@@ -760,8 +756,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(result).To(Equal(reconcile.Result{}))
 
 				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
-				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(Succeed())
-				Expect(envoyFilter.Spec.ConfigPatches[0].Patch.Value.Fields).NotTo(HaveKey("typed_extension_protocol_options"))
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(matchers.BeNotFoundError())
 			})
 		})
 
@@ -788,8 +783,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(result).To(Equal(reconcile.Result{}))
 
 				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
-				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(Succeed())
-				Expect(envoyFilter.Spec.ConfigPatches[0].Patch.Value.Fields).NotTo(HaveKey("typed_extension_protocol_options"))
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(matchers.BeNotFoundError())
 			})
 
 			It("should prioritize appProtocol over port name", func() {
@@ -802,8 +796,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(result).To(Equal(reconcile.Result{}))
 
 				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
-				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(Succeed())
-				Expect(envoyFilter.Spec.ConfigPatches[0].Patch.Value.Fields).NotTo(HaveKey("typed_extension_protocol_options"))
+				Expect(fakeClient.Get(ctx, types.NamespacedName{Name: envoyFilterName, Namespace: istioIngressNamespace.Name}, envoyFilter)).To(matchers.BeNotFoundError())
 			})
 		})
 	})

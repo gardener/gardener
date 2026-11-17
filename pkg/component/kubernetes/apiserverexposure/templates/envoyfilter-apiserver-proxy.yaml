@@ -42,10 +42,22 @@ spec:
                     log_format:
                       text_format_source:
                         inline_string: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% \"%UPSTREAM_TRANSPORT_FAILURE_REASON%\" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %UPSTREAM_CLUSTER_RAW% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%\n"
+              stream_idle_timeout: 21600s
+              request_timeout: 86400s
+              normalize_path: true
+              merge_slashes: true
+              common_http_protocol_options:
+                idle_timeout: 21600s
+                max_connection_duration: 86400s
+                max_stream_duration: 86400s
+                headers_with_underscores_action: REJECT_REQUEST
               http2_protocol_options:
                  max_concurrent_streams: 100
                  initial_stream_window_size: 65536 # 64 KiB
                  initial_connection_window_size: 1048576 # 1 MiB
+              request_headers_timeout: 60s
+              path_with_escaped_slashes_action: UNESCAPE_AND_REDIRECT
+              strip_trailing_host_dot: true
               route_config:
                 name: {{ .TargetClusterAPIServerProxy }}
                 virtual_hosts:

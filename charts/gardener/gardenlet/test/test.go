@@ -229,6 +229,7 @@ func getGardenletClusterRole(labels map[string]string, unmanagedInfrastructure b
 				"workloadentries.networking.istio.io",
 				"workloadgroups.networking.istio.io",
 				"telemetries.telemetry.istio.io",
+				"trafficextensions.extensions.istio.io",
 				"wasmplugins.extensions.istio.io",
 				"proxyconfigs.networking.istio.io",
 				"managedresources.resources.gardener.cloud",

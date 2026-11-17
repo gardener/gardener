@@ -37,7 +37,6 @@ import (
 const (
 	serviceFQDNSuffix = ".svc." + gardencorev1beta1.DefaultDomain
 
-	perConnectionBufferLimitBytes    = 32768
 	http2InitialStreamWindowSize     = 65536
 	http2InitialConnectionWindowSize = 1048576
 
@@ -149,6 +148,9 @@ func (r *Reconciler) reconcileEnvoyFilters(ctx context.Context, destinationRules
 			protocolMode := istioutils.DetermineProtocolMode(destinationRule, port)
 			clusterName := fmt.Sprintf("outbound|%d||%s", port.Port, kubernetesutils.FQDNForService(service.Name, service.Namespace))
 			patch := getEnvoyConfigPatch(clusterName, protocolMode)
+			if patch == nil {
+				continue
+			}
 
 			for _, targetNamespace := range targetNamespaces {
 				if !slices.Contains(serviceTargetNamespaces, targetNamespace) {
@@ -257,9 +259,7 @@ func getEnvoyConfigPatch(clusterName string, httpProtocolPolicy istioutils.HTTPP
 		Patch: &istioapinetworkingv1alpha3.EnvoyFilter_Patch{
 			Operation: istioapinetworkingv1alpha3.EnvoyFilter_Patch_MERGE,
 			Value: &structpb.Struct{
-				Fields: map[string]*structpb.Value{
-					"per_connection_buffer_limit_bytes": structpb.NewNumberValue(perConnectionBufferLimitBytes),
-				},
+				Fields: map[string]*structpb.Value{},
 			},
 		},
 	}
@@ -310,7 +310,7 @@ func getEnvoyConfigPatch(clusterName string, httpProtocolPolicy istioutils.HTTPP
 			},
 		}
 	default:
-		return envoyConfigPatch
+		return nil
 	}
 
 	envoyConfigPatch.Patch.Value.Fields["typed_extension_protocol_options"] = structpb.NewStructValue(&structpb.Struct{
