@@ -282,7 +282,7 @@ If you want to change the default namespace or shoot name, you can do so by pass
 ./hack/usage/generate-kubeconfig.sh --namespace <namespace> --shoot-name <shootname> > admin-kubeconf.yaml
 ```
 
-To access an Ingress resource from the `Seed`, use the Ingress host with port `8448` (`https://<ingress-host>:8448`, for example `https://gu-local--local.ingress.local.seed.local.gardener.cloud:8448`).
+Accessing a Virtualservice from the `Seed` works out of the box, just ensure you're using port `443`, e.g. by explicitly prefixing `https://` (for example `https://gu-local--local.ingress.local.seed.local.gardener.cloud`).
 
 ## (Optional): Setting Up a Second Seed Cluster
 
