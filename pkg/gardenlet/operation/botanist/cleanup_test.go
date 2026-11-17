@@ -16,7 +16,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	testclock "k8s.io/utils/clock/testing"
@@ -36,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Cleanup", func() {
@@ -107,7 +107,7 @@ var _ = Describe("Cleanup", func() {
 			Expect(botanist.CleanWebhooks(ctx)).To(Succeed())
 
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(policy), &admissionregistrationv1.ValidatingAdmissionPolicy{})).To(Succeed())
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(policyBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(policyBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{})).To(BeNotFoundError())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupBinding), &admissionregistrationv1.ValidatingAdmissionPolicyBinding{})).To(Succeed())
 		})
@@ -115,11 +115,11 @@ var _ = Describe("Cleanup", func() {
 		It("should delete webhook configurations but keep system-component and no-cleanup ones", func() {
 			Expect(botanist.CleanWebhooks(ctx)).To(Succeed())
 
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhook), &admissionregistrationv1.MutatingWebhookConfiguration{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhook), &admissionregistrationv1.MutatingWebhookConfiguration{})).To(BeNotFoundError())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemMutatingWebhook), &admissionregistrationv1.MutatingWebhookConfiguration{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupMutatingWebhook), &admissionregistrationv1.MutatingWebhookConfiguration{})).To(Succeed())
 
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhook), &admissionregistrationv1.ValidatingWebhookConfiguration{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhook), &admissionregistrationv1.ValidatingWebhookConfiguration{})).To(BeNotFoundError())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemValidatingWebhook), &admissionregistrationv1.ValidatingWebhookConfiguration{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupValidatingWebhook), &admissionregistrationv1.ValidatingWebhookConfiguration{})).To(Succeed())
 		})
@@ -172,11 +172,11 @@ var _ = Describe("Cleanup", func() {
 		It("should delete APIServices and CRDs but keep protected ones", func() {
 			Expect(botanist.CleanExtendedAPIs(ctx)).To(Succeed())
 
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(apiService), &apiregistrationv1.APIService{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(apiService), &apiregistrationv1.APIService{})).To(BeNotFoundError())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemAPIService), &apiregistrationv1.APIService{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(autoManagedAPIService), &apiregistrationv1.APIService{})).To(Succeed())
 
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(crd), &apiextensionsv1.CustomResourceDefinition{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(crd), &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupCRD), &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 	})
@@ -246,11 +246,11 @@ var _ = Describe("Cleanup", func() {
 		It("should delete the Kubernetes resources but keep protected ones", func() {
 			Expect(botanist.CleanKubernetesResources(ctx)).To(Succeed())
 
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(systemDeployment), &appsv1.Deployment{})).To(Succeed())
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(noCleanupDeployment), &appsv1.Deployment{})).To(Succeed())
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{}))).To(BeTrue())
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(pvc), &corev1.PersistentVolumeClaim{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(pvc), &corev1.PersistentVolumeClaim{})).To(BeNotFoundError())
 		})
 
 		It("should only consider Services and PersistentVolumeClaims due to skip-cleanup is set", func() {
@@ -261,8 +261,8 @@ var _ = Describe("Cleanup", func() {
 			Expect(botanist.CleanKubernetesResources(ctx)).To(Succeed())
 
 			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{})).To(Succeed())
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{}))).To(BeTrue())
-			Expect(apierrors.IsNotFound(shootClient.Get(ctx, client.ObjectKeyFromObject(pvc), &corev1.PersistentVolumeClaim{}))).To(BeTrue())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
+			Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(pvc), &corev1.PersistentVolumeClaim{})).To(BeNotFoundError())
 		})
 	})
 
@@ -274,6 +274,12 @@ var _ = Describe("Cleanup", func() {
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test2"}})).To(BeFalse())
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ""}})).To(BeFalse())
 			Expect(ignore(logr.Discard(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "test3"}})).To(BeTrue())
+		})
+
+		It("should not ignore cluster-scoped objects", func() {
+			ignore := IgnoreUnknownNamespaces([]string{"test1", "test2"})
+
+			Expect(ignore(logr.Discard(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test3"}})).To(BeFalse())
 		})
 	})
 
