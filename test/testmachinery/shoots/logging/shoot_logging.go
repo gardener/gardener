@@ -6,6 +6,7 @@ package logging
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -15,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -55,14 +57,31 @@ var _ = ginkgo.Describe("Shoot logging testing", func() {
 
 	framework.CBeforeEach(func(ctx context.Context) {
 
-		checkRequiredResources(ctx, shootFramework.SeedClient)
+		// Skip if RemoveVali feature gate is enabled
+		removeVali, err := isRemoveValiEnabled(ctx, shootFramework.GardenClient.Client(), shootFramework.Seed.Name)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("could not determine RemoveVali feature gate state for seed %s: %s", shootFramework.Seed.Name, err.Error()))
+		}
+		if removeVali {
+			ginkgo.Skip(fmt.Sprintf("RemoveVali feature gate is enabled for seed %s — skipping", shootFramework.Seed.Name))
+		}
+
+		err = shootFramework.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, &appsv1.StatefulSet{})
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for Vali in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
+		}
+
+		_, err = getFluentBitDaemonSet(ctx, shootFramework.SeedClient)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Error occurred checking for fluent-bit in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error()))
+		}
 
 		// Get shoot namespace name
 		shootNamespace.Name = shootFramework.ShootSeedNamespace()
 
 		seedClient := shootFramework.SeedClient.Client()
 		// Set label to the testing namespace
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx,
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx,
 			seedClient, shootNamespace,
 			func() error {
 				metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)

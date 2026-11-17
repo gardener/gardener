@@ -11,42 +11,100 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 )
 
-// Checks whether required logging resources are present.
-// If not, probably the logging feature gate is not enabled.
-func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
-	if _, err := getFluentBitDaemonSet(ctx, k8sSeedClient); err != nil {
-		return false, err
+func getFluentBitDaemonSet(ctx context.Context, k8sSeedClient kubernetes.Interface) (*appsv1.DaemonSet, error) {
+	daemonSetList := &appsv1.DaemonSetList{}
+	err := k8sSeedClient.Client().List(ctx,
+		daemonSetList,
+		client.InNamespace(garden),
+		client.MatchingLabels{
+			v1beta1constants.LabelApp:   v1beta1constants.DaemonSetNameFluentBit,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
+		})
+	if err != nil {
+		return nil, err
 	}
-
-	vali := &appsv1.StatefulSet{}
-	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
-		return false, err
+	if len(daemonSetList.Items) == 0 {
+		return nil, fmt.Errorf("fluent-bit daemonset not found")
 	}
-
-	return true, nil
+	return daemonSetList.Items[0].DeepCopy(), nil
 }
 
-func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) {
-	enabled, err := hasRequiredResources(ctx, k8sSeedClient)
-	if !enabled {
-		message := fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error())
-		ginkgo.Fail(message)
+// isRemoveValiEnabled reports whether the RemoveVali feature gate is enabled for the gardenlet.
+// Tries ManagedSeed first, then standalone Gardenlet CR. Falls back to AllFeatureGates default.
+// Returns an error only if a resource exists but cannot be decoded.
+func isRemoveValiEnabled(ctx context.Context, gardenClient client.Client, seedName string) (bool, error) {
+	enabled, found, err := isRemoveValiEnabledOnManagedSeed(ctx, gardenClient, seedName)
+	if err != nil {
+		return false, err
 	}
+	if found {
+		return enabled, nil
+	}
+
+	enabled, found, err = isRemoveValiEnabledOnGardenlet(ctx, gardenClient, seedName)
+	if err != nil {
+		return false, err
+	}
+	if found {
+		return enabled, nil
+	}
+
+	return features.AllFeatureGates[features.RemoveVali].Default, nil
+}
+
+func isRemoveValiEnabledOnGardenlet(ctx context.Context, gardenClient client.Client, seedName string) (bool, bool, error) {
+	gardenlet := &seedmanagementv1alpha1.Gardenlet{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: seedName}, gardenlet); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, false, nil
+		}
+		return false, false, fmt.Errorf("failed to get Gardenlet %s: %w", seedName, err)
+	}
+
+	cfg, err := encoding.DecodeGardenletConfiguration(&gardenlet.Spec.Config, false)
+	if err != nil {
+		return false, false, fmt.Errorf("failed to decode GardenletConfiguration for Gardenlet %s: %w", seedName, err)
+	}
+
+	val, ok := cfg.FeatureGates[string(features.RemoveVali)]
+	return val, ok, nil
+}
+
+func isRemoveValiEnabledOnManagedSeed(ctx context.Context, gardenClient client.Client, seedName string) (bool, bool, error) {
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: seedName}, managedSeed); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, false, nil
+		}
+		return false, false, fmt.Errorf("failed to get ManagedSeed %s: %w", seedName, err)
+	}
+
+	cfg, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
+	if err != nil {
+		return false, false, fmt.Errorf("failed to decode GardenletConfiguration for ManagedSeed %s: %w", seedName, err)
+	}
+
+	val, ok := cfg.FeatureGates[string(features.RemoveVali)]
+	return val, ok, nil
 }
 
 // WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
