@@ -7,6 +7,7 @@ package access_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,6 +63,8 @@ var (
 	testNamespace *corev1.Namespace
 	testSecret    *corev1.Secret
 	tokenFilePath string
+	caFilePath    string
+	caBundle      []byte
 
 	fs      afero.Fs
 	channel chan event.TypedGenericEvent[*rest.Config]
@@ -144,6 +147,7 @@ var _ = BeforeSuite(func() {
 		CertType:   secretsutils.CACert,
 	}).GenerateCertificate()
 	Expect(err).NotTo(HaveOccurred())
+	caBundle = caCert.CertificatePEM
 
 	caSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -196,8 +200,12 @@ var _ = BeforeSuite(func() {
 
 	fs = afero.NewMemMapFs()
 	tokenFilePath = testRunID + ".test"
+	caFilePath = testRunID + "-ca.test"
 
-	DeferCleanup(test.WithVar(&access.CreateTemporaryFile, func(fs afero.Fs, _, _ string) (afero.File, error) {
+	DeferCleanup(test.WithVar(&access.CreateTemporaryFile, func(fs afero.Fs, _, prefix string) (afero.File, error) {
+		if strings.Contains(prefix, "ca") {
+			return fs.Create(caFilePath)
+		}
 		return fs.Create(tokenFilePath)
 	}))
 
