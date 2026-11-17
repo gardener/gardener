@@ -409,9 +409,9 @@ func (b *Botanist) appendEtcdCAsToFiles(ctx context.Context, files []extensionsv
 		}
 	}
 
-	maskOldCAsAsCurrent, err := b.mustMaskOldEtcdCAsAsCurrent(ctx)
+	useOldCAs, err := b.mustUseOldEtcdCAsInsteadOfNew(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed checking whether old ETCD CAs must be marked as 'current': %w", err)
+		return nil, fmt.Errorf("failed checking whether old ETCD CAs must be used instead of the new ones: %w", err)
 	}
 
 	for _, ca := range []struct {
@@ -421,7 +421,7 @@ func (b *Botanist) appendEtcdCAsToFiles(ctx context.Context, files []extensionsv
 		{name: v1beta1constants.SecretNameCAETCD, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCD},
 		{name: v1beta1constants.SecretNameCAETCDPeer, basePath: v1beta1constants.OperatingSystemConfigFilePathCAETCDPeer},
 	} {
-		if !maskOldCAsAsCurrent {
+		if !useOldCAs {
 			if secret, found := b.SecretsManager.Get(ca.name, secretsmanager.Current); found {
 				files = append(files, filesForCA(secret.Data, filepath.Join(ca.basePath, v1beta1constants.OperatingSystemConfigFolderCurrent))...)
 			}
@@ -442,7 +442,7 @@ func (b *Botanist) appendEtcdCAsToFiles(ctx context.Context, files []extensionsv
 	return files, nil
 }
 
-func (b *Botanist) mustMaskOldEtcdCAsAsCurrent(ctx context.Context) (bool, error) {
+func (b *Botanist) mustUseOldEtcdCAsInsteadOfNew(ctx context.Context) (bool, error) {
 	// During the Preparing phase of certificate authority rotation, we are rolling out ETCD twice: First, to only
 	// populate the new CAs (so that all peers and clients know and trust them). Second, to regenerate the peer and
 	// server certificates (now that everyone knows the new CAs, we can issue new certificates signed by them).

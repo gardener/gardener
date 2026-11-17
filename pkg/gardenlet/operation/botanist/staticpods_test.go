@@ -407,7 +407,7 @@ var _ = Describe("StaticPods", func() {
 					etcdEvents.EXPECT().IsPeerCARolledOut(ctx).Return(false, nil).AnyTimes()
 				})
 
-				It("should mask the old etcd and peer CAs as current and omit the old folders", func() {
+				It("should use the old etcd and peer CAs in the current folders and omit the old folders", func() {
 					files, err := AppendEtcdCAsToFiles(botanist, ctx, nil)
 					Expect(err).NotTo(HaveOccurred())
 
