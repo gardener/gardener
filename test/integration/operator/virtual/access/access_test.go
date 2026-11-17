@@ -31,7 +31,8 @@ var _ = Describe("Access controller tests", func() {
 		config.Kind = "Config"
 		config.APIVersion = "v1"
 		config.Clusters["garden"] = &clientcmdapi.Cluster{
-			Server: "https://api.gardener.test",
+			Server:                   "https://api.gardener.test",
+			CertificateAuthorityData: caBundle,
 		}
 		config.Contexts["garden"] = &clientcmdapi.Context{
 			Cluster:  "garden",
@@ -107,7 +108,7 @@ var _ = Describe("Access controller tests", func() {
 				g.Expect(string(token)).To(Equal(issuedToken))
 				g.Expect(channel).To(Receive(&ev))
 			}).Should(Succeed())
-			Expect(ev.Object).To(Equal(restConfigWithTokenPath(kubeconfigFromSecret(secret), tokenFilePath)))
+			Expect(ev.Object).To(Equal(restConfigWithFilePaths(kubeconfigFromSecret(secret), tokenFilePath, caFilePath)))
 		})
 
 		It("should forward an already populated token and update it on changes", func() {
@@ -125,7 +126,12 @@ var _ = Describe("Access controller tests", func() {
 				g.Expect(string(token)).To(Equal("Z2FyZGVuZXIK"))
 				g.Expect(channel).To(Receive(&ev))
 			}).Should(Succeed())
-			Expect(ev.Object).To(Equal(restConfigWithTokenPath(kubeConfigData, tokenFilePath)))
+			Expect(ev.Object).To(Equal(restConfigWithFilePaths(kubeConfigData, tokenFilePath, caFilePath)))
+
+			By("Verify the CA bundle has been written to the CA file")
+			writtenCA, err := afero.ReadFile(fs, caFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(writtenCA).To(Equal(caBundle))
 
 			By("Update token in kubeconfig")
 			addTokenToConfig(config, "Ym90YW5pc3QK")
@@ -140,7 +146,7 @@ var _ = Describe("Access controller tests", func() {
 				g.Expect(string(token)).To(Equal("Ym90YW5pc3QK"))
 				g.Expect(channel).To(Receive(&ev))
 			}).Should(Succeed())
-			Expect(ev.Object).To(Equal(restConfigWithTokenPath(kubeConfigData, tokenFilePath)))
+			Expect(ev.Object).To(Equal(restConfigWithFilePaths(kubeConfigData, tokenFilePath, caFilePath)))
 		})
 
 		It("should renew the token via the token-requestor once the renew timestamp has been reached", func() {
@@ -159,7 +165,7 @@ var _ = Describe("Access controller tests", func() {
 				g.Expect(string(token)).To(Equal(issuedToken))
 				g.Expect(channel).To(Receive(&ev))
 			}).Should(Succeed())
-			Expect(ev.Object).To(Equal(restConfigWithTokenPath(kubeconfigFromSecret(secret), tokenFilePath)))
+			Expect(ev.Object).To(Equal(restConfigWithFilePaths(kubeconfigFromSecret(secret), tokenFilePath, caFilePath)))
 		})
 	})
 })
@@ -182,10 +188,12 @@ func kubeconfigFromSecret(secret *corev1.Secret) []byte {
 	return updated.Data["kubeconfig"]
 }
 
-func restConfigWithTokenPath(kubeConfigRaw []byte, tokenPath string) *rest.Config {
+func restConfigWithFilePaths(kubeConfigRaw []byte, tokenPath, caPath string) *rest.Config {
 	restConfig, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigRaw)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	restConfig.BearerToken = ""
 	restConfig.BearerTokenFile = tokenPath
+	restConfig.CAData = nil
+	restConfig.CAFile = caPath
 	return restConfig
 }

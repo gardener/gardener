@@ -46,6 +46,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 		restConfig = rest.CopyConfig(request.RESTConfig)
 	)
 
+	// The virtual cluster is instantiated only once. We intentionally do not rebuild it when a new REST config
+	// arrives on the channel: the access reconciler supplies the virtual garden's CA bundle via a CA file (not inline
+	// CA data), so client-go transparently reloads the CA from disk after a credentials rotation.
 	if r.virtualCluster == nil {
 		log.Info("Instantiating cluster.Cluster object for virtual cluster")
 		kubernetesclient.ApplyClientConnectionConfigurationToRESTConfig(&r.VirtualClientConnection, restConfig)
