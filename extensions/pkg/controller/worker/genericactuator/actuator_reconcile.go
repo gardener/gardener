@@ -345,6 +345,8 @@ func deployMachineDeployment(
 		}
 
 		if deploymentForControlPlanePool {
+			// `MachineConfiguration` is a pointer in `Machine.Spec`, so it must be initialized before setting
+			// `NodeConditions` below (do not remove this nil-guard).
 			if machineDeployment.Spec.Template.Spec.MachineConfiguration == nil {
 				machineDeployment.Spec.Template.Spec.MachineConfiguration = &machinev1alpha1.MachineConfiguration{}
 			}

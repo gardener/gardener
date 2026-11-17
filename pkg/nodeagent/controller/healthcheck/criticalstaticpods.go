@@ -51,7 +51,7 @@ func (c *CriticalStaticPodsChecker) Check(ctx context.Context, node *corev1.Node
 		client.MatchingFields{indexer.PodNodeName: node.Name},
 		client.MatchingLabels{v1beta1constants.LabelIsCriticalStaticPod: "true"},
 	); err != nil {
-		return fmt.Errorf("failed listing pods: %w", err)
+		return fmt.Errorf("failed listing critical static pods: %w", err)
 	}
 
 	log.V(1).Info("Listed critical static pods", "count", len(podList.Items))
