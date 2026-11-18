@@ -216,15 +216,20 @@ func deployMachineDeployments(
 		}
 	}
 
-	var taskFns = make([]flow.TaskFn, 0, len(wantedMachineDeployments))
+	var (
+		taskFns          = make([]flow.TaskFn, 0, len(wantedMachineDeployments))
+		controlPlanePool = v1beta1helper.ControlPlaneWorkerPoolForShoot(cluster.Shoot.Spec.Provider.Workers)
+	)
+
 	for _, deployment := range wantedMachineDeployments {
 		var (
-			existingMachineDeployment = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
-			shootIsAwake              = shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments)
+			existingMachineDeployment     = getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
+			shootIsAwake                  = shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments)
+			deploymentForControlPlanePool = controlPlanePool != nil && controlPlanePool.Name == deployment.PoolName
 		)
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			return deployMachineDeployment(ctx, log, cl, worker, deployment, existingMachineDeployment, clusterAutoscalerUsed, isHibernated, shootIsAwake)
+			return deployMachineDeployment(ctx, log, cl, worker, deployment, existingMachineDeployment, clusterAutoscalerUsed, isHibernated, shootIsAwake, deploymentForControlPlanePool)
 		})
 	}
 
@@ -241,6 +246,7 @@ func deployMachineDeployment(
 	clusterAutoscalerUsed bool,
 	isHibernationEnabled bool,
 	shootIsAwake bool,
+	deploymentForControlPlanePool bool,
 ) error {
 	var labels = map[string]string{extensionsworkercontroller.LabelKeyMachineDeploymentName: deployment.Name}
 
@@ -330,6 +336,10 @@ func deployMachineDeployment(
 			for k, v := range existingMachineDeployment.Spec.Template.Annotations {
 				metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, k, v)
 			}
+		}
+
+		if deploymentForControlPlanePool {
+			metav1.SetMetaDataAnnotation(&machineDeployment.Spec.Template.ObjectMeta, gardenerutils.AnnotationKeySuspendInstanceDeletion, gardenerutils.AnnotationValueSuspendInstanceDeletion)
 		}
 
 		log.Info("Deploying machine deployment", "machineDeployment", client.ObjectKeyFromObject(machineDeployment), "replicas", machineDeployment.Spec.Replicas)

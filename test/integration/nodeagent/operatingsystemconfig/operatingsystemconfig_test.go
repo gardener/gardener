@@ -1032,7 +1032,7 @@ units: {}
 
 				operatingSystemConfig.Spec.Files = append(operatingSystemConfig.Spec.Files, extensionsv1alpha1.File{Path: "/etc/kubernetes/manifests/kube-apiserver.yaml"})
 
-				DeferCleanup(test.WithVar(&operatingsystemconfig.LookupIP, func(_ string) ([]net.IP, error) {
+				DeferCleanup(test.WithVar(&utils.LookupIP, func(_ string) ([]net.IP, error) {
 					return []net.IP{net.ParseIP("10.0.0.1")}, nil
 				}))
 			})

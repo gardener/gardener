@@ -5,6 +5,7 @@
 package utils_test
 
 import (
+	"fmt"
 	"net"
 	"strings"
 
@@ -357,6 +358,39 @@ baz`, spaces)).To(Equal(`foo
 		Entry("prefer IPv4, multiple IPv4 → returns first match", false, []net.IP{net.ParseIP("10.0.0.1"), net.ParseIP("10.0.0.2")}, net.ParseIP("10.0.0.1")),
 		Entry("prefer IPv6, multiple IPv6 → returns first match", true, []net.IP{net.ParseIP("2001:db8::1"), net.ParseIP("2001:db8::2")}, net.ParseIP("2001:db8::1")),
 	)
+
+	Describe("#MachineIP", func() {
+		BeforeEach(func() {
+			originalLookupIP := LookupIP
+			DeferCleanup(func() { LookupIP = originalLookupIP })
+		})
+
+		It("should return the preferred IP address", func() {
+			LookupIP = func(string) ([]net.IP, error) {
+				return []net.IP{net.ParseIP("1.2.3.4"), net.ParseIP("2001:db8::1")}, nil
+			}
+
+			Expect(MachineIP("foo.example.com", true)).To(Equal(net.ParseIP("2001:db8::1")))
+		})
+
+		It("should return an error when the lookup fails", func() {
+			LookupIP = func(string) ([]net.IP, error) {
+				return nil, fmt.Errorf("fake")
+			}
+
+			_, err := MachineIP("foo.example.com", false)
+			Expect(err).To(MatchError(ContainSubstring("failed to lookup IPs for hostname foo.example.com")))
+		})
+
+		It("should return an error when no IP address is found", func() {
+			LookupIP = func(string) ([]net.IP, error) {
+				return nil, nil
+			}
+
+			_, err := MachineIP("foo.example.com", false)
+			Expect(err).To(MatchError("no IP address found for hostname foo.example.com"))
+		})
+	})
 
 	DescribeTable("#SplitAndTrimString",
 		func(str, sep string, expectedResult []string) {

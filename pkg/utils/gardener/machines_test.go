@@ -233,4 +233,57 @@ var _ = Describe("Machines", func() {
 			true,
 		),
 	)
+
+	Describe("#PreferredNodeAddress", func() {
+		var addresses []corev1.NodeAddress
+
+		BeforeEach(func() {
+			addresses = []corev1.NodeAddress{}
+		})
+
+		It("should return false if no addresses are present", func() {
+			_, found := PreferredNodeAddress(addresses)
+			Expect(found).To(BeFalse())
+		})
+
+		It("should return the only address present", func() {
+			addresses = []corev1.NodeAddress{{Type: corev1.NodeExternalIP, Address: "1.2.3.4"}}
+			address, _ := PreferredNodeAddress(addresses)
+			Expect(address).To(Equal("1.2.3.4"))
+		})
+
+		It("should return the address with the highest preference", func() {
+			addresses = []corev1.NodeAddress{
+				{Type: corev1.NodeExternalIP, Address: "1.2.3.4"},
+				{Type: corev1.NodeHostName, Address: "host.local"},
+				{Type: corev1.NodeInternalIP, Address: "10.0.0.2"},
+			}
+			address, _ := PreferredNodeAddress(addresses)
+			Expect(address).To(Equal("10.0.0.2"))
+		})
+
+		It("should prefer InternalDNS over ExternalIP", func() {
+			addresses = []corev1.NodeAddress{
+				{Type: corev1.NodeExternalIP, Address: "1.2.3.4"},
+				{Type: corev1.NodeInternalDNS, Address: "internal.dns"},
+			}
+			address, _ := PreferredNodeAddress(addresses)
+			Expect(address).To(Equal("internal.dns"))
+		})
+
+		It("should return unknown type if only unknown is present", func() {
+			addresses = []corev1.NodeAddress{{Type: "UnknownType", Address: "unknown.addr"}}
+			address, _ := PreferredNodeAddress(addresses)
+			Expect(address).To(Equal("unknown.addr"))
+		})
+
+		It("should prefer known type over unknown type", func() {
+			addresses = []corev1.NodeAddress{
+				{Type: "UnknownType", Address: "unknown.addr"},
+				{Type: corev1.NodeExternalDNS, Address: "external.dns"},
+			}
+			address, _ := PreferredNodeAddress(addresses)
+			Expect(address).To(Equal("external.dns"))
+		})
+	})
 })

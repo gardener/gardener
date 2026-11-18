@@ -28,7 +28,7 @@ import (
 )
 
 func (r *Reconciler) generateNodeSpecificETCDCertificates(ctx context.Context, secretsManager secretsmanager.Interface, osc *extensionsv1alpha1.OperatingSystemConfig) error {
-	machineIP, err := r.machineIP()
+	machineIP, err := utils.MachineIP(r.HostName, ptr.Deref(r.Config.PreferIPv6, false))
 	if err != nil {
 		return err
 	}
@@ -127,25 +127,6 @@ func (r *Reconciler) fileContentForPath(ctx context.Context, osc *extensionsv1al
 	}
 
 	return data, true, nil
-}
-
-// LookupIP is an alias for net.LookupIP that can be overridden in tests.
-var LookupIP = net.LookupIP
-
-// machineIP returns the IP address of the current machine. It prefers IPv6 addresses if indicated in the config, yet
-// falling back to any available address.
-// Similar to https://github.com/kubernetes/kubernetes/blob/ec9f0d55360f74337f9ef40879434a063821ff5b/pkg/kubelet/nodestatus/setters.go#L162-L178
-func (r *Reconciler) machineIP() (net.IP, error) {
-	addrs, err := LookupIP(r.HostName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup IPs for hostname %s: %w", r.HostName, err)
-	}
-
-	if ip := utils.PreferredIPAddress(ptr.Deref(r.Config.PreferIPv6, false), addrs...); ip != nil {
-		return ip, nil
-	}
-
-	return nil, fmt.Errorf("no IP address found for node")
 }
 
 type etcdTLSSecrets struct {

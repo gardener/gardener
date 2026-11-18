@@ -237,3 +237,21 @@ func PreferredIPAddress(preferIPv6 bool, addrs ...net.IP) net.IP {
 
 	return fallback
 }
+
+// LookupIP is an alias for net.LookupIP that can be overridden in tests.
+var LookupIP = net.LookupIP
+
+// MachineIP returns the IP address based on the given hostname. It prefers IPv6 addresses if indicated, yet falling
+// back to any available address.
+// Similar to https://github.com/kubernetes/kubernetes/blob/ec9f0d55360f74337f9ef40879434a063821ff5b/pkg/kubelet/nodestatus/setters.go#L162-L178
+func MachineIP(hostName string, preferIPv6 bool) (net.IP, error) {
+	addrs, err := LookupIP(hostName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup IPs for hostname %s: %w", hostName, err)
+	}
+
+	if ip := PreferredIPAddress(preferIPv6, addrs...); ip != nil {
+		return ip, nil
+	}
+	return nil, fmt.Errorf("no IP address found for hostname %s", hostName)
+}

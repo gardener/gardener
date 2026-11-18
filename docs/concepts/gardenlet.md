@@ -563,6 +563,17 @@ The reconciler watches the `Node` objects of the shoot's worker pools and drives
 
 This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if its `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. A worker pool is removed from the `status.inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate` or `status.inPlaceUpdates.pendingWorkerUpdates.autoInPlaceUpdate` field in the `Shoot` (depending on its update strategy) if the hash of the worker pool in the `Shoot` spec and the `Worker` status field matches. This indicates that all the nodes of that worker pool are successfully updated and are no longer pending an in-place update. Both update strategies are handled independently of each other, so a completed worker pool is cleared even if an unrelated worker pool is still failing.
 
+### [`EtcdMember` Controller](../../pkg/gardenlet/controller/shoot/etcdmember)
+
+This controller only runs if `gardenlet` is responsible for a self-hosted `Shoot` with managed infrastructure.
+It manages the lifecycle of control-plane `Machine`s as externally managed ETCD members.
+
+When a control-plane `Machine` reports an address in `.status.addresses[]`, the controller adds a finalizer (`gardenlet.gardener.cloud/etcd-member`) and appends the machine's preferred IP address to `.spec.externallyManagedMemberAddresses[]` (and increments `.spec.replicas`) on both `etcd-main` and `etcd-events` `Etcd` objects.
+This registers the machine with `etcd-druid` as an externally managed ETCD member.
+
+When the machine is being deleted, MCM first drains the node and then suspends instance deletion by setting the `InstanceDeletionSuspended` condition to `True` on the machine (via the `node.machine.sapcloud.io.suspend-instance-deletion/remove-etcd-member` annotation, which must be present on the machine at creation time).
+Once the controller observes this condition, it removes the machine's IP from both `Etcd` objects (and decrements `.spec.replicas`), removes the suspend annotation, and finally removes its finalizer — allowing MCM to proceed with the actual instance deletion.
+
 ### [`SelfHostedShootExposure` Reconciler](../../pkg/gardenlet/controller/shoot/selfhostedshootexposure)
 
 This reconciler only runs if `gardenlet` is responsible for a self-hosted `Shoot`.

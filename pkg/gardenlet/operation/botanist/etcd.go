@@ -7,11 +7,16 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"slices"
+	"time"
 
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -22,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -331,4 +337,77 @@ func getEtcdReplicas(shoot *gardencorev1beta1.Shoot) int32 {
 		return etcdconstants.HAReplicaCount
 	}
 	return 1
+}
+
+// EnsureMachineIPInBothETCDs returns a flow.TaskFn that runs the mutate function on both ETCDs (main and events) in
+// parallel.
+func EnsureMachineIPInBothETCDs(log logr.Logger, c client.Client, clock clock.Clock, namespace, address string, mutate func(*druidcorev1alpha1.Etcd, string) bool) flow.TaskFn {
+	return flow.Parallel(
+		func(ctx context.Context) error {
+			return ensureAddressInETCD(ctx, log, c, clock, namespace, v1beta1constants.ETCDRoleMain, address, mutate)
+		},
+		func(ctx context.Context) error {
+			return ensureAddressInETCD(ctx, log, c, clock, namespace, v1beta1constants.ETCDRoleEvents, address, mutate)
+		},
+	)
+}
+
+func ensureAddressInETCD(ctx context.Context, log logr.Logger, c client.Client, clock clock.Clock, namespace, role, address string, mutate func(*druidcorev1alpha1.Etcd, string) bool) error {
+	etcdObj := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: etcd.Name(role), Namespace: namespace}}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(etcdObj), etcdObj); err != nil {
+		return fmt.Errorf("failed reading Etcd %s: %w", client.ObjectKeyFromObject(etcdObj), err)
+	}
+
+	patch := client.MergeFromWithOptions(etcdObj.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if mutate(etcdObj, address) {
+		metav1.SetMetaDataAnnotation(&etcdObj.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&etcdObj.ObjectMeta, v1beta1constants.GardenerTimestamp, clock.Now().UTC().Format(time.RFC3339Nano))
+		if err := c.Patch(ctx, etcdObj, patch); err != nil {
+			return fmt.Errorf("failed patching preferred address %s in Etcd spec: %w", address, err)
+		}
+	}
+
+	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		c,
+		log,
+		etcd.CheckEtcdObject,
+		etcdObj,
+		"Etcd",
+		etcd.DefaultInterval,
+		etcd.DefaultSevereThreshold,
+		time.Minute,
+		nil,
+	); err != nil {
+		return err
+	}
+
+	log.Info("Address ensured (added or removed) in Etcd object", "etcd", client.ObjectKeyFromObject(etcdObj))
+	return nil
+}
+
+// AddAddressToETCD mutates the given etcdObj by inserting the given address into
+// `.spec.externallyManagedMemberAddresses[]` and increasing `.spec.replicas`. If the address is already part of the
+// list, nothing is done. It returns true or false based on whether it mutated etcdObj.
+func AddAddressToETCD(etcdObj *druidcorev1alpha1.Etcd, address string) bool {
+	if slices.Contains(etcdObj.Spec.ExternallyManagedMemberAddresses, address) {
+		return false
+	}
+	etcdObj.Spec.ExternallyManagedMemberAddresses = append(etcdObj.Spec.ExternallyManagedMemberAddresses, address)
+	etcdObj.Spec.Replicas++
+	return true
+}
+
+// RemoveAddressFromETCD mutates the given etcdObj by removing the given address from
+// `.spec.externallyManagedMemberAddresses[]` and decreasing `.spec.replicas`. If the address is not part of the list,
+// nothing is done. It returns true or false based on whether it mutated etcdObj.
+func RemoveAddressFromETCD(etcdObj *druidcorev1alpha1.Etcd, address string) bool {
+	if !slices.Contains(etcdObj.Spec.ExternallyManagedMemberAddresses, address) {
+		return false
+	}
+	etcdObj.Spec.ExternallyManagedMemberAddresses = slices.DeleteFunc(etcdObj.Spec.ExternallyManagedMemberAddresses, func(v string) bool {
+		return v == address
+	})
+	etcdObj.Spec.Replicas--
+	return true
 }

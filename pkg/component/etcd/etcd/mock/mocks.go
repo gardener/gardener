@@ -208,20 +208,16 @@ func (mr *MockInterfaceMockRecorder) SetReplicas(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicas", reflect.TypeOf((*MockInterface)(nil).SetReplicas), arg0)
 }
 
-// SetStaticPodControlPlaneNodesIPAddresses mocks base method.
-func (m *MockInterface) SetStaticPodControlPlaneNodesIPAddresses(arg0 ...net.IP) {
+// SetStaticPodFirstControlPlaneMachineIP mocks base method.
+func (m *MockInterface) SetStaticPodFirstControlPlaneMachineIP(arg0 net.IP) {
 	m.ctrl.T.Helper()
-	varargs := []any{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "SetStaticPodControlPlaneNodesIPAddresses", varargs...)
+	m.ctrl.Call(m, "SetStaticPodFirstControlPlaneMachineIP", arg0)
 }
 
-// SetStaticPodControlPlaneNodesIPAddresses indicates an expected call of SetStaticPodControlPlaneNodesIPAddresses.
-func (mr *MockInterfaceMockRecorder) SetStaticPodControlPlaneNodesIPAddresses(arg0 ...any) *gomock.Call {
+// SetStaticPodFirstControlPlaneMachineIP indicates an expected call of SetStaticPodFirstControlPlaneMachineIP.
+func (mr *MockInterfaceMockRecorder) SetStaticPodFirstControlPlaneMachineIP(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStaticPodControlPlaneNodesIPAddresses", reflect.TypeOf((*MockInterface)(nil).SetStaticPodControlPlaneNodesIPAddresses), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetStaticPodFirstControlPlaneMachineIP", reflect.TypeOf((*MockInterface)(nil).SetStaticPodFirstControlPlaneMachineIP), arg0)
 }
 
 // Snapshot mocks base method.

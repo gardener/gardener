@@ -27,6 +27,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -426,6 +427,38 @@ var _ = Describe("ActuatorReconcile", func() {
 					Expect(seedClient.List(ctx, &existingMachineDeployments)).To(Succeed())
 				}, 10),
 			)
+
+			When("shoot has a control plane worker pool", func() {
+				It("should set the suspend-instance-deletion annotation on the control plane pool's machine deployment template", func() {
+					cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:         "pool1",
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+						},
+					}
+
+					err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, caUsed)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(seedClient.Get(ctx, testDeploymentObjectKey, &returnedDeployment)).To(Succeed())
+					Expect(returnedDeployment.Spec.Template.Annotations).To(HaveKeyWithValue(gardenerutils.AnnotationKeySuspendInstanceDeletion, gardenerutils.AnnotationValueSuspendInstanceDeletion))
+				})
+
+				It("should not set the suspend-instance-deletion annotation on non-control-plane pool machine deployments", func() {
+					cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:         "other-pool",
+							ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+						},
+					}
+
+					err := deployMachineDeployments(ctx, log, seedClient, cluster, worker, &existingMachineDeployments, wantedMachineDeployments, caUsed)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(seedClient.Get(ctx, testDeploymentObjectKey, &returnedDeployment)).To(Succeed())
+					Expect(returnedDeployment.Spec.Template.Annotations).NotTo(HaveKey(gardenerutils.AnnotationKeySuspendInstanceDeletion))
+				})
+			})
 
 			It("should mark all machines for forceful deletion when shoot is hibernated", func() {
 				machine1 := &machinev1alpha1.Machine{

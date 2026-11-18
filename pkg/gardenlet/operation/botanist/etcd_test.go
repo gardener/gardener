@@ -607,6 +607,74 @@ var _ = Describe("Etcd", func() {
 			Expect(botanist.DestroyEtcd(ctx)).To(Succeed())
 		})
 	})
+
+	Describe("#AddAddressToETCD", func() {
+		var etcdObj *druidcorev1alpha1.Etcd
+
+		BeforeEach(func() {
+			etcdObj = &druidcorev1alpha1.Etcd{
+				Spec: druidcorev1alpha1.EtcdSpec{
+					Replicas:                         1,
+					ExternallyManagedMemberAddresses: []string{"192.168.0.1"},
+				},
+			}
+		})
+
+		It("should add the address and increase the replicas when the address is not yet present", func() {
+			Expect(AddAddressToETCD(etcdObj, "192.168.0.2")).To(BeTrue())
+			Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("192.168.0.1", "192.168.0.2"))
+			Expect(etcdObj.Spec.Replicas).To(BeEquivalentTo(2))
+		})
+
+		It("should do nothing when the address is already present", func() {
+			Expect(AddAddressToETCD(etcdObj, "192.168.0.1")).To(BeFalse())
+			Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("192.168.0.1"))
+			Expect(etcdObj.Spec.Replicas).To(BeEquivalentTo(1))
+		})
+
+		It("should add the address to an empty list", func() {
+			etcdObj.Spec.Replicas = 0
+			etcdObj.Spec.ExternallyManagedMemberAddresses = nil
+
+			Expect(AddAddressToETCD(etcdObj, "192.168.0.1")).To(BeTrue())
+			Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("192.168.0.1"))
+			Expect(etcdObj.Spec.Replicas).To(BeEquivalentTo(1))
+		})
+	})
+
+	Describe("#RemoveAddressFromETCD", func() {
+		var etcdObj *druidcorev1alpha1.Etcd
+
+		BeforeEach(func() {
+			etcdObj = &druidcorev1alpha1.Etcd{
+				Spec: druidcorev1alpha1.EtcdSpec{
+					Replicas:                         2,
+					ExternallyManagedMemberAddresses: []string{"192.168.0.1", "192.168.0.2"},
+				},
+			}
+		})
+
+		It("should remove the address and decrease the replicas when the address is present", func() {
+			Expect(RemoveAddressFromETCD(etcdObj, "192.168.0.2")).To(BeTrue())
+			Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("192.168.0.1"))
+			Expect(etcdObj.Spec.Replicas).To(BeEquivalentTo(1))
+		})
+
+		It("should do nothing when the address is not present", func() {
+			Expect(RemoveAddressFromETCD(etcdObj, "192.168.0.3")).To(BeFalse())
+			Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("192.168.0.1", "192.168.0.2"))
+			Expect(etcdObj.Spec.Replicas).To(BeEquivalentTo(2))
+		})
+
+		It("should remove the last remaining address", func() {
+			etcdObj.Spec.Replicas = 1
+			etcdObj.Spec.ExternallyManagedMemberAddresses = []string{"192.168.0.1"}
+
+			Expect(RemoveAddressFromETCD(etcdObj, "192.168.0.1")).To(BeTrue())
+			Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(BeEmpty())
+			Expect(etcdObj.Spec.Replicas).To(BeEquivalentTo(0))
+		})
+	})
 })
 
 type newEtcdValidator struct {

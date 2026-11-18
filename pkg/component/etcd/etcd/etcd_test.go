@@ -286,7 +286,7 @@ var _ = Describe("Etcd", func() {
 
 			switch class {
 			case ClassImportant:
-				if replicas == 1 {
+				if replicas == 1 && staticPodConfig == nil {
 					obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 				}
 				obj.Spec.Backup.Resources = &corev1.ResourceRequirements{
@@ -301,7 +301,7 @@ var _ = Describe("Etcd", func() {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "resources.druid.gardener.cloud/allow-unhealthy-pod-eviction", "")
 			}
 
-			if replicas == 3 {
+			if replicas == 3 && staticPodConfig == nil {
 				obj.Spec.Labels = utils.MergeStringMaps(obj.Spec.Labels, map[string]string{
 					"networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-2379": "allowed",
 					"networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-2380": "allowed",
@@ -1386,9 +1386,38 @@ var _ = Describe("Etcd", func() {
 					Expect(accessSecret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "kube-system"))
 				})
 
+				When("etcd is important", func() {
+					BeforeEach(func() {
+						class = ClassImportant
+					})
+
+					It("should not set the safe-to-evict annotation", func() {
+						Expect(etcd.Deploy(ctx)).To(Succeed())
+
+						etcdObj := &druidcorev1alpha1.Etcd{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+						Expect(etcdObj.Spec.Annotations).NotTo(HaveKey("cluster-autoscaler.kubernetes.io/safe-to-evict"))
+					})
+				})
+
+				When("HA setup is configured", func() {
+					BeforeEach(func() {
+						highAvailabilityEnabled = true
+						replicas = new(int32(3))
+					})
+
+					It("should not add the peer-to-peer network policy labels", func() {
+						Expect(etcd.Deploy(ctx)).To(Succeed())
+
+						etcdObj := &druidcorev1alpha1.Etcd{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+						Expect(etcdObj.Spec.Labels).NotTo(HaveKey("networking.resources.gardener.cloud/to-etcd-" + role + "-client-tcp-2380"))
+					})
+				})
+
 				It("should set ExternallyManagedMemberAddresses and derive Replicas from controlPlaneNodeIP", func() {
 					nodeIP := net.ParseIP("1.2.3.4")
-					etcd.SetStaticPodControlPlaneNodesIPAddresses(nodeIP)
+					etcd.SetStaticPodFirstControlPlaneMachineIP(nodeIP)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 
@@ -1398,9 +1427,18 @@ var _ = Describe("Etcd", func() {
 					Expect(etcdObj.Spec.Replicas).To(Equal(int32(1)))
 				})
 
+				It("should keep Replicas at zero without member addresses when no control plane machine IP is set", func() {
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+
+					etcdObj := &druidcorev1alpha1.Etcd{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+					Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(BeEmpty())
+					Expect(etcdObj.Spec.Replicas).To(Equal(int32(0)))
+				})
+
 				It("should not duplicate an address when the same IP is deployed twice", func() {
 					nodeIP := net.ParseIP("1.2.3.4")
-					etcd.SetStaticPodControlPlaneNodesIPAddresses(nodeIP)
+					etcd.SetStaticPodFirstControlPlaneMachineIP(nodeIP)
 
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 					Expect(etcd.Deploy(ctx)).To(Succeed())
@@ -1413,7 +1451,7 @@ var _ = Describe("Etcd", func() {
 
 				It("should preserve existing addresses and append a new IP on subsequent deploy", func() {
 					firstIP := net.ParseIP("1.2.3.4")
-					etcd.SetStaticPodControlPlaneNodesIPAddresses(firstIP)
+					etcd.SetStaticPodFirstControlPlaneMachineIP(firstIP)
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 
 					etcd2 := New(log, c, c, testNamespace, sm, Values{
@@ -1429,7 +1467,7 @@ var _ = Describe("Etcd", func() {
 						StaticPodConfig:         &StaticPodConfig{},
 					})
 					secondIP := net.ParseIP("5.6.7.8")
-					etcd2.SetStaticPodControlPlaneNodesIPAddresses(secondIP)
+					etcd2.SetStaticPodFirstControlPlaneMachineIP(secondIP)
 					Expect(etcd2.Deploy(ctx)).To(Succeed())
 
 					etcdObj := &druidcorev1alpha1.Etcd{}
@@ -1922,6 +1960,31 @@ var _ = Describe("Etcd", func() {
 				mockHttpClient.EXPECT().Do(request).Return(nil, fakeErr)
 
 				Expect(etcd.Snapshot(ctx, mockHttpClient)).To(MatchError(fakeErr))
+			})
+
+			When("etcd runs as static pod", func() {
+				BeforeEach(func() {
+					staticPodConfig = &StaticPodConfig{}
+				})
+
+				It("should target a member address from the Etcd resource", func() {
+					etcdObj := &druidcorev1alpha1.Etcd{
+						ObjectMeta: metav1.ObjectMeta{Name: etcdName, Namespace: testNamespace},
+						Spec:       druidcorev1alpha1.EtcdSpec{ExternallyManagedMemberAddresses: []string{"1.2.3.4"}},
+					}
+					Expect(c.Create(ctx, etcdObj)).To(Succeed())
+
+					request, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://1.2.3.4:8080/snapshot/full?final=true", nil)
+					Expect(err).ToNot(HaveOccurred())
+
+					mockHttpClient.EXPECT().Do(request)
+
+					Expect(etcd.Snapshot(ctx, mockHttpClient)).To(Succeed())
+				})
+
+				It("should return an error when the Etcd resource cannot be retrieved", func() {
+					Expect(etcd.Snapshot(ctx, mockHttpClient)).To(MatchError(ContainSubstring("failed to get etcd object")))
+				})
 			})
 		})
 	})
