@@ -669,7 +669,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, mr 
 		results         = make(chan *output)
 		wg              sync.WaitGroup
 		deletePVCs      = mr.Spec.DeletePersistentVolumeClaims != nil && *mr.Spec.DeletePersistentVolumeClaims
-		isForceDeletion = forceDeletion(mr)
+		isForceDeletion = forceDeletion(mr) && mr.DeletionTimestamp != nil
 		deletionPending = false
 		errorList       = &multierror.Error{
 			ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("Could not clean all old resources"),
