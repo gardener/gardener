@@ -168,7 +168,7 @@ var _ = Describe("Controller", func() {
 		)
 
 		BeforeEach(func() {
-			ctx = context.TODO()
+			ctx = context.Background()
 			namespaceName = "test-namespace"
 			obj = &unstructured.Unstructured{}
 			obj.SetAPIVersion("v1")
