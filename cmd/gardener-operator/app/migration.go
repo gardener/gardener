@@ -92,7 +92,7 @@ func deleteStaleShootAccessSecret(ctx context.Context, c client.Client, log logr
 
 func isValidGardenAccessReplacement(stale, replacement *corev1.Secret) bool {
 	return replacement.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest &&
-		replacement.Labels[resourcesv1alpha1.ResourceManagerClass] == resourcesv1alpha1.ResourceManagerClassGardenTransitional &&
+		replacement.Labels[resourcesv1alpha1.ResourceManagerClass] == "garden-transitional" &&
 		replacement.Annotations[resourcesv1alpha1.ServiceAccountName] == stale.Annotations[resourcesv1alpha1.ServiceAccountName] &&
 		replacement.Annotations[resourcesv1alpha1.ServiceAccountNamespace] == stale.Annotations[resourcesv1alpha1.ServiceAccountNamespace] &&
 		metav1.HasAnnotation(replacement.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
