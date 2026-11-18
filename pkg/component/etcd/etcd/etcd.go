@@ -287,7 +287,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
 	}
 
-	clientSecret, err := GenerateClientCertificate(ctx, e.secretsManager)
+	var clientCertSignedByCAOptions []secretsmanager.SignedByCAOption
+	if e.values.StaticPodConfig != nil {
+		// For self-hosted shoots, sign the client certificate with the old CA. Otherwise, etcd-druid already starts
+		// talking to etcd with the new client cert while the etcd pod on the control plane nodes did not yet receive
+		// the new CA bundle, hence rejects it. This would result in a never finishing Etcd reconciliation.
+		clientCertSignedByCAOptions = append(clientCertSignedByCAOptions, secretsmanager.UseOldCA)
+	}
+
+	clientSecret, err := GenerateClientCertificate(ctx, e.secretsManager, clientCertSignedByCAOptions...)
 	if err != nil {
 		return fmt.Errorf("failed to generate client certificate: %w", err)
 	}
@@ -1003,7 +1011,11 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
-	if !e.values.HighAvailabilityEnabled {
+	// Non-HA hosted shoots don't have a peer CA, so there is nothing to do for them (self-hosted shoots always have a
+	// peer CA, even when non-HA).
+	// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable
+	//  PeerUrlTLS even for clusters that are currently not configured with HA, see also L354.
+	if !e.values.HighAvailabilityEnabled && e.values.StaticPodConfig == nil {
 		return nil
 	}
 
