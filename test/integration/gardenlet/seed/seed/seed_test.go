@@ -742,7 +742,6 @@ var _ = Describe("Seed controller tests", func() {
 
 				By("Verify that the seed system components have been deployed")
 				expectedManagedResources := []string{
-					"cluster-autoscaler",
 					"dependency-watchdog-weeder",
 					"dependency-watchdog-prober",
 					"istio-basic-auth-server",
@@ -1113,7 +1112,6 @@ var _ = Describe("Seed controller tests", func() {
 
 					By("Verify that seed system components have been deployed (without components managed by shoot gardenlet)")
 					expectedManagedResources := []string{
-						"cluster-autoscaler",
 						"dependency-watchdog-weeder",
 						"dependency-watchdog-prober",
 						"istio-basic-auth-server",
