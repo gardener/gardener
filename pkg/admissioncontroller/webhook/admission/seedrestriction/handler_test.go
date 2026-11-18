@@ -140,31 +140,28 @@ var _ = Describe("handler", func() {
 		})
 
 		Context("when resource already exists and operation is CREATE", func() {
-			It("should allow the request", func() {
+			It("should still run normal admission checks (there is no generic already-exists fast path)", func() {
 				request.UserInfo = gardenletUser
 				request.Operation = admissionv1.Create
 				request.Kind = metav1.GroupVersionKind{
 					Group:   gardencorev1beta1.SchemeGroupVersion.Group,
 					Version: gardencorev1beta1.SchemeGroupVersion.Version,
-					Kind:    "BackupEntry",
+					Kind:    "ShootState",
 				}
 				request.Resource = metav1.GroupVersionResource{
 					Group:    gardencorev1beta1.SchemeGroupVersion.Group,
-					Resource: "backupentries",
+					Resource: "shootstates",
 				}
 				request.Name = "foo"
 				request.Namespace = "bar"
 
-				backupEntry := &gardencorev1beta1.BackupEntry{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      request.Name,
-						Namespace: request.Namespace,
-					},
-				}
-				Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
+				Expect(fakeClient.Create(ctx, &gardencorev1beta1.ShootState{
+					ObjectMeta: metav1.ObjectMeta{Name: request.Name, Namespace: request.Namespace},
+				})).To(Succeed())
 
-				responseAllowed.Result.Message = "object already exists"
-				Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				// A ShootState that already exists is NOT waved through; the Shoot-ownership check still runs and
+				// rejects because the owning Shoot does not exist.
+				Expect(handler.Handle(ctx, request).Allowed).To(BeFalse())
 			})
 		})
 
@@ -971,6 +968,53 @@ var _ = Describe("handler", func() {
 							Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should allow the request if the source BackupEntry already exists with an unchanged spec, even if the original BackupEntry spec no longer matches (retried migration)", func() {
+							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+							// The source BackupEntry already exists from a previous (successful) CREATE with the same spec as
+							// the incoming request, while the original BackupEntry's spec has since been modified. The request
+							// must be validated against the existing source BackupEntry, not the (now mismatching) original.
+							Expect(fakeClient.Create(ctx, &gardencorev1beta1.BackupEntry{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, shootBackupEntryName),
+									Namespace: namespace,
+								},
+								Spec: gardencorev1beta1.BackupEntrySpec{BucketName: bucketName, SeedName: &seedName},
+							})).To(Succeed())
+							Expect(fakeClient.Create(ctx, &gardencorev1beta1.BackupEntry{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      shootBackupEntryName,
+									Namespace: namespace,
+								},
+								Spec: gardencorev1beta1.BackupEntrySpec{BucketName: "some-different-bucket", SeedName: new("some-different-seedname")},
+							})).To(Succeed())
+
+							responseAllowed.Result.Message = "source BackupEntry already exists"
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should forbid the request if the already existing source BackupEntry has a different spec", func() {
+							Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+							Expect(fakeClient.Create(ctx, &gardencorev1beta1.BackupEntry{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, shootBackupEntryName),
+									Namespace: namespace,
+								},
+								Spec: gardencorev1beta1.BackupEntrySpec{BucketName: "some-other-seeds-bucket", SeedName: &seedName},
+							})).To(Succeed())
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("spec of the already existing source BackupEntry %s-%s does not match the incoming spec", v1beta1constants.BackupSourcePrefix, shootBackupEntryName),
+									},
+								},
+							}))
 						})
 
 						It("should allow creation of source BackupEntry if a matching BackupEntry exists and shoot is in live-migrate phase", func() {
