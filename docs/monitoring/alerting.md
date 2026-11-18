@@ -134,4 +134,4 @@ inhibit_rules:
 
 Below is a graph visualizing the inhibition rules:
 
-![inhibitionGraph](../development/content/alertInhibitionGraph.png)
+![inhibitionGraph](../development/content/alert-inhibition-graph.png)
