@@ -372,6 +372,9 @@ var _ = Describe("Etcd", func() {
 
 			if staticPodConfig != nil {
 				obj.Spec.RunAsRoot = new(true)
+				obj.Spec.Labels = utils.MergeStringMaps(obj.Spec.Labels, map[string]string{
+					"shoot.gardener.cloud/is-critical-static-pod": "true",
+				})
 
 				if controlPlaneNodeIP != nil {
 					obj.Spec.ExternallyManagedMemberAddresses = []string{controlPlaneNodeIP.String()}
@@ -1396,6 +1399,14 @@ var _ = Describe("Etcd", func() {
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
 					Expect(etcdObj.Spec.ExternallyManagedMemberAddresses).To(ConsistOf("1.2.3.4"))
 					Expect(etcdObj.Spec.Replicas).To(Equal(int32(1)))
+				})
+
+				It("should label the etcd as a critical static pod", func() {
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+
+					etcdObj := &druidcorev1alpha1.Etcd{}
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, etcdObj)).To(Succeed())
+					Expect(etcdObj.Spec.Labels).To(HaveKeyWithValue("shoot.gardener.cloud/is-critical-static-pod", "true"))
 				})
 
 				It("should not duplicate an address when the same IP is deployed twice", func() {

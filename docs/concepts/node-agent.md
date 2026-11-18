@@ -107,11 +107,12 @@ Therefore, while serial reconciliation benefits both components, it is the `etcd
 Serial reconciliation is enabled by setting the `reconciliation.osc.node-agent.gardener.cloud/serial` annotation to `"true"` on the `Secret` containing the `OperatingSystemConfig`.
 When this annotation is present, the controller uses a leader election mechanism based on Kubernetes `Lease` objects to coordinate reconciliation across multiple `gardener-node-agent` instances:
 
-1. **Lease Acquisition**: Before starting reconciliation, each `gardener-node-agent` instance attempts to acquire a `Lease` object with the same name as the `Secret` (in the `kube-system` namespace). The `Lease` is owned by the `Secret` via an `OwnerReference`.
-2. **Reconciliation with Lock**: Only the instance that successfully acquires the `Lease` proceeds with reconciliation. The `Lease` has a duration of 10 minutes and is renewed in the beginning of the reconciliation process.
-3. **Lock Release**: After successful reconciliation, the instance releases the `Lease` by clearing its holder identity, making it available for other instances to acquire.
-4. **Waiting for Lock**: Instances that fail to acquire the `Lease` (because another instance holds it) will requeue their reconciliation and wait. The controller watches the `Lease` object and automatically requeues when it detects the `Lease` has been released.
-5. **Lease Expiry Handling**: If a `Lease` holder fails to renew the `Lease` before it expires, other instances can detect this and attempt to acquire the `Lease` to proceed with reconciliation.
+1. **Quorum Protection**: Before attempting to acquire the `Lease`, each instance checks the `CriticalControlPlanePodsUnhealthy` condition (see [Health Check Controller](#health-check-controller)) of the other nodes in its worker pool. A sibling is considered at risk when the condition reports `True`, is missing, or is stale (the health check controller refreshes the condition's heartbeat every interval, so a missing or stale condition means the sibling's `gardener-node-agent` stopped reporting and its `etcd` health is unknown). While any sibling is at risk, the instance backs off and requeues (after `1m`) instead of acquiring the `Lease`, so a node is never updated while another control plane node's `etcd` might be unhealthy.
+2. **Lease Acquisition**: Before starting reconciliation, each `gardener-node-agent` instance attempts to acquire a `Lease` object with the same name as the `Secret` (in the `kube-system` namespace). The `Lease` is owned by the `Secret` via an `OwnerReference`.
+3. **Reconciliation with Lock**: Only the instance that successfully acquires the `Lease` proceeds with reconciliation. The `Lease` has a duration of 10 minutes and is renewed in the beginning of the reconciliation process.
+4. **Lock Release**: After successful reconciliation, the instance releases the `Lease` by clearing its holder identity, making it available for other instances to acquire.
+5. **Waiting for Lock**: Instances that fail to acquire the `Lease` (because another instance holds it) will requeue their reconciliation and wait. The controller watches the `Lease` object and automatically requeues when it detects the `Lease` has been released.
+6. **Lease Expiry Handling**: If a `Lease` holder fails to renew the `Lease` before it expires, other instances can detect this and attempt to acquire the `Lease` to proceed with reconciliation.
 
 ##### Behavior Changes
 
@@ -149,6 +150,11 @@ It monitors the expiration of the certificate and requests a new one before the 
 This controller performs periodic health checks on the node's critical components, such as `containerd` and `kubelet`.
 It watches the `Node` object and executes configured health checkers at regular intervals.
 If a health check fails, the controller can restart the affected systemd service to restore normal operation.
+
+On control plane nodes of self-hosted shoot clusters, an additional checker watches the critical static pods running on the node.
+It lists the `Pod`s in the `kube-system` namespace that carry the `shoot.gardener.cloud/is-critical-static-pod=true` label (set on the `etcd` static pods) and reports their readiness and health to the `CriticalControlPlanePodsUnhealthy` condition on the `Node`.
+The condition is used by the [serial reconciliation](#serial-reconciliation) to avoid updating a node while another control plane node's `etcd` is unhealthy, protecting the `etcd` quorum.
+Additionally, the condition is appended to `.spec.template.spec.machineConfiguration.nodeConditions` of the control plane pool's `MachineDeployment` so that `machine-controller-manager` also treats a node reporting it as unhealthy.
 
 ### [Hostname Check Controller](../../pkg/nodeagent/controller/hostnamecheck)
 

@@ -8,6 +8,7 @@ import (
 	"context"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	mcmoptions "github.com/gardener/machine-controller-manager/pkg/util/provider/app/options"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,6 +35,12 @@ import (
 )
 
 var _ = Describe("ActuatorReconcile", func() {
+	Describe("defaultMachineControllerManagerNodeConditions", func() {
+		It("should match machine-controller-manager's default node conditions", func() {
+			Expect(defaultMachineControllerManagerNodeConditions).To(Equal(mcmoptions.NewMCServer().NodeConditions))
+		})
+	})
+
 	Describe("#validateMachineDeploymentPoolNames", func() {
 		It("should reject unknown worker pools", func() {
 			worker := &extensionsv1alpha1.Worker{
@@ -304,6 +311,50 @@ var _ = Describe("ActuatorReconcile", func() {
 					caUsed = false
 				}, 2),
 			)
+		})
+
+		When("shoot has a control plane worker pool", func() {
+			BeforeEach(func() {
+				cluster.Shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{
+					Name:         "pool1",
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				}}
+			})
+
+			It("should append the critical control plane pods node condition to the control plane pool's MachineDeployment", func() {
+				wantedMachineDeployments = append(wantedMachineDeployments,
+					buildWantedMachineDeployment("2", machinev1alpha1.RollingUpdateMachineDeploymentStrategyType, nil),
+				)
+
+				expectedControlPlaneMachineDeployment := buildExpectedMachineDeployment("namespace", 2, "1", wantedMachineDeployments[0])
+				expectedControlPlaneMachineDeployment.Spec.Template.Spec.MachineConfiguration = &machinev1alpha1.MachineConfiguration{
+					NodeConditions: new("KernelDeadlock,ReadonlyFilesystem,DiskPressure,NetworkUnavailable,CriticalControlPlanePodsUnhealthy"),
+				}
+
+				testMachineDeployments(wantedMachineDeployments, []*machinev1alpha1.MachineDeployment{
+					expectedControlPlaneMachineDeployment,
+					buildExpectedMachineDeployment("namespace", 2, "1", wantedMachineDeployments[1]),
+				})
+			})
+
+			It("should append the critical control plane pods node condition to the control plane pool's pre-existing node conditions", func() {
+				wantedMachineDeployments[0].MachineConfiguration = &machinev1alpha1.MachineConfiguration{
+					NodeConditions: new("CustomCondition"),
+				}
+				wantedMachineDeployments = append(wantedMachineDeployments,
+					buildWantedMachineDeployment("2", machinev1alpha1.RollingUpdateMachineDeploymentStrategyType, nil),
+				)
+
+				expectedControlPlaneMachineDeployment := buildExpectedMachineDeployment("namespace", 2, "1", wantedMachineDeployments[0])
+				expectedControlPlaneMachineDeployment.Spec.Template.Spec.MachineConfiguration = &machinev1alpha1.MachineConfiguration{
+					NodeConditions: new("CustomCondition,CriticalControlPlanePodsUnhealthy"),
+				}
+
+				testMachineDeployments(wantedMachineDeployments, []*machinev1alpha1.MachineDeployment{
+					expectedControlPlaneMachineDeployment,
+					buildExpectedMachineDeployment("namespace", 2, "1", wantedMachineDeployments[1]),
+				})
+			})
 		})
 
 		When("there are existing MachineDeployments", func() {
