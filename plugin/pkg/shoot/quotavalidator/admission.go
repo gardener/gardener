@@ -183,6 +183,7 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 
 	if a.GetOperation() == admission.Create {
 		checkQuota = true
+		checkLifetime = true
 	}
 
 	if a.GetOperation() == admission.Update {
@@ -252,7 +253,7 @@ func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ a
 
 		plannedExpirationTime, err := time.Parse(time.RFC3339, lifetime)
 		if err != nil {
-			return apierrors.NewInternalError(err)
+			return admission.NewForbidden(a, fmt.Errorf("could not parse the value of the %s annotation as RFC3339 time: %w", v1beta1constants.ShootExpirationTimestamp, err))
 		}
 
 		maxPossibleExpirationTime = q.clock.Now().Add(time.Duration(*maxShootLifetime*24) * time.Hour)
