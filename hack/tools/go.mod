@@ -22,17 +22,17 @@ tool (
 
 // This separate Go module decouples development-tool dependencies from Gardener's production binaries.
 require (
-	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4
+	golang.org/x/exp v0.0.0-20261117202309-7a49493bfd90
 	// this has to be kept in sync with the used golangci-lint version
 	// use go version -m hack/tools/bin/<<architecture>>/golangci-lint to detect the dependency versions
 	// or, with `go work` enabled, use `go work sync`
-	golang.org/x/tools v0.52.1-0.20261117052324-6bc5e25e1abb
+	golang.org/x/tools v0.53.0
 	sigs.k8s.io/kube-api-linter v0.0.0-20261030144752-d90122c89087
 )
 
 require (
 	github.com/google/go-cmp v0.7.0 // indirect
-	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 )
 
@@ -386,10 +386,10 @@ require (
 	gocloud.dev v0.46.0 // indirect
 	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20261007192929-f45ad48fbe92 // indirect
-	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
-	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
+	golang.org/x/telemetry v0.0.0-20261116191925-e77a43154acb // indirect
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
