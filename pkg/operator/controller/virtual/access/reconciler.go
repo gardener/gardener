@@ -44,6 +44,7 @@ type Reconciler struct {
 	Clock           clock.Clock
 
 	tokenFilePath string
+	caFilePath    string
 }
 
 // NewVirtualClient builds a client to the virtual cluster from the given REST config. Exposed for testing.
@@ -53,9 +54,11 @@ var NewVirtualClient = func(restConfig *rest.Config) (client.Client, error) {
 
 // Reconcile processes the given access secret in the request.
 // It extracts the included Kubeconfig, and prepares a dedicated REST config
-// where the inline bearer token is replaced by a bearer token file.
-// Any subsequent reconciliation run causes the content of the BearerTokenFile to be updated with the token found
-// in the access secret.
+// where the inline bearer token is replaced by a bearer token file and the inline CA bundle is replaced by a CA file.
+// Any subsequent reconciliation run causes the content of the BearerTokenFile and the CA file to be updated with the
+// token and CA bundle found in the access secret. Using a CA file (instead of inline CA data) allows client-go to
+// transparently reload the virtual garden's CA bundle after a credentials rotation without recreating the client (see
+// the ClientsAllowCARotation feature gate), which the virtual cluster reconciler relies on.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -116,6 +119,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	restConfig.BearerToken = ""
 	restConfig.BearerTokenFile = r.tokenFilePath
 
+	// Replace the inline CA bundle with a CA file so that client-go reloads it from disk on credentials rotation
+	// instead of pinning it for the lifetime of the virtual cluster client. We only switch to the file if the
+	// kubeconfig actually carried a CA bundle, to avoid emitting a REST config that trusts no CA at all.
+	if len(restConfig.CAData) > 0 {
+		if err := r.writeCABundleToFile(log, restConfig.CAData); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error writing CA bundle to file: %w", err)
+		}
+
+		restConfig.CAData = nil
+		restConfig.CAFile = r.caFilePath
+	}
+
 	log.Info("Notifying virtual cluster creation reconciler about new REST config")
 	r.Channel <- event.TypedGenericEvent[*rest.Config]{Object: restConfig}
 	return reconcile.Result{}, nil
@@ -156,6 +171,22 @@ func (r *Reconciler) writeTokenToFile(log logr.Logger, token string) error {
 
 	log.Info("Writing virtual garden access token to file", "path", r.tokenFilePath)
 	return afero.WriteFile(r.FS, r.tokenFilePath, []byte(token), 0o600)
+}
+
+func (r *Reconciler) writeCABundleToFile(log logr.Logger, caBundle []byte) error {
+	if r.caFilePath == "" {
+		caFile, err := CreateTemporaryFile(r.FS, "", "garden-access-ca")
+		if err != nil {
+			return fmt.Errorf("error creating virtual garden CA bundle file: %w", err)
+		}
+		r.caFilePath = caFile.Name()
+		if err := caFile.Close(); err != nil {
+			return fmt.Errorf("error closing virtual garden CA bundle file: %w", err)
+		}
+	}
+
+	log.Info("Writing virtual garden CA bundle to file", "path", r.caFilePath)
+	return afero.WriteFile(r.FS, r.caFilePath, caBundle, 0o600)
 }
 
 // setBootstrapClientCertificate creates a short-lived client certificate signed by the `ca-client` CA
