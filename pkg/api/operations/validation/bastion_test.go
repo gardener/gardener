@@ -5,6 +5,8 @@
 package validation_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -209,6 +211,34 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.machine"),
 				}))))
 			})
+		})
+	})
+
+	Describe("#ValidateBastionStatusUpdate", func() {
+		It("should allow a heartbeat in the past", func() {
+			heartbeat := metav1.NewTime(metav1.Now().Add(-time.Minute))
+			bastion.Status.LastHeartbeatTimestamp = &heartbeat
+
+			Expect(ValidateBastionStatusUpdate(bastion, bastion)).To(BeEmpty())
+		})
+
+		It("should forbid a missing heartbeat", func() {
+			bastion.Status.LastHeartbeatTimestamp = nil
+
+			Expect(ValidateBastionStatusUpdate(bastion, bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("status.lastHeartbeatTimestamp"),
+			}))))
+		})
+
+		It("should forbid a heartbeat in the future", func() {
+			heartbeat := metav1.NewTime(metav1.Now().Add(time.Minute))
+			bastion.Status.LastHeartbeatTimestamp = &heartbeat
+
+			Expect(ValidateBastionStatusUpdate(bastion, bastion)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("status.lastHeartbeatTimestamp"),
+			}))))
 		})
 	})
 })

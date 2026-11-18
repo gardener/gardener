@@ -145,9 +145,15 @@ func (s bastionStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runt
 	oldBastion := old.(*operations.Bastion)
 	newBastion.Spec = oldBastion.Spec
 
-	// recalculate to prevent manipulation
-	expires := metav1.NewTime(newBastion.Status.LastHeartbeatTimestamp.Add(s.timeToLive))
-	newBastion.Status.ExpirationTimestamp = &expires
+	// Derive the expiration timestamp from the heartbeat to prevent manipulation. A client may omit
+	// `.status.lastHeartbeatTimestamp` in the payload, so guard against the nil pointer and let
+	// validation reject the update.
+	if newBastion.Status.LastHeartbeatTimestamp != nil {
+		expires := metav1.NewTime(newBastion.Status.LastHeartbeatTimestamp.Add(s.timeToLive))
+		newBastion.Status.ExpirationTimestamp = &expires
+	} else {
+		newBastion.Status.ExpirationTimestamp = nil
+	}
 }
 
 func (bastionStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {

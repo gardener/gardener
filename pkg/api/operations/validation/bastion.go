@@ -94,9 +94,10 @@ func ValidateBastionSpecUpdate(newSpec, oldSpec *operations.BastionSpec, fldPath
 // ValidateBastionStatusUpdate validates the status field of a Bastion object.
 func ValidateBastionStatusUpdate(newBastion, _ *operations.Bastion) field.ErrorList {
 	allErrs := field.ErrorList{}
-	now := time.Now()
 
-	if newBastion.Status.LastHeartbeatTimestamp.After(now) {
+	if newBastion.Status.LastHeartbeatTimestamp == nil {
+		allErrs = append(allErrs, field.Required(field.NewPath("status.lastHeartbeatTimestamp"), "last heartbeat must be set"))
+	} else if newBastion.Status.LastHeartbeatTimestamp.After(time.Now()) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("status.lastHeartbeatTimestamp"), newBastion.Status.LastHeartbeatTimestamp, "last heartbeat must not be in the future"))
 	}
 
