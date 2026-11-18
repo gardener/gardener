@@ -45,7 +45,7 @@ stringData:
         spec:
           containers:
           - name: nginx
-            image: nginx:1.31.8
+            image: nginx:1.31.9
             ports:
             - containerPort: 80
 ---
