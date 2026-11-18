@@ -24,6 +24,9 @@ const (
 	// a valid deletion propagation value (e.g., "Foreground", "Background", "Orphan"), the controller will use this value
 	// when deleting the object in case it faces an "Invalid" response during an update operation.
 	DeletionPropagationOnInvalidUpdate = "resources.gardener.cloud/deletion-propagation-on-invalid-update"
+	// ForceDeletion is a constant for an annotation on a ManagedResource. If set to true, all resources managed by
+	// the ManagedResource will be forcefully deleted when the ManagedResource itself is deleted.
+	ForceDeletion = "resources.gardener.cloud/force-deletion"
 	// KeepObject is a constant for an annotation on a resource managed by a ManagedResource. If set to
 	// true then the controller will not delete the object in case it is removed from the ManagedResource or the
 	// ManagedResource itself is deleted.

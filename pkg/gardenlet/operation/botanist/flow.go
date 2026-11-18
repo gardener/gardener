@@ -1408,7 +1408,7 @@ func (b *Botanist) MigrateAndDeleteManagedResourcesTaskGroup(cleanupShootResourc
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting all Managed Resources from the Shoot's namespace",
-			Fn:           b.DeleteManagedResources,
+			Fn:           b.DeleteManagedResourcesWithoutForceDeletion,
 			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
 		})
 		_ = g.Add(flow.Task{
