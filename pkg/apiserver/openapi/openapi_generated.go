@@ -2594,7 +2594,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"maxNodeProvisionTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
+							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).\n\nDeprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.",
 							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
 						},
 					},
@@ -2775,7 +2775,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscalerOptions(ref common.ReferenceC
 					},
 					"maxNodeProvisionTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned.",
+							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned.\n\nDeprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.",
 							Ref:         ref(metav1.Duration{}.OpenAPIModelName()),
 						},
 					},

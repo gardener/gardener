@@ -28,6 +28,8 @@ const (
 	// ScaleDownUnreadyTimeAnnotation is the annotation key for the value of NodeGroupAutoscalingOptions.ScaleDownUnreadyTime of cluster-autoscaler
 	ScaleDownUnreadyTimeAnnotation = "autoscaler.gardener.cloud/scale-down-unready-time"
 	// MaxNodeProvisionTimeAnnotation is the annotation key for the value of NodeGroupAutoscalingOptions.MaxNodeProvisionTime of cluster-autoscaler
+	//
+	// Deprecated: This annotation is deprecated and will be removed in the future. The cluster-autoscaler will use machineControllerManager.machineCreationTimeout instead.
 	MaxNodeProvisionTimeAnnotation = "autoscaler.gardener.cloud/max-node-provision-time"
 )
 
@@ -203,6 +205,8 @@ type ClusterAutoscalerOptions struct {
 	// +optional
 	ScaleDownUnreadyTime *metav1.Duration `json:"scaleDownUnreadyTime,omitempty"`
 	// MaxNodeProvisionTime defines how long cluster autoscaler should wait for a node to be provisioned.
+	//
+	// Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
 	// +optional
 	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty"`
 }

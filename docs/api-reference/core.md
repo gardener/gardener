@@ -2096,7 +2096,7 @@ float
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).</p>
+<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).<br />Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.</p>
 </td>
 </tr>
 <tr>
@@ -2386,7 +2386,7 @@ float
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned.</p>
+<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned.<br />Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.</p>
 </td>
 </tr>
 

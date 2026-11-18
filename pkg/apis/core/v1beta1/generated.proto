@@ -588,6 +588,8 @@ message ClusterAutoscaler {
   optional string expander = 7;
 
   // MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+  //
+  // Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 8;
 
@@ -688,6 +690,8 @@ message ClusterAutoscalerOptions {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration scaleDownUnreadyTime = 4;
 
   // MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+  //
+  // Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 5;
 }
