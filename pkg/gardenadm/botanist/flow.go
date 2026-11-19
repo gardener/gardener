@@ -74,9 +74,9 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 		},
 	})
 	_ = g.Add(flow.Task{
-		Name: "Deleting stale apiserver master leases",
+		Name: "Deleting stale apiserver master leases from etcd",
 		Fn: func(ctx context.Context) error {
-			return b.DeleteStaleAPIServerMasterLeases(ctx)
+			return b.DeleteStaleAPIServerMasterLeasesFromEtcd(ctx)
 		},
 	})
 	_ = g.Add(flow.Task{

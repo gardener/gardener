@@ -27,7 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -182,8 +184,8 @@ func (b *GardenadmBotanist) DeleteStaleEtcdMemberLeases(ctx context.Context, rea
 	return nil
 }
 
-// DeleteStaleAPIServerMasterLeases deletes the /registry/masterleases/ entries that the restored etcd snapshot carries
-// for the prior control plane Node(s). Each masterlease key backs an endpoint of the kube-apiserver
+// DeleteStaleAPIServerMasterLeasesFromEtcd deletes the /registry/masterleases/ entries that the restored etcd snapshot
+// carries for the prior control plane Node(s). Each masterlease key backs an endpoint of the kube-apiserver
 // Service/EndpointSlice in the default namespace that in-cluster clients use to reach the kube-apiserver. On a normal
 // running cluster each key is bound to an etcd lease with a short TTL that the owning kube-apiserver renews, so a lost
 // member's key expires within seconds. A restore reconstructs a fresh etcd from a point-in-time snapshot without the
@@ -199,11 +201,11 @@ func (b *GardenadmBotanist) DeleteStaleEtcdMemberLeases(ctx context.Context, rea
 // Deleting the whole prefix is safe: the live kube-apiserver re-creates its own masterlease on the next renewal
 // (~seconds), so its endpoint reappears while only the orphaned prior-node entries stay gone; the running apiserver
 // re-reconciles the kubernetes Endpoints on its own cycle afterwards.
-func (b *GardenadmBotanist) DeleteStaleAPIServerMasterLeases(ctx context.Context) error {
+func (b *GardenadmBotanist) DeleteStaleAPIServerMasterLeasesFromEtcd(ctx context.Context) error {
 	var (
-		caFile   = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, "ca-etcd"), secretsutils.DataKeyCertificateBundle)
-		certFile = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, "etcd-client"), secretsutils.DataKeyCertificate)
-		keyFile  = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, "etcd-client"), secretsutils.DataKeyPrivateKey)
+		caFile   = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, apiserver.VolumeNameCAEtcd), secretsutils.DataKeyCertificateBundle)
+		certFile = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, apiserver.VolumeNameEtcdClient), secretsutils.DataKeyCertificate)
+		keyFile  = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, apiserver.VolumeNameEtcdClient), secretsutils.DataKeyPrivateKey)
 	)
 
 	tlsConfig, err := (transport.TLSInfo{CertFile: certFile, KeyFile: keyFile, TrustedCAFile: caFile}).ClientConfig()
@@ -212,7 +214,7 @@ func (b *GardenadmBotanist) DeleteStaleAPIServerMasterLeases(ctx context.Context
 	}
 
 	etcdClient, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{"https://localhost:2379"},
+		Endpoints:   []string{fmt.Sprintf("https://localhost:%d", etcdconstants.PortEtcdClient)},
 		DialTimeout: 15 * time.Second,
 		TLS:         tlsConfig,
 	})
@@ -224,17 +226,19 @@ func (b *GardenadmBotanist) DeleteStaleAPIServerMasterLeases(ctx context.Context
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	return b.deleteStaleAPIServerMasterLeases(ctxWithTimeout, etcdClient)
+	return b.deleteStaleAPIServerMasterLeasesFromEtcd(ctxWithTimeout, etcdClient)
 }
 
-// deleteStaleAPIServerMasterLeases performs the actual etcd prefix deletion against the given KV client. It is split out
-// from DeleteStaleAPIServerMasterLeases so the deletion can be exercised against an embedded etcd in tests without the
-// fixed localhost endpoint, TLS and host cert paths the exported method wires up at runtime.
-func (b *GardenadmBotanist) deleteStaleAPIServerMasterLeases(ctx context.Context, kv clientv3.KV) error {
+type etcdKVDeleter interface {
+	Delete(ctx context.Context, key string, opts ...clientv3.OpOption) (*clientv3.DeleteResponse, error)
+}
+
+// deleteStaleAPIServerMasterLeasesFromEtcd performs the etcd prefix deletion against the given KV client.
+func (b *GardenadmBotanist) deleteStaleAPIServerMasterLeasesFromEtcd(ctx context.Context, kv etcdKVDeleter) error {
 	const masterLeasesPrefix = "/registry/masterleases/"
-	b.Logger.Info("Deleting stale apiserver master leases", "prefix", masterLeasesPrefix)
+	b.Logger.Info("Deleting stale apiserver master leases from etcd", "prefix", masterLeasesPrefix)
 	if _, err := kv.Delete(ctx, masterLeasesPrefix, clientv3.WithPrefix()); err != nil {
-		return fmt.Errorf("failed deleting stale apiserver master leases under %q: %w", masterLeasesPrefix, err)
+		return fmt.Errorf("failed deleting stale apiserver master leases from etcd under %q: %w", masterLeasesPrefix, err)
 	}
 
 	return nil
