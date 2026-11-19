@@ -18,6 +18,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -232,7 +233,7 @@ func (r *Reconciler) setLiveMigrationStepConditionError(ctx context.Context, sho
 }
 
 // finalizeLiveMigration advances status.seedName so the destination gardenlet takes ownership,
-// then removes the live-migration intent annotation.
+// removes all queued task annotations, and removes the live-migration intent annotation.
 func (r *Reconciler) finalizeLiveMigration(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
 	shoot.Status.SeedName = shoot.Spec.SeedName
@@ -241,6 +242,7 @@ func (r *Reconciler) finalizeLiveMigration(ctx context.Context, shoot *gardencor
 	}
 
 	patch := client.MergeFrom(shoot.DeepCopy())
+	controllerutils.RemoveAllTasks(shoot.Annotations)
 	delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
 	return r.GardenClient.Patch(ctx, shoot, patch)
 }

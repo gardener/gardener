@@ -212,6 +212,7 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 	if role == v1beta1helper.LiveMigrationRoleNone && shoot.Status.LiveMigration != nil {
 		if v1beta1helper.HasLiveMigrationAnnotation(shoot.Annotations) {
 			patch := client.MergeFrom(shoot.DeepCopy())
+			controllerutils.RemoveAllTasks(shoot.Annotations)
 			delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
 			if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove stale live migration annotation: %w", err)
@@ -245,6 +246,7 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 		return reconcile.Result{}, fmt.Errorf("failed to finalize live migration: %w", err)
 	}
 
+	r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventLiveMigrated, gardencorev1beta1.EventActionLiveMigrate, "Live migrated Shoot cluster")
 	log.Info("Live control plane migration completed")
 	return reconcile.Result{}, r.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeLiveMigrate)
 }
