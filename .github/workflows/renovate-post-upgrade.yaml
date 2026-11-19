@@ -131,22 +131,33 @@ jobs:
     if: needs.post-upgrade-tasks.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      # `id-token: write` is required for the OIDC token exchange performed by the `github-auth` action.
+      # The commit and push below authenticate with the `Federated GitHub Access` token instead of the default
+      # `GITHUB_TOKEN`, so access to the branches can be restricted via a GitHub App RuleSet.
+      id-token: write
+      contents: read
     steps:
+      - name: Get Federated GitHub Access token
+        id: fed-token
+        uses: gardener/cc-utils/.github/actions/github-auth@v1
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          repositories: ${{ github.event.repository.name }}
+          permissions: |-
+            contents: write
       - name: Checkout
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-      - name: Set up git identity
-        uses: gardener/cc-utils/.github/actions/setup-git-identity@v1
+          token: ${{ steps.fed-token.outputs.token }}
       - name: Download patch
         uses: actions/download-artifact@v8
         with:
           name: post-upgrade-changes
           path: ${{ runner.temp }}
-      - name: Apply patch and push
+      - name: Apply patch and determine commit message
+        id: apply
         env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           RUN_TIDY: ${{ needs.post-upgrade-tasks.outputs.run-tidy }}
           RUN_GENERATE: ${{ needs.post-upgrade-tasks.outputs.run-generate }}
           RUN_ENVOY: ${{ needs.post-upgrade-tasks.outputs.run-envoy }}
@@ -154,7 +165,6 @@ jobs:
           set -euo pipefail
 
           git apply --3way --whitespace=nowarn "${RUNNER_TEMP}/post-upgrade.patch"
-          git add -A
 
           # Collect a message part per task and join them with '; '.
           parts=()
@@ -177,5 +187,10 @@ jobs:
             fi
           done
 
-          git commit -m "${message}"
-          git push origin "HEAD:${HEAD_REF}"
+          echo "message=${message}" >> "${GITHUB_OUTPUT}"
+      - name: Create signed commit and push
+        uses: gardener/cc-utils/.github/actions/signed-commit@v1
+        with:
+          token: ${{ steps.fed-token.outputs.token }}
+          branch: ${{ github.event.pull_request.head.ref }}
+          message: ${{ steps.apply.outputs.message }}
