@@ -238,7 +238,7 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 				// Port order matters => do not reorder
 				ExtraArgs: map[string]string{
 					// HTTP port is used only by the oidc-app extension. It's sufficient to expose the port only on localhost.
-					"httpListenAddr": fmt.Sprintf(":%d,localhost:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
+					"httpListenAddr": fmt.Sprintf(":%d,127.0.0.1:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
 					"tls":            "true,false",
 					"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
 					"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),

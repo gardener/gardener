@@ -81,7 +81,8 @@ var _ = Describe("Perses", func() {
 		dsLongterm         *persesv1alpha2.PersesDatasource
 		seedServiceMonitor *monitoringv1.ServiceMonitor
 
-		newExpectedDatasource func(string, string, string, bool, string, string, string, string) *persesv1alpha2.PersesDatasource
+		newExpectedDatasource       func(string, string, string, bool, string) *persesv1alpha2.PersesDatasource
+		newExpectedDatasourceWithCA func(string, string, string, bool, string, string, string, string) *persesv1alpha2.PersesDatasource
 	)
 
 	BeforeEach(func() {
@@ -211,7 +212,7 @@ var _ = Describe("Perses", func() {
 			},
 		}
 
-		newExpectedDatasource = func(dsName, pluginKind, url string, isDefault bool, instanceName string, secretName string, caName string, caNamespace string) *persesv1alpha2.PersesDatasource {
+		newExpectedDatasourceWithCA = func(dsName, pluginKind, url string, isDefault bool, instanceName string, secretName string, caName string, caNamespace string) *persesv1alpha2.PersesDatasource {
 			var allowedEndpoints []any
 			switch pluginKind {
 			case "PrometheusDatasource":
@@ -306,10 +307,14 @@ var _ = Describe("Perses", func() {
 			}
 		}
 
-		dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", true, "perses-seed", "", "", "")
-		dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-seed", "", "", "")
-		dsGarden = newExpectedDatasource("prometheus-garden", "PrometheusDatasource", "http://prometheus-garden:80", true, "perses-garden", "", "", "")
-		dsLongterm = newExpectedDatasource("prometheus-longterm", "PrometheusDatasource", "http://prometheus-longterm:81", false, "perses-garden", "", "", "")
+		newExpectedDatasource = func(dsName, pluginKind, url string, isDefault bool, instanceName string) *persesv1alpha2.PersesDatasource {
+			return newExpectedDatasourceWithCA(dsName, pluginKind, url, isDefault, instanceName, "", "", "")
+		}
+
+		dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", true, "perses-seed")
+		dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-seed")
+		dsGarden = newExpectedDatasource("prometheus-garden", "PrometheusDatasource", "http://prometheus-garden:80", true, "perses-garden")
+		dsLongterm = newExpectedDatasource("prometheus-longterm", "PrometheusDatasource", "http://prometheus-longterm:81", false, "perses-garden")
 
 		seedServiceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("perses", namespace, "seed"),
@@ -611,7 +616,7 @@ var _ = Describe("Perses", func() {
 				})
 
 				It("should include VictoriaLogs datasource", func() {
-					dsVL := newExpectedDatasource("victorialogs", "VictoriaLogsDatasource", "https://logging-vl."+namespace+".svc:9429", false, "perses-seed", "victorialogs-secret", "ca", namespace)
+					dsVL := newExpectedDatasourceWithCA("victorialogs", "VictoriaLogsDatasource", "https://logging-vl."+namespace+".svc:9429", false, "perses-seed", "victorialogs-secret", "ca", namespace)
 					Expect(managedResource).To(containsObjs(
 						persesCR,
 						dsAggregate,
@@ -749,11 +754,11 @@ var _ = Describe("Perses", func() {
 						Status: healthyManagedResourceStatus,
 					})).To(Succeed())
 
-					dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", false, "perses-garden", "", "", "")
+					dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", false, "perses-garden")
 				})
 
 				It("should only deploy seed-specific datasources and dashboards", func() {
-					dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-garden", "", "", "")
+					dsSeed = newExpectedDatasource("prometheus-seed", "PrometheusDatasource", "http://prometheus-seed:80", false, "perses-garden")
 					Expect(managedResource).To(containsObjs(
 						dsAggregate,
 						dsSeed,

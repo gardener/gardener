@@ -6,7 +6,6 @@ package perses
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +42,8 @@ type Values struct {
 	VPAEnabled bool
 	// IsGardenCluster specifies whether the cluster is a garden cluster.
 	IsGardenCluster bool
+	// ExternalExposure contains configuration for exposing this Perses instance via a VirtualService resource.
+	ExternalExposure *ExposureValues
 	// VictoriaLogsEnabled indicates whether VictoriaLogs is enabled as the logging backend.
 	VictoriaLogsEnabled bool
 	// IncludeIstioDashboards specifies whether the istio dashboards should be deployed.
@@ -53,8 +54,6 @@ type Values struct {
 	OnlyDeployDatasourcesAndDashboards bool
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
-	// ExternalExposure contains configuration for exposing this Perses instance via a VirtualService resource.
-	ExternalExposure *ExposureValues
 }
 
 // ExposureValues contains configuration for exposing this Perses instance via a VirtualService resource.

@@ -132,7 +132,7 @@ var _ = Describe("VictoriaLogs", func() {
 					},
 					ReplicaCount: new(int32(0)),
 					ExtraArgs: map[string]string{
-						"httpListenAddr": fmt.Sprintf(":%d,localhost:%d", 9429, 9428),
+						"httpListenAddr": fmt.Sprintf(":%d,127.0.0.1:%d", 9429, 9428),
 						"tls":            "true,false",
 						"tlsCertFile":    "/etc/victorialogs/tls/tls.crt",
 						"tlsKeyFile":     "/etc/victorialogs/tls/tls.key",
