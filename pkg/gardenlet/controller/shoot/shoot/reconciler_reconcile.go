@@ -525,23 +525,8 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			deployManagedResourceForGardenerNodeAgent,
 			waitUntilKubeRootCAConfigMapsUpdated,
 		))
-		_                                         = g.AddGroup(b.ReconcileExtensionsAfterWorkerTaskGroup(flowCtx.skipReadiness))
-		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
-			Name: "Delete stale OperatingSystemConfig resources",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx)
-			},
-			SkipIf:       b.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Waiting until stale OperatingSystemConfig resources are deleted",
-			Fn: func(ctx context.Context) error {
-				return b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources(ctx)
-			},
-			SkipIf:       b.Shoot.IsWorkerless || b.Shoot.HibernationEnabled || flowCtx.skipReadiness,
-			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
-		})
+		_ = g.AddGroup(b.ReconcileExtensionsAfterWorkerTaskGroup(flowCtx.skipReadiness))
+		_ = g.AddGroup(b.DeleteStaleOperatingSystemConfigResourcesTaskGroup(flowCtx.skipReadiness))
 
 		_ = g.Add(flow.Task{
 			Name:         "Checking if we have dual-stack pod CIDRs in nodes",

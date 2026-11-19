@@ -626,6 +626,14 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Name: "Refreshing shoot state",
 		Fn:   b.RefreshShootStateForLiveMigration,
 	})
+	// The kube-apiserver service was deployed and confirmed ready in destinationKubeAPIServerReadyTaskGroup,
+	// so its external IP is available. Update advertised addresses early so they are correct for the rest
+	// of the flow (matches the reconciler which runs this right after kube-apiserver service is ready).
+	_ = g.Add(flow.Task{
+		Name:         "Ensuring advertised addresses for the shoot",
+		Fn:           b.UpdateAdvertisedAddresses,
+		Dependencies: flow.NewTaskIDs(refreshShootState),
+	})
 
 	deployReferencedResources := b.ReconcileReferencedResourcesTaskGroup()
 	g = g.AddAll(deployReferencedResources.TasksWithDependencies(refreshShootState)...)
@@ -661,6 +669,8 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 
 	waitUntilWorkerReady := b.ReconcileWorkerTaskGroup(false)
 	g = g.AddAll(waitUntilWorkerReady.TasksWithDependencies(waitUntilMachineControllerManagerReady)...)
+
+	g = g.AddAll(b.DeleteStaleOperatingSystemConfigResourcesTaskGroup(false).TasksWithDependencies(waitUntilWorkerReady)...)
 
 	waitUntilExtensionResourcesAfterWorkerReady := b.ReconcileExtensionsAfterWorkerTaskGroup(false)
 	g = g.AddAll(waitUntilExtensionResourcesAfterWorkerReady.TasksWithDependencies(waitUntilWorkerReady)...)
@@ -711,6 +721,14 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 
 	// TODO(GEP-39): Destroy the temporary VPN shoot client and live migration VPN DNS record after the permanent tunnel is established.
 
+	_ = g.Add(flow.Task{
+		Name: "Waiting until all shoot worker nodes have updated the operating system config",
+		Fn: func(ctx context.Context) error {
+			return b.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx, false, false)
+		},
+		SkipIf:       b.Shoot.IsWorkerless,
+		Dependencies: flow.NewTaskIDs(waitTunnelConnection),
+	})
 	// EnsureShootClusterIdentity populates status.ClusterIdentity, read by the system-components group, so it runs first.
 	deployAPIServerProxy := g.Add(flow.Task{
 		Name:         "Deploying apiserver-proxy",
@@ -721,7 +739,6 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	ensureShootClusterIdentity := g.Add(flow.Task{
 		Name:         "Ensuring shoot cluster identity",
 		Fn:           b.EnsureShootClusterIdentity,
-		SkipIf:       b.Shoot.IsWorkerless,
 		Dependencies: flow.NewTaskIDs(deployAPIServerProxy),
 	})
 
@@ -747,16 +764,11 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 		Fn:           b.PopulateStaticManifestsFromSeedToShoot,
 		Dependencies: flow.NewTaskIDs(deployNodeAgent),
 	})
-	updateAdvertisedAddresses := g.Add(flow.Task{
-		Name:         "Ensuring advertised addresses for the shoot",
-		Fn:           b.UpdateAdvertisedAddresses,
-		Dependencies: flow.NewTaskIDs(populateStaticManifests),
-	})
 
 	deployLogging := g.Add(flow.Task{
 		Name:         "Deploying shoot logging stack in seed",
 		Fn:           b.DeployLogging,
-		Dependencies: flow.NewTaskIDs(updateAdvertisedAddresses),
+		Dependencies: flow.NewTaskIDs(populateStaticManifests),
 	})
 	reconcileObservabilityComponents := b.ReconcileObservabilityTaskGroup()
 	g = g.AddAll(reconcileObservabilityComponents.TasksWithDependencies(deployLogging)...)
@@ -839,10 +851,17 @@ func sourceSeedFinalTeardownTaskGroup(b *botanistpkg.Botanist, o *operation.Oper
 		Fn:           flow.TaskFn(b.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		Dependencies: flow.NewTaskIDs(waitUntilEtcdDeleted, destroyEtcdMemberExposure, destroyDNSRecords, destroySourceBackupEntry, destroyVPNServer),
 	})
-	_ = g.Add(flow.Task{
+	waitUntilNamespaceDeleted := g.Add(flow.Task{
 		Name:         "Waiting until shoot namespace in Seed has been deleted",
 		Fn:           b.WaitUntilSeedNamespaceDeleted,
 		Dependencies: flow.NewTaskIDs(deleteNamespace),
+	})
+	_ = g.Add(flow.Task{
+		Name: "Deleting Cluster resource from source seed",
+		Fn: func(ctx context.Context) error {
+			return o.DeleteClusterResourceFromSeed(ctx)
+		},
+		Dependencies: flow.NewTaskIDs(waitUntilNamespaceDeleted),
 	})
 	return g
 }
