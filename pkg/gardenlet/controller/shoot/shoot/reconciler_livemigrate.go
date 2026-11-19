@@ -301,20 +301,21 @@ func sourceEtcdPreparedForPeerJoinTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
 
-		// The destination restores the backup entry in DestinationEtcdPeersJoinedTaskGroup. Skip
-		// re-migrating once destination has already started consuming the result.
-		isDestinationJoined = v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined) != nil
+		// The destination restores the `core.BackupEntry` in DestinationEtcdPeersJoinedTaskGroup. Skip
+		// re-migrating after the execution of that group has started so that the restore operation done by the
+		// destination is not overwritten by a migrate operation done by the source.
+		destinationEtcdPeersJoinedConditionExists = v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined) != nil
 
 		migrateBackupEntry = g.Add(flow.Task{
 			Name:         "Migrating backup entry",
 			Fn:           b.Shoot.Components.BackupEntry.Migrate,
-			SkipIf:       isDestinationJoined,
+			SkipIf:       destinationEtcdPeersJoinedConditionExists,
 			Dependencies: flow.NewTaskIDs(waitEtcdsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until backup entry has been migrated",
 			Fn:           b.Shoot.Components.BackupEntry.WaitMigrate,
-			SkipIf:       isDestinationJoined,
+			SkipIf:       destinationEtcdPeersJoinedConditionExists,
 			Dependencies: flow.NewTaskIDs(migrateBackupEntry),
 		})
 	)
@@ -327,9 +328,13 @@ const taskGroupDestinationEtcdPeersJoined flow.TaskID = "TaskGroupDestinationEtc
 
 // destinationEtcdPeersJoinedTaskGroup returns the flow.TaskGroup for joining the destination etcd to the source cluster.
 func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
+	// Once etcd migration is complete, the etcd peer-join work (backup entry restore, etcd deployment) must
+	// not be re-run. The setup tasks (namespace, peer exposure, secrets management) are still needed on every
+	// reconcile so the in-memory secrets manager is populated for subsequent task groups.
+	etcdMigrationComplete := v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete) != nil
+
 	var (
-		g = flow.NewTaskGroup(taskGroupDestinationEtcdPeersJoined).
-			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete) != nil)
+		g = flow.NewTaskGroup(taskGroupDestinationEtcdPeersJoined)
 
 		// Fetch the ShootState written by the source so InitializeSecretsManagement can restore from it.
 		refreshShootState = g.Add(flow.Task{
@@ -355,11 +360,13 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 		deploySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Deploying source backup entry",
 			Fn:           b.DeploySourceBackupEntry,
+			SkipIf:       etcdMigrationComplete,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneNamespace),
 		})
 		waitSourceBackupEntryReady = g.Add(flow.Task{
 			Name:         "Waiting until source backup entry is ready",
 			Fn:           b.Shoot.Components.SourceBackupEntry.Wait,
+			SkipIf:       etcdMigrationComplete,
 			Dependencies: flow.NewTaskIDs(deploySourceBackupEntry),
 		})
 		restoreBackupEntry = g.Add(flow.Task{
@@ -367,11 +374,13 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 			Fn: func(ctx context.Context) error {
 				return b.Shoot.Components.BackupEntry.Restore(ctx, nil)
 			},
+			SkipIf:       etcdMigrationComplete,
 			Dependencies: flow.NewTaskIDs(waitSourceBackupEntryReady),
 		})
 		waitBackupEntryReady = g.Add(flow.Task{
 			Name:         "Waiting until backup entry is ready",
 			Fn:           b.Shoot.Components.BackupEntry.Wait,
+			SkipIf:       etcdMigrationComplete,
 			Dependencies: flow.NewTaskIDs(restoreBackupEntry),
 		})
 		deployEtcd = g.Add(flow.Task{
@@ -379,11 +388,13 @@ func destinationEtcdPeersJoinedTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup
 			Fn: func(ctx context.Context) error {
 				return b.DeployEtcdForLiveMigrationPhase(ctx, 2)
 			},
+			SkipIf:       etcdMigrationComplete,
 			Dependencies: flow.NewTaskIDs(initSecretsManagement, deployEtcdPeerExposure, waitBackupEntryReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until etcds are ready",
 			Fn:           b.WaitUntilEtcdsReady,
+			SkipIf:       etcdMigrationComplete,
 			Dependencies: flow.NewTaskIDs(deployEtcd),
 		})
 	)
@@ -417,8 +428,14 @@ func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 		Dependencies: flow.NewTaskIDs(refreshShootState),
 	})
 
+	deployReferencedResources := b.ReconcileReferencedResourcesTaskGroup()
+	g = g.AddAll(deployReferencedResources.TasksWithDependencies(refreshShootState)...)
+
+	deployCloudProviderSecret := b.DeployCloudProviderSecretTaskGroup()
+	g = g.AddAll(deployCloudProviderSecret.TasksWithDependencies(deployReferencedResources)...)
+
 	reconcileExtensions := b.ReconcileExtensionsBeforeKubeAPIServerTaskGroup(false)
-	g = g.AddAll(reconcileExtensions.TasksWithDependencies(reconcileIstioConfigMap)...)
+	g = g.AddAll(reconcileExtensions.TasksWithDependencies(reconcileIstioConfigMap, deployCloudProviderSecret)...)
 
 	deployService := g.Add(flow.Task{
 		Name:         "Deploying kube-apiserver service",
@@ -642,11 +659,14 @@ func destinationCompletionTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	reconcileMCM := b.ReconcileMachineControllerManagerTaskGroup()
 	g = g.AddAll(reconcileMCM.TasksWithDependencies(reconcileOperatingSystemConfig)...)
 
-	reconcileWorker := b.ReconcileWorkerTaskGroup(false)
-	g = g.AddAll(reconcileWorker.TasksWithDependencies(reconcileMCM)...)
+	waitUntilWorkerReady := b.ReconcileWorkerTaskGroup(false)
+	g = g.AddAll(waitUntilWorkerReady.TasksWithDependencies(reconcileMCM)...)
+
+	reconcileExtensionsAfterWorker := b.ReconcileExtensionsAfterWorkerTaskGroup(false)
+	g = g.AddAll(reconcileExtensionsAfterWorker.TasksWithDependencies(waitUntilWorkerReady)...)
 
 	reconcileContainerRuntime := b.ReconcileContainerRuntimeTaskGroup(false)
-	g = g.AddAll(reconcileContainerRuntime.TasksWithDependencies(reconcileWorker)...)
+	g = g.AddAll(reconcileContainerRuntime.TasksWithDependencies(reconcileExtensionsAfterWorker)...)
 
 	reconcileExtensionsAfterKubeAPIServer := b.ReconcileExtensionsAfterKubeAPIServerTaskGroup(false)
 	g = g.AddAll(reconcileExtensionsAfterKubeAPIServer.TasksWithDependencies(reconcileContainerRuntime)...)
