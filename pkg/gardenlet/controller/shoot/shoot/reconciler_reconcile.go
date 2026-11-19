@@ -295,7 +295,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			// During a domain migration, the new domain is advertised (and used in new kubeconfigs) only after it resolves
 			// and the kube-apiserver serves it.
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady).
-				InsertIf(b.Shoot.PriorExternalClusterDomain != nil, reconcileDNSRecords, deployKubeAPIServerServiceSNISettings),
+				InsertIf(b.Shoot.PriorExternalClusterDomain != nil, reconcileDNSRecords, reconcileKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Cleaning up stale Istio ingress namespaces of Kubernetes API server services in the Seed cluster",
