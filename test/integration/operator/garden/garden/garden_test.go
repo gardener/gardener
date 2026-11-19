@@ -911,6 +911,20 @@ spec:
 		By("Delete Extension ManagedResource")
 		Expect(testClient.Delete(ctx, extensionManagedResource)).To(Succeed())
 
+		By("Simulate operator extension uninstallation")
+		// The extension controller is not running in this test, so we simulate the uninstallation by
+		// patching the Extension's Installed condition to False, which the garden deletion flow waits for.
+		patch := client.MergeFrom(extension.DeepCopy())
+		extension.Status.Conditions = []gardencorev1beta1.Condition{{
+			Type:               operatorv1alpha1.ExtensionInstalled,
+			Status:             gardencorev1beta1.ConditionFalse,
+			Reason:             "DeleteSuccessful",
+			Message:            "Extension has been deleted successfully",
+			LastTransitionTime: metav1.Now(),
+			LastUpdateTime:     metav1.Now(),
+		}}
+		Eventually(func() error { return testClient.Status().Patch(ctx, extension, patch) }).To(Succeed())
+
 		By("Verify that the virtual garden control plane components have been deleted")
 		Eventually(func(g Gomega) []string {
 			deploymentList := &appsv1.DeploymentList{}

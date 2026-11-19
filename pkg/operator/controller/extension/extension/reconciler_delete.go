@@ -74,7 +74,7 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Handling Extension in runtime cluster",
 			Fn: func(ctx context.Context) error {
-				_, err := r.deployExtensionInRuntime(ctx, log, virtualClusterClientSet, extension)
+				reconcileResult, err = r.deployExtensionInRuntime(ctx, log, virtualClusterClientSet, extension)
 				return err
 			},
 			Dependencies: flow.NewTaskIDs(createVirtualGardenClientSet),
