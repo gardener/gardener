@@ -367,11 +367,14 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			SkipIf:       b.Shoot.HibernationEnabled || !v1beta1helper.HasManagedIssuer(b.Shoot.GetInfo()),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
-		// TODO(DobromirNPeev): Remove this migration task after Gardener v1.158 has been released.
+		// TODO(DobromirNPeev): Remove this migration task after Gardener v1.166 has been released.
+		// Note: This migration targets resources inside a Shoot cluster. A Shoot can be hibernated for extended periods, during
+		// which gardener-resource-manager is scaled to 0 and cannot perform this migration. Remove only after verifying that
+		// all Shoots have been reconciled post-migration.
 		_ = g.Add(flow.Task{
 			Name:         "Removing obsolete vpa-in-place-updates mutated label from VerticalPodAutoscalers in the shoot",
 			Fn:           flow.TaskFn(b.RemoveVPAInPlaceUpdatesMutatedLabel).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       b.Shoot.HibernationEnabled,
+			SkipIf:       b.Shoot.HibernationEnabled || !b.Shoot.WantsVerticalPodAutoscaler,
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		rewriteResourcesAddLabel = g.Add(flow.Task{

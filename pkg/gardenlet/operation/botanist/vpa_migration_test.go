@@ -52,13 +52,14 @@ var _ = Describe("VPAMigration", func() {
 			Expect(botanist.RemoveVPAInPlaceUpdatesMutatedLabel(ctx)).To(Succeed())
 		})
 
-		It("should only remove the mutated label from VPAs across namespaces", func() {
+		It("should only remove the mutated label from VPAs in kube-system and not touch other namespaces", func() {
 			shootClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 			withClient(shootClient)
 
-			Expect(shootClient.Create(ctx, newVPA("a", "ns1", map[string]string{mutatedLabel: "true", "foo": "bar"}))).To(Succeed())
-			Expect(shootClient.Create(ctx, newVPA("b", "ns2", map[string]string{mutatedLabel: "true"}))).To(Succeed())
-			Expect(shootClient.Create(ctx, newVPA("c", "ns2", map[string]string{"foo": "bar"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, newVPA("a", metav1.NamespaceSystem, map[string]string{mutatedLabel: "true", "foo": "bar"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, newVPA("b", metav1.NamespaceSystem, map[string]string{mutatedLabel: "true"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, newVPA("c", metav1.NamespaceSystem, map[string]string{"foo": "bar"}))).To(Succeed())
+			Expect(shootClient.Create(ctx, newVPA("d", "other-ns", map[string]string{mutatedLabel: "true"}))).To(Succeed())
 
 			Expect(botanist.RemoveVPAInPlaceUpdatesMutatedLabel(ctx)).To(Succeed())
 
@@ -67,9 +68,11 @@ var _ = Describe("VPAMigration", func() {
 				ExpectWithOffset(1, shootClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, v)).To(Succeed())
 				return v.Labels
 			}
-			Expect(get("a", "ns1")).To(Equal(map[string]string{"foo": "bar"}))
-			Expect(get("b", "ns2")).To(BeEmpty())
-			Expect(get("c", "ns2")).To(Equal(map[string]string{"foo": "bar"}))
+			Expect(get("a", metav1.NamespaceSystem)).To(Equal(map[string]string{"foo": "bar"}))
+			Expect(get("b", metav1.NamespaceSystem)).To(BeEmpty())
+			Expect(get("c", metav1.NamespaceSystem)).To(Equal(map[string]string{"foo": "bar"}))
+			// VPA in other namespace must not be touched
+			Expect(get("d", "other-ns")).To(Equal(map[string]string{mutatedLabel: "true"}))
 		})
 
 		It("should succeed when the VPA CRD does not exist (NoMatchError)", func() {
@@ -101,7 +104,7 @@ var _ = Describe("VPAMigration", func() {
 		It("should return an error when patching fails", func() {
 			withClient(fakeclient.NewClientBuilder().
 				WithScheme(kubernetes.ShootScheme).
-				WithObjects(newVPA("a", "ns1", map[string]string{mutatedLabel: "true"})).
+				WithObjects(newVPA("a", metav1.NamespaceSystem, map[string]string{mutatedLabel: "true"})).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
 						return errors.New("fake patch error")
@@ -109,13 +112,13 @@ var _ = Describe("VPAMigration", func() {
 				}).
 				Build())
 
-			Expect(botanist.RemoveVPAInPlaceUpdatesMutatedLabel(ctx)).To(MatchError(And(ContainSubstring("ns1/a"), ContainSubstring("fake patch error"))))
+			Expect(botanist.RemoveVPAInPlaceUpdatesMutatedLabel(ctx)).To(MatchError(And(ContainSubstring("kube-system/a"), ContainSubstring("fake patch error"))))
 		})
 
 		It("should ignore VPAs that were deleted in the meantime", func() {
 			withClient(fakeclient.NewClientBuilder().
 				WithScheme(kubernetes.ShootScheme).
-				WithObjects(newVPA("a", "ns1", map[string]string{mutatedLabel: "true"})).
+				WithObjects(newVPA("a", metav1.NamespaceSystem, map[string]string{mutatedLabel: "true"})).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Patch: func(_ context.Context, _ client.WithWatch, obj client.Object, _ client.Patch, _ ...client.PatchOption) error {
 						return apierrors.NewNotFound(schema.GroupResource{Group: "autoscaling.k8s.io", Resource: "verticalpodautoscalers"}, obj.GetName())
