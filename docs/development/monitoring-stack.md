@@ -67,9 +67,9 @@ The alert definitions are located in `charts/seed-monitoring/charts/core/charts/
 
 1. Adding additional alerts for a component which already has a set of alerts. In this case you have to extend the existing rule file for the component.
 1. Adding alerts for a new component. In this case a new rule file with name scheme `example-component.rules.yaml` needs to be added.
-1. Add the new alert to `alertInhibitionGraph.dot`, add any required inhibition flows and render the new graph. To render the graph, run:
+1. Add the new alert to `alert-inhibition-graph.dot`, add any required inhibition flows and render the new graph. To render the graph, run:
 ```bash
-dot -Tpng ./content/alertInhibitionGraph.dot -o ./content/alertInhibitionGraph.png
+dot -Tpng ./content/alert-inhibition-graph.dot -o ./content/alert-inhibition-graph.png
 ```
 1. Create a test for the new alert. See `Alert Tests`.
 
@@ -125,7 +125,7 @@ Shoot Alertmanager
 
 All alerts related to components running on the Shoot workers are inhibited in case of an issue with the vpn connection, because those components can't be scraped anymore and Prometheus will fire alerts in consequence. The components running on the workers are probably healthy and the alerts are presumably false positives. The inhibition flow is shown in the figure below. If you add a new alert, make sure to add it to the diagram.
 
-![alertDiagram](content/alertInhibitionGraph.png)
+![alertDiagram](content/alert-inhibition-graph.png)
 
 ### Alert Attributes
 
