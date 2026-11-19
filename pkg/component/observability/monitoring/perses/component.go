@@ -126,12 +126,12 @@ func (p *perses) Deploy(ctx context.Context) error {
 		objs = append(objs, p.serviceMonitor())
 	}
 
-	caBundle, found := p.secretsManager.Get(p.values.SecretNameServerCA)
-	if !found {
-		return fmt.Errorf("the CA trust bundle for %q was not found", p.values.SecretNameServerCA)
+	datasources, err := p.datasources()
+	if err != nil {
+		return err
 	}
 
-	objs = append(objs, p.datasources(caBundle)...)
+	objs = append(objs, datasources...)
 
 	dashboards, err := p.dashboards()
 	if err != nil {
