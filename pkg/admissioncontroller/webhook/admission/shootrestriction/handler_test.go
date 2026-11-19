@@ -1304,6 +1304,44 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						Expect(response.Allowed).To(BeFalse())
 						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of Gardenlet"))
 					})
+
+					It("should deny when the operation annotation is set to force-redeploy", func() {
+						oldGardenlet := &seedmanagementv1alpha1.Gardenlet{
+							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
+						}
+						newGardenlet := oldGardenlet.DeepCopy()
+						newGardenlet.Annotations = map[string]string{"gardener.cloud/operation": "force-redeploy"}
+
+						oldRaw, err := stdjson.Marshal(oldGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring(`must not set the "gardener.cloud/operation" annotation to "force-redeploy" on Gardenlet`))
+					})
+
+					It("should deny when the operation annotation is set to renew-kubeconfig", func() {
+						oldGardenlet := &seedmanagementv1alpha1.Gardenlet{
+							ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace},
+						}
+						newGardenlet := oldGardenlet.DeepCopy()
+						newGardenlet.Annotations = map[string]string{"gardener.cloud/operation": "renew-kubeconfig"}
+
+						oldRaw, err := stdjson.Marshal(oldGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newGardenlet)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring(`must not set the "gardener.cloud/operation" annotation to "renew-kubeconfig" on Gardenlet`))
+					})
 				})
 			})
 
@@ -1450,6 +1488,26 @@ Foj/rmOanFj5g6QF3GRDrqaNc1GNEXDU6fW7JsTx6+Anj1M/aDNxOXYqIqUN0s3d
 						response := handler.Handle(ctx, request)
 						Expect(response.Allowed).To(BeFalse())
 						Expect(response.Result.Message).To(ContainSubstring("must not modify .spec of ManagedSeed"))
+					})
+
+					It("should deny when the operation annotation is set to force-redeploy", func() {
+						oldMS := &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: shootNamespace},
+							Spec:       seedmanagementv1alpha1.ManagedSeedSpec{Shoot: &seedmanagementv1alpha1.Shoot{Name: shootName}},
+						}
+						newMS := oldMS.DeepCopy()
+						newMS.Annotations = map[string]string{"gardener.cloud/operation": "force-redeploy"}
+
+						oldRaw, err := stdjson.Marshal(oldMS)
+						Expect(err).NotTo(HaveOccurred())
+						newRaw, err := stdjson.Marshal(newMS)
+						Expect(err).NotTo(HaveOccurred())
+						request.OldObject = runtime.RawExtension{Raw: oldRaw}
+						request.Object = runtime.RawExtension{Raw: newRaw}
+
+						response := handler.Handle(ctx, request)
+						Expect(response.Allowed).To(BeFalse())
+						Expect(response.Result.Message).To(ContainSubstring(`must not set the "gardener.cloud/operation" annotation to "force-redeploy" on ManagedSeed`))
 					})
 
 					It("should forbid because the ManagedSeed does not belong to gardenlet's shoot", func() {

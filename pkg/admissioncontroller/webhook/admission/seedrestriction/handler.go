@@ -344,6 +344,9 @@ func (h *Handler) admitManagedSeed(_ string, request admission.Request) admissio
 	if !apiequality.Semantic.DeepEqual(oldManagedSeed.Spec, newManagedSeed.Spec) {
 		return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of ManagedSeed"))
 	}
+	if response := admissionwebhook.ForbidsRestrictedOperationAnnotation(oldManagedSeed.Annotations, newManagedSeed.Annotations, "ManagedSeed"); response != nil {
+		return *response
+	}
 	return admission.Allowed("")
 }
 
@@ -417,6 +420,9 @@ func (h *Handler) admitGardenlet(ctx context.Context, seedName string, request a
 		}
 		if !apiequality.Semantic.DeepEqual(oldGardenlet.Spec, newGardenlet.Spec) {
 			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Gardenlet"))
+		}
+		if response := admissionwebhook.ForbidsRestrictedOperationAnnotation(oldGardenlet.Annotations, newGardenlet.Annotations, "Gardenlet"); response != nil {
+			return *response
 		}
 		return admission.Allowed("")
 

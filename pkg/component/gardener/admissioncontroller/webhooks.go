@@ -432,16 +432,24 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						},
 					},
 					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"gardenlets"},
+						},
+					},
+					{
 						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
 							APIVersions: []string{"v1alpha1"},
-							Resources:   []string{"gardenlets", "managedseeds"},
+							Resources:   []string{"managedseeds"},
 						},
 					},
 				},
 				MatchConditions: []admissionregistrationv1.MatchCondition{
-					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
+					{Name: "spec-or-annotations-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec || has(object.metadata.annotations) != has(oldObject.metadata.annotations) || (has(object.metadata.annotations) && object.metadata.annotations != oldObject.metadata.annotations)`},
 				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,
@@ -489,7 +497,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 						},
 					},
 					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   []string{seedmanagementv1alpha1.GroupName},
 							APIVersions: []string{"v1alpha1"},
@@ -506,7 +514,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					},
 				},
 				MatchConditions: []admissionregistrationv1.MatchCondition{
-					{Name: "spec-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec`},
+					{Name: "spec-or-annotations-changed-or-not-update", Expression: `request.operation != 'UPDATE' || object.spec != oldObject.spec || has(object.metadata.annotations) != has(oldObject.metadata.annotations) || (has(object.metadata.annotations) && object.metadata.annotations != oldObject.metadata.annotations)`},
 				},
 				FailurePolicy: &failurePolicyFail,
 				MatchPolicy:   &matchPolicyEquivalent,

@@ -360,6 +360,10 @@ func (h *Handler) admitManagedSeed(_ context.Context, gardenletShootInfo types.N
 		return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of ManagedSeed"))
 	}
 
+	if response := admissionwebhook.ForbidsRestrictedOperationAnnotation(oldMS.Annotations, newMS.Annotations, "ManagedSeed"); response != nil {
+		return *response
+	}
+
 	if oldMS.Spec.Shoot == nil {
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to shoot %s", gardenletShootInfo))
 	}
@@ -504,6 +508,9 @@ func (h *Handler) admitGardenlet(gardenletShootInfo types.NamespacedName, reques
 		}
 		if !apiequality.Semantic.DeepEqual(oldGardenlet.Spec, newGardenlet.Spec) {
 			return admission.Errored(http.StatusForbidden, errors.New("gardenlet must not modify .spec of Gardenlet"))
+		}
+		if response := admissionwebhook.ForbidsRestrictedOperationAnnotation(oldGardenlet.Annotations, newGardenlet.Annotations, "Gardenlet"); response != nil {
+			return *response
 		}
 		return admission.Allowed("")
 
