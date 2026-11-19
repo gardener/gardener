@@ -7,6 +7,7 @@ package healthcheck
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -86,7 +87,10 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 	)
 
 	for _, hc := range a.healthChecks {
-		check := hc.HealthCheck
+		// Clone the health check to avoid data races: the health checks are shared and long-lived, while the clients
+		// and logger below are injected per reconciliation. Without the clone, concurrent reconciliations for different
+		// shoots would overwrite each other's injected clients.
+		check := shallowCopy(hc.HealthCheck)
 		SourceClientInfo(a.sourceClient, check)
 		if _, ok := check.(TargetClient); ok {
 			if targetClient == nil {
@@ -263,6 +267,21 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 	}
 
 	return &checkResults, nil
+}
+
+// shallowCopy returns a shallow copy of the given HealthCheck. It is used to isolate the per-reconciliation client and
+// logger injection from the shared, long-lived health check instances. The copy is shallow because only the top-level
+// fields (clients, logger) are mutated after cloning.
+func shallowCopy(healthCheck HealthCheck) HealthCheck {
+	value := reflect.ValueOf(healthCheck)
+	if value.Kind() != reflect.Pointer {
+		// The injection relies on pointer receivers, so a non-pointer HealthCheck cannot carry injected state anyway.
+		return healthCheck
+	}
+
+	copied := reflect.New(value.Elem().Type())
+	copied.Elem().Set(value.Elem())
+	return copied.Interface().(HealthCheck)
 }
 
 func (a *Actuator) getPreCheckFuncObject(ctx context.Context, request types.NamespacedName) (any, error) {
