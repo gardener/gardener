@@ -22,7 +22,7 @@
   // and restoring the `distroless-` prefix of the envoy image tag) when detecting whether a branch was manually
   // edited. Otherwise, Renovate would treat the branch as modified and stop updating the PR.
   gitIgnoredAuthors: [
-    '41898282+github-actions[bot]@users.noreply.github.com',
+    '248678271+federated-github-access[bot]@users.noreply.github.com',
   ],
   customManagers: [
     {
