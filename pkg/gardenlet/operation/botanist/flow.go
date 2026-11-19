@@ -887,6 +887,35 @@ func (b *Botanist) ReconcileWorkerTaskGroup(skipReadiness bool) flow.TaskGroup {
 	return g
 }
 
+// TaskGroupDeleteStaleOperatingSystemConfigResources is a flow.TaskID for a logical flow.TaskGroup.
+const TaskGroupDeleteStaleOperatingSystemConfigResources flow.TaskID = "TaskGroupDeleteStaleOperatingSystemConfigResources"
+
+// DeleteStaleOperatingSystemConfigResourcesTaskGroup returns the flow.TaskGroup for deleting stale OperatingSystemConfig resources.
+func (b *Botanist) DeleteStaleOperatingSystemConfigResourcesTaskGroup(skipReadiness bool) flow.TaskGroup {
+	var (
+		g = flow.NewTaskGroup(TaskGroupDeleteStaleOperatingSystemConfigResources).
+			SkipIf(b.Shoot.IsWorkerless).
+			WithDependencies(TaskGroupReconcileWorker)
+
+		deleteStale = g.Add(flow.Task{
+			Name: "Delete stale OperatingSystemConfig resources",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx)
+			},
+		})
+		_ = g.Add(flow.Task{
+			Name: "Waiting until stale OperatingSystemConfig resources are deleted",
+			Fn: func(ctx context.Context) error {
+				return b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources(ctx)
+			},
+			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deleteStale),
+		})
+	)
+
+	return g
+}
+
 // TaskGroupReconcileShootNamespaces is a flow.TaskID for a logical flow.TaskGroup.
 const TaskGroupReconcileShootNamespaces flow.TaskID = "TaskGroupReconcileShootNamespaces"
 
