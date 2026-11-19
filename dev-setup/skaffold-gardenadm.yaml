@@ -271,6 +271,8 @@ build:
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
+            - pkg/resourcemanager/webhook/nodeagentauthorizer
+            - pkg/resourcemanager/webhook/nodeagentrestriction
             - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
             - pkg/resourcemanager/webhook/podschedulername
             - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -318,6 +320,7 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
+            - pkg/webhook/authorizer
             - plugin/pkg
             - plugin/pkg/backupbucket/validator
             - plugin/pkg/bastion/mutator
@@ -604,6 +607,7 @@ build:
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
             - pkg/resourcemanager/webhook/nodeagentauthorizer
+            - pkg/resourcemanager/webhook/nodeagentrestriction
             - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
             - pkg/resourcemanager/webhook/podschedulername
             - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -882,6 +886,8 @@ build:
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
+            - pkg/resourcemanager/webhook/nodeagentauthorizer
+            - pkg/resourcemanager/webhook/nodeagentrestriction
             - pkg/resourcemanager/webhook/podkubeapiserverloadbalancing
             - pkg/resourcemanager/webhook/podschedulername
             - pkg/resourcemanager/webhook/podtopologyspreadconstraints
@@ -927,6 +933,7 @@ build:
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/utils/workloadidentity
+            - pkg/webhook/authorizer
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

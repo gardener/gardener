@@ -73,12 +73,19 @@ func (b *GardenadmBotanist) CleanUpStaleRestoredResourcesTaskGroup(clientSet *ku
 			return b.DeleteStaleEtcdMemberLeases(ctx, (*clientSet).Client())
 		},
 	})
+	deleteNodeAgentRestrictionWebhook := g.Add(flow.Task{
+		Name: "Deleting stale gardener-node-agent NodeAgentRestriction webhook",
+		Fn: func(ctx context.Context) error {
+			return b.DeleteNodeAgentRestrictionWebhook(ctx, (*clientSet).Client())
+		},
+		Dependencies: flow.NewTaskIDs(deleteGardenerResourceManagers),
+	})
 	_ = g.Add(flow.Task{
 		Name: "Deleting stale gardener-node-agent CertificateSigningRequests",
 		Fn: func(ctx context.Context) error {
 			return b.DeleteNodeAgentCertificateSigningRequests(ctx, (*clientSet).Client())
 		},
-		Dependencies: flow.NewTaskIDs(deleteGardenerResourceManagers),
+		Dependencies: flow.NewTaskIDs(deleteNodeAgentRestrictionWebhook),
 	})
 
 	return g

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -182,17 +183,57 @@ func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machin
 		return auth.DecisionDeny, reason, err
 	}
 
-	allowedLeases := []string{"gardener-node-agent-" + node.Name}
-	if node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName] != "" {
-		allowedLeases = append(allowedLeases, node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
+	if attrs.GetNamespace() != metav1.NamespaceSystem {
+		log.Info("Denying authorization because gardener-node-agent is not allowed to access leases outside the namespace", "nodeName", node.Name, "machineName", machineName, "leaseName", attrs.GetName(), "leaseNamespace", attrs.GetNamespace())
+		return auth.DecisionDeny, fmt.Sprintf("gardener-node-agent can only access leases in the %q namespace", metav1.NamespaceSystem), nil
 	}
 
-	if (attrs.GetVerb() != "create" && !slices.Contains(allowedLeases, attrs.GetName())) || attrs.GetNamespace() != metav1.NamespaceSystem {
-		log.Info("Denying authorization because gardener-node-agent is not allowed to access the lease", "nodeName", node.Name, "machineName", machineName, "leaseName", attrs.GetName())
-		return auth.DecisionDeny, fmt.Sprintf("this gardener-node-agent can only access leases %v in %q namespace", allowedLeases, metav1.NamespaceSystem), nil
+	// The name of a Lease is not part of the SubjectAccessReview for 'create' requests, hence it cannot be verified
+	// here. Creating an arbitrary Lease does not grant any privileges (leader-election Leases already exist and cannot
+	// be seized via 'create'), so 'create' is allowed unconditionally.
+	if attrs.GetVerb() == "create" {
+		return auth.DecisionAllow, "", nil
 	}
 
-	return auth.DecisionAllow, "", nil
+	// gardener-node-agent accesses its own heartbeat Lease (named after the node) and the serial-reconciliation
+	// leader-election Lease (named after the operating system config secret) of its worker pool. Both names carry the
+	// gardener-node-agent- prefix. gardener-node-agent sets up the leader-election Lease watch for every node (it is
+	// driven by the node-agent's own configuration, not by the gardener-node-agent-secret-name Node label), so reading
+	// leases must not depend on that label being observed yet: 'get'/'list'/'watch' are allowed for any Lease with the
+	// gardener-node-agent- prefix. Reading leases grants no privilege escalation; only holding the lock
+	// ('update'/'patch') does.
+	if slices.Contains([]string{"get", "list", "watch"}, attrs.GetVerb()) {
+		if !strings.HasPrefix(attrs.GetName(), gardenerutils.NodeLeasePrefix) {
+			log.Info("Denying authorization because gardener-node-agent is not allowed to read the lease", "nodeName", node.Name, "machineName", machineName, "leaseName", attrs.GetName())
+			return auth.DecisionDeny, fmt.Sprintf("gardener-node-agent can only read leases with the %q prefix", gardenerutils.NodeLeasePrefix), nil
+		}
+		return auth.DecisionAllow, "", nil
+	}
+
+	// For 'update'/'patch' the Lease name must match either the node's own heartbeat Lease or the worker pool's
+	// serial-reconciliation leader-election Lease. The node's heartbeat Lease is the common case and can be checked
+	// without a client call, so verify it first to avoid the operating system config secret 'get' below.
+	if attrs.GetName() == gardenerutils.NodeAgentLeaseName(node.Name) {
+		return auth.DecisionAllow, "", nil
+	}
+
+	// The worker pool's serial-reconciliation leader-election Lease is named after the operating system config secret.
+	// Its name is derived from the gardener-node-agent-secret-name Node label whose immutability is enforced by the
+	// node-agent-restriction webhook, and writing it is only allowed when serial reconciliation is enabled for the
+	// worker pool.
+	if oscSecretName := node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; oscSecretName != "" && attrs.GetName() == oscSecretName {
+		oscSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oscSecretName, Namespace: metav1.NamespaceSystem}}
+		if err := a.targetClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), oscSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return auth.DecisionDeny, "", fmt.Errorf("error getting operating system config secret %q: %w", oscSecretName, err)
+			}
+		} else if oscSecret.Annotations[v1beta1constants.AnnotationNodeAgentSerialOSCReconciliation] == "true" {
+			return auth.DecisionAllow, "", nil
+		}
+	}
+
+	log.Info("Denying authorization because gardener-node-agent is not allowed to write the lease", "nodeName", node.Name, "machineName", machineName, "leaseName", attrs.GetName())
+	return auth.DecisionDeny, fmt.Sprintf("this gardener-node-agent is not allowed to write lease %q in %q namespace", attrs.GetName(), metav1.NamespaceSystem), nil
 }
 
 func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machineName string, attrs auth.Attributes) (auth.Decision, string, error) {

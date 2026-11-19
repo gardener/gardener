@@ -313,6 +313,21 @@ var _ = Describe("Restore", func() {
 		})
 	})
 
+	Describe("#DeleteNodeAgentRestrictionWebhook", func() {
+		It("should succeed when there is no ValidatingWebhookConfiguration", func(ctx SpecContext) {
+			Expect(b.DeleteNodeAgentRestrictionWebhook(ctx, fakeClient)).To(Succeed())
+		})
+
+		It("should delete the restored NodeAgentRestriction ValidatingWebhookConfiguration", func(ctx SpecContext) {
+			webhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-shoot"}}
+			Expect(fakeClient.Create(ctx, webhookConfig)).To(Succeed())
+
+			Expect(b.DeleteNodeAgentRestrictionWebhook(ctx, fakeClient)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(webhookConfig), &admissionregistrationv1.ValidatingWebhookConfiguration{})).To(BeNotFoundError())
+		})
+	})
+
 	Describe("#DeleteNodeAgentCertificateSigningRequests", func() {
 		csrWithCommonName := func(name, signerName, commonName string) *certificatesv1.CertificateSigningRequest {
 			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
