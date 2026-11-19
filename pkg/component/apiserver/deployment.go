@@ -18,8 +18,11 @@ import (
 )
 
 const (
-	volumeNameCAEtcd          = "ca-etcd"
-	volumeNameEtcdClient      = "etcd-client"
+	// VolumeNameCAEtcd is the name of the volume containing the etcd CA certificate bundle.
+	VolumeNameCAEtcd = "ca-etcd"
+	// VolumeNameEtcdClient is the name of the volume containing the etcd client certificate and private key.
+	VolumeNameEtcdClient = "etcd-client"
+
 	volumeNameServer          = "server"
 	volumeMountPathCAEtcd     = "/srv/kubernetes/etcd/ca"
 	volumeMountPathEtcdClient = "/srv/kubernetes/etcd/client"
@@ -94,11 +97,11 @@ func InjectDefaultSettings(
 
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
 		corev1.VolumeMount{
-			Name:      volumeNameCAEtcd,
+			Name:      VolumeNameCAEtcd,
 			MountPath: volumeMountPathCAEtcd,
 		},
 		corev1.VolumeMount{
-			Name:      volumeNameEtcdClient,
+			Name:      VolumeNameEtcdClient,
 			MountPath: volumeMountPathEtcdClient,
 		},
 		corev1.VolumeMount{
@@ -109,7 +112,7 @@ func InjectDefaultSettings(
 
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
 		corev1.Volume{
-			Name: volumeNameCAEtcd,
+			Name: VolumeNameCAEtcd,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: secretCAETCD.Name,
@@ -117,7 +120,7 @@ func InjectDefaultSettings(
 			},
 		},
 		corev1.Volume{
-			Name: volumeNameEtcdClient,
+			Name: VolumeNameEtcdClient,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretETCDClient.Name,

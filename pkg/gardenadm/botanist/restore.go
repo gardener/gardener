@@ -7,10 +7,13 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	"go.etcd.io/etcd/client/pkg/v3/transport"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -24,12 +27,16 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DeletePriorNode deletes the Node object of the prior control plane Node that was lost during the disaster.
@@ -172,6 +179,66 @@ func (b *GardenadmBotanist) DeleteStaleEtcdMemberLeases(ctx context.Context, rea
 				return fmt.Errorf("failed clearing status members of Etcd %s: %w", client.ObjectKeyFromObject(&etcd), err)
 			}
 		}
+	}
+
+	return nil
+}
+
+// DeleteStaleAPIServerMasterLeasesFromEtcd deletes the /registry/masterleases/ entries that the restored etcd snapshot
+// carries for the prior control plane Node(s). Each masterlease key backs an endpoint of the kube-apiserver
+// Service/EndpointSlice in the default namespace that in-cluster clients use to reach the kube-apiserver. On a normal
+// running cluster each key is bound to an etcd lease with a short TTL that the owning kube-apiserver renews, so a lost
+// member's key expires within seconds. A restore reconstructs a fresh etcd from a point-in-time snapshot without the
+// live TTL countdown, and the replacement kube-apiserver writes its own key under its new IP rather than renewing the
+// old one. The prior node's key is therefore orphaned with no TTL to expire it, and the kubernetes Service keeps
+// advertising the dead apiserver IP, so clients that hit it fail with "no route to host" (e.g. gardenlet crash-looping).
+//
+// These keys are an internal implementation detail of the kube-apiserver's endpoint reconciler and are not exposed as
+// Kubernetes API objects, so they cannot be reached through a Kubernetes client - the cleanup talks directly to the
+// bootstrap etcd on localhost (the apiserver's own backing store during the restore bootstrap) using the
+// kube-apiserver's etcd client certificate.
+//
+// Deleting the whole prefix is safe: the live kube-apiserver re-creates its own masterlease on the next renewal
+// (~seconds), so its endpoint reappears while only the orphaned prior-node entries stay gone; the running apiserver
+// re-reconciles the kubernetes Endpoints on its own cycle afterwards.
+func (b *GardenadmBotanist) DeleteStaleAPIServerMasterLeasesFromEtcd(ctx context.Context) error {
+	var (
+		caFile   = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, apiserver.VolumeNameCAEtcd), secretsutils.DataKeyCertificateBundle)
+		certFile = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, apiserver.VolumeNameEtcdClient), secretsutils.DataKeyCertificate)
+		keyFile  = filepath.Join(staticpod.HostPath(v1beta1constants.DeploymentNameKubeAPIServer, apiserver.VolumeNameEtcdClient), secretsutils.DataKeyPrivateKey)
+	)
+
+	tlsConfig, err := (transport.TLSInfo{CertFile: certFile, KeyFile: keyFile, TrustedCAFile: caFile}).ClientConfig()
+	if err != nil {
+		return fmt.Errorf("failed building etcd client TLS config: %w", err)
+	}
+
+	etcdClient, err := clientv3.New(clientv3.Config{
+		Endpoints:   []string{fmt.Sprintf("https://localhost:%d", etcdconstants.PortEtcdClient)},
+		DialTimeout: 15 * time.Second,
+		TLS:         tlsConfig,
+	})
+	if err != nil {
+		return fmt.Errorf("failed creating etcd client: %w", err)
+	}
+	defer func() { _ = etcdClient.Close() }()
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	return b.deleteStaleAPIServerMasterLeasesFromEtcd(ctxWithTimeout, etcdClient)
+}
+
+type etcdKVDeleter interface {
+	Delete(ctx context.Context, key string, opts ...clientv3.OpOption) (*clientv3.DeleteResponse, error)
+}
+
+// deleteStaleAPIServerMasterLeasesFromEtcd performs the etcd prefix deletion against the given KV client.
+func (b *GardenadmBotanist) deleteStaleAPIServerMasterLeasesFromEtcd(ctx context.Context, kv etcdKVDeleter) error {
+	const masterLeasesPrefix = "/registry/masterleases/"
+	b.Logger.Info("Deleting stale apiserver master leases from etcd", "prefix", masterLeasesPrefix)
+	if _, err := kv.Delete(ctx, masterLeasesPrefix, clientv3.WithPrefix()); err != nil {
+		return fmt.Errorf("failed deleting stale apiserver master leases from etcd under %q: %w", masterLeasesPrefix, err)
 	}
 
 	return nil

@@ -5,13 +5,16 @@
 package botanist
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/x509/pkix"
+	"errors"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -32,6 +35,14 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
+
+type fakeEtcdKVDeleter struct {
+	deleteFn func(context.Context, string, ...clientv3.OpOption) (*clientv3.DeleteResponse, error)
+}
+
+func (f *fakeEtcdKVDeleter) Delete(ctx context.Context, key string, opts ...clientv3.OpOption) (*clientv3.DeleteResponse, error) {
+	return f.deleteFn(ctx, key, opts...)
+}
 
 var _ = Describe("Restore", func() {
 	const (
@@ -310,6 +321,35 @@ var _ = Describe("Restore", func() {
 			Expect(b.DeleteStaleEtcdMemberLeases(ctx, etcdClient)).To(Succeed())
 
 			Expect(etcdClient.Get(ctx, client.ObjectKeyFromObject(otherLease), &coordinationv1.Lease{})).To(Succeed())
+		})
+	})
+
+	Describe("#deleteStaleAPIServerMasterLeasesFromEtcd", func() {
+		It("should delete only the master leases prefix using the supplied context", func(ctx SpecContext) {
+			called := false
+			kvClient := &fakeEtcdKVDeleter{deleteFn: func(deleteCtx context.Context, key string, opts ...clientv3.OpOption) (*clientv3.DeleteResponse, error) {
+				called = true
+				Expect(deleteCtx).To(Equal(ctx))
+				op := clientv3.OpDelete(key, opts...)
+				Expect(op.KeyBytes()).To(Equal([]byte("/registry/masterleases/")))
+				// WithPrefix computes the exclusive upper bound by incrementing the trailing '/' to '0'.
+				Expect(op.RangeBytes()).To(Equal([]byte("/registry/masterleases0")))
+				return &clientv3.DeleteResponse{}, nil
+			}}
+
+			Expect(b.deleteStaleAPIServerMasterLeasesFromEtcd(ctx, kvClient)).To(Succeed())
+			Expect(called).To(BeTrue())
+		})
+
+		It("should wrap and preserve deletion errors", func(ctx SpecContext) {
+			deleteErr := errors.New("etcd unavailable")
+			kvClient := &fakeEtcdKVDeleter{deleteFn: func(context.Context, string, ...clientv3.OpOption) (*clientv3.DeleteResponse, error) {
+				return nil, deleteErr
+			}}
+
+			err := b.deleteStaleAPIServerMasterLeasesFromEtcd(ctx, kvClient)
+			Expect(err).To(MatchError(ContainSubstring("failed deleting stale apiserver master leases from etcd under \"/registry/masterleases/\"")))
+			Expect(errors.Is(err, deleteErr)).To(BeTrue())
 		})
 	})
 
