@@ -12,6 +12,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -30,7 +31,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration, zoneCapNodeSelector client.MatchingLabels) error {
 	targetClientSet, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
@@ -95,7 +96,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		}
 	}
 
-	if err := node.AddToManager(mgr, targetCluster, *cfg); err != nil {
+	if err := node.AddToManager(mgr, targetCluster, *cfg, zoneCapNodeSelector); err != nil {
 		return fmt.Errorf("failed adding node controller: %w", err)
 	}
 
