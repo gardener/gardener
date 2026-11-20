@@ -10413,7 +10413,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Workers is a list of worker groups.</p>
+<p>Workers is a list of worker groups. At most 300 worker groups are allowed.</p>
 </td>
 </tr>
 <tr>

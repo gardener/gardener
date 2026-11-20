@@ -1341,7 +1341,7 @@ type Provider struct {
 	// InfrastructureConfig contains the provider-specific infrastructure config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
 	InfrastructureConfig *runtime.RawExtension
-	// Workers is a list of worker groups.
+	// Workers is a list of worker groups. At most 300 worker groups are allowed.
 	Workers []Worker
 	// WorkersSettings contains settings for all workers.
 	WorkersSettings *WorkersSettings
