@@ -55,6 +55,9 @@ import (
 
 const taskID = "initializeOperation"
 
+// Specifies the interval at which fiaeld shoots are retried periodically.
+const periodicRetryInterval = 24 * time.Hour
+
 // Reconciler implements the main shoot reconciliation logic, i.e., creation, hibernation, migration and deletion.
 type Reconciler struct {
 	GardenClient                client.Client
@@ -354,6 +357,12 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 				updateErr := r.patchShootStatusOperationError(ctx, shoot, syncErr.Error(), i.OperationType, false, shoot.Status.LastErrors...)
 				return nil, reconcile.Result{}, errorsutils.WithSuppressed(syncErr, updateErr)
 			}
+
+			// Periodically retry failed shoots every 24 hours
+			if result, done := r.schedulePeriodicRetryForFailedShoot(ctx, log, shoot); done {
+				return nil, result, nil
+			}
+
 			return nil, reconcile.Result{}, nil
 		}
 
@@ -1354,4 +1363,29 @@ func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1bet
 
 func manualInPlacePendingWorkersPresent(inPlaceUpdates *gardencorev1beta1.InPlaceUpdatesStatus) bool {
 	return inPlaceUpdates != nil && inPlaceUpdates.PendingWorkerUpdates != nil && len(inPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0
+}
+
+// schedulePeriodicRetryForFailedShoot checks whether a failed shoot is due for a periodic retry.
+func (r *Reconciler) schedulePeriodicRetryForFailedShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (reconcile.Result, bool) {
+	lastOp := shoot.Status.LastOperation
+	if lastOp == nil || lastOp.State != gardencorev1beta1.LastOperationStateFailed {
+		return reconcile.Result{}, false
+	}
+
+	// Schedule a requeue if failed shoot is not yet due for a periodic retry
+	elapsed := r.Clock.Now().UTC().Sub(lastOp.LastUpdateTime.UTC())
+	if elapsed < periodicRetryInterval {
+		return reconcile.Result{RequeueAfter: periodicRetryInterval - elapsed}, true
+	}
+
+	// Trigger a periodic retry by setting the retry annotation on the shoot, which leads to a reconciliation.
+	patch := client.MergeFrom(shoot.DeepCopy())
+	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+	if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+		log.Error(err, "Failed to trigger periodic retry of failed shoot")
+		return reconcile.Result{}, false
+	}
+
+	log.Info("Triggered periodic retry of failed shoot")
+	return reconcile.Result{}, true
 }
