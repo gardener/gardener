@@ -642,6 +642,19 @@ func (o *otelCollector) openTelemetryCollector(namespace, lokiEndpoint, genericT
 		}
 	}
 
+	// Without any backend the config would have no pipelines and be invalid, so fall back to the "nop" exporter.
+	if o.values.RemoveVali && !o.values.VictoriaLogsBackend {
+		obj.Spec.Config.Exporters.Object["nop"] = map[string]any{}
+		obj.Spec.Config.Service.Pipelines["logs/nop"] = &otelv1beta1.Pipeline{
+			Exporters: []string{
+				"nop",
+			},
+			Receivers: []string{
+				"otlp",
+			},
+		}
+	}
+
 	if o.values.WithRBACProxy {
 		obj.Spec.Ports = append(obj.Spec.Ports, otelv1beta1.PortsSpec{
 			ServicePort: corev1.ServicePort{
