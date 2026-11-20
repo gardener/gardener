@@ -56,6 +56,7 @@ var _ = ginkgo.Describe("PrometheusRules", func() {
 
 			testGardenerDiscoveryServerAlert(config, isGardenerDiscoveryServerEnabled)
 
+			test.PrometheusRule(auditLog, "testdata/auditlog.prometheusrule.test.yaml")
 			test.PrometheusRule(healthcheck, "testdata/healthcheck.prometheusrule.test.yaml")
 			test.PrometheusRule(metering, "testdata/metering-meta.prometheusrule.test.yaml")
 			test.PrometheusRule(seed, "testdata/seed.prometheusrule.test.yaml")
