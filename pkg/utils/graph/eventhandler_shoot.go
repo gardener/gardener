@@ -185,6 +185,8 @@ func (g *graph) HandleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		}
 	}
 
+	// The WorkloadIdentity edges below are mirrored by the token request API when binding context objects to workload
+	// identities (pkg/apiserver/registry/security/workloadidentity/storage/jwt.go). Keep both in sync.
 	if shoot.Spec.DNS != nil {
 		for _, provider := range shoot.Spec.DNS.Providers {
 			if provider.CredentialsRef != nil {

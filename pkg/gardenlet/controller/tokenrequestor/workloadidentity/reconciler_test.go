@@ -6,6 +6,7 @@ package workloadidentity_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityfake "github.com/gardener/gardener/pkg/client/security/clientset/versioned/fake"
@@ -103,6 +105,7 @@ var _ = Describe("Reconciler", func() {
 				Config: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
 					TokenExpirationDuration: &metav1.Duration{Duration: 6 * time.Hour},
 				},
+				GardenNamespace: "garden",
 			}
 
 			secretName = "cloudsecret"
@@ -227,6 +230,87 @@ var _ = Describe("Reconciler", func() {
 			result, err := ctrl.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
+		})
+
+		Context("context object", func() {
+			const (
+				shootNamespace        = "garden-foo"
+				shootName             = "bar"
+				shootUID              = types.UID("4bdd6ae0-3d4e-4f8b-9a9b-1e6b2d3c4f5a")
+				controlPlaneNamespace = "shoot--foo--bar"
+				backupEntryName       = controlPlaneNamespace + "--" + string(shootUID)
+			)
+
+			var (
+				coreGroupVersion = gardencorev1beta1.SchemeGroupVersion.String()
+
+				setContextObject = func(namespace string, contextObject securityv1alpha1.ContextObject) {
+					raw, err := json.Marshal(contextObject)
+					Expect(err).NotTo(HaveOccurred())
+					secret.Namespace = namespace
+					secret.Annotations["workloadidentity.security.gardener.cloud/context-object"] = string(raw)
+					request.Namespace = namespace
+				}
+
+				tokenRequested = func() bool {
+					for _, action := range securityClient.Actions() {
+						if action.GetVerb() == "create" && action.GetSubresource() == "token" {
+							return true
+						}
+					}
+					return false
+				}
+			)
+
+			BeforeEach(func() {
+				Expect(gardenClient.Create(ctx, &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{Namespace: shootNamespace, Name: shootName, UID: shootUID},
+					Status:     gardencorev1beta1.ShootStatus{TechnicalID: controlPlaneNamespace},
+				})).To(Succeed())
+				Expect(gardenClient.Create(ctx, workloadIdentity)).To(Succeed())
+				fakeCreateWorkloadIdentityToken(nil)
+			})
+
+			DescribeTable("should request a token for context objects belonging to the secret's namespace",
+				func(namespace string, contextObject securityv1alpha1.ContextObject) {
+					setContextObject(namespace, contextObject)
+					Expect(seedClient.Create(ctx, secret)).To(Succeed())
+
+					result, err := ctrl.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(Equal(reconcile.Result{RequeueAfter: expectedRenewDuration}))
+					Expect(tokenRequested()).To(BeTrue())
+				},
+
+				Entry("shoot in its control plane namespace", controlPlaneNamespace, securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Shoot", Namespace: new(shootNamespace), Name: shootName, UID: shootUID}),
+				Entry("seed in the garden namespace", "garden", securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Seed", Name: "seed"}),
+				Entry("backupBucket in the garden namespace", "garden", securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "BackupBucket", Name: "bucket"}),
+				Entry("backupEntry in the garden namespace", "garden", securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "BackupEntry", Namespace: new(shootNamespace), Name: backupEntryName}),
+				Entry("backupEntry in the shoot's control plane namespace", controlPlaneNamespace, securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "BackupEntry", Namespace: new(shootNamespace), Name: backupEntryName}),
+				Entry("source backupEntry in the shoot's control plane namespace", controlPlaneNamespace, securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "BackupEntry", Namespace: new(shootNamespace), Name: "source-" + backupEntryName}),
+			)
+
+			DescribeTable("should not request a token for context objects not belonging to the secret's namespace",
+				func(namespace string, contextObject securityv1alpha1.ContextObject) {
+					setContextObject(namespace, contextObject)
+					Expect(seedClient.Create(ctx, secret)).To(Succeed())
+
+					result, err := ctrl.Reconcile(ctx, request)
+					Expect(err).To(MatchError(ContainSubstring("is not allowed for secrets in namespace")))
+					Expect(result).To(Equal(reconcile.Result{}))
+					Expect(tokenRequested()).To(BeFalse())
+				},
+
+				Entry("shoot in another shoot's control plane namespace", "shoot--foo--other", securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Shoot", Namespace: new(shootNamespace), Name: shootName, UID: shootUID}),
+				Entry("shoot in the garden namespace", "garden", securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Shoot", Namespace: new(shootNamespace), Name: shootName, UID: shootUID}),
+				Entry("shoot with mismatching UID", controlPlaneNamespace, securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Shoot", Namespace: new(shootNamespace), Name: shootName, UID: "other"}),
+				Entry("non-existing shoot", controlPlaneNamespace, securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Shoot", Namespace: new(shootNamespace), Name: "other", UID: shootUID}),
+				Entry("shoot without namespace", controlPlaneNamespace, securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Shoot", Name: shootName, UID: shootUID}),
+				Entry("seed in a shoot's control plane namespace", controlPlaneNamespace, securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "Seed", Name: "seed"}),
+				Entry("backupBucket in an extension namespace", "extension-foo", securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "BackupBucket", Name: "bucket"}),
+				Entry("backupEntry in another shoot's control plane namespace", "shoot--foo--other", securityv1alpha1.ContextObject{APIVersion: coreGroupVersion, Kind: "BackupEntry", Namespace: new(shootNamespace), Name: backupEntryName}),
+				Entry("unsupported kind", "garden", securityv1alpha1.ContextObject{APIVersion: "v1", Kind: "Namespace", Name: "garden"}),
+			)
 		})
 
 		Context("error", func() {
