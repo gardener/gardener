@@ -79,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			log.Info("No manual in-place pending workers in Shoot status, but credentials rotation phases are not set to Prepared, triggering a Shoot reconciliation")
 			patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-			if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+			if err := r.GardenClient.SubResource("metadata").Patch(ctx, shoot, patch); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to patch Shoot: %w", err)
 			}
 
@@ -196,7 +196,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 		}
 
-		if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+		if err := r.GardenClient.SubResource("metadata").Patch(ctx, shoot, patch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to patch Shoot: %w", err)
 		}
 	}

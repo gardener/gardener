@@ -118,7 +118,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 
 	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizersViaMetadataSubresource(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -505,7 +505,7 @@ func (r *Reconciler) finalizeShootMigration(ctx context.Context, shoot *gardenco
 
 	metaPatch := client.MergeFrom(shoot.DeepCopy())
 	controllerutils.RemoveAllTasks(shoot.Annotations)
-	if err := r.GardenClient.Patch(ctx, shoot, metaPatch); err != nil {
+	if err := r.GardenClient.SubResource("metadata").Patch(ctx, shoot, metaPatch); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -543,7 +543,7 @@ func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logg
 
 	if controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.RemoveFinalizersViaMetadataSubresource(ctx, r.GardenClient, shoot, gardencorev1beta1.GardenerName); err != nil {
 			r.Recorder.Eventf(shoot, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, "failed to remove finalizer: %v", err)
 			return fmt.Errorf("failed to remove finalizer: %w", err)
 		}
@@ -828,7 +828,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		} else {
 			shoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(updatedOperations, v1beta1constants.GardenerOperationsSeparator)
 		}
-		return r.GardenClient.Patch(ctx, shoot, patch)
+		return r.GardenClient.SubResource("metadata").Patch(ctx, shoot, patch)
 	}
 
 	return nil
@@ -1202,7 +1202,7 @@ func (r *Reconciler) patchBastions(ctx context.Context, shoot *gardencorev1beta1
 			fns = append(fns, func(ctx context.Context) error {
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
-				if err := r.GardenClient.Patch(ctx, &bastion, patch); err != nil {
+				if err := r.GardenClient.SubResource("metadata").Patch(ctx, &bastion, patch); err != nil {
 					return fmt.Errorf("failed to patch bastion %s: %w", client.ObjectKeyFromObject(&bastion), err)
 				}
 				bastionsPatched = true

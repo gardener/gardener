@@ -92,7 +92,7 @@ func (r *Reconciler) delete(
 	// Remove finalizer from Seed
 	if controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.RemoveFinalizersViaMetadataSubresource(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}

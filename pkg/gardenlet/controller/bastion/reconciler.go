@@ -95,7 +95,7 @@ func (r *Reconciler) reconcileBastion(
 ) error {
 	if !controllerutil.ContainsFinalizer(bastion, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, bastion, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizersViaMetadataSubresource(gardenCtx, r.GardenClient, bastion, gardencorev1beta1.GardenerName); err != nil {
 			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -226,7 +226,7 @@ func (r *Reconciler) cleanupBastion(
 
 			if controllerutil.ContainsFinalizer(bastion, gardencorev1beta1.GardenerName) {
 				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, bastion, gardencorev1beta1.GardenerName); err != nil {
+				if err := controllerutils.RemoveFinalizersViaMetadataSubresource(gardenCtx, r.GardenClient, bastion, gardencorev1beta1.GardenerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer: %w", err)
 				}
 			}

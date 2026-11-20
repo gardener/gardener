@@ -387,7 +387,7 @@ func (a *Actuator) deployGardenlet(
 		annotations := obj.GetAnnotations()
 		delete(annotations, v1beta1constants.GardenerOperation)
 		obj.SetAnnotations(annotations)
-		return a.GardenClient.Patch(ctx, obj, patch)
+		return a.GardenClient.SubResource("metadata").Patch(ctx, obj, patch)
 	}
 
 	return nil
