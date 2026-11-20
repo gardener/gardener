@@ -5,8 +5,15 @@
 package shoot
 
 import (
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
@@ -77,6 +84,49 @@ func ShootLoggingVl(tc *ShootContext) {
 	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "unit", "containerd.service", time.Hour)
 	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "unit", "kubelet.service", time.Hour)
 	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "k8s.pod.name", "event-logger"+".*", time.Hour)
+}
+
+// SeedLoggingVl checks the seed-side routing of the shoot logging stack of VictoriaLogs.
+// It deploys two logger applications. One in the shoot's control-plane namespace on the
+// seed, and another in the seed's garden namespace. Both loggers are asserted to appear
+// only in their respective VictoriaLogs instance and not in the other.
+// Garden VictoriaLogs ingress auth is also verified.
+func SeedLoggingVl(tc *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc)
+
+	ItShouldHaveShootVictoriaLogsReady(tc)
+	ItShouldHaveGardenVictoriaLogsReady(tc.SeedContext)
+
+	controlPlaneLoggerName := "seed-cp-logger" + "-" + utilrand.String(randomLength)
+	gardenNamespaceLoggerName := "seed-garden-ns-logger" + "-" + utilrand.String(randomLength)
+
+	AfterAll(func(ctx SpecContext) {
+		if tc.SeedClient == nil {
+			return
+		}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      gardenNamespaceLoggerName,
+			Namespace: "garden",
+		}}
+		Eventually(ctx, func() error {
+			return client.IgnoreNotFound(tc.SeedClient.Delete(ctx, deployment))
+		}).Should(Succeed())
+	}, NodeTimeout(time.Minute))
+
+	ItShouldRenderAndDeployTemplateToShootControlPlane(tc, loggerAppName, nonGardenerLoggerParams(controlPlaneLoggerName))
+	ItShouldWaitForPodsInShootControlPlaneToBeReady(tc, labels.SelectorFromSet(map[string]string{"app": controlPlaneLoggerName}))
+
+	seed.ItShouldRenderAndDeployTemplateToSeed(tc.SeedContext, "garden", loggerAppName, nonGardenerLoggerParams(gardenNamespaceLoggerName))
+	seed.ItShouldWaitForPodsInGardenNamespaceToBeReady(tc.SeedContext, labels.SelectorFromSet(map[string]string{"app": gardenNamespaceLoggerName}))
+
+	ItShouldRejectUnauthenticatedVictoriaLogsRequestInGarden(tc.SeedContext)
+	ItShouldRejectWrongCredentialsVictoriaLogsRequestInGarden(tc.SeedContext)
+
+	ItShouldWaitForLogsCountByKeyToBeInShootVictoriaLogs(tc, "k8s.pod.name", controlPlaneLoggerName+".*", time.Hour, shootLogsCount)
+	ItShouldWaitForLogsByKeyNotToBeInShootVictoriaLogs(tc, "k8s.pod.name", gardenNamespaceLoggerName+".*", time.Hour)
+
+	ItShouldWaitForLogsCountByKeyToBeInGardenVictoriaLogs(tc.SeedContext, "k8s.pod.name", gardenNamespaceLoggerName+".*", time.Hour, shootLogsCount)
+	ItShouldWaitForLogsByKeyNotToBeInGardenVictoriaLogs(tc.SeedContext, "k8s.pod.name", controlPlaneLoggerName+".*", time.Hour)
 }
 
 func itShouldSetUpShootAndSeedContext(tc *ShootContext) {
