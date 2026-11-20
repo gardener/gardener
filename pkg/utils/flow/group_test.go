@@ -200,6 +200,33 @@ var _ = Describe("TaskGroup", func() {
 			group.TasksWithDependencies(gate)
 			Expect(group.Tasks()[0].Dependencies.StringList()).To(ConsistOf("pre"))
 		})
+
+		It("should propagate the group's SkipIf=true to every returned task", func() {
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a"}, flow.Task{Name: "b"}).SkipIf(true)
+			tasks := group.TasksWithDependencies()
+			Expect(tasks[0].SkipIf).To(BeTrue())
+			Expect(tasks[1].SkipIf).To(BeTrue())
+		})
+
+		It("should not set SkipIf when the group's SkipIf is false", func() {
+			group := flow.NewTaskGroup("group", flow.Task{Name: "a"}).SkipIf(false)
+			tasks := group.TasksWithDependencies()
+			Expect(tasks[0].SkipIf).To(BeFalse())
+		})
+
+		It("should preserve a task's own SkipIf=true when the group's SkipIf is false", func() {
+			task := flow.Task{Name: "a", SkipIf: true}
+			group := flow.NewTaskGroup("group", task).SkipIf(false)
+			tasks := group.TasksWithDependencies()
+			Expect(tasks[0].SkipIf).To(BeTrue())
+		})
+
+		It("should OR the group's SkipIf onto a task's own SkipIf", func() {
+			taskSkipped := flow.Task{Name: "a", SkipIf: false}
+			group := flow.NewTaskGroup("group", taskSkipped).SkipIf(true)
+			tasks := group.TasksWithDependencies()
+			Expect(tasks[0].SkipIf).To(BeTrue())
+		})
 	})
 
 	Describe("#SkipIf", func() {

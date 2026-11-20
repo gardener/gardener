@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return r.deleteShoot(ctx, log, shoot)
 	}
 
-	if liveMigrationRole != v1beta1helper.LiveMigrationRoleNone {
+	if liveMigrationRole != v1beta1helper.LiveMigrationRoleNone || shoot.Status.LiveMigration != nil {
 		return r.liveMigrateShoot(ctx, log, shoot, liveMigrationRole)
 	}
 
@@ -209,6 +209,19 @@ func (r *Reconciler) migrateShoot(ctx context.Context, log logr.Logger, shoot *g
 func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, role v1beta1helper.LiveMigrationRole) (reconcile.Result, error) {
 	log = log.WithValues("operation", "live-migrate", "liveMigrationRole", role)
 
+	if role == v1beta1helper.LiveMigrationRoleNone && shoot.Status.LiveMigration != nil {
+		if v1beta1helper.HasLiveMigrationAnnotation(shoot.Annotations) {
+			patch := client.MergeFrom(shoot.DeepCopy())
+			controllerutils.RemoveAllTasks(shoot.Annotations)
+			delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+			if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove stale live migration annotation: %w", err)
+			}
+		}
+		log.Info("Live control plane migration completed")
+		return reconcile.Result{}, r.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeLiveMigrate)
+	}
+
 	if err := r.checkGardenletVersionParity(ctx, shoot, role); err != nil {
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, err.Error(), gardencorev1beta1.LastOperationTypeLiveMigrate, false)
 		return reconcile.Result{}, errorsutils.WithSuppressed(err, updateErr)
@@ -224,6 +237,16 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 		return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
+	if role == v1beta1helper.LiveMigrationRoleSource {
+		log.Info("Live migration successful from source seed's perspective, destination seed will finalize migration")
+		return reconcile.Result{}, nil
+	}
+
+	if err := r.finalizeLiveMigration(ctx, shoot); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to finalize live migration: %w", err)
+	}
+
+	r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventLiveMigrated, gardencorev1beta1.EventActionLiveMigrate, "Live migrated Shoot cluster")
 	log.Info("Live control plane migration completed")
 	return reconcile.Result{}, r.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeLiveMigrate)
 }
@@ -908,6 +931,10 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	if operationType != gardencorev1beta1.LastOperationTypeDelete {
 		shoot.Status.SeedName = shoot.Spec.SeedName
+	}
+
+	if operationType == gardencorev1beta1.LastOperationTypeLiveMigrate {
+		shoot.Status.LiveMigration = nil
 	}
 
 	shoot.Status.RetryCycleStartTime = nil
