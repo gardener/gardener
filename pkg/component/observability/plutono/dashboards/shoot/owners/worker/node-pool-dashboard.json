@@ -1234,7 +1234,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "changes(node_boot_time_seconds[$__rate_interval])\n* on (node) group_left (label_worker_gardener_cloud_pool)\n  kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}",
+          "expr": "(  abs(    last_over_time(node_boot_time_seconds[$__rate_interval])\n    -   last_over_time(node_boot_time_seconds[$__rate_interval] offset $__rate_interval)  )\n  * on (node) group_left (label_worker_gardener_cloud_pool)\n  kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) \n > bool 30",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 1,
