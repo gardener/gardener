@@ -54,7 +54,7 @@ func ShootLogging(tc *ShootContext) {
 			"resources.gardener.cloud/managed-by": "gardener",
 		},
 	}
-	ItShouldRenderAndDeployTemplateToShoot(tc, loggerAppName, loggerParams)
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, loggerParams)
 
 	loggerParams = map[string]any{
 		"LoggerName":          nonGardenerLoggerName,
@@ -63,7 +63,7 @@ func ShootLogging(tc *ShootContext) {
 		"LogsCount":           shootLogsCount,
 		"LogsDuration":        "20s",
 	}
-	ItShouldRenderAndDeployTemplateToShoot(tc, loggerAppName, loggerParams)
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, loggerParams)
 
 	gardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
 		"app": gardenerLoggerAppLabel,
