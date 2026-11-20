@@ -6082,6 +6082,11 @@ func (in *SeedVolume) DeepCopyInto(out *SeedVolume) {
 		*out = make([]SeedVolumeProvider, len(*in))
 		copy(*out, *in)
 	}
+	if in.ETCDStorageClassName != nil {
+		in, out := &in.ETCDStorageClassName, &out.ETCDStorageClassName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
