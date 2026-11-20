@@ -62,7 +62,7 @@ require (
 	github.com/perses/perses v0.55.1
 	github.com/perses/perses-operator v0.6.1
 	github.com/perses/spec v0.3.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.94.2
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.95.2
 	github.com/prometheus/blackbox_exporter v0.29.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.74.0
