@@ -163,7 +163,7 @@ func (h *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 var kubeletConfigProblemRegex = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
 
 // CheckNodes checks whether the given nodes are ready and the version in the node status is of the same major-minor as given in 'workerGroupKubernetesVersion'.
-// It returns the failed condition and a bool indicating whether the failure is attributable entirely to preserved nodes (i.e. nodes whose backing machine is preserved by MCM).
+// It returns the failed condition and a bool indicating whether the failure is attributable entirely to intentionally-held nodes (i.e. nodes whose backing machine is preserved or under planned maintenance by MCM).
 // If the bool is true, the caller may choose to continue checking other conditions rather than returning early,
 // since the failure is expected and other checks may surface more actionable problems.
 func (h *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string, workerGroupKubernetesVersion *semver.Version, preservedNodeNames sets.Set[string]) (*gardencorev1beta1.Condition, bool) {
@@ -186,7 +186,11 @@ func (h *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes 
 		isNodePreserved := preservedNodeNames.Has(node.Name)
 		var messageSuffix string
 		if isNodePreserved {
-			messageSuffix = " (node and backing machine preserved by MCM)"
+			if health.IsNodeUnderMaintenanceAndNotReady(node) {
+				messageSuffix = " (node and backing machine under planned maintenance by MCM)"
+			} else {
+				messageSuffix = " (node and backing machine preserved by MCM)"
+			}
 		}
 
 		if err := health.CheckNode(&node); err != nil {
