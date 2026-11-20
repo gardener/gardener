@@ -863,7 +863,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					}},
 				}
 				cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &localv1alpha1.CloudProfileConfig{MachineImages: []localv1alpha1.MachineImages{
-					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0"}}},
+					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: new("local-dev:1.0.0")}}},
 				}}}
 				Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
 
@@ -873,7 +873,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					}},
 				}
 				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &localv1alpha1.CloudProfileConfig{MachineImages: []localv1alpha1.MachineImages{
-					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "2.0.0", Image: "local-dev:2.0.0"}}},
+					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "2.0.0", Image: new("local-dev:2.0.0")}}},
 				}}}
 				Expect(fakeClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 			})
@@ -902,16 +902,16 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 
 				// Simulate a status update by the provider extension.
 				namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Object: &localv1alpha1.CloudProfileConfig{MachineImages: []localv1alpha1.MachineImages{
-					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0"}}},
-					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "2.0.0", Image: "local-dev:2.0.0"}}},
+					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: new("local-dev:1.0.0")}}},
+					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "2.0.0", Image: new("local-dev:2.0.0")}}},
 				}}}
 				Expect(fakeClient.Status().Update(ctx, namespacedCloudProfile)).To(Succeed())
 				statusConfig := &localv1alpha1.CloudProfileConfig{}
 				_, _, err = serializer.NewCodecFactory(fakeClient.Scheme()).UniversalDeserializer().Decode(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw, nil, statusConfig)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(statusConfig).To(BeEquivalentTo(&localv1alpha1.CloudProfileConfig{MachineImages: []localv1alpha1.MachineImages{
-					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0"}}},
-					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "2.0.0", Image: "local-dev:2.0.0"}}},
+					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: new("local-dev:1.0.0")}}},
+					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "2.0.0", Image: new("local-dev:2.0.0")}}},
 				}}))
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(SatisfyAll(
@@ -929,7 +929,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					}},
 				}
 				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &localv1alpha1.CloudProfileConfig{MachineImages: []localv1alpha1.MachineImages{
-					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "3.0.0", Image: "local-dev:3.0.0"}}},
+					{Name: "machine-image-2", Versions: []localv1alpha1.MachineImageVersion{{Version: "3.0.0", Image: new("local-dev:3.0.0")}}},
 				}}}
 				Expect(fakeClient.Update(ctx, namespacedCloudProfile)).To(Succeed())
 
@@ -969,7 +969,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Versions:       []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, Architectures: []string{"amd64", "arm64"}}}},
 				}
 				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &localv1alpha1.CloudProfileConfig{MachineImages: []localv1alpha1.MachineImages{
-					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0-nscpfl"}}},
+					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: new("local-dev:1.0.0-nscpfl")}}},
 				}}}
 				Expect(fakeClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 
@@ -984,7 +984,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Versions:       []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}}}},
 				}
 				cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &localv1alpha1.CloudProfileConfig{MachineImages: []localv1alpha1.MachineImages{
-					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0-cpfl"}}},
+					{Name: "machine-image-1", Versions: []localv1alpha1.MachineImageVersion{{Version: "1.0.0", Image: new("local-dev:1.0.0-cpfl")}}},
 				}}}
 				Expect(fakeClient.Update(ctx, cloudProfile)).To(Succeed())
 

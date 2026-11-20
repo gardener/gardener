@@ -44,7 +44,7 @@ type MachineImageVersion struct {
 	Version string `json:"version"`
 	// Image is the image for the machine image.
 	// +optional
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
 	// CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.
 	// +required
 	CapabilityFlavors []MachineImageFlavor `json:"capabilityFlavors"`

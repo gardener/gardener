@@ -88,7 +88,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				Name: "image-1",
 				Versions: []localv1alpha1.MachineImageVersion{{
 					Version: "1.0",
-					Image:   "local/image:1.0-amd64",
+					Image:   new("local/image:1.0-amd64"),
 				}},
 			}
 		})
@@ -171,13 +171,13 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				MatchFields(IgnoreExtras, Fields{
 					"Name": Equal("image-1"),
 					"Versions": ContainElements(
-						localv1alpha1.MachineImageVersion{Version: "1.0", Image: "local/image:1.0"},
-						localv1alpha1.MachineImageVersion{Version: "1.1", Image: "local/image:1.1"},
+						localv1alpha1.MachineImageVersion{Version: "1.0", Image: new("local/image:1.0")},
+						localv1alpha1.MachineImageVersion{Version: "1.1", Image: new("local/image:1.1")},
 					),
 				}),
 				MatchFields(IgnoreExtras, Fields{
 					"Name":     Equal("image-2"),
-					"Versions": ContainElements(localv1alpha1.MachineImageVersion{Version: "2.0", Image: "local/image:2.0"}),
+					"Versions": ContainElements(localv1alpha1.MachineImageVersion{Version: "2.0", Image: new("local/image:2.0")}),
 				}),
 			))
 		})
@@ -206,7 +206,7 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				MatchFields(IgnoreExtras, Fields{
 					"Name": Equal("image-1"),
 					"Versions": ContainElements(
-						localv1alpha1.MachineImageVersion{Version: "1.0", Image: "local/image:1.0-nscpfl"},
+						localv1alpha1.MachineImageVersion{Version: "1.0", Image: new("local/image:1.0-nscpfl")},
 					),
 				}),
 			))

@@ -13,6 +13,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -84,10 +85,10 @@ func TransformProviderConfigToParentFormat(cloudProfileConfig *localv1alpha1.Clo
 			transformedVersion := localv1alpha1.MachineImageVersion{Version: version.Version}
 			if isParentInCapabilityFormat && !isVersionInCapabilityFormat {
 				// transform to capability format
-				transformedVersion.CapabilityFlavors = []localv1alpha1.MachineImageFlavor{{Image: version.Image}}
+				transformedVersion.CapabilityFlavors = []localv1alpha1.MachineImageFlavor{{Image: ptr.Deref(version.Image, "")}}
 			} else if !isParentInCapabilityFormat && isVersionInCapabilityFormat {
 				// transform to old format
-				transformedVersion.Image = version.CapabilityFlavors[0].Image
+				transformedVersion.Image = new(version.CapabilityFlavors[0].Image)
 			} else {
 				transformedVersion = version
 			}
