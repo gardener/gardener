@@ -118,9 +118,10 @@ var _ = Describe("PersesOperator", func() {
 						Labels: map[string]string{
 							"app":                              "perses-operator",
 							"networking.gardener.cloud/to-dns": "allowed",
-							"networking.gardener.cloud/to-runtime-apiserver":                "allowed",
-							"networking.resources.gardener.cloud/to-perses-garden-tcp-8080": "allowed",
-							"networking.resources.gardener.cloud/to-perses-seed-tcp-8080":   "allowed",
+							"networking.gardener.cloud/to-runtime-apiserver":                          "allowed",
+							"networking.resources.gardener.cloud/to-perses-garden-tcp-8080":           "allowed",
+							"networking.resources.gardener.cloud/to-perses-seed-tcp-8080":             "allowed",
+							"networking.resources.gardener.cloud/to-all-shoots-perses-shoot-tcp-8080": "allowed",
 						},
 					},
 					Spec: corev1.PodSpec{

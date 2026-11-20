@@ -149,6 +149,12 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.155.0
 	AllowlistSeedReferences featuregate.Feature = "AllowlistSeedReferences"
+
+	// PersesShoot enables the deployment of a Perses instance in the control plane of shoot clusters, next to
+	// Plutono. The instance only shows the dashboards that have already been migrated from Plutono.
+	// owner: @rickardsjp
+	// alpha: v1.156.0
+	PersesShoot featuregate.Feature = "PersesShoot"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -195,6 +201,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	RemoveHTTPProxyLegacyPort:      {Default: true, PreRelease: featuregate.Beta},
 	StrictAuditPolicyValidation:    {Default: false, PreRelease: featuregate.Alpha},
 	AllowlistSeedReferences:        {Default: false, PreRelease: featuregate.Alpha},
+	PersesShoot:                    {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

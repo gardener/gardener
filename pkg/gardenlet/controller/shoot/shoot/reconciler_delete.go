@@ -641,10 +641,15 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.Plutono.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointControlPlaneDown),
 		})
+		deletePerses = g.Add(flow.Task{
+			Name:         "Deleting Perses in Seed",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.Perses.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(syncPointControlPlaneDown),
+		})
 		deleteIstioBasicAuthServer = g.Add(flow.Task{
 			Name:         "Deleting istio-basic-auth-server in Seed",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.IstioBasicAuthServer.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deleteAlertmanager, deletePrometheus, deletePlutono),
+			Dependencies: flow.NewTaskIDs(deleteAlertmanager, deletePrometheus, deletePlutono, deletePerses),
 		})
 		destroySeedLogging = g.Add(flow.Task{
 			Name:         "Deleting logging stack in Seed",
@@ -657,6 +662,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			deletePrometheus,
 			deleteBlackboxExporter,
 			deletePlutono,
+			deletePerses,
 			deleteIstioBasicAuthServer,
 			destroySeedLogging,
 		)

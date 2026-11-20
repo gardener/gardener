@@ -1650,10 +1650,20 @@ func (b *Botanist) ReconcileObservabilityTaskGroup() flow.TaskGroup {
 			Fn:           b.WaitForPlutono,
 			Dependencies: flow.NewTaskIDs(deployPlutonoForMonitoring),
 		})
+		deployPerses = g.Add(flow.Task{
+			Name:         "Reconciling Perses for shoot in seed",
+			Fn:           flow.TaskFn(b.DeployPerses).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(deployAlertManager, deployPrometheus),
+		})
+		waitUntilPersesReconciled = g.Add(flow.Task{
+			Name:         "Waiting until Perses for shoot in seed is reconciled",
+			Fn:           b.WaitForPerses,
+			Dependencies: flow.NewTaskIDs(deployPerses),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying istio-basic-auth-server",
 			Fn:           flow.TaskFn(b.Shoot.Components.ControlPlane.IstioBasicAuthServer.Deploy).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReconciled, waitUntilPrometheusReconciled, waitUntilPlutonoReconciled),
+			Dependencies: flow.NewTaskIDs(waitUntilAlertmanagerReconciled, waitUntilPrometheusReconciled, waitUntilPlutonoReconciled, waitUntilPersesReconciled),
 		})
 	)
 

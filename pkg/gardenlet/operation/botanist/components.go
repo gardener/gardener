@@ -154,6 +154,10 @@ func (b *Botanist) instantiateComponentsObservability() (err error) {
 	if err != nil {
 		return err
 	}
+	b.Shoot.Components.ControlPlane.Perses, err = b.DefaultPerses()
+	if err != nil {
+		return err
+	}
 	b.Shoot.Components.ControlPlane.Plutono, err = b.DefaultPlutono()
 	if err != nil {
 		return err

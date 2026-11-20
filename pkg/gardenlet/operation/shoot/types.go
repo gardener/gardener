@@ -47,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/perses"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
@@ -162,6 +163,7 @@ type ControlPlane struct {
 	KubeControllerManager    kubecontrollermanager.Interface
 	KubeStateMetrics         component.DeployWaiter
 	MachineControllerManager machinecontrollermanager.Interface
+	Perses                   perses.Interface
 	Plutono                  plutono.Interface
 	Prometheus               prometheus.Interface
 	// RuntimeResourceManager is the gardener-resource-manager instance responsible for runtime operations running in

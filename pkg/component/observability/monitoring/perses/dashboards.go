@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	"github.com/gardener/gardener/pkg/component"
 )
 
 var (
@@ -114,7 +116,7 @@ func decodeDashboard(data []byte) (string, persesv1alpha2.Dashboard, error) {
 
 // selectDashboards returns the set of embedded dashboard directories to deploy for the current role, together with the
 // path segments that should be ignored (e.g. istio or vpa dashboards which are only conditionally deployed). Perses is
-// only ever deployed to the garden runtime cluster and to seeds, so only these two roles are handled.
+// deployed to the garden runtime cluster, to seeds, and to shoot control planes.
 func (p *perses) selectDashboards() (map[string]embed.FS, sets.Set[string]) {
 	ignorePaths := sets.New[string]()
 
@@ -129,6 +131,18 @@ func (p *perses) selectDashboards() (map[string]embed.FS, sets.Set[string]) {
 		}
 		if !p.values.IncludeIstioDashboards {
 			ignorePaths.Insert("istio")
+		}
+		return requiredDashboards, ignorePaths
+	}
+
+	if p.values.ClusterType == component.ClusterTypeShoot {
+		// TODO(rickardsjp): Add the shoot-specific dashboards once they are migrated from Plutono.
+		requiredDashboards := map[string]embed.FS{
+			gardenAndShootDashboardsPath: gardenAndShootDashboards,
+			commonDashboardsPath:         commonDashboards,
+		}
+		if !p.values.VPAEnabled {
+			ignorePaths.Insert("vpa")
 		}
 		return requiredDashboards, ignorePaths
 	}

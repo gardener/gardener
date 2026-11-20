@@ -37,6 +37,12 @@ func (p *perses) datasources() []client.Object {
 			p.newDatasource("prometheus-aggregate", pluginKindPrometheus, "http://prometheus-aggregate:80", !p.values.OnlyDeployDatasourcesAndDashboards),
 			p.newDatasource("prometheus-seed", pluginKindPrometheus, "http://prometheus-seed:80", false),
 		)
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
+		// The shoot Prometheus is the default datasource. Dashboards contributed by extensions rely on this because
+		// they do not name a datasource.
+		datasources = append(datasources,
+			p.newDatasource("prometheus-shoot", pluginKindPrometheus, "http://prometheus-shoot:80", true),
+		)
 	}
 
 	if p.values.VictoriaLogsEnabled && !p.values.OnlyDeployDatasourcesAndDashboards {

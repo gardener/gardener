@@ -38,7 +38,10 @@ type Values struct {
 	ClusterType component.ClusterType
 	// Replicas is the number of replicas.
 	Replicas int32
-	// VPAEnabled states whether VerticalPodAutoscaler is enabled.
+	// PriorityClassName is the name of the priority class for the Perses pods. If empty, no priority class is set.
+	PriorityClassName string
+	// VPAEnabled states whether VerticalPodAutoscaler is enabled. For shoot control planes it only controls whether
+	// the VPA dashboards are deployed, since seeds always autoscale control plane components.
 	VPAEnabled bool
 	// IsGardenCluster specifies whether the cluster is a garden cluster.
 	IsGardenCluster bool

@@ -27,6 +27,9 @@ func (p *perses) persesName() string {
 	if p.values.IsGardenCluster {
 		return "perses-garden"
 	}
+	if p.values.ClusterType == component.ClusterTypeShoot {
+		return "perses-shoot"
+	}
 	return "perses-seed"
 }
 
@@ -84,15 +87,31 @@ func (p *perses) perses() *persesv1alpha2.Perses {
 		},
 	}
 
+	if p.values.PriorityClassName != "" {
+		obj.Spec.PriorityClassName = &p.values.PriorityClassName
+	}
+
 	return obj
 }
 
 func (p *perses) getServiceAnnotations() map[string]string {
+	scrapeTargets := v1beta1constants.LabelNetworkPolicySeedScrapeTargets
+	if p.values.ClusterType == component.ClusterTypeShoot {
+		scrapeTargets = v1beta1constants.LabelNetworkPolicyScrapeTargets
+	}
 	scrapeTargetAnnotationKey := resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix +
-		v1beta1constants.LabelNetworkPolicySeedScrapeTargets +
+		scrapeTargets +
 		resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix
 	annotations := map[string]string{
 		scrapeTargetAnnotationKey: `[{"protocol":"TCP","port":8080}]`,
+	}
+	// The perses-operator runs in the garden namespace and pushes datasources and dashboards directly to the pods of
+	// the instance. The network policies which are generated for every Service only allow traffic from pods in the
+	// same namespace. Instances in shoot namespaces hence need the following annotations so that additional network
+	// policies allowing traffic from the garden namespace are generated.
+	if p.values.ClusterType == component.ClusterTypeShoot {
+		annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] = v1beta1constants.LabelNetworkPolicyShootNamespaceAlias
+		annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] = `[{"matchLabels":{"kubernetes.io/metadata.name":"` + v1beta1constants.GardenNamespace + `"}}]`
 	}
 	// Export the Service only to the istio ingress gateway namespace where it is consumed. When the instance is not
 	// externally exposed there is no consumer, so no export annotation is set.
@@ -144,10 +163,13 @@ func (p *perses) getPodLabels() map[string]string {
 		return labels
 	}
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	switch p.values.ClusterType {
+	case component.ClusterTypeSeed:
 		for k, v := range seedSpecificLabels {
 			labels[k] = v
 		}
+	case component.ClusterTypeShoot:
+		labels[gardenerutils.NetworkPolicyLabel("prometheus-shoot", 9090)] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
 	return labels
