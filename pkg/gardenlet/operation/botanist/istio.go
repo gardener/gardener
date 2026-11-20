@@ -73,6 +73,7 @@ func (b *Botanist) DefaultIstio(ctx context.Context) (istio.Interface, error) {
 		},
 		annotations,
 		loadBalancerClass,
+		nil,
 		externalTrafficPolicy,
 		nil,
 		[]corev1.ServicePort{{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)}},
