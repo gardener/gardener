@@ -400,6 +400,51 @@ var _ = Describe("Warnings", func() {
 			),
 		)
 
+		Describe("spec.kubernetes.clusterAutoscaler.maxNodeProvisionTime", func() {
+			It("should return a warning when maxNodeProvisionTime is set", func() {
+				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
+					MaxNodeProvisionTime: &metav1.Duration{Duration: 15 * time.Minute},
+				}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal(
+					"you are setting the spec.kubernetes.clusterAutoscaler.maxNodeProvisionTime field. The field is deprecated. Use spec.provider.workers[*].machineControllerManager.machineCreationTimeout instead.",
+				)))
+			})
+
+			It("should not return a warning when clusterAutoscaler is nil", func() {
+				shoot.Spec.Kubernetes.ClusterAutoscaler = nil
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+
+			It("should not return a warning when maxNodeProvisionTime is nil", func() {
+				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+		})
+
+		Describe("spec.provider.workers[].clusterAutoscaler.maxNodeProvisionTime", func() {
+			It("should return a warning when maxNodeProvisionTime is set on a worker pool", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{
+					Name: "test",
+					ClusterAutoscaler: &core.ClusterAutoscalerOptions{
+						MaxNodeProvisionTime: &metav1.Duration{Duration: 20 * time.Minute},
+					},
+				}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(ContainElement(Equal(
+					"you are setting the spec.provider.workers[0].clusterAutoscaler.maxNodeProvisionTime field. The field is deprecated. Use spec.provider.workers[0].machineControllerManager.machineCreationTimeout instead.",
+				)))
+			})
+
+			It("should not return a warning when clusterAutoscaler is nil on the worker pool", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{Name: "test", ClusterAutoscaler: nil}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+
+			It("should not return a warning when maxNodeProvisionTime is nil on the worker pool", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{{Name: "test", ClusterAutoscaler: &core.ClusterAutoscalerOptions{}}}
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval, nil)).To(BeEmpty())
+			})
+		})
+
 		Describe("spec.provider.workers[].machineControllerManagerSettings.autoPreserveFailedMachineMax", func() {
 			It("should return a warning when autoPreserveFailedMachineMax is less than the number of zones", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{{

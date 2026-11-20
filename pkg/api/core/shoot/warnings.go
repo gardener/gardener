@@ -76,7 +76,19 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"), ignoreWarningsForDNSIndexes)...)
 	}
 
+	if shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxNodeProvisionTime != nil {
+		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field is deprecated. Use %s instead.",
+			field.NewPath("spec", "kubernetes", "clusterAutoscaler", "maxNodeProvisionTime"),
+			field.NewPath("spec", "provider", "workers[*]", "machineControllerManager", "machineCreationTimeout")))
+	}
+
 	for i, worker := range shoot.Spec.Provider.Workers {
+		if worker.ClusterAutoscaler != nil && worker.ClusterAutoscaler.MaxNodeProvisionTime != nil {
+			fldPath := field.NewPath("spec", "provider", "workers").Index(i).Child("clusterAutoscaler", "maxNodeProvisionTime")
+			warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field is deprecated. Use %s instead.",
+				fldPath,
+				field.NewPath("spec", "provider", "workers").Index(i).Child("machineControllerManager", "machineCreationTimeout")))
+		}
 		if worker.MachineControllerManagerSettings != nil {
 			if autoPreserveFailedMachineMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0); autoPreserveFailedMachineMax > 0 {
 				numZones := len(sets.New(worker.Zones...))
