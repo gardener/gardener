@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -28,12 +29,11 @@ import (
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/api/extensions/v1alpha1/helper"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/nodeagent/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/kubernetes/adminaccess"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardener-node-agents. It never has an opinion on the request.
@@ -61,15 +61,16 @@ var (
 	podResource                       = corev1.Resource("pods")
 	secretsResource                   = corev1.Resource("secrets")
 
-	oscDecoder runtime.Decoder
+	decoder runtime.Decoder
 )
 
 func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(nodeagentconfigv1alpha1.AddToScheme(scheme))
 	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
-	versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
-	oscDecoder = serializer.NewCodecFactory(scheme).CodecForVersions(nil, ser, nil, versions)
+	codecFactory := serializer.NewCodecFactory(scheme)
+	decoder = codecFactory.CodecForVersions(nil, ser, nil, schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion, nodeagentconfigv1alpha1.SchemeGroupVersion}))
 }
 
 type authorizer struct {
@@ -302,14 +303,12 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 		return auth.DecisionDeny, reason, nil
 	}
 
+	// valitailTokenSecretName and openTelemetryCollectorTokenSecretName are allowed for all worker pools. The remaining
+	// access tokens (e.g. for the control plane components of self-hosted shoots) are only readable by the node-agents of
+	// the worker pool whose operating system config references them, see tokenSecretNamesFromOSCSecret below.
 	validSecrets := []string{
 		valitailTokenSecretName,
 		openTelemetryCollectorTokenSecretName,
-		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameKubeControllerManager,
-		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameKubeScheduler,
-		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.ETCDMain,
-		gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.ETCDEvents,
-		gardenerutils.SecretNamePrefixShootAccess + adminaccess.ShootAccessSecretNameSuffix,
 	}
 
 	if a.machineNamespace != nil {
@@ -338,11 +337,11 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 				hostname = node.Labels[corev1.LabelHostname]
 			}
 
-			secretRefNames, err := secretRefNamesFromOSCSecret(oscSecret, hostname)
+			authorizedSecretNames, err := authorizedSecretNamesFromOSCSecret(oscSecret, hostname)
 			if err != nil {
-				return auth.DecisionDeny, "", fmt.Errorf("error reading secretRef names from OSC secret %q: %w", oscSecretName, err)
+				return auth.DecisionDeny, "", fmt.Errorf("error reading authorized secret names from OSC secret %q: %w", oscSecretName, err)
 			}
-			validSecrets = append(validSecrets, secretRefNames...)
+			validSecrets = append(validSecrets, authorizedSecretNames...)
 		}
 	} else {
 		var nodeNotFound bool
@@ -368,11 +367,11 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 			for _, oscSecret := range oscSecretList.Items {
 				validSecrets = append(validSecrets, oscSecret.Name)
 
-				secretRefNames, err := secretRefNamesFromOSCSecret(&oscSecret, "")
+				authorizedSecretNames, err := authorizedSecretNamesFromOSCSecret(&oscSecret, "")
 				if err != nil {
-					return auth.DecisionDeny, "", fmt.Errorf("error reading secretRef names from OSC secret %q: %w", oscSecret.Name, err)
+					return auth.DecisionDeny, "", fmt.Errorf("error reading authorized secret names from OSC secret %q: %w", oscSecret.Name, err)
 				}
-				validSecrets = append(validSecrets, secretRefNames...)
+				validSecrets = append(validSecrets, authorizedSecretNames...)
 			}
 		} else {
 			// Verify that the secret from node label is an operating system config secret.
@@ -381,11 +380,11 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 				if oscSecret.Name == node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName] {
 					validSecrets = append(validSecrets, oscSecret.Name)
 
-					secretRefNames, err := secretRefNamesFromOSCSecret(&oscSecret, hostname)
+					authorizedSecretNames, err := authorizedSecretNamesFromOSCSecret(&oscSecret, hostname)
 					if err != nil {
-						return auth.DecisionDeny, "", fmt.Errorf("error reading secretRef names from OSC secret %q: %w", oscSecret.Name, err)
+						return auth.DecisionDeny, "", fmt.Errorf("error reading authorized secret names from OSC secret %q: %w", oscSecret.Name, err)
 					}
-					validSecrets = append(validSecrets, secretRefNames...)
+					validSecrets = append(validSecrets, authorizedSecretNames...)
 					break
 				}
 			}
@@ -400,22 +399,56 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 	return auth.DecisionAllow, "", nil
 }
 
-func secretRefNamesFromOSCSecret(secret *corev1.Secret, hostname string) ([]string, error) {
+func authorizedSecretNamesFromOSCSecret(secret *corev1.Secret, hostname string) ([]string, error) {
 	oscRaw, ok := secret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig]
 	if !ok {
 		return nil, nil
 	}
 
 	osc := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := runtime.DecodeInto(oscDecoder, oscRaw, osc); err != nil {
+	if err := runtime.DecodeInto(decoder, oscRaw, osc); err != nil {
 		return nil, fmt.Errorf("unable to decode OSC from secret %q: %w", secret.Name, err)
 	}
 
 	var names []string
 	for _, file := range append(osc.Spec.Files, osc.Status.ExtensionFiles...) {
-		if file.Content.SecretRef != nil && (hostname == "" || file.HostName == nil || *file.HostName == hostname) {
+		if hostname != "" && file.HostName != nil && *file.HostName != hostname {
+			continue
+		}
+
+		if file.Content.SecretRef != nil {
 			names = append(names, file.Content.SecretRef.Name)
 		}
+
+		// The access tokens the node-agent is allowed to sync (e.g. the control plane component tokens of self-hosted
+		// shoots) are declared in its own configuration file embedded in the OSC. Reading them from there ensures that
+		// only the node-agents of worker pools which actually sync these tokens are authorized to access them.
+		if file.Content.Inline != nil && strings.HasPrefix(file.Path, nodeagentconfigv1alpha1.BaseDir+"/config-") {
+			tokenSecretNames, err := tokenSecretNamesFromNodeAgentConfigFile(file.Content.Inline)
+			if err != nil {
+				return nil, err
+			}
+			names = append(names, tokenSecretNames...)
+		}
+	}
+
+	return names, nil
+}
+
+func tokenSecretNamesFromNodeAgentConfigFile(inline *extensionsv1alpha1.FileContentInline) ([]string, error) {
+	data, err := extensionsv1alpha1helper.Decode(inline.Encoding, []byte(inline.Data))
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode node-agent config file content: %w", err)
+	}
+
+	config := &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
+	if err := runtime.DecodeInto(decoder, data, config); err != nil {
+		return nil, fmt.Errorf("unable to decode node-agent config: %w", err)
+	}
+
+	var names []string
+	for _, syncConfig := range config.Controllers.Token.SyncConfigs {
+		names = append(names, syncConfig.SecretName)
 	}
 
 	return names, nil
