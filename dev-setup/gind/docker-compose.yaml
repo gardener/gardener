@@ -40,6 +40,7 @@ services:
     - "172.18.255.123:443:443"
     volumes:
     - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    - ../../dev/gind-lb:/etc/gind-lb
     command: ["envoy", "-c", "/etc/envoy/envoy.yaml"]
     depends_on:
     - machine-0

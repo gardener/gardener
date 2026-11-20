@@ -21,21 +21,19 @@ static_resources:
               log_format:
                 text_format_source:
                   inline_string: "[%START_TIME%] %DOWNSTREAM_REMOTE_ADDRESS% -> %UPSTREAM_HOST% (%BYTES_RECEIVED%/%BYTES_SENT%) %DURATION%ms\n"
-  clusters:
-  - name: kube_apiserver
-    connect_timeout: 3s
-    type: STRICT_DNS
-    dns_lookup_family: V4_ONLY
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: kube_apiserver
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: gind-machine-0
-                port_value: 443
+  clusters: []
+# The kube_apiserver cluster is read from /etc/gind-lb/cds.yaml. Envoy polls it (poll_interval) rather than using
+# watched_directory: over the Docker Desktop (VirtioFS) bind mount Envoy's inotify watch does not fire on host-side
+# changes. Use set-api-server-upstream.sh to change the upstream.
+node:
+  id: gind-apiserver-lb
+  cluster: gind-apiserver-lb
+dynamic_resources:
+  cds_config:
+    resource_api_version: V3
+    path_config_source:
+      path: /etc/gind-lb/cds.yaml
+      poll_interval: 2s
 admin:
   address:
     pipe:
