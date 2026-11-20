@@ -276,6 +276,76 @@ var _ = Describe("Controller", func() {
 			Expect(extensionBackupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 		})
 
+		DescribeTable("should forward explicit restore requests despite unchanged specs and credentials",
+			func(previousOperation gardencorev1beta1.LastOperationType, withTimestamp bool) {
+				backupEntry.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}
+				if withTimestamp {
+					backupEntry.Annotations[v1beta1constants.GardenerTimestamp] = now.Format(time.RFC3339Nano)
+				}
+				backupEntry.OwnerReferences = []metav1.OwnerReference{{Kind: "Shoot", Name: "shoot"}}
+				Expect(gardenClient.Update(ctx, backupEntry)).To(Succeed())
+				backupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  previousOperation,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(gardenClient.Status().Update(ctx, backupEntry)).To(Succeed())
+				Expect(gardenClient.Create(ctx, &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: testNamespaceName}})).To(Succeed())
+				extensionBackupEntry.Status.LastOperation.Type = previousOperation
+				extensionBackupEntry.Annotations = map[string]string{v1beta1constants.GardenerTimestamp: now.Add(-time.Minute).Format(time.RFC3339Nano)}
+				Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+				Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
+				Expect(extensionBackupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
+				Expect(extensionBackupEntry.Spec.BucketName).To(Equal(backupBucket.Name))
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+				Expect(backupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
+				Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateProcessing))
+			},
+			Entry("after reconciliation", gardencorev1beta1.LastOperationTypeReconcile, true),
+			Entry("after a previous restore", gardencorev1beta1.LastOperationTypeRestore, true),
+			Entry("without a request timestamp", gardencorev1beta1.LastOperationTypeReconcile, false),
+		)
+
+		It("should wait for a dispatched restore and acknowledge it only after it completes", func() {
+			backupEntry.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore,
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Minute).Format(time.RFC3339Nano),
+			}
+			Expect(gardenClient.Update(ctx, backupEntry)).To(Succeed())
+			extensionBackupEntry.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore,
+				v1beta1constants.GardenerTimestamp: now.Format(time.RFC3339Nano),
+			}
+			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+			Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+
+			Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{}))
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+			Expect(backupEntry.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
+			Expect(extensionBackupEntry.Annotations[v1beta1constants.GardenerTimestamp]).To(Equal(now.Format(time.RFC3339Nano)))
+
+			delete(extensionBackupEntry.Annotations, v1beta1constants.GardenerOperation)
+			extensionBackupEntry.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeRestore
+			Expect(seedClient.Update(ctx, extensionBackupEntry)).To(Succeed())
+			Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{}))
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+			Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+			Expect(backupEntry.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
+
+			By("Preserve the completed restore on a redundant reconciliation")
+			completedStatus := backupEntry.Status.DeepCopy()
+			fakeClock.Step(time.Minute)
+			Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{}))
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+			Expect(backupEntry.Status).To(Equal(*completedStatus))
+		})
+
 		It("should reconcile the extension secret and extension BackupEntry if the secret currently doesn't have a timestamp", func() {
 			extensionSecret.Annotations = nil
 			Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
@@ -293,6 +363,57 @@ var _ = Describe("Controller", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			Expect(extensionBackupEntry.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
 		})
+
+		DescribeTable("should not skip new work after a successful restore",
+			func(change string) {
+				backupEntry.Generation = 1
+				Expect(gardenClient.Update(ctx, backupEntry)).To(Succeed())
+				backupEntry.Status = gardencorev1beta1.BackupEntryStatus{
+					ObservedGeneration: 1,
+					SeedName:           new(seedName),
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type:  gardencorev1beta1.LastOperationTypeRestore,
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+					},
+				}
+				Expect(gardenClient.Status().Update(ctx, backupEntry)).To(Succeed())
+				extensionBackupEntry.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeRestore
+				Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
+				Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
+
+				switch change {
+				case "generation":
+					backupEntry.Generation++
+					Expect(gardenClient.Update(ctx, backupEntry)).To(Succeed())
+				case "credentials":
+					gardenSecret.Data["foo"] = []byte("changed")
+					Expect(gardenClient.Update(ctx, gardenSecret)).To(Succeed())
+				case "extension error":
+					extensionBackupEntry.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
+					Expect(seedClient.Update(ctx, extensionBackupEntry)).To(Succeed())
+				case "bucket error":
+					backupBucket.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
+					Expect(gardenClient.Status().Update(ctx, backupBucket)).To(Succeed())
+				}
+
+				Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{}))
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+				Expect(backupEntry.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeReconcile))
+				switch change {
+				case "generation":
+					Expect(backupEntry.Status.ObservedGeneration).To(Equal(backupEntry.Generation))
+				case "credentials":
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
+					Expect(extensionBackupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+				case "extension error", "bucket error":
+					Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+				}
+			},
+			Entry("when the generation changes", "generation"),
+			Entry("when credentials change", "credentials"),
+			Entry("when the extension reports an error", "extension error"),
+			Entry("when the bucket reports an error", "bucket error"),
+		)
 
 		It("should reconcile the extension BackupEntry if the secret data has changed", func() {
 			extensionSecret.Data = map[string][]byte{"dash": []byte("bash")}

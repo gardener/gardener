@@ -48,18 +48,21 @@ case "$COMMAND" in
       REGISTRY_DIR="/etc/containerd/certs.d/${UPSTREAM_HOST}"
       docker exec "${NODE}" mkdir -p "${REGISTRY_DIR}"
 
-      local ca_line=""
+      local server_ca_line=""
+      local host_ca_line=""
       if [[ -n "$CA_CRT" ]]; then
         docker cp "$CA_CRT" "${NODE}:${REGISTRY_DIR}/ca.crt"
-        ca_line="  ca = \"${REGISTRY_DIR}/ca.crt\""
+        server_ca_line="ca = \"${REGISTRY_DIR}/ca.crt\""
+        host_ca_line="  ca = \"${REGISTRY_DIR}/ca.crt\""
       fi
 
       cat <<EOF | docker exec -i "${NODE}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
 server = "${UPSTREAM_SERVER}"
+${server_ca_line}
 
 [host."${MIRROR_HOST}"]
   capabilities = ["pull", "resolve"]
-${ca_line}
+${host_ca_line}
 EOF
     }
 

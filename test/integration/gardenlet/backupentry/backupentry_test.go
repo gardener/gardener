@@ -43,9 +43,13 @@ var _ = Describe("BackupEntry controller tests", func() {
 		shootNamespace       *corev1.Namespace
 		cluster              *extensionsv1alpha1.Cluster
 
-		reconcileExtensionBackupEntry func(bool)
+		reconcileExtensionBackupEntry func(bool, ...func())
 		reconcileCoreBackupBucket     func(bool)
 	)
+
+	BeforeEach(func() {
+		annotations = nil
+	})
 
 	JustBeforeEach(func() {
 		DeferCleanup(test.WithVars(
@@ -58,7 +62,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 		fakeClock.SetTime(time.Now().Round(time.Second))
 
-		reconcileExtensionBackupEntry = func(makeReady bool) {
+		reconcileExtensionBackupEntry = func(makeReady bool, afterStatusUpdate ...func()) {
 			By("Ensure extension secret and extension backupentry is created")
 			EventuallyWithOffset(1, func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
@@ -107,12 +111,16 @@ var _ = Describe("BackupEntry controller tests", func() {
 			if operationType != "" {
 				switch operationType {
 				case string(v1beta1constants.GardenerOperationReconcile):
-					extensionBackupEntry.Status.LastOperation.Type = v1beta1constants.GardenerOperationReconcile
+					extensionBackupEntry.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
 				case string(v1beta1constants.GardenerOperationRestore):
-					extensionBackupEntry.Status.LastOperation.Type = v1beta1constants.GardenerOperationRestore
+					extensionBackupEntry.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeRestore
 				}
 			}
 			ExpectWithOffset(1, testClient.Status().Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
+
+			for _, check := range afterStatusUpdate {
+				check()
+			}
 
 			if operationType != v1beta1constants.GardenerOperationReconcile {
 				ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
@@ -533,6 +541,41 @@ var _ = Describe("BackupEntry controller tests", func() {
 				g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				g.Expect(backupEntry.Status.LastOperation.Progress).To(Equal(int32(100)))
 				g.Expect(backupEntry.Status.ObservedGeneration).To(Equal(backupEntry.Generation))
+			}).Should(Succeed())
+
+			By("Ensure queued extension events do not overwrite the completed restore")
+			completedStatus := backupEntry.Status.DeepCopy()
+			Consistently(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+				g.Expect(backupEntry.Status).To(Equal(*completedStatus))
+			}).Should(Succeed())
+		})
+
+		It("should acknowledge restoration only after the extension clears its operation annotation", func() {
+			reconcileExtensionBackupEntry(true, func() {
+				By("Allow the controller to observe success while the restore annotation is still present")
+				Eventually(func(g Gomega) {
+					observed := &extensionsv1alpha1.BackupEntry{}
+					g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), observed)).To(Succeed())
+					g.Expect(observed.Status.LastOperation).NotTo(BeNil())
+					g.Expect(observed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(observed.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
+				}).Should(Succeed())
+
+				Consistently(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+					g.Expect(backupEntry.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore))
+					g.Expect(backupEntry.Status.LastOperation).NotTo(BeNil())
+					g.Expect(backupEntry.Status.LastOperation.State).NotTo(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+				}).Should(Succeed())
+			})
+
+			By("Observe core BackupEntry success after annotation removal without another status update")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+				g.Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+				g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+				g.Expect(backupEntry.Status.LastOperation.Type).To(Equal(gardencorev1beta1.LastOperationTypeRestore))
 			}).Should(Succeed())
 		})
 	})

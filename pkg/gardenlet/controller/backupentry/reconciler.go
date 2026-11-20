@@ -116,8 +116,17 @@ func (r *Reconciler) reconcileBackupEntry(
 	}
 
 	operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
-	if updateErr := r.updateBackupEntryStatusOperationStart(gardenCtx, backupEntry, operationType); updateErr != nil {
-		return fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
+	// Multiple extension events can enqueue reconciliation after an operation has already completed.
+	// Defer changing its status until we know whether there is new work to do.
+	operationAlreadySucceeded := backupEntry.Status.LastOperation != nil &&
+		backupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded &&
+		backupEntry.Status.LastError == nil &&
+		backupEntry.Status.ObservedGeneration == backupEntry.Generation &&
+		!metav1.HasAnnotation(backupEntry.ObjectMeta, v1beta1constants.GardenerOperation)
+	if !operationAlreadySucceeded {
+		if updateErr := r.updateBackupEntryStatusOperationStart(gardenCtx, backupEntry, operationType); updateErr != nil {
+			return fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
+		}
 	}
 
 	var (
@@ -143,6 +152,11 @@ func (r *Reconciler) reconcileBackupEntry(
 	)
 
 	if err := r.checkIfBackupBucketIsHealthy(gardenCtx, backupBucket); err != nil {
+		if operationAlreadySucceeded {
+			if updateErr := r.updateBackupEntryStatusOperationStart(gardenCtx, backupEntry, operationType); updateErr != nil {
+				return fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
+			}
+		}
 		reconcileErr := &gardencorev1beta1.LastError{
 			Codes:       v1beta1helper.ExtractErrorCodes(err),
 			Description: err.Error(),
@@ -257,6 +271,39 @@ func (r *Reconciler) reconcileBackupEntry(
 		}
 	}
 
+	// Forward new restore requests even if the extension previously succeeded: its etcd-backup Secret may be gone.
+	// Dispatch timestamps prevent restarting an in-progress restore.
+	if kubernetesutils.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
+		if timestamp, ok := backupEntry.Annotations[v1beta1constants.GardenerTimestamp]; ok {
+			requestedAt, err := time.Parse(time.RFC3339Nano, timestamp)
+			if err != nil {
+				return fmt.Errorf("could not parse BackupEntry restore timestamp: %w", err)
+			}
+			dispatchedAt := time.Time{}
+			if timestamp, ok := extensionBackupEntry.Annotations[v1beta1constants.GardenerTimestamp]; ok {
+				if dispatchedAt, err = time.Parse(time.RFC3339Nano, timestamp); err != nil {
+					return fmt.Errorf("could not parse extension BackupEntry timestamp: %w", err)
+				}
+			}
+			mustReconcileExtensionBackupEntry = mustReconcileExtensionBackupEntry || requestedAt.After(dispatchedAt)
+		} else if extensionBackupEntry.Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRestore &&
+			(extensionBackupEntry.Status.LastOperation == nil || extensionBackupEntry.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeRestore) {
+			mustReconcileExtensionBackupEntry = true
+		}
+	}
+
+	if operationAlreadySucceeded {
+		if !mustReconcileExtensionBackupEntry && lastObservedError == nil &&
+			extensionBackupEntry.Status.LastOperation != nil &&
+			extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded &&
+			!metav1.HasAnnotation(extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation) {
+			return nil
+		}
+		if updateErr := r.updateBackupEntryStatusOperationStart(gardenCtx, backupEntry, operationType); updateErr != nil {
+			return fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
+		}
+	}
+
 	if lastObservedError != nil {
 		reconcileErr := &gardencorev1beta1.LastError{
 			Codes:       v1beta1helper.ExtractErrorCodes(lastObservedError),
@@ -278,7 +325,8 @@ func (r *Reconciler) reconcileBackupEntry(
 		return nil
 	}
 
-	if extensionBackupEntry.Status.LastOperation != nil && extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+	if extensionBackupEntry.Status.LastOperation != nil && extensionBackupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded &&
+		!metav1.HasAnnotation(extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation) {
 		if updateErr := r.updateBackupEntryStatusSucceeded(gardenCtx, backupEntry, operationType); updateErr != nil {
 			return fmt.Errorf("could not update status after reconciliation success: %w", updateErr)
 		}

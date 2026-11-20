@@ -269,9 +269,17 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 			Fn:           b.UpdateAdvertisedAddresses,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
 		})
-		reconcileDNSRecords      = g.AddGroup(b.ReconcileDNSRecordsTaskGroup().WithDependencies(waitUntilKubeAPIServerServiceIsReady))
-		_                        = g.AddGroup(b.ReconcileBackupResourcesTaskGroup(flowCtx.allowBackup, flowCtx.isCopyOfBackupsRequired, flowCtx.skipReadiness))
-		waitUntilEtcdReady       = g.AddGroup(b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness))
+		reconcileDNSRecords          = g.AddGroup(b.ReconcileDNSRecordsTaskGroup().WithDependencies(waitUntilKubeAPIServerServiceIsReady))
+		_                            = g.AddGroup(b.ReconcileBackupResourcesTaskGroup(flowCtx.allowBackup, flowCtx.isCopyOfBackupsRequired, flowCtx.skipReadiness))
+		waitUntilEtcdReady           = g.AddGroup(b.ReconcileETCDsTaskGroup(shootIsGarden, flowCtx.isRestoringHAControlPlane, flowCtx.skipReadiness))
+		removeForceRestoreAnnotation = g.Add(flow.Task{
+			Name: "Removing the force-restore annotation",
+			Fn: func(ctx context.Context) error {
+				return removeShootOperationAnnotation(ctx, b.GardenClient, b.Shoot, v1beta1constants.GardenerOperationForceRestore)
+			},
+			SkipIf:       b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationForceRestore,
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
+		})
 		destroySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
 			Fn:           b.DestroySourceBackupEntry,
@@ -291,6 +299,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 				waitUntilEtcdReady,
 				waitUntilKubeAPIServerServiceIsReady,
 				waitUntilExtensionResourcesBeforeKAPIReady,
+				removeForceRestoreAnnotation,
 			).
 			WithDependenciesIf(!flowCtx.hasNodesCIDR, waitUntilInfrastructureReady))
 

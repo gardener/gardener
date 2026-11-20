@@ -17,6 +17,20 @@ import (
 )
 
 var _ = Describe("Helper", func() {
+	DescribeTable("#ComputeOperationType with force-restore",
+		func(lastOperation *gardencorev1beta1.LastOperation, deleting bool, expected gardencorev1beta1.LastOperationType) {
+			meta := metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationForceRestore}}
+			if deleting {
+				meta.DeletionTimestamp = &metav1.Time{}
+			}
+			Expect(ComputeOperationType(meta, lastOperation)).To(Equal(expected))
+		},
+		Entry("without a last operation", nil, false, gardencorev1beta1.LastOperationTypeRestore),
+		Entry("after successful reconciliation", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile, State: gardencorev1beta1.LastOperationStateSucceeded}, false, gardencorev1beta1.LastOperationTypeRestore),
+		Entry("after a failed reconciliation", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile, State: gardencorev1beta1.LastOperationStateFailed}, false, gardencorev1beta1.LastOperationTypeRestore),
+		Entry("during deletion", nil, true, gardencorev1beta1.LastOperationTypeDelete),
+	)
+
 	DescribeTable("#UpsertLastError",
 		func(lastErrors []gardencorev1beta1.LastError, lastError gardencorev1beta1.LastError, expected []gardencorev1beta1.LastError) {
 			Expect(UpsertLastError(lastErrors, lastError)).To(Equal(expected))
@@ -118,6 +132,7 @@ var _ = Describe("Helper", func() {
 		},
 		Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
 		Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
+		Entry("force-restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationForceRestore}}, true),
 		Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
 		Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
 		Entry("not present", metav1.ObjectMeta{}, false),

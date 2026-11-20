@@ -77,6 +77,7 @@ var (
 		v1beta1constants.ShootOperationMaintain,
 		v1beta1constants.ShootOperationRetry,
 		v1beta1constants.ShootOperationForceInPlaceUpdate,
+		v1beta1constants.GardenerOperationForceRestore,
 	).Union(availableShootMaintenanceOperations)
 	availableShootMaintenanceOperations = sets.New(
 		v1beta1constants.GardenerOperationReconcile,
@@ -3525,6 +3526,13 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		}
 		if k8sLess134 && helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
+		}
+
+	case v1beta1constants.GardenerOperationForceRestore:
+		if helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "force-restore is not supported for self-hosted shoot clusters"))
+		} else if shoot.DeletionTimestamp == nil && (shoot.Spec.SeedName == nil || shoot.Status.SeedName == nil || *shoot.Spec.SeedName != *shoot.Status.SeedName) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "force-restore requires spec.seedName and status.seedName to reference the same seed"))
 		}
 
 	case v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout:

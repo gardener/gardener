@@ -23,6 +23,13 @@ shift 2
 CONDITIONS=("$@")
 NAMESPACE=${NAMESPACE:-}
 SKIP_LAST_OPERATION_CHECK=${SKIP_LAST_OPERATION_CHECK:-false}
+# The caller can defer readiness checks to a later step.
+SKIP_WAIT=${SKIP_WAIT:-false}
+
+if [ "$SKIP_WAIT" = "true" ]; then
+  echo "ℹ️  SKIP_WAIT=true — skipping readiness check for ${RESOURCE_TYPE}/${OBJECT_NAME}."
+  exit 0
+fi
 
 # The number of retries before failing
 TIMEOUT=${TIMEOUT:-600}
