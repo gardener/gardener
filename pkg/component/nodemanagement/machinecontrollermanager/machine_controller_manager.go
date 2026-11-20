@@ -584,8 +584,13 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"nodes", "nodes/status", "endpoints", "replicationcontrollers", "pods", "persistentvolumes", "persistentvolumeclaims"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					Resources: []string{"nodes", "nodes/status"},
+					Verbs:     []string{"get", "list", "watch", "update", "patch", "delete"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods"},
+					Verbs:     []string{"get", "list", "watch", "delete"},
 				},
 				{
 					APIGroups: []string{""},
@@ -593,14 +598,9 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 					Verbs:     []string{"create"},
 				},
 				{
-					APIGroups: []string{"apps"},
-					Resources: []string{"replicasets", "statefulsets", "daemonsets", "deployments"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"batch"},
-					Resources: []string{"jobs", "cronjobs"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					APIGroups: []string{""},
+					Resources: []string{"persistentvolumes", "persistentvolumeclaims"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{"policy"},
@@ -610,7 +610,7 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 				{
 					APIGroups: []string{"storage.k8s.io"},
 					Resources: []string{"volumeattachments"},
-					Verbs:     []string{"delete", "get", "list", "watch"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		}
@@ -637,7 +637,7 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 				{
 					APIGroups: []string{""},
 					Resources: []string{"secrets"},
-					Verbs:     []string{"create", "delete", "get", "list"},
+					Verbs:     []string{"create", "delete", "get"},
 				},
 			},
 		}

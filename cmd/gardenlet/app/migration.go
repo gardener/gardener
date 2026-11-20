@@ -10,14 +10,21 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/cmd/internal/migration"
 	"github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
@@ -30,6 +37,53 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 	// TODO(DobromirNPeev): Remove this migration after Gardener v1.158 has been released.
 	if err := migration.RemoveVPAInPlaceUpdatesMutatedLabel(ctx, g.mgr.GetClient(), log); err != nil {
 		return err
+	}
+
+	// TODO(gagan16k): Remove this migration after Gardener v1.159 has been released.
+	log.Info("Migrating RBAC resources for cluster-autoscaler")
+	if err := migrateCARBAC(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Replaces the cluster-autoscaler's old cluster-wide ClusterRoleBinding with a namespaced Role/RoleBinding,
+// and removes the seed-wide ClusterRole managed resource that used to back it.
+// TODO(gagan16k): Remove this function after Gardener v1.159 has been released.
+func migrateCARBAC(ctx context.Context, seedClient client.Client) error {
+	namespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
+		return fmt.Errorf("failed listing namespaces with '%s: %s' label: %w", v1beta1constants.GardenRole, v1beta1constants.GardenRoleShoot, err)
+	}
+
+	var tasks []flow.TaskFn
+
+	for _, namespace := range namespaceList.Items {
+		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
+			continue
+		}
+		tasks = append(tasks, func(ctx context.Context) error {
+			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			if err := seedClient.Get(ctx, client.ObjectKey{Name: "cluster-autoscaler-" + namespace.Name}, clusterRoleBinding); err != nil {
+				// If the cluster-autoscaler ClusterRoleBinding does not exist, there is nothing to do.
+				return client.IgnoreNotFound(err)
+			}
+
+			return clusterautoscaler.New(seedClient, namespace.Name, nil, "", 0, nil, nil, nil, nil).MigrateRBAC(ctx)
+		})
+	}
+
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return err
+	}
+
+	// Remove the seed-wide ClusterRole managed resource that used to be deployed in the garden namespace by the
+	// cluster-autoscaler bootstrapper.
+	if err := managedresources.DeleteForSeed(ctx, seedClient, v1beta1constants.GardenNamespace, "cluster-autoscaler"); err != nil {
+		if !meta.IsNoMatchError(err) {
+			return err
+		}
 	}
 
 	return nil

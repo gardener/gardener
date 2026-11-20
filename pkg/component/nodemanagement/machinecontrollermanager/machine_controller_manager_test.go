@@ -426,20 +426,22 @@ rules:
   resources:
   - nodes
   - nodes/status
-  - endpoints
-  - replicationcontrollers
-  - pods
-  - persistentvolumes
-  - persistentvolumeclaims
   verbs:
-  - create
-  - delete
-  - deletecollection
   - get
   - list
-  - patch
-  - update
   - watch
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
 - apiGroups:
   - ""
   resources:
@@ -447,34 +449,13 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - apps
+  - ""
   resources:
-  - replicasets
-  - statefulsets
-  - daemonsets
-  - deployments
+  - persistentvolumes
+  - persistentvolumeclaims
   verbs:
-  - create
-  - delete
-  - deletecollection
   - get
   - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - batch
-  resources:
-  - jobs
-  - cronjobs
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - policy
@@ -488,7 +469,6 @@ rules:
   resources:
   - volumeattachments
   verbs:
-  - delete
   - get
   - list
   - watch
@@ -522,7 +502,6 @@ rules:
   - create
   - delete
   - get
-  - list
 `
 
 		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
