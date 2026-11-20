@@ -43,7 +43,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	Describe("Create, Authenticate, Delete", Ordered, Label("authentication"), func() {
+	Describe("Create, Authenticate, Delete", Ordered, Label("authentication", "observability"), func() {
 		shoot1 := NewShootContext(DefaultShoot("e2e-auth-one"))
 		shoot2 := NewShootContext(DefaultShoot("e2e-auth-two"))
 
@@ -62,6 +62,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		ItShouldWaitForShootToBeReconciledAndHealthy(shoot2)
 		ItShouldGetResponsibleSeed(shoot2)
 		seed.ItShouldInitializeSeedClient(shoot2.SeedContext)
+
+		Describe("Shoot Logging tests", Label("observability"), func() {
+			// Logging is disabled in the IPv6 setup because Vali does not support IPv6.
+			// See dev-setup/gardenlet/components/ipv6/kustomization.yaml.
+			if os.Getenv("IPFAMILY") == "ipv6" {
+				return
+			}
+
+			PerShootLoggingIsolation(shoot1, shoot2)
+		})
 
 		var shoot1Client, shoot2Client, shoot1TokenClient, shoot2TokenClient kubernetes.Interface
 
