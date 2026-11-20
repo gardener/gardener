@@ -16,5 +16,6 @@ type Configuration struct {
 
 	// CommonSuffixes are expected to be the suffix of a fully qualified domain name.
 	// Each suffix should contain at least one or two dots ('.') to prevent accidental clashes.
+	// +optional
 	CommonSuffixes []string `json:"commonSuffixes,omitempty"`
 }

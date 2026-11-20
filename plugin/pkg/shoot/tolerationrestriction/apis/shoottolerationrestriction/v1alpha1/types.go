@@ -17,7 +17,9 @@ type Configuration struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Defaults is the Garden cluster-wide default tolerations list.
+	// +optional
 	Defaults []gardencorev1beta1.Toleration `json:"defaults,omitempty"`
 	// Whitelist is the Garden cluster-wide whitelist of tolerations.
+	// +optional
 	Whitelist []gardencorev1beta1.Toleration `json:"whitelist,omitempty"`
 }
