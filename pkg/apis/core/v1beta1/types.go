@@ -5,6 +5,8 @@
 package v1beta1
 
 import (
+	"slices"
+
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -45,17 +47,7 @@ func IsIPv6SingleStack(ipFamilies []IPFamily) bool {
 
 // IsDualStack determines whether the given list of IP families specifies dual-stack networking (both IPv4 and IPv6).
 func IsDualStack(ipFamilies []IPFamily) bool {
-	hasIPv4 := false
-	hasIPv6 := false
-	for _, family := range ipFamilies {
-		switch family {
-		case IPFamilyIPv4:
-			hasIPv4 = true
-		case IPFamilyIPv6:
-			hasIPv6 = true
-		}
-	}
-	return hasIPv4 && hasIPv6
+	return slices.Contains(ipFamilies, IPFamilyIPv4) && slices.Contains(ipFamilies, IPFamilyIPv6)
 }
 
 // AccessRestriction describes an access restriction for a Kubernetes cluster (e.g., EU access-only).

@@ -241,8 +241,8 @@ func (s *Seed) GetZonalLoadBalancerServiceProxyProtocolTermination(zone string) 
 
 // IsDualStack checks if the seed is a dual-stack seed.
 func (s *Seed) IsDualStack() bool {
-	seed := s.GetInfo()
-	return len(seed.Spec.Networks.IPFamilies) == 2
+	ipFamilies := s.GetInfo().Spec.Networks.IPFamilies
+	return gardencorev1beta1.IsDualStack(ipFamilies)
 }
 
 // GetNodeCIDR returns the node CIDR of the seed.

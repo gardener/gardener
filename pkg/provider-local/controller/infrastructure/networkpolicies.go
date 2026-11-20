@@ -19,7 +19,6 @@ import (
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/provider-local/cloud-provider/loadbalancer"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 var machineSelector = map[string]string{"app": "machine"}
@@ -82,13 +81,12 @@ func kindPeers() []networkingv1.NetworkPolicyPeer {
 }
 
 func allowToPublicNetworks() networkingv1.NetworkPolicyEgressRule {
-	exceptV4 := netutils.ToCIDRStrings(networkpolicy.AllPrivateNetworkBlocksV4()...)
-	exceptV6 := netutils.ToCIDRStrings(networkpolicy.AllPrivateNetworkBlocksV6()...)
+	peers, _ := networkpolicy.GetNetworkPolicyPeersWithExceptions(
+		networkpolicy.AllNetworks(),
+		networkpolicy.PrivateNetworks(),
+	)
 	return networkingv1.NetworkPolicyEgressRule{
-		To: []networkingv1.NetworkPolicyPeer{
-			{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0", Except: exceptV4}},
-			{IPBlock: &networkingv1.IPBlock{CIDR: "::/0", Except: exceptV6}},
-		},
+		To: peers,
 	}
 }
 
