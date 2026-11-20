@@ -56,11 +56,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			// TODO(rrhubenov): Remove this once Vali has been replaced.
 			// TODO(rrhubenov): Enable deployment of the logging stack when Vali is replaced.
 			// They have been disabled via dev-setup/gardenlet/components/ipv6/kustomization.yaml
+			// The whole logging is disabled, therefore we skip Victoria logs too.
 			if os.Getenv("IPFAMILY") == "ipv6" {
 				return
 			}
 
 			ShootLoggingVali(tc)
+			ShootLoggingVl(tc)
 		})
 
 		It("should allow creating pod in the kube-system namespace", func(ctx SpecContext) {
