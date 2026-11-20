@@ -34,8 +34,9 @@ func (b *Botanist) DefaultMachineControllerManager() (machinecontrollermanager.I
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		machinecontrollermanager.Values{
-			Image:           image.String(),
-			SelfHostedShoot: b.Shoot.IsSelfHosted(),
+			Image:                        image.String(),
+			WithoutTargetCluster:         b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane(),
+			TargetClusterIsRuntimeCluster: b.Shoot.IsSelfHosted() && b.Shoot.RunsControlPlane(),
 		},
 	), nil
 }

@@ -89,16 +89,15 @@ type Values struct {
 	Image string
 	// Replicas is the number of replicas for the deployment.
 	Replicas int32
-	// SelfHostedShoot is true if the machine-controller-manager is deployed for a self-hosted shoot cluster.
-	SelfHostedShoot bool
+	// WithoutTargetCluster disables interaction with a target cluster.
+	WithoutTargetCluster bool
+	// TargetClusterIsRuntimeCluster uses in-cluster credentials instead of a separate target kubeconfig.
+	// It has no effect when WithoutTargetCluster is true.
+	TargetClusterIsRuntimeCluster bool
 }
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	var (
-		// In `gardenadm bootstrap`, machine-controller-manager runs without a target cluster. We don't need the shoot
-		// resources (e.g., RBAC) in this case.
-		hasTargetCluster = !m.values.SelfHostedShoot || m.namespace == metav1.NamespaceSystem
-
 		shootAccessSecret   = m.newShootAccessSecret()
 		serviceAccount      = m.emptyServiceAccount()
 		roleBinding         = m.emptyRoleBindingRuntime()
@@ -212,7 +211,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if !m.values.SelfHostedShoot {
+	if !m.values.WithoutTargetCluster && !m.values.TargetClusterIsRuntimeCluster {
 		if err := shootAccessSecret.Reconcile(ctx, m.client); err != nil {
 			return err
 		}
@@ -252,7 +251,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						fmt.Sprintf("--port=%d", portMetrics),
 						"--safety-up=2",
 						"--safety-down=1",
-						"--target-kubeconfig=" + targetKubeconfig(m.values.SelfHostedShoot, m.namespace),
+						"--target-kubeconfig=" + targetKubeconfig(m.values.WithoutTargetCluster, m.values.TargetClusterIsRuntimeCluster),
 						"--concurrent-syncs=30",
 						"--kube-api-qps=150",
 						"--kube-api-burst=200",
@@ -300,7 +299,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 		}
 
-		if !m.values.SelfHostedShoot {
+		if !m.values.WithoutTargetCluster && !m.values.TargetClusterIsRuntimeCluster {
 			genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 			if !found {
 				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -487,7 +486,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if hasTargetCluster {
+	if !m.values.WithoutTargetCluster {
 		data, err := m.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
 		if err != nil {
 			return err
@@ -499,20 +498,17 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	return nil
 }
 
-// targetKubeconfig returns the path to the target kubeconfig file depending on the shoot configuration.
-func targetKubeconfig(selfHostedShoot bool, controlPlaneNamespace string) string {
-	if !selfHostedShoot {
-		return gardenerutils.PathGenericKubeconfig
+// targetKubeconfig returns the target kubeconfig argument depending on the cluster topology.
+func targetKubeconfig(withoutTargetCluster, targetClusterIsRuntimeCluster bool) string {
+	if withoutTargetCluster {
+		return "none"
 	}
 
-	if controlPlaneNamespace == metav1.NamespaceSystem {
-		// The control plane runs inside the cluster, use the in-cluster config as the target kubeconfig.
+	if targetClusterIsRuntimeCluster {
 		return ""
 	}
 
-	// There is no control plane for the self-hosted shoot cluster yet, i.e., we're creating machines for the control plane
-	// nodes with `gardenadm bootstrap`. machine-controller-manager should not interact with a target cluster.
-	return "none"
+	return gardenerutils.PathGenericKubeconfig
 }
 
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
