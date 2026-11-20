@@ -7,8 +7,6 @@ package controllermanager
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
@@ -33,10 +31,8 @@ func (g *gardenerControllerManager) verticalPodAutoscaler() *vpaautoscalingv1.Ve
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: containerName,
-						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("300Mi"),
-						},
+						ContainerName:    containerName,
+						ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
 						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
