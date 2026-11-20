@@ -10,7 +10,7 @@ spec:
       expr: |
         ( sum by (job) (
               rate(
-                apiserver_audit_error_total{plugin="webhook"}[5m]
+                apiserver_audit_error_total{plugin!="log"}[5m]
               )
           )
           /
