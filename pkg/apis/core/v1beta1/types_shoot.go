@@ -2286,6 +2286,10 @@ const (
 	ShootUsesUnifiedHTTPProxyPort ConditionType = "UsesUnifiedHTTPProxyPort"
 	// ShootPreservedFailedMachinesAbsent is a constant for a condition type indicating that the Shoot cluster no preserved failed machines.
 	ShootPreservedFailedMachinesAbsent ConditionType = "PreservedFailedMachinesAbsent"
+	// ShootKubernetesVersionSupported is a constant for a condition type indicating that the Shoot cluster's Kubernetes version is currently supported (i.e. not deprecated, expired, preview, unavailable).
+	ShootKubernetesVersionSupported ConditionType = "KubernetesVersionSupported"
+	// ShootMachineImagesVersionSupported is a constant for a condition type indicating that all of the Shoot cluster's MachineImage versions are currently supported (i.e. not deprecated, expired, preview, unavailable).
+	ShootMachineImagesVersionSupported ConditionType = "MachineImagesVersionSupported"
 
 	// ShootLiveMigrationSourceEtcdPreparedForPeerJoin indicates that the source etcd cluster
 	// is prepared for destination peers to join.
