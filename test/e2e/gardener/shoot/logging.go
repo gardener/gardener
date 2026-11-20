@@ -23,61 +23,59 @@ var (
 	loggerAppName  = "logger-app.yaml.tpl"
 )
 
-// ShootLogging checks that the logging stack for shoots works as expected.
+// ShootLoggingVali checks that the logging stack for shoots works as expected using Vali.
 // It deploys two logger applications: one with Gardener labels and one without.
 // It's expected that the one with Gardener labels has its logs collected in Vali by
 // the log shipper (valitail). While the one without label does not.
 // Function is exposed so that it can be called from the context of another
 // e2e test. This is done so that we can minimize the number of shoot clusters
 // that we create.
-func ShootLogging(tc *ShootContext) {
+func ShootLoggingVali(tc *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc)
+
+	gardenerLoggerName := "gardener-logger" + "-" + utilrand.String(randomLength)
+	nonGardenerLoggerName := "non-gardener-logger" + "-" + utilrand.String(randomLength)
+
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, gardenerLoggerParams(gardenerLoggerName))
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": gardenerLoggerName}))
+
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, nonGardenerLoggerParams(nonGardenerLoggerName))
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": nonGardenerLoggerName}))
+
+	ItShouldWaitForLogsCountWithLabelToBeInVali(tc, valiLabels, "pod_name", gardenerLoggerName+".*", shootLogsCount)
+	ItShouldWaitForLogsWithLabelToNotBeInVali(tc, valiLabels, "pod_name", nonGardenerLoggerName+".*")
+
+	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "containerd.service")
+	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "kubelet.service")
+}
+
+func itShouldSetUpShootAndSeedContext(tc *ShootContext) {
 	ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 	ItShouldInitializeShootClient(tc)
 	ItShouldGetResponsibleSeed(tc)
 	seed.ItShouldInitializeSeedClient(tc.SeedContext)
 	ItShouldComputeControlPlaneNamespace(tc)
+}
 
-	gardenerLoggerAppLabel := "gardener-logger"
-	gardenerLoggerName := "gardener-logger" + "-" + utilrand.String(randomLength)
-	nonGardenerLoggerAppLabel := "non-gardener-logger"
-	nonGardenerLoggerName := nonGardenerLoggerAppLabel + "-" + utilrand.String(randomLength)
-
-	loggerParams := map[string]any{
-		"LoggerName":          gardenerLoggerName,
-		"HelmDeployNamespace": "kube-system",
-		"AppLabel":            gardenerLoggerAppLabel,
-		"LogsCount":           shootLogsCount,
-		"LogsDuration":        "20s",
+func gardenerLoggerParams(name string) map[string]any {
+	return map[string]any{
+		"LoggerName":   name,
+		"AppLabel":     name,
+		"LogsCount":    shootLogsCount,
+		"LogsDuration": "20s",
 		"AdditionalLabels": map[string]string{
 			"origin":                              "gardener",
 			"gardener.cloud/role":                 "system-component",
 			"resources.gardener.cloud/managed-by": "gardener",
 		},
 	}
-	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, loggerParams)
+}
 
-	loggerParams = map[string]any{
-		"LoggerName":          nonGardenerLoggerName,
-		"HelmDeployNamespace": "kube-system",
-		"AppLabel":            nonGardenerLoggerAppLabel,
-		"LogsCount":           shootLogsCount,
-		"LogsDuration":        "20s",
+func nonGardenerLoggerParams(name string) map[string]any {
+	return map[string]any{
+		"LoggerName":   name,
+		"AppLabel":     name,
+		"LogsCount":    shootLogsCount,
+		"LogsDuration": "20s",
 	}
-	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, loggerParams)
-
-	gardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
-		"app": gardenerLoggerAppLabel,
-	})
-	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", gardenerLoggerLabels)
-
-	nonGardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
-		"app": nonGardenerLoggerAppLabel,
-	})
-	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", nonGardenerLoggerLabels)
-
-	ItShouldWaitForLogsCountWithLabelToBeInVali(tc, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", shootLogsCount)
-	ItShouldWaitForLogsWithLabelToNotBeInVali(tc, valiLabels, "pod_name", nonGardenerLoggerAppLabel+".*")
-
-	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "containerd.service")
-	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "kubelet.service")
 }

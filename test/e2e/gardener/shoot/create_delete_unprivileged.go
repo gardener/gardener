@@ -59,7 +59,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			if os.Getenv("IPFAMILY") == "ipv6" {
 				return
 			}
-			ShootLogging(tc)
+
+			ShootLoggingVali(tc)
 		})
 
 		It("should allow creating pod in the kube-system namespace", func(ctx SpecContext) {
