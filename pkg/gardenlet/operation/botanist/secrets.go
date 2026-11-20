@@ -45,11 +45,6 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		if err := b.restoreSecretsFromShootState(ctx); err != nil {
 			return err
 		}
-	} else if b.Seed != nil && v1beta1helper.GetLiveMigrationRole(b.Shoot.GetInfo(), b.Seed.GetInfo().Name) ==
-		v1beta1helper.LiveMigrationRoleDestination {
-		if err := b.restoreSecretsFromShootStateForLiveMigration(ctx); err != nil {
-			return err
-		}
 	}
 
 	taskFns := []flow.TaskFn{
@@ -108,18 +103,6 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 
 func (b *Botanist) restoreSecretsFromShootState(ctx context.Context) error {
 	return b.restoreSecretsFromGardenerResourceData(ctx, b.Shoot.GetShootState().Spec.Gardener)
-}
-
-func (b *Botanist) restoreSecretsFromShootStateForLiveMigration(ctx context.Context) error {
-	// Fetch the ShootState fresh from the API rather than using b.Shoot.GetShootState(): the botanist is
-	// created once at the start of the live migration flow, before the source gardenlet creates the ShootState.
-	// The in-memory copy is therefore nil at this point.
-	shootState := &gardencorev1beta1.ShootState{}
-	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
-		return fmt.Errorf("failed to fetch ShootState for live migration secret restoration: %w", err)
-	}
-
-	return b.restoreSecretsFromGardenerResourceData(ctx, shootState.Spec.Gardener)
 }
 
 func (b *Botanist) restoreSecretsFromGardenerResourceData(ctx context.Context, gardenerResourceData []gardencorev1beta1.GardenerResourceData) error {

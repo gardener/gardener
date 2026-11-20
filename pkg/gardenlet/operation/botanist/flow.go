@@ -1361,20 +1361,21 @@ const TaskGroupMigrateExtensionsBeforeKubeAPIServer flow.TaskID = "TaskGroupMigr
 
 // MigrateExtensionsBeforeKubeAPIServerTaskGroup migrates the source extensions needed before the kube-apiserver and
 // persists the resulting shoot state so the destination can restore them.
-func (b *Botanist) MigrateExtensionsBeforeKubeAPIServerTaskGroup() flow.TaskGroup {
-	var (
-		g = flow.NewTaskGroup(TaskGroupMigrateExtensionsBeforeKubeAPIServer).WithDependencies(TaskGroupMigrateAndDeleteManagedResources)
+func (b *Botanist) MigrateExtensionsBeforeKubeAPIServerTaskGroup(requireManagedResourcesCleanup bool) flow.TaskGroup {
+	g := flow.NewTaskGroup(TaskGroupMigrateExtensionsBeforeKubeAPIServer)
+	if requireManagedResourcesCleanup {
+		g = g.WithDependencies(TaskGroupMigrateAndDeleteManagedResources)
+	}
 
-		migrateExtensionsBeforeKubeAPIServer = g.Add(flow.Task{
-			Name: "Migrating extensions before kube-apiserver",
-			Fn:   b.Shoot.Components.Extensions.Extension.MigrateBeforeKubeAPIServer,
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until extensions before kube-apiserver have been migrated",
-			Fn:           b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer,
-			Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
-		})
-	)
+	migrateExtensionsBeforeKubeAPIServer := g.Add(flow.Task{
+		Name: "Migrating extensions before kube-apiserver",
+		Fn:   b.Shoot.Components.Extensions.Extension.MigrateBeforeKubeAPIServer,
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Waiting until extensions before kube-apiserver have been migrated",
+		Fn:           b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer,
+		Dependencies: flow.NewTaskIDs(migrateExtensionsBeforeKubeAPIServer),
+	})
 
 	return g
 }
