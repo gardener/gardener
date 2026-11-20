@@ -164,6 +164,42 @@ integer
 </tr>
 <tr>
 <td>
+<code>truncateEnabled</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TruncateEnabled specifies whether audit event and batch truncation is enabled.<br />Note that truncation is only performed if this field is set to `true`, since the kube-apiserver defaults the corresponding `--audit-webhook-truncate-enabled` flag to `false`.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>truncateMaxBatchSize</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TruncateMaxBatchSize is the maximum size in bytes of a batch sent to the webhook.<br />Defaulted to 10485760 (10MB) by the kubernetes apiserver (https://github.com/kubernetes/kubernetes/blob/6c4be7ebaa505f58463f1829272445845567b501/staging/src/k8s.io/apiserver/pkg/server/options/audit.go#L176)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>truncateMaxEventSize</code></br>
+<em>
+integer
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TruncateMaxEventSize is the maximum size in bytes of an audit event sent to the webhook.<br />Defaulted to 102400 (100KB) by the kubernetes apiserver (https://github.com/kubernetes/kubernetes/blob/6c4be7ebaa505f58463f1829272445845567b501/staging/src/k8s.io/apiserver/pkg/server/options/audit.go#L177)</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>kubeconfigSecretName</code></br>
 <em>
 string
