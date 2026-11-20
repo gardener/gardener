@@ -1,3 +1,4 @@
+# TODO(oliver-goetz): Remove this envoyfilter when gardener v1.159 has been released.
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -37,6 +38,18 @@ spec:
                   request_handle:headers():remove(value)
                 end
 
+                -- Drop all extra headers (keys prefixed with "X-Remote-Extra-") used by the kube-apiserver authentication proxy.
+                local extraPrefix = string.lower("X-Remote-Extra-")
+                local removeExtra = {}
+                for key, value in pairs(request_handle:headers()) do
+                  if string.sub(string.lower(key), 1, string.len(extraPrefix)) == extraPrefix then
+                    table.insert(removeExtra, key)
+                  end
+                end
+                for key, value in pairs(removeExtra) do
+                  request_handle:headers():remove(value)
+                end
+
                 -- Upstream request timeout, capped at 1d (see below). When a client certificate
                 -- is present, it is reduced to the certificate's remaining lifetime further down.
                 local upstreamTimeoutMilliseconds = 86400000
@@ -51,6 +64,7 @@ spec:
                   -- Kill request if CN is empty.
                   if cn == "" then
                     request_handle:respond({[":status"] = "400"}, "Invalid certificate subject")
+                    streamInfo:drainConnectionUponCompletion()
                     return
                   end
 
@@ -62,6 +76,7 @@ spec:
                   local notAfter = ssl:expirationPeerCertificate()
                   if now >= notAfter or now < notBefore then
                     request_handle:respond({[":status"] = "401"}, "Client certificate is expired or not yet valid")
+                    streamInfo:drainConnectionUponCompletion()
                     return
                   end
 
@@ -96,6 +111,6 @@ spec:
                 -- connections like forgotten kubectl port-forward or exec commands, and ensures
                 -- requests do not outlive the client certificate.
                 -- See https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#route-timeouts
-                request_handle:headers():add("x-envoy-upstream-rq-timeout-ms", tostring(upstreamTimeoutMilliseconds))
-                request_handle:headers():add("x-envoy-upstream-rq-per-try-timeout-ms", tostring(upstreamTimeoutMilliseconds))
+                request_handle:headers():replace("x-envoy-upstream-rq-timeout-ms", tostring(upstreamTimeoutMilliseconds))
+                request_handle:headers():replace("x-envoy-upstream-rq-per-try-timeout-ms", tostring(upstreamTimeoutMilliseconds))
               end
