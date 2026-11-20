@@ -682,6 +682,42 @@ func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 	return false
 }
 
+// isLoggingEnabled returns true if the logging stack is enabled. Default is enabled.
+func isLoggingEnabled(logging *operatorv1alpha1.Logging) bool {
+	if logging != nil {
+		return ptr.Deref(logging.Enabled, true)
+	}
+	return true
+}
+
+// isValiEnabled returns true if the logging stack and Vali are enabled and the RemoveVali feature gate is turned
+// off. Default is enabled.
+func isValiEnabled(logging *operatorv1alpha1.Logging) bool {
+	if !isLoggingEnabled(logging) {
+		return false
+	}
+	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
+		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+		return false
+	}
+	if logging != nil && logging.Vali != nil {
+		return ptr.Deref(logging.Vali.Enabled, true)
+	}
+	return true
+}
+
+// isVictoriaLogsEnabled returns true if the logging stack and VictoriaLogs are enabled and the VictoriaLogsBackend
+// feature gate is turned on. Default is enabled.
+func isVictoriaLogsEnabled(logging *operatorv1alpha1.Logging) bool {
+	if !isLoggingEnabled(logging) || !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+		return false
+	}
+	if logging != nil && logging.VictoriaLogs != nil {
+		return ptr.Deref(logging.VictoriaLogs.Enabled, true)
+	}
+	return true
+}
+
 func pvcAutoscalerEnabled(settings *operatorv1alpha1.Settings) bool {
 	return settings != nil &&
 		settings.PersistentVolumeClaimAutoscaler != nil &&
