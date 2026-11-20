@@ -706,7 +706,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 			})
 
-			It("only allow one supported version per minor version", func() {
+			It("should allow multiple supported versions per minor version", func() {
 				cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
 					{
 						Version:        "1.1.0",
@@ -719,13 +719,55 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				}
 				errorList := ValidateCloudProfile(cloudProfile)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.versions[1]"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.versions[0]"),
-				}))))
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow multiple implicitly supported versions (nil classification) per minor version", func() {
+				cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+					{
+						Version: "1.1.0",
+					},
+					{
+						Version: "1.1.1",
+					},
+				}
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow multiple supported machine image versions per minor version (explicit, implicit, and lifecycle)", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+				cloudProfile.Spec.MachineImages[0].Versions = []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "1.1.0",
+							Classification: &supportedClassification,
+						},
+						CRI:           []core.CRI{{Name: "containerd"}},
+						Architectures: []string{"amd64"},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.1.1",
+						},
+						CRI:           []core.CRI{{Name: "containerd"}},
+						Architectures: []string{"amd64"},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.1.2",
+							Lifecycle: []core.LifecycleStage{
+								{Classification: supportedClassification},
+							},
+						},
+						CRI:           []core.CRI{{Name: "containerd"}},
+						Architectures: []string{"amd64"},
+					},
+				}
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(BeEmpty())
 			})
 
 			Context("machine image validation", func() {
@@ -1867,6 +1909,53 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					errorList := ValidateCloudProfile(cloudProfile)
 					Expect(errorList).To(BeEmpty())
 				})
+
+				DescribeTable("should allow implicitly and lifecycle-supported Bastion images", func(version core.ExpirableVersion, selectedVersion *string) {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+					version.Version = "1.2.3"
+					cloudProfile.Spec.MachineImages[0].Versions[0].ExpirableVersion = version
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineType:  &core.BastionMachineType{Name: machineType.Name},
+						MachineImage: &core.BastionMachineImage{Name: machineImageName, Version: selectedVersion},
+					}
+
+					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+				},
+					Entry("implicit support with image name", core.ExpirableVersion{}, nil),
+					Entry("implicit support with explicit version", core.ExpirableVersion{}, new("1.2.3")),
+					Entry("lifecycle support with image name", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationSupported}}}, nil),
+					Entry("lifecycle support with explicit version", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationSupported}}}, new("1.2.3")),
+				)
+
+				DescribeTable("should reject Bastion image versions that are not currently supported", func(version core.ExpirableVersion) {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
+					version.Version = "1.2.3"
+					cloudProfile.Spec.MachineImages[0].Versions[0].ExpirableVersion = version
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineImage: &core.BastionMachineImage{Name: machineImageName, Version: new("1.2.3")},
+					}
+
+					Expect(ValidateCloudProfile(cloudProfile)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.bastion.machineImage.version"),
+					}))))
+				},
+					Entry("legacy preview", core.ExpirableVersion{Classification: new(core.ClassificationPreview)}),
+					Entry("legacy deprecated", core.ExpirableVersion{Classification: new(core.ClassificationDeprecated)}),
+					Entry("expired implicit support", core.ExpirableVersion{ExpirationDate: new(metav1.NewTime(time.Now().Add(-time.Hour)))}),
+					Entry("lifecycle preview", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationPreview}}}),
+					Entry("lifecycle deprecated", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{
+						{Classification: core.ClassificationSupported},
+						{Classification: core.ClassificationDeprecated, StartTime: new(metav1.NewTime(time.Now().Add(-time.Hour)))},
+					}}),
+					Entry("lifecycle expired", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{
+						{Classification: core.ClassificationSupported},
+						{Classification: core.ClassificationExpired, StartTime: new(metav1.NewTime(time.Now().Add(-time.Hour)))},
+					}}),
+					Entry("lifecycle unavailable", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{
+						{Classification: core.ClassificationSupported, StartTime: new(metav1.NewTime(time.Now().Add(time.Hour)))},
+					}}),
+				)
 
 				It("should allow matching arch of machineType and machineImage", func() {
 					cloudProfile.Spec.Bastion = &core.Bastion{
@@ -3032,7 +3121,7 @@ var _ = Describe("Supported version lifecycle periods", func() {
 	}
 
 	DescribeTable("validates Kubernetes and machine image versions",
-		func(first, second core.ExpirableVersion, secondVersion string, overlap bool) {
+		func(first, second core.ExpirableVersion, secondVersion string) {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 			first.Version = "1.30.1"
 			second.Version = secondVersion
@@ -3051,25 +3140,20 @@ var _ = Describe("Supported version lifecycle periods", func() {
 					spec.Kubernetes.Versions = append(spec.Kubernetes.Versions, first, second)
 				}
 				errs := ValidateNamespacedCloudProfileStatus(&spec, field.NewPath("status", "cloudProfileSpec"))
-				if overlap {
-					Expect(errs).NotTo(BeEmpty())
-					for _, err := range errs {
-						Expect(err.Type).To(Equal(field.ErrorTypeForbidden))
-						Expect(err.Detail).To(ContainSubstring("lifecycle stages must not overlap per minor version"))
-					}
-				} else {
-					Expect(errs).To(BeEmpty())
-				}
+				Expect(errs).To(BeEmpty())
 			}
 		},
-		Entry("adjacent periods do not overlap", period(nil, &middle), period(&middle, nil), "1.30.2", false),
-		Entry("separated periods do not overlap", period(&start, &middle), period(&end, nil), "1.30.2", false),
-		Entry("reversed separated periods do not overlap", period(&end, nil), period(&start, &middle), "1.30.2", false),
-		Entry("empty periods do not overlap", period(&middle, &middle), period(&start, &end), "1.30.2", false),
-		Entry("different minors do not conflict", period(nil, nil), period(nil, nil), "1.31.0", false),
-		Entry("explicit legacy and lifecycle versions conflict", core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, period(nil, nil), "1.30.2", true),
-		Entry("implicit legacy classifications retain their compatibility exception", core.ExpirableVersion{}, core.ExpirableVersion{}, "1.30.2", false),
-		Entry("implicit legacy classifications remain excluded beside lifecycle versions", core.ExpirableVersion{}, period(nil, nil), "1.30.2", false),
-		Entry("versions without a supported stage do not conflict", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationPreview}}}, period(nil, nil), "1.30.2", false),
+		Entry("adjacent periods do not conflict", period(nil, &middle), period(&middle, nil), "1.30.2"),
+		Entry("separated periods do not conflict", period(&start, &middle), period(&end, nil), "1.30.2"),
+		Entry("reversed separated periods do not conflict", period(&end, nil), period(&start, &middle), "1.30.2"),
+		Entry("empty periods do not conflict", period(&middle, &middle), period(&start, &end), "1.30.2"),
+		Entry("different minors do not conflict", period(nil, nil), period(nil, nil), "1.31.0"),
+		Entry("overlapping supported lifecycle periods do not conflict", period(nil, nil), period(nil, nil), "1.30.2"),
+		Entry("overlapping bounded supported lifecycle periods do not conflict", period(&start, &end), period(&middle, &end), "1.30.2"),
+		Entry("multiple explicitly supported versions do not conflict", core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, "1.30.2"),
+		Entry("explicit legacy and lifecycle versions do not conflict", core.ExpirableVersion{Classification: new(core.ClassificationSupported)}, period(nil, nil), "1.30.2"),
+		Entry("implicit legacy classifications do not conflict", core.ExpirableVersion{}, core.ExpirableVersion{}, "1.30.2"),
+		Entry("implicit legacy classifications beside lifecycle versions do not conflict", core.ExpirableVersion{}, period(nil, nil), "1.30.2"),
+		Entry("versions without a supported stage do not conflict", core.ExpirableVersion{Lifecycle: []core.LifecycleStage{{Classification: core.ClassificationPreview}}}, period(nil, nil), "1.30.2"),
 	)
 })

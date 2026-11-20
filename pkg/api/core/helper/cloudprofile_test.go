@@ -8,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
@@ -829,69 +827,6 @@ var _ = Describe("CloudProfile Helper", func() {
 			Expect(diff.RemovedVersions).To(BeEmpty())
 			Expect(diff.AddedImages.UnsortedList()).To(BeEmpty())
 			Expect(diff.AddedVersions).To(BeEmpty())
-		})
-	})
-
-	Describe("#FilterVersionsWithClassification", func() {
-		var (
-			classification = core.ClassificationSupported
-			versions       = []core.ExpirableVersion{
-				{
-					Version:        "1.0.2",
-					Classification: &classification,
-				},
-				{
-					Version:        "1.0.1",
-					Classification: &classification,
-				},
-				{
-					Version: "1.0.0",
-				},
-			}
-		)
-
-		It("should filter version", func() {
-			filteredVersions := FilterVersionsWithClassification(versions, classification)
-
-			Expect(filteredVersions).To(HaveLen(2))
-			Expect(filteredVersions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-				"Version":        Equal("1.0.2"),
-				"Classification": Equal(&classification),
-			}), MatchFields(IgnoreExtras, Fields{
-				"Version":        Equal("1.0.1"),
-				"Classification": Equal(&classification),
-			})))
-		})
-	})
-
-	Describe("#FindVersionsWithSameMajorMinor", func() {
-		var (
-			versions = []core.ExpirableVersion{
-				{
-					Version: "1.1.3",
-				},
-				{
-					Version: "1.1.2",
-				},
-				{
-					Version: "1.1.1",
-				},
-				{
-					Version: "1.0.0",
-				},
-			}
-		)
-		It("should filter version", func() {
-			currentSemVer, err := semver.NewVersion("1.1.3")
-			Expect(err).ToNot(HaveOccurred())
-			filteredVersions, _ := FindVersionsWithSameMajorMinor(versions, *currentSemVer)
-
-			Expect(filteredVersions).To(HaveLen(2))
-			Expect(filteredVersions).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-				"Version": Equal("1.1.2"),
-			}), MatchFields(IgnoreExtras, Fields{
-				"Version": Equal("1.1.1"),
-			})))
 		})
 	})
 
