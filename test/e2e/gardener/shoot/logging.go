@@ -129,6 +129,34 @@ func SeedLoggingVl(tc *ShootContext) {
 	ItShouldWaitForLogsByKeyNotToBeInGardenVictoriaLogs(tc.SeedContext, "k8s.pod.name", controlPlaneLoggerName+".*", time.Hour)
 }
 
+// ShootLogShipper verifies that the shoot's running systemd OpenTelemetry collector recovers after its
+// auth token is broken and restored, without explicitly restarting the collector.
+// Recovery is verified by fresh node journal or managed pod logs.
+func ShootLogShipper(tc *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc)
+
+	ItShouldHaveShootVictoriaLogsReady(tc)
+
+	brokenLoggerName := "broken-logger" + "-" + utilrand.String(randomLength)
+
+	// Corrupt the shoot-side target Secret to simulate invalid credentials.
+	// Restore it below by forcing renewal through the seed-side access Secret.
+	ItShouldBreakOpenTelemetryCollectorToken(tc)
+	ItShouldRestartGNA(tc)
+	ItShouldWaitForInvalidTokenOnNodes(tc)
+
+	// Create the logger after the invalid token reaches the nodes to exclude earlier logs.
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, gardenerLoggerParams(brokenLoggerName))
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": brokenLoggerName}))
+	ItShouldWaitForLogsByKeyNotToBeInShootVictoriaLogs(tc, "k8s.pod.name", brokenLoggerName+".*", time.Hour)
+
+	ItShouldRestoreOpenTelemetryCollectorToken(tc)
+	ItShouldRestartGNA(tc)
+	ItShouldWaitForValidTokenOnNodes(tc)
+
+	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "origin", "^(systemd_journal|shoot_system)$", 0)
+}
+
 func itShouldSetUpShootAndSeedContext(tc *ShootContext) {
 	ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 	ItShouldInitializeShootClient(tc)

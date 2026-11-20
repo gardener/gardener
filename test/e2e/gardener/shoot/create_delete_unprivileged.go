@@ -64,6 +64,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ShootLoggingVali(tc)
 			ShootLoggingVl(tc)
 			SeedLoggingVl(tc)
+			ShootLogShipper(tc)
 		})
 
 		It("should allow creating pod in the kube-system namespace", func(ctx SpecContext) {
