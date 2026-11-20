@@ -9,10 +9,11 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/perses"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewPerses creates a new perses deployer.
-func NewPerses(c client.Client, namespace string, values perses.Values) (perses.Interface, error) {
+func NewPerses(c client.Client, namespace string, sm secretsmanager.Interface, values perses.Values) (perses.Interface, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePerses)
 	if err != nil {
 		return nil, err
@@ -20,5 +21,5 @@ func NewPerses(c client.Client, namespace string, values perses.Values) (perses.
 
 	values.Image = image.String()
 
-	return perses.New(c, namespace, values), nil
+	return perses.New(c, namespace, sm, values), nil
 }

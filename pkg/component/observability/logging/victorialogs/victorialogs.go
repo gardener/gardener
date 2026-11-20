@@ -237,7 +237,8 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 				PriorityClassName:   v.values.PriorityClassName,
 				// Port order matters => do not reorder
 				ExtraArgs: map[string]string{
-					"httpListenAddr": fmt.Sprintf(":%d,:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
+					// HTTP port is used only by the oidc-app extension. It's sufficient to expose the port only on localhost.
+					"httpListenAddr": fmt.Sprintf(":%d,127.0.0.1:%d", constants.VictoriaLogsPort, constants.VictoriaLogsHttpPort),
 					"tls":            "true,false",
 					"tlsCertFile":    path.Join(vlServerTLSMountPath, secrets.DataKeyCertificate),
 					"tlsKeyFile":     path.Join(vlServerTLSMountPath, secrets.DataKeyPrivateKey),
@@ -277,20 +278,12 @@ func (v *victoriaLogs) vlSingle(vlServerTLSSecretName string) *victoriametricsv1
 					Name:        constants.ServiceName,
 					Annotations: v.serviceAnnotations(),
 				},
-				// Exposing both ports. The http port is left for extension compatibility reasons.
-				// For more information look up constants.VictoriaLogsHttpPort
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
 						{
 							Name:       "https",
 							Port:       constants.VictoriaLogsPort,
 							TargetPort: intstr.FromInt32(constants.VictoriaLogsPort),
-							Protocol:   corev1.ProtocolTCP,
-						},
-						{
-							Name:       "http",
-							Port:       constants.VictoriaLogsHttpPort,
-							TargetPort: intstr.FromInt32(constants.VictoriaLogsHttpPort),
 							Protocol:   corev1.ProtocolTCP,
 						},
 					},
