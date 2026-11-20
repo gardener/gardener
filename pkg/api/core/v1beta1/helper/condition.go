@@ -196,3 +196,40 @@ func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condi
 	}
 	return *newCondition
 }
+
+// MergeConditionsKStatus sets kstatus-compatible Reconciling and Stalled status conditions.
+func MergeConditionsKStatus(clock clock.Clock, conditions []gardencorev1beta1.Condition, isReconciling bool, stalledReason, stalledMessage string) []gardencorev1beta1.Condition {
+	var (
+		conditionsToAdd    []gardencorev1beta1.Condition
+		conditionsToRemove []gardencorev1beta1.ConditionType
+	)
+
+	if isReconciling {
+		conditionReconciling := UpdatedConditionWithClock(
+			clock,
+			GetOrInitConditionWithClock(clock, conditions, gardencorev1beta1.ConditionReconciling),
+			gardencorev1beta1.ConditionTrue,
+			"ReconcileInProgress",
+			"The resource is currently being reconciled.",
+		)
+		conditionsToAdd = append(conditionsToAdd, conditionReconciling)
+	} else {
+		conditionsToRemove = append(conditionsToRemove, gardencorev1beta1.ConditionReconciling)
+	}
+
+	if stalledMessage != "" || stalledReason != "" {
+		conditionStalled := UpdatedConditionWithClock(
+			clock,
+			GetOrInitConditionWithClock(clock, conditions, gardencorev1beta1.ConditionStalled),
+			gardencorev1beta1.ConditionTrue,
+			stalledReason,
+			stalledMessage,
+		)
+		conditionsToAdd = append(conditionsToAdd, conditionStalled)
+	} else {
+		conditionsToRemove = append(conditionsToRemove, gardencorev1beta1.ConditionStalled)
+	}
+
+	conditions = MergeConditions(conditions, conditionsToAdd...)
+	return RemoveConditions(conditions, conditionsToRemove...)
+}

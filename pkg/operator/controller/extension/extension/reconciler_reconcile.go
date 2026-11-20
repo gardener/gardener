@@ -45,7 +45,13 @@ func (r *Reconciler) reconcile(
 		}
 
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonNoGardenFound, "No garden found")
+		conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, false, "", "")
 		return reconcile.Result{}, r.updateExtensionStatus(ctx, log, extension, conditions)
+	}
+
+	conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, true, "", "")
+	if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to update extension status: %w", err)
 	}
 
 	if !controllerutil.ContainsFinalizer(extension, operatorv1alpha1.FinalizerName) {
@@ -119,7 +125,9 @@ func (r *Reconciler) reconcile(
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log: log,
 	}); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonReconcileFailed, err.Error())
+		reason, errorMsg := ReasonReconcileFailed, err.Error()
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, reason, errorMsg)
+		conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, false, reason, errorMsg)
 		if updateErr := r.updateExtensionStatus(ctx, log, extension, conditions); updateErr != nil {
 			return reconcile.Result{}, errors.Join(err, fmt.Errorf("failed to update extension status: %w", updateErr))
 		}
@@ -130,6 +138,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionTrue, ReasonReconcileSuccess, "Extension has been reconciled successfully")
+	conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, false, "", "")
 	return reconcileResult, r.updateExtensionStatus(ctx, log, extension, conditions)
 }
 

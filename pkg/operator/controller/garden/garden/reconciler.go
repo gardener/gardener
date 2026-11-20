@@ -200,6 +200,8 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		description = "Deletion of Garden cluster in progress."
 	}
 
+	garden.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, garden.Status.Conditions, true, "", "")
+
 	garden.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           operationType,
 		State:          gardencorev1beta1.LastOperationStateProcessing,
@@ -337,6 +339,8 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 		description = "Garden cluster has been successfully deleted."
 	}
 
+	garden.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, garden.Status.Conditions, false, "", "")
+
 	garden.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           operationType,
 		State:          gardencorev1beta1.LastOperationStateSucceeded,
@@ -430,6 +434,8 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, garden *ope
 	garden.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
 	garden.Status.LastOperation.Description = err.Error() + " Operation will be retried."
 	garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+	garden.Status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, garden.Status.Conditions, false, string(operationType)+string(garden.Status.LastOperation.State), garden.Status.LastOperation.Description)
 
 	if err2 := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err2 != nil {
 		return fmt.Errorf("failed updating last operation to state 'Error' (due to %s): %w", err.Error(), err2)

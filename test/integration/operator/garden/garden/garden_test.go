@@ -434,6 +434,18 @@ spec:
 		}).Should(Equal(gardencorev1beta1.LastOperationStateProcessing))
 		Expect(garden.Status.Gardener).NotTo(BeNil())
 
+		By("Verify Reconciling=True is set while reconciliation is in progress")
+		Expect(garden.Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal(gardencorev1beta1.ConditionReconciling),
+			"Status": Equal(gardencorev1beta1.ConditionTrue),
+		})), "Reconciling=True must be set while last operation is Processing")
+
+		By("Verify Stalled condition is not present while reconciliation is in progress")
+		Expect(garden.Status.Conditions).ToNot(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal(gardencorev1beta1.ConditionStalled),
+			"Status": Equal(gardencorev1beta1.ConditionTrue),
+		})), "Stalled=True must not be set while reconciliation is progressing")
+
 		deployedCRDs := []string{
 			"etcds.druid.gardener.cloud",
 			"etcdcopybackupstasks.druid.gardener.cloud",
@@ -890,6 +902,14 @@ spec:
 			}
 			return garden.Status.LastOperation.State
 		}).Should(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+
+		By("Verify kstatus conditions are absent after successful reconciliation")
+		Expect(garden.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type": Equal(gardencorev1beta1.ConditionReconciling),
+		})), "Reconciling must be absent after successful reconciliation")
+		Expect(garden.Status.Conditions).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+			"Type": Equal(gardencorev1beta1.ConditionStalled),
+		})), "Stalled must be absent after successful reconciliation")
 
 		By("Ensure relevant Gardenlet resources get auto-updated")
 		Eventually(func(g Gomega) gardencorev1.OCIRepository {

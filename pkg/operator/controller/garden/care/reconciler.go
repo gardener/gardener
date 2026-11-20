@@ -112,9 +112,16 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	constraintsNeedUpdate := v1beta1helper.ConditionsNeedUpdate(gardenConstraints.ConvertToSlice(), updatedConstraints)
 
 	if conditionsNeedUpdate || constraintsNeedUpdate {
+		// Health checks may take time, so retrieve the latest status before merging their results.
+		if err := r.RuntimeClient.Get(reconcileCtx, req.NamespacedName, garden); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+		}
+
 		// Rebuild garden conditions/constraints to ensure that only the entries with the
-		// correct types will be updated, and any other entries will remain intact
-		patch := client.MergeFrom(garden.DeepCopy())
+		// correct types will be updated, and any other entries will remain intact.
+		// Optimistic locking prevents concurrent status updates from being overwritten;
+		// conflicts are returned so the next reconciliation reads the latest Garden.
+		patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		if conditionsNeedUpdate {
 			garden.Status.Conditions = v1beta1helper.BuildConditions(garden.Status.Conditions, updatedConditions, gardenConditions.ConditionTypes())
 		}
