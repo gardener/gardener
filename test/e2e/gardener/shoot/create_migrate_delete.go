@@ -14,15 +14,17 @@ import (
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/apiserveravailability"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
-	test := func(tc *ShootContext) {
+	test := func(tc *ShootContext, liveMigrate bool) {
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
 		tc.Shoot.Spec.SeedName = new(getSeedName(false))
 
@@ -35,14 +37,19 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		ItShouldGetResponsibleSeed(tc)
 		seed.ItShouldInitializeSeedClient(tc.SeedContext)
 
-		if !v1beta1helper.IsWorkerless(tc.Shoot) && !v1beta1helper.HibernationIsEnabled(tc.Shoot) {
+		// The shoot client (admin kubeconfig) is needed for the in-cluster access check (worker shoots) and for the API
+		// server availability probe during live migration (both worker and workerless shoots).
+		if liveMigrate || (!v1beta1helper.IsWorkerless(tc.Shoot) && !v1beta1helper.HibernationIsEnabled(tc.Shoot)) {
 			ItShouldInitializeShootClient(tc)
+		}
+		if !v1beta1helper.IsWorkerless(tc.Shoot) && !v1beta1helper.HibernationIsEnabled(tc.Shoot) {
 			inclusterclient.VerifyInClusterAccessToAPIServer(tc)
 		}
 
 		var (
 			seedClientSourceCluster client.Client
 			secretsBeforeMigration  map[string]corev1.Secret
+			availabilityProbe       = &apiserveravailability.Probe{}
 		)
 
 		It("Record current seed client", func() {
@@ -59,6 +66,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
+		if liveMigrate {
+			availabilityProbe.ItShouldStartProbe(tc)
+			ItShouldAnnotateShoot(tc, map[string]string{v1beta1constants.AnnotationMigrationLiveMigrate: "true"})
+		}
+
 		It("Migrate Shoot", func(ctx SpecContext) {
 			patch := client.MergeFrom(tc.Shoot.DeepCopy())
 			tc.Shoot.Spec.SeedName = new(getSeedName(true))
@@ -70,6 +82,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 		ItShouldGetResponsibleSeed(tc)
 		seed.ItShouldInitializeSeedClient(tc.SeedContext)
+
+		if liveMigrate {
+			availabilityProbe.ItShouldStopProbeAndEnsureNoDowntime(tc)
+		}
 
 		It("Verify that all secrets have been migrated without regeneration", func(ctx SpecContext) {
 			var secretsAfterMigration map[string]corev1.Secret
@@ -98,11 +114,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	}
 
 	Context("Shoot with workers", Ordered, PriorityLonger, func() {
-		test(NewShootContext(DefaultShoot("e2e-migrate")))
+		test(NewShootContext(DefaultShoot("e2e-migrate")), false)
 	})
 
 	Context("Workerless Shoot", Label("workerless"), Ordered, PriorityLong, func() {
-		test(NewShootContext(DefaultWorkerlessShoot("e2e-migrate")))
+		test(NewShootContext(DefaultWorkerlessShoot("e2e-migrate")), false)
 	})
 
 	Context("Hibernated Shoot", Label("hibernated"), Ordered, PriorityLong, func() {
@@ -110,7 +126,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Enabled: new(true),
 		}
-		test(NewShootContext(shoot))
+		test(NewShootContext(shoot), false)
+	})
+
+	Context("Live Migration Shoot", Label("live-migration"), Ordered, PriorityLong, func() {
+		test(NewShootContext(DefaultShoot("e2e-live-mgr")), true)
+	})
+
+	Context("Live Migration Workerless Shoot", Label("workerless", "live-migration"), Ordered, PriorityLong, func() {
+		test(NewShootContext(DefaultWorkerlessShoot("e2e-live-mgr")), true)
 	})
 })
 

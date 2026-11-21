@@ -102,6 +102,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return r.liveMigrateShoot(ctx, log, shoot, liveMigrationRole)
 	}
 
+	// If the live-migration annotation is still present but spec.seedName already equals status.seedName, the
+	// annotation is a leftover from a finalizeLiveMigration call where the status patch succeeded but the
+	// annotation removal failed.
+	if v1beta1helper.HasLiveMigrationAnnotation(shoot.Annotations) {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		delete(shoot.Annotations, v1beta1constants.AnnotationMigrationLiveMigrate)
+		if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove stale live migration annotation: %w", err)
+		}
+	}
+
 	if v1beta1helper.ShouldPrepareShootForMigration(shoot) {
 		return r.migrateShoot(ctx, log, shoot)
 	}
@@ -222,6 +233,15 @@ func (r *Reconciler) liveMigrateShoot(ctx context.Context, log logr.Logger, shoo
 	if flowErr := r.runLiveMigrateShootFlow(ctx, o, role); flowErr != nil {
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeLiveMigrate, false, flowErr.LastErrors...)
 		return reconcile.Result{}, errorsutils.WithSuppressed(errors.New(flowErr.Description), updateErr)
+	}
+
+	if role == v1beta1helper.LiveMigrationRoleSource {
+		log.Info("Live migration successful from source seed's perspective, destination seed will finalize migration")
+		return reconcile.Result{}, nil
+	}
+
+	if err := r.finalizeLiveMigration(ctx, shoot); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to finalize live migration: %w", err)
 	}
 
 	log.Info("Live control plane migration completed")

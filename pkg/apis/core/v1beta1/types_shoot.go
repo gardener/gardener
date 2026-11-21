@@ -2299,18 +2299,18 @@ const (
 	// ShootLiveMigrationDestinationKubeAPIServerReady indicates that the destination kube-apiserver
 	// is deployed and ready.
 	ShootLiveMigrationDestinationKubeAPIServerReady ConditionType = "DestinationKubeAPIServerReady"
-	// ShootLiveMigrationMigrateDNSRecords indicates that DNS records have been updated
-	// to point to the destination seed.
-	ShootLiveMigrationMigrateDNSRecords ConditionType = "MigrateDNSRecords"
-	// ShootLiveMigrationEtcdMigrationComplete indicates that the etcd cluster has been
-	// fully migrated to the destination seed.
-	ShootLiveMigrationEtcdMigrationComplete ConditionType = "EtcdMigrationComplete"
 	// ShootLiveMigrationSourceSeedCleanup indicates that cleanup of resources in the
 	// source seed has been completed.
 	ShootLiveMigrationSourceSeedCleanup ConditionType = "SourceSeedCleanup"
+	// ShootLiveMigrationEtcdMigrationComplete indicates that the etcd cluster has been
+	// fully migrated to the destination seed.
+	ShootLiveMigrationEtcdMigrationComplete ConditionType = "EtcdMigrationComplete"
 	// ShootLiveMigrationMigrationCompleted indicates that the live control plane migration
 	// has completed successfully.
 	ShootLiveMigrationMigrationCompleted ConditionType = "MigrationCompleted"
+	// ShootLiveMigrationSourceSeedFinalTeardown indicates that the final teardown of the source
+	// seed has been completed successfully.
+	ShootLiveMigrationSourceSeedFinalTeardown ConditionType = "SourceSeedFinalTeardown"
 )
 
 // ShootPurpose is a type alias for string.
