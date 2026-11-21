@@ -291,6 +291,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateForceDeletion(newShoot, oldShoot)...)
+	allErrs = append(allErrs, ValidateFastDeletion(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateNodeLocalDNSUpdate(&newShoot.Spec, &oldShoot.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateInPlaceUpdates(newShoot, oldShoot)...)
 
@@ -3688,6 +3689,18 @@ func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	}
 
 	return allErrs
+}
+
+// ValidateFastDeletion prevents disabling fast deletion once deletion has started. Unlike force deletion, opting in
+// does not require a prior deletion failure and is also allowed before deletion starts.
+func ValidateFastDeletion(newShoot, oldShoot *core.Shoot) field.ErrorList {
+	if newShoot.DeletionTimestamp != nil && helper.ShootNeedsFastDeletion(oldShoot) && !helper.ShootNeedsFastDeletion(newShoot) {
+		return field.ErrorList{field.Forbidden(
+			field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationConfirmationFastDeletion),
+			"fast-deletion annotation cannot be removed once deletion has started",
+		)}
+	}
+	return nil
 }
 
 // ValidateInPlaceUpdates validates the updates of the worker pools with in-place update strategy of a Shoot.

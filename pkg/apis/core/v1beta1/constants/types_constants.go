@@ -774,6 +774,10 @@ const (
 	// AnnotationConfirmationForceDeletion is a constant for an annotation on a Shoot resource whose value must be set to "true" in order to
 	// trigger force-deletion of the cluster. It can only be set if the Shoot has a deletion timestamp and contains an ErrorCode in the Shoot Status.
 	AnnotationConfirmationForceDeletion = "confirmation.gardener.cloud/force-deletion"
+	// AnnotationConfirmationFastDeletion opts into Shoot deletion without restoring the control plane or cleaning up
+	// resources inside the Shoot. Workers, infrastructure, and Seed resources are still deleted normally.
+	// External resources belonging to workloads may remain and become the user's responsibility.
+	AnnotationConfirmationFastDeletion = "confirmation.gardener.cloud/fast-deletion"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
 	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"

@@ -29,8 +29,10 @@ const (
 // The shoot object can be read from the `Cluster` object, e.g., using the GardenContext.GetCluster method in webhooks.
 func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamespace, providerName, image string) corev1.Container {
 	selfHostedShoot := v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
-	withoutTargetCluster := selfHostedShoot && controlPlaneNamespace != metav1.NamespaceSystem
-	targetClusterIsRuntimeCluster := selfHostedShoot && controlPlaneNamespace == metav1.NamespaceSystem
+	runsControlPlane := controlPlaneNamespace == metav1.NamespaceSystem
+	fastDeletion := shoot.DeletionTimestamp != nil && v1beta1helper.ShootNeedsFastDeletion(shoot) && !v1beta1helper.ShootNeedsForceDeletion(shoot)
+	withoutTargetCluster := (selfHostedShoot && !runsControlPlane) || fastDeletion
+	targetClusterIsRuntimeCluster := selfHostedShoot && runsControlPlane
 
 	c := corev1.Container{
 		Name:            providerSidecarContainerName(providerName),

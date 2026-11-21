@@ -663,6 +663,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("#ValidateFastDeletion", func() {
+			It("should allow opting in before deletion without any errors in status", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should allow opting in during deletion without any errors in status", func() {
+				shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+				newShoot := shoot.DeepCopy()
+				metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+				Expect(ValidateFastDeletion(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should allow removing the annotation before deletion", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+				newShoot := prepareShootForUpdate(shoot)
+				delete(newShoot.Annotations, v1beta1constants.AnnotationConfirmationFastDeletion)
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			DescribeTable("should forbid disabling fast deletion once deletion starts",
+				func(value string) {
+					shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+					newShoot := shoot.DeepCopy()
+					if value == "" {
+						delete(newShoot.Annotations, v1beta1constants.AnnotationConfirmationFastDeletion)
+					} else {
+						newShoot.Annotations[v1beta1constants.AnnotationConfirmationFastDeletion] = value
+					}
+					Expect(ValidateFastDeletion(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("metadata.annotations[confirmation.gardener.cloud/fast-deletion]"),
+					}))))
+				},
+				Entry("removed", ""),
+				Entry("false", "false"),
+				Entry("invalid", "yes"),
+			)
+
+			It("should allow equivalent true values and escalation to force deletion", func() {
+				shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+				newShoot := shoot.DeepCopy()
+				newShoot.Annotations[v1beta1constants.AnnotationConfirmationFastDeletion] = "1"
+				metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+				Expect(ValidateFastDeletion(newShoot, shoot)).To(BeEmpty())
+			})
+		})
+
 		Context("exposure class", func() {
 			It("should forbid invalid exposure class names", func() {
 				shoot.Spec.ExposureClassName = new("$invalid.class.[]name{}/")

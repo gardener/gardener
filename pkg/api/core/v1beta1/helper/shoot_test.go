@@ -226,6 +226,18 @@ var _ = Describe("Helper", func() {
 			BeTrue()),
 	)
 
+	DescribeTable("#ShootNeedsFastDeletion",
+		func(shoot *gardencorev1beta1.Shoot, expected bool) {
+			Expect(ShootNeedsFastDeletion(shoot)).To(Equal(expected))
+		},
+		Entry("nil shoot", nil, false),
+		Entry("missing annotation", &gardencorev1beta1.Shoot{}, false),
+		Entry("false", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "false"}}}, false),
+		Entry("invalid value", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "yes"}}}, false),
+		Entry("true", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "true"}}}, true),
+		Entry("boolean alias", &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "1"}}}, true),
+	)
+
 	DescribeTable("#HasLiveMigrationAnnotation",
 		func(objectMeta metav1.ObjectMeta, match gomegatypes.GomegaMatcher) {
 			Expect(HasLiveMigrationAnnotation(objectMeta.Annotations)).To(match)

@@ -457,6 +457,43 @@ webhooks:
 		Entry("should deploy secrets and apply charts with correct parameters (no shoot CRDs chart)", cloudProviderConfigName, staticChecksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false),
 	)
 
+	It("should skip Shoot MR cleanup waits but retain Seed MR finalizers during fast deletion", func() {
+		cluster := *cluster
+		cluster.Shoot = cluster.Shoot.DeepCopy()
+		cluster.Shoot.DeletionTimestamp = new(metav1.Now())
+		metav1.SetMetaDataAnnotation(&cluster.Shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+		gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
+		gardenerClientset.EXPECT().Version().Return(seedVersion)
+		chartRenderer := mockchartrenderer.NewMockInterface(ctrl)
+		crf := extensionsmockcontroller.NewMockChartRendererFactory(ctrl)
+		crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
+		c := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		for _, name := range []string{StorageClassesChartResourceName, ControlPlaneShootCRDsChartResourceName, ControlPlaneShootChartResourceName, ControlPlaneSeedChartResourceName} {
+			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace, Name: name, Finalizers: []string{"resource-manager"},
+			}}
+			if name == ControlPlaneSeedChartResourceName {
+				mr.Spec.Class = new("seed")
+			}
+			Expect(c.Create(ctx, mr)).To(Succeed())
+		}
+		a := &actuator{
+			client: c, gardenerClientset: gardenerClientset, chartRendererFactory: crf,
+			providerName:               providerName,
+			newSecretsManager:          newSecretsManager,
+			controlPlaneChart:          mockchartutil.NewMockInterface(ctrl),
+			controlPlaneShootCRDsChart: mockchartutil.NewMockInterface(ctrl),
+		}
+		timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		Expect(a.Delete(timeoutCtx, logger, cp, &cluster)).To(Succeed())
+
+		seedMR := &resourcesv1alpha1.ManagedResource{}
+		Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ControlPlaneSeedChartResourceName}, seedMR)).To(Succeed())
+		Expect(seedMR.DeletionTimestamp).NotTo(BeNil())
+		Expect(seedMR.Finalizers).To(ConsistOf("resource-manager"))
+	})
+
 	DescribeTable("#Delete",
 		func(configName string, webhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, withShootCRDsChart bool) {
 			var atomicWebhookConfig *atomic.Value

@@ -338,6 +338,12 @@ var _ = Describe("Strategy", func() {
 					},
 					true,
 				),
+				Entry("fast-deletion annotation",
+					func(s *core.Shoot) {
+						metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+					},
+					false,
+				),
 			)
 
 			Context("confine spec update rollout", func() {

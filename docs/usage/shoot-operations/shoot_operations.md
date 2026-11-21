@@ -92,6 +92,23 @@ List of operations that can run in parallel:
 - `rotate-serviceaccount-key-start-without-workers-rollout`
 - `rotate-serviceaccount-key-complete`
 
+## Fast Deletion
+
+For non-self-hosted Shoots, annotate the Shoot with `confirmation.gardener.cloud/fast-deletion=true` to skip in-Shoot cleanup during deletion, without restoring an unavailable control plane.
+The primary goal is to allow deletion without depending on a running Shoot etcd or kube-apiserver.
+Workers, infrastructure, extensions, and Seed-side resources still use their normal deletion operations.
+
+This is useful when:
+
+- Shoot etcd or kube-apiserver is broken or overloaded, for example because a faulty workload created too many resources in an infinite loop.
+- Faster deletion is desired and graceful cleanup of in-Shoot resources is unnecessary or intentionally skipped.
+
+The annotation can be set before or during deletion, without a prior deletion failure.
+Preselecting it does not change creation or reconciliation, but it cannot be disabled once deletion has started.
+If force deletion is also enabled, force deletion takes precedence.
+
+> :warning: Resources created by workloads in external systems, such as load balancers and persistent volumes, may remain and require manual cleanup. Provider extensions must support deletion without access to the Shoot API.
+
 ## Force Deletion
 
 When a Shoot fails to be deleted normally, users can force-delete the Shoot if it meets the following conditions:

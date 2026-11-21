@@ -75,6 +75,16 @@ func ShootNeedsForceDeletion(shoot *core.Shoot) bool {
 	return forceDelete
 }
 
+// ShootNeedsFastDeletion determines whether a Shoot should be deleted without in-Shoot cleanup - or rather, without being dependend on the Shoots ControlPlane.
+func ShootNeedsFastDeletion(shoot *core.Shoot) bool {
+	if shoot == nil {
+		return false
+	}
+
+	fastDelete, _ := strconv.ParseBool(shoot.Annotations[v1beta1constants.AnnotationConfirmationFastDeletion])
+	return fastDelete
+}
+
 // IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set.
 func IsHAControlPlaneConfigured(shoot *core.Shoot) bool {
 	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil

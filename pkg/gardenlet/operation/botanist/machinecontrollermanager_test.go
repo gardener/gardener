@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -72,12 +73,20 @@ var _ = Describe("MachineControllerManager", func() {
 	})
 
 	Describe("#DefaultMachineControllerManager", func() {
+		fastDelete := func() {
+			shoot.DeletionTimestamp = new(metav1.Now())
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+		}
+
 		DescribeTable("should configure target cluster access",
-			func(selfHosted bool, controlPlaneNamespace, targetKubeconfig string, hasTargetCluster, needsAccessSecret bool) {
+			func(selfHosted bool, controlPlaneNamespace, targetKubeconfig string, hasTargetCluster, needsAccessSecret bool, prepare func()) {
+				if prepare != nil {
+					prepare()
+				}
 				if selfHosted {
 					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}}
-					botanist.Shoot.SetInfo(shoot)
 				}
+				botanist.Shoot.SetInfo(shoot)
 				botanist.Shoot.ControlPlaneNamespace = controlPlaneNamespace
 				botanist.SecretsManager = fakesecretsmanager.New(fakeClient, controlPlaneNamespace)
 				if needsAccessSecret {
@@ -106,9 +115,19 @@ var _ = Describe("MachineControllerManager", func() {
 					Expect(resourceErr).To(BeNotFoundError())
 				}
 			},
-			Entry("external shoot", false, "shoot--foo--bar", "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig", true, true),
-			Entry("self-hosted shoot during bootstrap", true, "shoot--foo--bar", "none", false, false),
-			Entry("self-hosted shoot running its control plane", true, "kube-system", "", true, false),
+			Entry("external shoot", false, "shoot--foo--bar", "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig", true, true, nil),
+			Entry("self-hosted shoot during bootstrap", true, "shoot--foo--bar", "none", false, false, nil),
+			Entry("self-hosted shoot running its control plane", true, "kube-system", "", true, false, nil),
+			Entry("fast-deleting external shoot", false, "shoot--foo--bar", "none", false, false, fastDelete),
+			Entry("fast-deleting self-hosted shoot during bootstrap", true, "shoot--foo--bar", "none", false, false, fastDelete),
+			Entry("fast-deleting self-hosted shoot running its control plane", true, "kube-system", "none", false, false, fastDelete),
+			Entry("fast deletion preselected without deleting", false, "shoot--foo--bar", "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig", true, true, func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+			}),
+			Entry("force deletion takes precedence", false, "shoot--foo--bar", "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig", true, true, func() {
+				fastDelete()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+			}),
 		)
 	})
 

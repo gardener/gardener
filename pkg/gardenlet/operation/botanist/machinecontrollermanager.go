@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
@@ -29,13 +30,16 @@ func (b *Botanist) DefaultMachineControllerManager() (machinecontrollermanager.I
 		return nil, err
 	}
 
+	shoot := b.Shoot.GetInfo()
+	fastDeletion := shoot.DeletionTimestamp != nil && v1beta1helper.ShootNeedsFastDeletion(shoot) && !v1beta1helper.ShootNeedsForceDeletion(shoot)
+
 	return machinecontrollermanager.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		machinecontrollermanager.Values{
-			Image:                        image.String(),
-			WithoutTargetCluster:         b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane(),
+			Image:                         image.String(),
+			WithoutTargetCluster:          (b.Shoot.IsSelfHosted() && !b.Shoot.RunsControlPlane()) || fastDeletion,
 			TargetClusterIsRuntimeCluster: b.Shoot.IsSelfHosted() && b.Shoot.RunsControlPlane(),
 		},
 	), nil

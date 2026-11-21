@@ -11,10 +11,12 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -98,6 +100,34 @@ var _ = Describe("Provider", func() {
 		})
 
 		It("should return the provider sidecar container", func() {
+			Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
+		})
+
+		It("should keep the target connection when fast deletion is only preselected", func() {
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+			Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
+		})
+
+		It("should leave force deletion unchanged when both annotations are set", func() {
+			shoot.DeletionTimestamp = new(metav1.Now())
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
+			Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
+		})
+	})
+
+	When("fast-deleting the shoot", func() {
+		BeforeEach(func() {
+			shoot.DeletionTimestamp = new(metav1.Now())
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationFastDeletion, "true")
+		})
+
+		It("should disable the target connection and omit the kubeconfig mount", func() {
+			for i, s := range container.Args {
+				if strings.HasPrefix(s, "--target-kubeconfig=") {
+					container.Args[i] = "--target-kubeconfig=none"
+				}
+			}
 			Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
 		})
 	})

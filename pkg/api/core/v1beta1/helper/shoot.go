@@ -85,6 +85,16 @@ func ShootNeedsForceDeletion(shoot *gardencorev1beta1.Shoot) bool {
 	return forceDelete
 }
 
+// ShootNeedsFastDeletion determines whether a Shoot should be deleted without in-Shoot cleanup - or rather, without being dependend on the Shoots ControlPlane.
+func ShootNeedsFastDeletion(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot == nil {
+		return false
+	}
+
+	fastDelete, _ := strconv.ParseBool(shoot.Annotations[v1beta1constants.AnnotationConfirmationFastDeletion])
+	return fastDelete
+}
+
 // ShootSchedulingProfile returns the scheduling profile of the given Shoot.
 func ShootSchedulingProfile(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.SchedulingProfile {
 	if shoot.Spec.Kubernetes.KubeScheduler != nil {
