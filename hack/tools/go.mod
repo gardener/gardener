@@ -22,7 +22,7 @@ tool (
 
 // This separate Go module decouples development-tool dependencies from Gardener's production binaries.
 require (
-	golang.org/x/exp v0.0.0-20261120182113-8801fbdfac81
+	golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5
 	// this has to be kept in sync with the used golangci-lint version
 	// use go version -m hack/tools/bin/<<architecture>>/golangci-lint to detect the dependency versions
 	// or, with `go work` enabled, use `go work sync`
