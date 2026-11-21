@@ -9,5 +9,5 @@ import (
 )
 
 func (g *gardenerControllerManager) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewGardenTransitionalAccessSecret(DeploymentName, g.namespace)
+	return gardenerutils.NewGardenAccessSecret(DeploymentName, g.namespace)
 }

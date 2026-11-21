@@ -320,8 +320,6 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail when the deploy function fails for etcd-main", func() {
-			etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
-			etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 			etcdMain.EXPECT().Deploy(ctx).Return(fakeErr)
 			etcdEvents.EXPECT().Deploy(ctx)
 
@@ -332,8 +330,6 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail when the deploy function fails for etcd-events", func() {
-			etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
-			etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 			etcdMain.EXPECT().Deploy(ctx)
 			etcdEvents.EXPECT().Deploy(ctx).Return(fakeErr)
 
@@ -349,8 +345,6 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should set the secrets and deploy", func() {
-				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
-				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
 
@@ -410,8 +404,6 @@ var _ = Describe("Etcd", func() {
 				Expect(fakeClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 
 				expectSetBackupConfig()
-				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
-				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
 
@@ -446,8 +438,6 @@ var _ = Describe("Etcd", func() {
 					}
 
 					expectSetBackupConfig()
-					etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
-					etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(ctx)
 					Expect(fakeClient.Create(ctx, backupSecret.DeepCopy())).To(Succeed())
 				})
 

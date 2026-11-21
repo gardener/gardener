@@ -943,12 +943,10 @@ var _ = Describe("Etcd LiveMigration", func() {
 				etcdMain.EXPECT().SetLiveMigration((*etcd.LiveMigrationValues)(nil)).DoAndReturn(func(_ *etcd.LiveMigrationValues) {
 					nilLMCalled = true
 				})
-				etcdMain.EXPECT().UnmarkAsPeerCARolloutCompleted(gomock.Any()).Return(nil)
 				etcdMain.EXPECT().Deploy(gomock.Any()).DoAndReturn(func(_ context.Context) error {
 					Expect(nilLMCalled).To(BeTrue(), "SetLiveMigration(nil) must be called before Deploy")
 					return nil
 				})
-				etcdEvents.EXPECT().UnmarkAsPeerCARolloutCompleted(gomock.Any()).Return(nil)
 				etcdEvents.EXPECT().Deploy(gomock.Any()).Return(nil)
 
 				cleanFn := func(ctx context.Context) error {
