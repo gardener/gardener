@@ -29,11 +29,15 @@ type WorkerStatus struct {
 // MachineImage is a mapping from logical names and versions to provider-specific machine image data.
 type MachineImage struct {
 	// Name is the logical name of the machine image.
+	// +required
 	Name string `json:"name"`
 	// Version is the logical version of the machine image.
+	// +required
 	Version string `json:"version"`
 	// Image is the image for the machine image.
+	// +required
 	Image string `json:"image"`
 	// Capabilities of the machine image.
+	// +optional
 	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }

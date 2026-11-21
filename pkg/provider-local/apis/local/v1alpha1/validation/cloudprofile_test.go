@@ -138,7 +138,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			BeforeEach(func() {
 				// set capabilityFlavors to empty to simulate no capabilities defined
 				cloudProfileConfig.MachineImages[0].Versions[0].CapabilityFlavors = []localv1alpha1.MachineImageFlavor{}
-				cloudProfileConfig.MachineImages[0].Versions[0].Image = "ubuntu-18.04-amd64"
+				cloudProfileConfig.MachineImages[0].Versions[0].Image = new("ubuntu-18.04-amd64")
 				machineImages[0].Versions[0].CapabilityFlavors = []core.MachineImageFlavor{}
 				capabilityDefinitions = []v1beta1.CapabilityDefinition{}
 			})
@@ -149,7 +149,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail with empty image string", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].Image = ""
+				cloudProfileConfig.MachineImages[0].Versions[0].Image = new("")
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -176,7 +176,7 @@ var _ = Describe("CloudProfileConfig validation", func() {
 			})
 
 			It("should fail if image string is set when using capabilities", func() {
-				cloudProfileConfig.MachineImages[0].Versions[0].Image = "ubuntu-18.04"
+				cloudProfileConfig.MachineImages[0].Versions[0].Image = new("ubuntu-18.04")
 				errorList := ValidateCloudProfileConfig(cloudProfileConfig, machineImages, capabilityDefinitions, fldPath)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),

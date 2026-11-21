@@ -154,6 +154,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Capabilities of the machine image.</p>
 </td>
 </tr>
@@ -202,6 +203,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Capabilities that are supported by the identifier in this set.</p>
 </td>
 </tr>

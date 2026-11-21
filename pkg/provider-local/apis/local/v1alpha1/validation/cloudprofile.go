@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	coreapi "github.com/gardener/gardener/pkg/api"
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
@@ -100,7 +101,7 @@ func validateWithCapabilities(version localv1alpha1.MachineImageVersion, capabil
 	allErrs := field.ErrorList{}
 
 	// When using capabilities, image must not be set directly
-	if len(version.Image) > 0 {
+	if ptr.Deref(version.Image, "") != "" {
 		allErrs = append(allErrs, field.Forbidden(jdxPath.Child("image"),
 			"must not be set as CloudProfile defines capabilities. Use capabilityFlavors[].image instead."))
 	}
@@ -122,7 +123,7 @@ func validateWithoutCapabilities(version localv1alpha1.MachineImageVersion, jdxP
 	allErrs := field.ErrorList{}
 
 	// When not using capabilities, image must be set directly
-	if len(version.Image) == 0 {
+	if ptr.Deref(version.Image, "") == "" {
 		allErrs = append(allErrs, field.Required(jdxPath.Child("image"), "must provide an image"))
 	}
 

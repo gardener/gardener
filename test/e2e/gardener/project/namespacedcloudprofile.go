@@ -66,7 +66,7 @@ var _ = Describe("Project Tests", Label("Project", "default"), func() {
 			Expect(cloudProfileConfig.MachineImages).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Name": Equal("nscpfl-machine-image-1"),
 				"Versions": ContainElements(
-					localv1alpha1.MachineImageVersion{Version: "1.1", Image: "local/image:1.1"},
+					localv1alpha1.MachineImageVersion{Version: "1.1", Image: new("local/image:1.1")},
 				),
 			})))
 		})

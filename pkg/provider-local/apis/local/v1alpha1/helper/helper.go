@@ -7,6 +7,8 @@ package helper
 import (
 	"fmt"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
@@ -56,7 +58,7 @@ func findMachineImageFlavor(
 			// If no capabilityDefinitions are specified, return the (legacy) image field as no capabilityFlavors are used.
 			if len(capabilityDefinitions) == 0 {
 				return &localv1alpha1.MachineImageFlavor{
-					Image:        version.Image,
+					Image:        ptr.Deref(version.Image, ""),
 					Capabilities: v1beta1.Capabilities{},
 				}, nil
 			}
