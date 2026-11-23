@@ -111,6 +111,21 @@ case "$COMMAND" in
 
     docker compose -f "$GIND_COMPOSE_FILE" down --volumes
 
+    # In the 'connect' and 'full' scenarios, the cloud controller manager creates gardener-lb-* containers for
+    # LoadBalancer Services outside of the Compose project. Remove them after stopping the machines so the
+    # controller cannot recreate them. Scope cleanup to the self-hosted Shoot to preserve load balancers of the
+    # reusable kind cluster and other Shoots. The default technical ID matches
+    # the local gardenadm manifests; override it when using a customized Project/Shoot.
+    shoot_technical_id="${SHOOT_TECHNICAL_ID:-shoot--garden--root}"
+    echo "Removing load balancer containers of $shoot_technical_id"
+    load_balancer_containers=$(docker container ls -aq \
+      --filter network=kind \
+      --filter label=gardener.cloud/role=loadbalancer \
+      --filter "label=kubernetes.io/cluster=$shoot_technical_id")
+    for container in $load_balancer_containers; do
+      docker container rm -f "$container"
+    done
+
     # Tear down the shared infra only once the 'gardener-local' kind cluster is gone, to allow the kind cluster and the
     # Gardener control plane running on it to be reused across gind-up/gind-down cycles. If the kind cluster exists,
     # `make kind-down` owns the infra teardown.
