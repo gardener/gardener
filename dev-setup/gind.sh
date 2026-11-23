@@ -118,12 +118,11 @@ case "$COMMAND" in
     # the local gardenadm manifests; override it when using a customized Project/Shoot.
     shoot_technical_id="${SHOOT_TECHNICAL_ID:-shoot--garden--root}"
     echo "Removing load balancer containers of $shoot_technical_id"
-    load_balancer_containers=$(docker container ls -aq \
+    for container in $(docker container ls -aq \
       --filter network=kind \
       --filter label=gardener.cloud/role=loadbalancer \
-      --filter "label=kubernetes.io/cluster=$shoot_technical_id")
-    for container in $load_balancer_containers; do
-      docker container rm -f "$container"
+      --filter "label=kubernetes.io/cluster=$shoot_technical_id"); do
+      docker container rm -f "$container" || true
     done
 
     # Tear down the shared infra only once the 'gardener-local' kind cluster is gone, to allow the kind cluster and the
