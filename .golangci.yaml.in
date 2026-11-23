@@ -336,13 +336,14 @@ linters:
         text: 'structured logging message should be capitalized: "garden(er-apiserver|er-controller-manager|er-admission-controller|er-operator|er-resource-manager|let|adm)'
       # kubeapilinter only applies to files directly in the versioned API type packages (.../<group>/<version>/),
       # where the JSON-tagged API types live. The enumerated roots are: pkg/apis, the extension library's
-      # extensions/pkg/apis, the in-tree test provider's pkg/provider-local/apis, and the admission plugins'
+      # extensions/pkg/apis, the in-tree test provider's pkg/provider-local/apis and its per-provider
+      # pkg/provider-local/<name>/api (cloud-provider/machine-provider), and the admission plugins'
       # plugin/pkg/shoot/<name>/apis/<group>. Internal (unversioned) API packages and nested subpackages
       # (helper/validation/install) carry no JSON-tagged API types and are excluded. A new versioned API package
       # under a new root must be added to the alternation below explicitly.
       - linters:
           - kubeapilinter
-        path-except: '^(pkg/apis/[^/]+(/[^/]+)?|extensions/pkg/apis/[^/]+|pkg/provider-local/apis/[^/]+|plugin/pkg/shoot/[^/]+/apis/[^/]+)/v[0-9]+((alpha|beta)[0-9]+)?/[^/]+$'
+        path-except: '^(pkg/apis/[^/]+(/[^/]+)?|extensions/pkg/apis/[^/]+|pkg/provider-local/apis/[^/]+|pkg/provider-local/[^/]+/api|plugin/pkg/shoot/[^/]+/apis/[^/]+)/v[0-9]+((alpha|beta)[0-9]+)?/[^/]+$'
       # optionalfields: Spec/Status and other struct fields on top-level API objects have established non-pointer
       # conventions in Kubernetes APIs. Similarly, scalar fields (int64, string) with incomplete validation
       # are intentionally kept as value types. Converting these to pointers would be API-breaking.
