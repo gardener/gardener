@@ -169,7 +169,7 @@ func (r *Reconciler) runFastDeleteShootFlow(ctx context.Context, o *operation.Op
 			Name: "Deleting managed resources and dependency watchdog access",
 			Fn: flow.Sequential(
 				retry(cleaner.DeleteShootManagedResources),
-				retry(botanist.DeleteManagedResources),
+				retry(botanist.DeleteManagedResourcesWithoutForceDeletion),
 				func(ctx context.Context) error {
 					if workerless {
 						return nil
