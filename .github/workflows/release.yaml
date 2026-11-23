@@ -22,7 +22,7 @@ jobs:
 
   release-to-github-and-bump:
     if: ${{ github.repository == 'gardener/gardener' && startsWith(github.ref, 'refs/heads/release-v') }}
-    uses: gardener/cc-utils/.github/workflows/release.yaml@v1
+    uses: gardener/cc-utils/.github/workflows/release.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
     needs:
       - build
     secrets: inherit

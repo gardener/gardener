@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   validate-release-notes:
-    uses: gardener/cc-utils/.github/workflows/validate-release-notes.yaml@v1
+    uses: gardener/cc-utils/.github/workflows/validate-release-notes.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
     permissions:
       pull-requests: read
     with:
