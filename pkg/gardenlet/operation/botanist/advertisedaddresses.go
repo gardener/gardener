@@ -47,6 +47,13 @@ func (b *Botanist) ToAdvertisedAddresses(ctx context.Context) ([]gardencorev1bet
 		})
 	}
 
+	if b.Shoot.PriorExternalClusterDomain != nil {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: v1beta1constants.AdvertisedAddressPriorExternal,
+			URL:  "https://" + v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorExternalClusterDomain),
+		})
+	}
+
 	if b.ControlPlaneWildcardCert != nil {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: v1beta1constants.AdvertisedAddressWildcardTLSSeedBound,

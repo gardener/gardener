@@ -19,5 +19,6 @@ func RegisterFeatureGates() {
 		features.VersionClassificationLifecycle,
 		features.DisableNginxIngressInShoot,
 		features.AllowlistSeedReferences,
+		features.MutableShootDomains,
 	)))
 }
