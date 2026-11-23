@@ -22,6 +22,7 @@ type CloudProviderConfig struct {
 	// +optional
 	RuntimeCluster *RuntimeCluster `json:"runtimeCluster,omitempty"`
 	// LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
+	// +required
 	LoadBalancer LoadBalancer `json:"loadBalancer"`
 }
 
@@ -30,6 +31,7 @@ type CloudProviderConfig struct {
 type RuntimeCluster struct {
 	// Namespace configures the namespace of the runtime cluster where the shoot machine pods run.
 	// If RuntimeCluster is set, this field is required.
+	// +required
 	Namespace string `json:"namespace"`
 	// Kubeconfig configures the path to the kubeconfig file for connecting to the runtime cluster. If not set,
 	// cloud-controller-manager-local uses the in-cluster credentials (ServiceAccount).
@@ -40,5 +42,6 @@ type RuntimeCluster struct {
 // LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
 type LoadBalancer struct {
 	// Image is the envoy container image used for starting load balancer containers.
+	// +required
 	Image string `json:"image"`
 }
