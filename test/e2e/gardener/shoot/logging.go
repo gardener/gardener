@@ -196,7 +196,7 @@ func gardenerLoggerParams(name string) map[string]any {
 		"LoggerName":   name,
 		"AppLabel":     name,
 		"LogsCount":    shootLogsCount,
-		"LogsDuration": "20s",
+		"LogsDuration": "5s",
 		"AdditionalLabels": map[string]string{
 			"origin":                              "gardener",
 			"gardener.cloud/role":                 "system-component",
@@ -210,6 +210,6 @@ func nonGardenerLoggerParams(name string) map[string]any {
 		"LoggerName":   name,
 		"AppLabel":     name,
 		"LogsCount":    shootLogsCount,
-		"LogsDuration": "20s",
+		"LogsDuration": "5s",
 	}
 }
