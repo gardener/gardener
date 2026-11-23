@@ -322,6 +322,7 @@ build:
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/vpa
             - pkg/utils/workloadidentity
             - VERSION
         ldflags:

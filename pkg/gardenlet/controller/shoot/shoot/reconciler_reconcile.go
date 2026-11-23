@@ -369,8 +369,7 @@ func (r *Reconciler) setupShootReconciliationFlow(ctx context.Context, b *botani
 		})
 		// TODO(DobromirNPeev): Remove this migration task after Gardener v1.166 has been released.
 		// Note: This migration targets resources inside a Shoot cluster. A Shoot can be hibernated for extended periods, during
-		// which gardener-resource-manager is scaled to 0 and cannot perform this migration. Remove only after verifying that
-		// all Shoots have been reconciled post-migration.
+		// which its kube-apiserver is not running and the migration cannot be performed. The cleanup is best effort.
 		_ = g.Add(flow.Task{
 			Name:         "Removing obsolete vpa-in-place-updates mutated label from VerticalPodAutoscalers in the shoot",
 			Fn:           flow.TaskFn(b.RemoveVPAInPlaceUpdatesMutatedLabel).RetryUntilTimeout(defaultInterval, defaultTimeout),

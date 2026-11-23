@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	utilsvpa "github.com/gardener/gardener/pkg/utils/vpa"
+	vpautils "github.com/gardener/gardener/pkg/utils/vpa"
 )
 
 // RemoveVPAInPlaceUpdatesMutatedLabel removes the obsolete `vpa-in-place-updates.resources.gardener.cloud/mutated`
@@ -18,8 +18,7 @@ import (
 //
 // TODO(DobromirNPeev): Remove this method after Gardener v1.166 has been released.
 // Note: This migration targets resources inside a Shoot cluster. A Shoot can be hibernated for extended periods, during
-// which gardener-resource-manager is scaled to 0 and cannot perform this migration. Remove only after verifying that
-// all Shoots have been reconciled post-migration.
+// which its kube-apiserver is not running and the migration cannot be performed. The cleanup is best effort.
 func (b *Botanist) RemoveVPAInPlaceUpdatesMutatedLabel(ctx context.Context) error {
-	return utilsvpa.RemoveInPlaceUpdatesMutatedLabel(ctx, b.ShootClientSet.Client(), b.Logger, client.InNamespace(metav1.NamespaceSystem))
+	return vpautils.RemoveInPlaceUpdatesMutatedLabel(ctx, b.ShootClientSet.Client(), b.Logger, client.InNamespace(metav1.NamespaceSystem))
 }

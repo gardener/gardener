@@ -27,9 +27,6 @@ const vpaParallelWorkersCount = 20
 // all VerticalPodAutoscalers matching the given list options.
 //
 // TODO(DobromirNPeev): Remove this function after Gardener v1.166 has been released.
-// Note: This migration may target resources inside a Shoot cluster. A Shoot can be hibernated for extended periods,
-// during which gardener-resource-manager is scaled to 0 and cannot perform this migration. Remove only after verifying
-// that all Shoots have been reconciled post-migration.
 func RemoveInPlaceUpdatesMutatedLabel(ctx context.Context, c client.Client, log logr.Logger, listOpts ...client.ListOption) error {
 	vpaList := &vpaautoscalingv1.VerticalPodAutoscalerList{}
 	opts := append([]client.ListOption{client.HasLabels{vpaInPlaceUpdatesMutatedLabel}}, listOpts...)
