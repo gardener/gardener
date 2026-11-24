@@ -16,7 +16,6 @@ import (
 func NewFluentOperatorCustomResources(
 	c client.Client,
 	gardenNamespaceName string,
-	enabled bool,
 	suffix string,
 	centralLoggingConfigurations []component.CentralLoggingConfiguration,
 	outputs []*fluentbitv1alpha2.ClusterOutput,
@@ -61,10 +60,6 @@ func NewFluentOperatorCustomResources(
 			Outputs: outputs,
 		},
 	)
-
-	if !enabled {
-		deployer = component.OpDestroyAndWait(deployer)
-	}
 
 	return deployer, nil
 }

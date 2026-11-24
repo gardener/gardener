@@ -711,18 +711,7 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady, snapshotETCD),
 		})
 
-		_ = g.Add(flow.Task{
-			Name: "Deploying fluent-operator",
-			Fn:   c.fluentOperator.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying fluent-operator CustomResources",
-			Fn:   c.fluentOperatorCustomResources.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying fluent-bit",
-			Fn:   c.fluentBit.Deploy,
-		})
+		_ = g.AddGroup(reconcileFluentTaskGroup(c, isLoggingEnabled(r.Config.Logging)))
 		_ = g.Add(flow.Task{
 			Name: "Deploying VictoriaLogs",
 			Fn:   c.victoriaLogs.Deploy,
@@ -1693,4 +1682,43 @@ func (r *Reconciler) cleanupKubeAPIServerTLSServices(ctx context.Context, log lo
 		component.OpDestroy(mutualTLSService),
 		component.OpDestroy(upgradeService),
 	).Deploy(ctx)
+}
+
+// reconcileFluentTaskGroup returns the flow.TaskGroup for reconciling fluent-operator, fluent-bit and the fluent-operator
+// custom resources. They are deployed if the logging stack is enabled and destroyed otherwise.
+func reconcileFluentTaskGroup(c components, loggingEnabled bool) flow.TaskGroup {
+	group := flow.NewTaskGroup("TaskGroupReconcileFluent")
+
+	if loggingEnabled {
+		group.Add(flow.Task{
+			Name: "Deploying fluent-operator",
+			Fn:   c.fluentOperator.Deploy,
+		})
+		group.Add(flow.Task{
+			Name: "Deploying fluent-operator CustomResources",
+			Fn:   c.fluentOperatorCustomResources.Deploy,
+		})
+		group.Add(flow.Task{
+			Name: "Deploying fluent-bit",
+			Fn:   c.fluentBit.Deploy,
+		})
+		return group
+	}
+
+	destroyFluentOperatorCustomResources := group.Add(flow.Task{
+		Name: "Destroying fluent-operator CustomResources",
+		Fn:   component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
+	})
+	destroyFluentBit := group.Add(flow.Task{
+		Name: "Destroying fluent-bit",
+		Fn:   component.OpDestroyAndWait(c.fluentBit).Destroy,
+	})
+	group.Add(flow.Task{
+		Name: "Destroying fluent-operator",
+		Fn:   component.OpDestroyAndWait(c.fluentOperator).Destroy,
+		// The fluent-operator removes the finalizers from its custom resources, hence it must only be destroyed after they
+		// are gone.
+		Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources, destroyFluentBit),
+	})
+	return group
 }

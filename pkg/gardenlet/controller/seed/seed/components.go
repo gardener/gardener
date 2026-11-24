@@ -921,7 +921,6 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		gardenlethelper.IsLoggingEnabled(&r.Config),
 		"",
 		centralLoggingConfigurations,
 		outputs,
@@ -1056,7 +1055,6 @@ func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentOperator(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		gardenlethelper.IsLoggingEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }
@@ -1065,7 +1063,6 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentBit(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		gardenlethelper.IsLoggingEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		false,
 	)

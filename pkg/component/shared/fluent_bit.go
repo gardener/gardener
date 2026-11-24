@@ -20,7 +20,6 @@ import (
 func NewFluentBit(
 	c client.Client,
 	gardenNamespaceName string,
-	enabled bool,
 	priorityClassName string,
 	isGardenCluster bool,
 ) (
@@ -47,10 +46,6 @@ func NewFluentBit(
 			IsGardenCluster:    isGardenCluster,
 		},
 	)
-
-	if !enabled {
-		deployer = component.OpDestroyAndWait(deployer)
-	}
 
 	return deployer, nil
 }

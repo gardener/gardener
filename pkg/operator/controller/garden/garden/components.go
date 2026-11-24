@@ -329,8 +329,6 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// observability components
-	loggingEnabled := isLoggingEnabled(r.Config.Logging)
-
 	c.gardenerMetricsExporter, err = r.newGardenerMetricsExporter(secretsManager)
 	if err != nil {
 		return
@@ -339,15 +337,15 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.fluentOperator, err = r.newFluentOperator(loggingEnabled)
+	c.fluentOperator, err = r.newFluentOperator()
 	if err != nil {
 		return
 	}
-	c.fluentBit, err = r.newFluentBit(loggingEnabled)
+	c.fluentBit, err = r.newFluentBit()
 	if err != nil {
 		return
 	}
-	c.fluentOperatorCustomResources, err = r.newFluentCustomResources(r.Config.Logging, loggingEnabled)
+	c.fluentOperatorCustomResources, err = r.newFluentCustomResources(r.Config.Logging)
 	if err != nil {
 		return
 	}
@@ -1435,26 +1433,24 @@ func virtualGardenAPIServerHost(garden *operatorv1alpha1.Garden) string {
 	return v1beta1helper.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)
 }
 
-func (r *Reconciler) newFluentOperator(loggingEnabled bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentOperator(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		loggingEnabled,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }
 
-func (r *Reconciler) newFluentBit(loggingEnabled bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentBit(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		loggingEnabled,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		true,
 	)
 }
 
-func (r *Reconciler) newFluentCustomResources(logging *operatorconfigv1alpha1.Logging, loggingEnabled bool) (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentCustomResources(logging *operatorconfigv1alpha1.Logging) (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 
 	isValiRunning := isValiEnabled(logging)
@@ -1470,7 +1466,6 @@ func (r *Reconciler) newFluentCustomResources(logging *operatorconfigv1alpha1.Lo
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		loggingEnabled,
 		"-garden",
 		observabilitylogging.GardenCentralLoggingConfigurations,
 		outputs,
