@@ -8742,7 +8742,7 @@ func schema_pkg_apis_core_v1beta1_SSHAccess(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd. Defaults to true.",
+							Description: "Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd. Defaults to: - true, for Shoots created with Kubernetes version < 1.38 - false, for Shoots created with Kubernetes version >= 1.38",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
