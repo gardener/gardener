@@ -683,7 +683,7 @@ func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 }
 
 // isLoggingEnabled returns true if the logging stack is enabled. Default is enabled.
-func isLoggingEnabled(logging *operatorv1alpha1.Logging) bool {
+func isLoggingEnabled(logging *operatorconfigv1alpha1.Logging) bool {
 	if logging != nil {
 		return ptr.Deref(logging.Enabled, true)
 	}
@@ -692,7 +692,7 @@ func isLoggingEnabled(logging *operatorv1alpha1.Logging) bool {
 
 // isValiEnabled returns true if the logging stack and Vali are enabled and the RemoveVali feature gate is turned
 // off. Default is enabled.
-func isValiEnabled(logging *operatorv1alpha1.Logging) bool {
+func isValiEnabled(logging *operatorconfigv1alpha1.Logging) bool {
 	if !isLoggingEnabled(logging) {
 		return false
 	}
@@ -708,7 +708,7 @@ func isValiEnabled(logging *operatorv1alpha1.Logging) bool {
 
 // isVictoriaLogsEnabled returns true if the logging stack and VictoriaLogs are enabled and the VictoriaLogsBackend
 // feature gate is turned on. Default is enabled.
-func isVictoriaLogsEnabled(logging *operatorv1alpha1.Logging) bool {
+func isVictoriaLogsEnabled(logging *operatorconfigv1alpha1.Logging) bool {
 	if !isLoggingEnabled(logging) || !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
 		return false
 	}

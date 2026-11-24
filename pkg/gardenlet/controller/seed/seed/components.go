@@ -910,7 +910,7 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 
 	// Vali is removed if the RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well).
 	valiIsRunning := gardenlethelper.IsValiEnabled(&r.Config) &&
-		!(features.DefaultFeatureGate.Enabled(features.RemoveVali) && features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend))
+		!(features.DefaultFeatureGate.Enabled(features.RemoveVali) && features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend)) //nolint:staticcheck // this is easier to read
 
 	outputs := []*fluentbitv1alpha2.ClusterOutput{
 		fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels, valiIsRunning),

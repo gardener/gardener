@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/operator/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -163,41 +163,41 @@ var _ = Describe("Reconciler", func() {
 
 	Describe("#isLoggingEnabled", func() {
 		It("should return true when logging.enabled is not set", func() {
-			settings := &operatorv1alpha1.Logging{}
+			settings := &operatorconfigv1alpha1.Logging{}
 			Expect(isLoggingEnabled(settings)).To(BeTrue())
 		})
 
 		It("should return true when logging is enabled", func() {
-			settings := &operatorv1alpha1.Logging{Enabled: new(true)}
+			settings := &operatorconfigv1alpha1.Logging{Enabled: new(true)}
 			Expect(isLoggingEnabled(settings)).To(BeTrue())
 		})
 
 		It("should return false when logging is disabled", func() {
-			settings := &operatorv1alpha1.Logging{Enabled: new(false)}
+			settings := &operatorconfigv1alpha1.Logging{Enabled: new(false)}
 			Expect(isLoggingEnabled(settings)).To(BeFalse())
 		})
 	})
 
 	Describe("#isValiEnabled", func() {
 		It("should return true when vali.enabled is not set", func() {
-			settings := &operatorv1alpha1.Logging{}
+			settings := &operatorconfigv1alpha1.Logging{}
 			Expect(isValiEnabled(settings)).To(BeTrue())
 		})
 
 		It("should return true when vali is enabled", func() {
-			settings := &operatorv1alpha1.Logging{Vali: &operatorv1alpha1.Vali{Enabled: new(true)}}
+			settings := &operatorconfigv1alpha1.Logging{Vali: &operatorconfigv1alpha1.Vali{Enabled: new(true)}}
 			Expect(isValiEnabled(settings)).To(BeTrue())
 		})
 
 		It("should return false when vali is disabled", func() {
-			settings := &operatorv1alpha1.Logging{Vali: &operatorv1alpha1.Vali{Enabled: new(false)}}
+			settings := &operatorconfigv1alpha1.Logging{Vali: &operatorconfigv1alpha1.Vali{Enabled: new(false)}}
 			Expect(isValiEnabled(settings)).To(BeFalse())
 		})
 
 		It("should return false when logging is disabled", func() {
-			settings := &operatorv1alpha1.Logging{
+			settings := &operatorconfigv1alpha1.Logging{
 				Enabled: new(false),
-				Vali:    &operatorv1alpha1.Vali{Enabled: new(true)},
+				Vali:    &operatorconfigv1alpha1.Vali{Enabled: new(true)},
 			}
 			Expect(isValiEnabled(settings)).To(BeFalse())
 		})
@@ -206,7 +206,7 @@ var _ = Describe("Reconciler", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, true))
 
-			settings := &operatorv1alpha1.Logging{Vali: &operatorv1alpha1.Vali{Enabled: new(true)}}
+			settings := &operatorconfigv1alpha1.Logging{Vali: &operatorconfigv1alpha1.Vali{Enabled: new(true)}}
 			Expect(isValiEnabled(settings)).To(BeFalse())
 		})
 
@@ -214,7 +214,7 @@ var _ = Describe("Reconciler", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, false))
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.RemoveVali, true))
 
-			settings := &operatorv1alpha1.Logging{Vali: &operatorv1alpha1.Vali{Enabled: new(true)}}
+			settings := &operatorconfigv1alpha1.Logging{Vali: &operatorconfigv1alpha1.Vali{Enabled: new(true)}}
 			Expect(isValiEnabled(settings)).To(BeTrue())
 		})
 	})
@@ -224,22 +224,22 @@ var _ = Describe("Reconciler", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, false))
 
 			Expect(isVictoriaLogsEnabled(nil)).To(BeFalse())
-			Expect(isVictoriaLogsEnabled(&operatorv1alpha1.Logging{})).To(BeFalse())
+			Expect(isVictoriaLogsEnabled(&operatorconfigv1alpha1.Logging{})).To(BeFalse())
 		})
 
 		It("should return true when the VictoriaLogsBackend feature gate is enabled and victoriaLogs.enabled is not set", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 
-			settings := &operatorv1alpha1.Logging{}
+			settings := &operatorconfigv1alpha1.Logging{}
 			Expect(isVictoriaLogsEnabled(settings)).To(BeTrue())
 		})
 
 		It("should return false when logging is disabled", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 
-			settings := &operatorv1alpha1.Logging{
+			settings := &operatorconfigv1alpha1.Logging{
 				Enabled:      new(false),
-				VictoriaLogs: &operatorv1alpha1.VictoriaLogs{Enabled: new(true)},
+				VictoriaLogs: &operatorconfigv1alpha1.VictoriaLogs{Enabled: new(true)},
 			}
 			Expect(isVictoriaLogsEnabled(settings)).To(BeFalse())
 		})
@@ -247,14 +247,14 @@ var _ = Describe("Reconciler", func() {
 		It("should return false when victoriaLogs is disabled", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 
-			settings := &operatorv1alpha1.Logging{VictoriaLogs: &operatorv1alpha1.VictoriaLogs{Enabled: new(false)}}
+			settings := &operatorconfigv1alpha1.Logging{VictoriaLogs: &operatorconfigv1alpha1.VictoriaLogs{Enabled: new(false)}}
 			Expect(isVictoriaLogsEnabled(settings)).To(BeFalse())
 		})
 
 		It("should return true when victoriaLogs is enabled", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VictoriaLogsBackend, true))
 
-			settings := &operatorv1alpha1.Logging{VictoriaLogs: &operatorv1alpha1.VictoriaLogs{Enabled: new(true)}}
+			settings := &operatorconfigv1alpha1.Logging{VictoriaLogs: &operatorconfigv1alpha1.VictoriaLogs{Enabled: new(true)}}
 			Expect(isVictoriaLogsEnabled(settings)).To(BeTrue())
 		})
 	})
