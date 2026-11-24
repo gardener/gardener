@@ -1,6 +1,7 @@
 {
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: [
+    'helpers:pinGitHubActionDigests',
     'config:recommended',
     ':semanticCommitsDisabled',
     'github>gardener/ci-infra//config/renovate/makefile-versions.json5',
