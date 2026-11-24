@@ -365,7 +365,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.openTelemetryOperator, err = r.newOpenTelemetryOperator()
+	c.openTelemetryOperator, err = r.newOpenTelemetryOperator(r.Config.Logging)
 	if err != nil {
 		return
 	}
@@ -1827,11 +1827,11 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 	), nil
 }
 
-func (r *Reconciler) newOpenTelemetryOperator() (component.DeployWaiter, error) {
+func (r *Reconciler) newOpenTelemetryOperator(logging *operatorconfigv1alpha1.Logging) (component.DeployWaiter, error) {
 	return sharedcomponent.NewOpenTelemetryOperator(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
+		isLoggingEnabled(logging),
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }

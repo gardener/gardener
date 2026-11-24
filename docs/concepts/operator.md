@@ -821,6 +821,10 @@ As all of these components are managed by `gardener-operator` in this scenario, 
 
 > ℹ️ There is no need to configure anything - the `gardenlet` will automatically detect when its seed cluster is the garden runtime cluster at the same time.
 
+⚠️ As the shared observability components are managed by `gardener-operator`, they follow the `logging` settings in the `gardener-operator` configuration, not the ones in the `gardenlet` configuration.
+For example, disabling logging for `gardener-operator` also removes `fluent-bit` and `opentelemetry-operator`, which the seed and its shoot control planes rely on.
+Hence, keep the `logging` settings of `gardener-operator` and `gardenlet` aligned in this scenario.
+
 ⚠️ Note that such setup requires that you upgrade the versions of `gardener-operator` and `gardenlet` in lock-step.
 Otherwise, you might experience unexpected behaviour or issues with your seed or shoot clusters.
 

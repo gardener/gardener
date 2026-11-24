@@ -242,6 +242,8 @@ type NodeTolerationConfiguration struct {
 type Logging struct {
 	// Enabled is used to enable or disable the logging stack in the runtime cluster.
 	// If not set, by default the logging stack is enabled.
+	// If the runtime cluster is a seed cluster at the same time, this should be aligned with the gardenlet's logging
+	// configuration, see docs/concepts/operator.md#using-garden-runtime-cluster-as-seed-cluster.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 	// Vali contains configuration for Vali.
