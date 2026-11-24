@@ -58,9 +58,9 @@ gardenadm destroy --config-dir /path/to/manifests
 
 ```
   -d, --config-dir string         Path to a directory containing the Gardener configuration files for the init command, i.e., files containing resources like CloudProfile, Shoot, etc. The files must be in YAML/JSON and have .{yaml,yml,json} file extensions to be considered.
-  -h, --help                      help for destroy
+  -h, --help[=true|false]         help for destroy
   -k, --kubeconfig string         Path to the kubeconfig file pointing to the bootstrap cluster
-      --shoot-kubeconfig string   Path to the kubeconfig file pointing to the self-hosted shoot cluster (recommended). If set, cluster-autoscaler and machine-controller-manager are stopped in the shoot cluster, the current ShootState is computed from the shoot cluster instead of being read from the config directory
+  -s, --shoot-kubeconfig string   Path to the kubeconfig file pointing to the self-hosted shoot cluster (recommended). If set, cluster-autoscaler and machine-controller-manager are stopped in the shoot cluster, the current ShootState is computed from the shoot cluster instead of being read from the config directory
 ```
 
 ### Options inherited from parent commands

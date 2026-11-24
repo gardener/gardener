@@ -196,7 +196,7 @@ func run(ctx context.Context, opts *Options) error {
 				WithDependencies(syncPointBootstrapped),
 		)
 		reconcileOperatingSystemConfig = g.AddGroup(
-			b.ReconcileOperatingSystemConfigTaskGroup(false).
+			b.ReconcileOperatingSystemConfigTaskGroup().
 				WithDependencies(syncPointBootstrapped),
 		)
 
