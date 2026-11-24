@@ -44,3 +44,8 @@ var IgnoreObjectsCreatedAfter = func(t time.Time) utilclient.IgnoreLeftoverFunc 
 var IgnoreObjectsManagedByManagedResourceInNamespace = func(ctx context.Context, c client.Reader, namespace string) utilclient.IgnoreLeftoverFunc {
 	return ignoreObjectsManagedByManagedResourceInNamespace(ctx, c, namespace)
 }
+
+var (
+	ParseConnectedVPNClients = parseConnectedVPNClients
+	ExpectedVPNClientCNs     = expectedVPNClientCNs
+)
