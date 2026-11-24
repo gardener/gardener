@@ -352,6 +352,30 @@ var _ = Describe("mutator", func() {
 				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
 			})
 
+			It("should not add deploy infrastructure task and not panic when SSHAccess is unset on both old and new shoot", func() {
+				// SSHAccess is no longer guaranteed to be defaulted, so the comparison must be nil-safe:
+				// unset on both sides means the effective SSH access did not change.
+				oldShoot.Spec.Provider.WorkersSettings = nil
+				shoot.Spec.Provider.WorkersSettings = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeFalse())
+			})
+
+			It("should add deploy infrastructure task when SSHAccess becomes explicitly disabled from an unset (enabled) state", func() {
+				oldShoot.Spec.Provider.WorkersSettings = nil
+				shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
 			It("should add deploy dnsrecord tasks because dns config has changed", func() {
 				shoot.Spec.DNS = &core.DNS{}
 
