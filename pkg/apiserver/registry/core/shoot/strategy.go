@@ -86,6 +86,7 @@ func (s shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	gardenerutils.SyncCloudProfileFields(nil, newShoot)
 
 	SyncDNSProviderCredentials(newShoot)
+	defaultSSHAccess(newShoot)
 	s.storeIgnoredDNSWarnings(newShoot, ignoredDNSWarningIndexes)
 }
 
@@ -558,6 +559,32 @@ func SyncDNSProviderCredentials(shoot *core.Shoot) {
 		// - both fields are set -> let the validation check if they are correct
 		// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
 	}
+}
+
+// defaultSSHAccess defaults spec.provider.workersSettings.sshAccess.enabled when it is not set,
+// depending on the Shoot's Kubernetes version: starting with Kubernetes 1.38 SSH access to the
+// worker nodes is disabled by default, before that it is enabled by default.
+//
+// It is only called on Shoot creation. Existing Shoots are never flipped retroactively: the field
+// is a non-pointer bool that has historically been defaulted to true, so for already created Shoots
+// there is no way to distinguish an explicitly chosen true from a defaulted true. Changing the
+// default for them on upgrade could silently revoke SSH access from owners who deliberately enabled
+// it, hence the new default only applies to Shoots created on Kubernetes >= 1.38.
+func defaultSSHAccess(shoot *core.Shoot) {
+	if len(shoot.Spec.Provider.Workers) == 0 {
+		return
+	}
+
+	if shoot.Spec.Provider.WorkersSettings == nil {
+		shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{}
+	}
+
+	if shoot.Spec.Provider.WorkersSettings.SSHAccess != nil {
+		return
+	}
+
+	enabled := !versionutils.ConstraintK8sGreaterEqual138.CheckVersion(shoot.Spec.Kubernetes.Version)
+	shoot.Spec.Provider.WorkersSettings.SSHAccess = &core.SSHAccess{Enabled: enabled}
 }
 
 func isSecretDNSProviderCredentialsRef(credentialsRef *autoscalingv1.CrossVersionObjectReference) bool {

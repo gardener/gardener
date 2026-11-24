@@ -2146,7 +2146,9 @@ type WorkersSettings struct {
 // SSHAccess contains settings regarding ssh access to the worker nodes.
 type SSHAccess struct {
 	// Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.
-	// Defaults to true.
+	// Defaults to:
+	// - true, for Shoots created with Kubernetes version < 1.38
+	// - false, for Shoots created with Kubernetes version >= 1.38
 	// +required
 	Enabled bool `json:"enabled" protobuf:"varint,1,opt,name=enabled"`
 }

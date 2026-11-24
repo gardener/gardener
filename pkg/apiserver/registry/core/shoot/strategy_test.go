@@ -206,6 +206,67 @@ var _ = Describe("Strategy", func() {
 				Expect(strategy.WarningsOnCreate(ctx, shoot)).NotTo(ContainElement(ContainSubstring("spec.dns.providers[0].secretName")))
 			})
 		})
+
+		Context("sshAccess defaulting", func() {
+			var shoot *core.Shoot
+
+			shootWithVersion := func(version string) *core.Shoot {
+				return &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{Version: version},
+						Provider: core.Provider{
+							Workers: []core.Worker{{Name: "worker"}},
+						},
+					},
+				}
+			}
+
+			It("should default sshAccess.enabled to true for a new Shoot with Kubernetes < 1.38", func() {
+				shoot = shootWithVersion("1.37.0")
+
+				strategy.PrepareForCreate(ctx, shoot)
+
+				Expect(shoot.Spec.Provider.WorkersSettings).To(Equal(&core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}))
+			})
+
+			It("should default sshAccess.enabled to false for a new Shoot with Kubernetes >= 1.38", func() {
+				shoot = shootWithVersion("1.38.0")
+
+				strategy.PrepareForCreate(ctx, shoot)
+
+				Expect(shoot.Spec.Provider.WorkersSettings).To(Equal(&core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}))
+			})
+
+			It("should not overwrite an explicitly set sshAccess.enabled=true on Kubernetes >= 1.38", func() {
+				shoot = shootWithVersion("1.38.0")
+				shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}
+
+				strategy.PrepareForCreate(ctx, shoot)
+
+				Expect(shoot.Spec.Provider.WorkersSettings).To(Equal(&core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}))
+			})
+
+			It("should not overwrite an explicitly set sshAccess.enabled=false on Kubernetes < 1.38", func() {
+				shoot = shootWithVersion("1.37.0")
+				shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}
+
+				strategy.PrepareForCreate(ctx, shoot)
+
+				Expect(shoot.Spec.Provider.WorkersSettings).To(Equal(&core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}))
+			})
+
+			It("should not default sshAccess for a workerless Shoot", func() {
+				shoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{Version: "1.38.0"},
+					},
+				}
+
+				strategy.PrepareForCreate(ctx, shoot)
+
+				Expect(shoot.Spec.Provider.WorkersSettings).To(BeNil())
+			})
+		})
 	})
 
 	Describe("#PrepareForUpdate", func() {
@@ -217,6 +278,33 @@ var _ = Describe("Strategy", func() {
 		BeforeEach(func() {
 			oldShoot = &core.Shoot{}
 			newShoot = oldShoot.DeepCopy()
+		})
+
+		Context("sshAccess defaulting", func() {
+			It("should not retroactively flip sshAccess for an existing Shoot upgrading from 1.37 to 1.38", func() {
+				// Existing Shoots carry a persisted sshAccess value; it must never be changed on update,
+				// even when crossing the 1.38 boundary.
+				oldShoot.Spec.Kubernetes.Version = "1.37.0"
+				oldShoot.Spec.Provider.Workers = []core.Worker{{Name: "worker"}}
+				oldShoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}
+				newShoot = oldShoot.DeepCopy()
+				newShoot.Spec.Kubernetes.Version = "1.38.0"
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Provider.WorkersSettings).To(Equal(&core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}))
+			})
+
+			It("should not default sshAccess on update when it was never set (no retroactive defaulting)", func() {
+				oldShoot.Spec.Kubernetes.Version = "1.37.0"
+				oldShoot.Spec.Provider.Workers = []core.Worker{{Name: "worker"}}
+				newShoot = oldShoot.DeepCopy()
+				newShoot.Spec.Kubernetes.Version = "1.38.0"
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Spec.Provider.WorkersSettings).To(BeNil())
+			})
 		})
 
 		Context("cloudProfile field removal", func() {
