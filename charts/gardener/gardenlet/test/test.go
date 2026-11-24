@@ -180,6 +180,12 @@ func getGardenletClusterRole(labels map[string]string, unmanagedInfrastructure b
 			Verbs:     []string{"create"},
 		},
 		{
+			APIGroups:     []string{""},
+			Resources:     []string{"pods/portforward"},
+			ResourceNames: []string{"vpn-seed-server-0", "vpn-seed-server-1"},
+			Verbs:         []string{"create"},
+		},
+		{
 			APIGroups: []string{""},
 			Resources: []string{"configmaps", "namespaces", "secrets", "serviceaccounts", "services"},
 			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
