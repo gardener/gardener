@@ -3600,9 +3600,6 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	case v1beta1constants.OperationRotateSSHKeypairStart:
 		if helper.ShootEnablesSSHAccess(shoot) {
 			phase := helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials)
-			if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
-				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start SSH keypair rotation if shoot was not yet created successfully or is not ready for reconciliation"))
-			}
 			if len(phase) > 0 && phase != core.RotationCompleted {
 				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start SSH keypair rotation if .status.credentials.rotation.sshKeypair.phase is not 'Completed'"))
 			}

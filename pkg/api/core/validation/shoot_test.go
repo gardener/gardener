@@ -7503,7 +7503,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			DescribeTable("SSH keypair rotation lifecycle",
 				func(operation string, phase core.CredentialsRotationPhase, allowed bool) {
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
-					shoot.Status.LastOperation = &core.LastOperation{Type: core.LastOperationTypeReconcile, State: core.LastOperationStateSucceeded}
+					shoot.Status.LastOperation = &core.LastOperation{}
 					shoot.Status.Credentials = &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{SSHKeypair: &core.ShootSSHKeypairRotation{Phase: phase}}}
 					if allowed {
 						Expect(ValidateShoot(shoot)).To(BeEmpty())
