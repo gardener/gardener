@@ -105,7 +105,7 @@ The `gardener-apiserver` protects the internal domains of a `Seed` with `Shoot`s
 
 - An internal domain that is used by a `Shoot` cannot be removed.
 - The first internal domain cannot be removed in the same update that replaces it. Make another domain the first one before (step 1).
-- No internal domain can be removed before the `gardenlet` has observed the current generation of the `Seed`.
+- No internal domain can be removed before the `gardenlet` has observed the current generation of the `Seed`. This does not apply to the `gardenlet` of the `Seed`, which registers its `Seed` at startup.
 - A `Shoot` cannot be moved to another `Seed` (control plane migration) if the target `Seed` does not list the internal domains used by the `Shoot`.
 
 > [!NOTE]
