@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -252,7 +253,7 @@ func (r *Reconciler) updateStatusOperationError(ctx context.Context, seed *garde
 	}
 	seed.Status.LastOperation.Type = operationType
 	seed.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
-	seed.Status.LastOperation.Description = err.Error() + " Operation will be retried."
+	seed.Status.LastOperation.Description = err.Error() + errorsutils.OperationWillBeRetried
 	seed.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
 
 	if err2 := r.GardenClient.Status().Patch(ctx, seed, patch); err2 != nil {

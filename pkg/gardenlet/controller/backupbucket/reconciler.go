@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
@@ -319,7 +320,7 @@ func (r *Reconciler) deleteBackupBucket(
 		if lastError := extensionBackupBucket.Status.LastError; lastError != nil {
 			r.Recorder.Eventf(backupBucket, nil, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, gardencorev1beta1.EventActionDelete, lastError.Description)
 
-			if updateErr := r.updateBackupBucketStatusError(gardenCtx, backupBucket, lastError.Description+" Operation will be retried.", lastError); updateErr != nil {
+			if updateErr := r.updateBackupBucketStatusError(gardenCtx, backupBucket, lastError.Description+errorsutils.OperationWillBeRetried, lastError); updateErr != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update status after deletion error: %w", updateErr)
 			}
 			return reconcile.Result{}, errors.New(lastError.Description)

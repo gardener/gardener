@@ -380,7 +380,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 		log.Error(err, "Shoot cannot be synced with seed")
 
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.LastOperation.Description = fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
+		shoot.Status.LastOperation.Description = errorsutils.TruncateOperationDescription(fmt.Sprintf("Shoot cannot be synced with Seed: %v", err))
 		shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
 		if patchErr := r.GardenClient.Status().Patch(ctx, shoot, patch); patchErr != nil {
 			return nil, reconcile.Result{}, errorsutils.WithSuppressed(err, patchErr)
@@ -1046,18 +1046,18 @@ func (r *Reconciler) patchShootStatusOperationError(
 		state = gardencorev1beta1.LastOperationStateFailed
 		shoot.Status.RetryCycleStartTime = nil
 	} else {
-		description += " Operation will be retried."
+		description += errorsutils.OperationWillBeRetried
 	}
 
 	shoot.Status.Gardener = *r.Identity
-	shoot.Status.LastErrors = lastErrors
+	shoot.Status.LastErrors = errorsutils.TruncateLastErrors(lastErrors, logf.FromContext(ctx))
 
 	if shoot.Status.LastOperation == nil {
 		shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 	}
 	shoot.Status.LastOperation.Type = operationType
 	shoot.Status.LastOperation.State = state
-	shoot.Status.LastOperation.Description = description
+	shoot.Status.LastOperation.Description = errorsutils.TruncateOperationDescription(description)
 	shoot.Status.LastOperation.LastUpdateTime = now
 
 	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
