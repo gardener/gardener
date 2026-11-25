@@ -176,6 +176,7 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	APIServerClusterIPPrefixLen               int
 	APIServerRequestHeaderUserName            string
 	APIServerRequestHeaderGroup               string
+	APIServerRequestHeaderUID                 string
 	APIServerRequestHeaderPrefixExtra         string
 	APIServerAuthenticationDynamicMetadataKey string
 	IstioTLSSecret                            string
@@ -201,6 +202,7 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	ConnectionUpgradeRouteName        string
 	APIServerRequestHeaderUserName    string
 	APIServerRequestHeaderGroup       string
+	APIServerRequestHeaderUID         string
 	APIServerRequestHeaderPrefixExtra string
 }
 
@@ -268,6 +270,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			APIServerClusterIPPrefixLen:       apiServerClusterIPPrefixLen,
 			APIServerRequestHeaderUserName:    kubeapiserverconstants.RequestHeaderUserName,
 			APIServerRequestHeaderGroup:       kubeapiserverconstants.RequestHeaderGroup,
+			APIServerRequestHeaderUID:         kubeapiserverconstants.RequestHeaderUID,
 			APIServerRequestHeaderPrefixExtra: kubeapiserverconstants.RequestHeaderPrefixExtra,
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
 			IstioTLSSecret:                   s.emptyIstioTLSSecret().Name,
@@ -327,6 +330,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 				ConnectionUpgradeRouteName:        connectionUpgradeRouteName,
 				APIServerRequestHeaderUserName:    kubeapiserverconstants.RequestHeaderUserName,
 				APIServerRequestHeaderGroup:       kubeapiserverconstants.RequestHeaderGroup,
+				APIServerRequestHeaderUID:         kubeapiserverconstants.RequestHeaderUID,
 				APIServerRequestHeaderPrefixExtra: kubeapiserverconstants.RequestHeaderPrefixExtra,
 			}); err != nil {
 				return err

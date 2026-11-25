@@ -11,6 +11,8 @@ const (
 	RequestHeaderGroup = "X-Remote-Group"
 	// RequestHeaderUserName is the header key for the username headers.
 	RequestHeaderUserName = "X-Remote-User"
+	// RequestHeaderUID is the header key for the UID headers.
+	RequestHeaderUID = "X-Remote-Uid"
 	// RequestHeaderPrefixExtra is the prefix headers keys for extra headers.
 	RequestHeaderPrefixExtra = "X-Remote-Extra-"
 )

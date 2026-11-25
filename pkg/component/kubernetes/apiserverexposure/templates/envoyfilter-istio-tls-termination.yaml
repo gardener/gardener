@@ -90,7 +90,7 @@ spec:
             inlineString: |
               function envoy_on_request(request_handle)
                 -- Drop headers used by kube-apiserver authentication proxy.
-                local remove = {"{{ $.APIServerRequestHeaderUserName }}", "{{ $.APIServerRequestHeaderGroup }}"}
+                local remove = {"{{ $.APIServerRequestHeaderUserName }}", "{{ $.APIServerRequestHeaderGroup }}", "{{ $.APIServerRequestHeaderUID }}"}
                 for key, value in pairs(remove) do
                   request_handle:headers():remove(value)
                 end
