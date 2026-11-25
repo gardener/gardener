@@ -897,7 +897,7 @@ func (b *Botanist) DeleteStaleOperatingSystemConfigResourcesTaskGroup(skipReadin
 			SkipIf(b.Shoot.IsWorkerless).
 			WithDependencies(TaskGroupReconcileWorker)
 
-		deleteStale = g.Add(flow.Task{
+		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
 			Name: "Delete stale OperatingSystemConfig resources",
 			Fn: func(ctx context.Context) error {
 				return b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources(ctx)
@@ -909,7 +909,7 @@ func (b *Botanist) DeleteStaleOperatingSystemConfigResourcesTaskGroup(skipReadin
 				return b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources(ctx)
 			},
 			SkipIf:       b.Shoot.HibernationEnabled || skipReadiness,
-			Dependencies: flow.NewTaskIDs(deleteStale),
+			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
 		})
 	)
 
