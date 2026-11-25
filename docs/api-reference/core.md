@@ -13297,6 +13297,18 @@ ShootSSHKeypairRotation contains information about the ssh-keypair credential ro
 
 <tr>
 <td>
+<code>phase</code></br>
+<em>
+<a href="#credentialsrotationphase">CredentialsRotationPhase</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Phase describes the phase of the ssh-keypair credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>lastInitiationTime</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">Time</a>
@@ -13317,6 +13329,30 @@ ShootSSHKeypairRotation contains information about the ssh-keypair credential ro
 <td>
 <em>(Optional)</em>
 <p>LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationFinishedTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">Time</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationFinishedTime is the most recent time when preparation of the ssh-keypair rotation completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTriggeredTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta">Time</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTriggeredTime is the most recent time when completion of the ssh-keypair rotation was triggered.</p>
 </td>
 </tr>
 
