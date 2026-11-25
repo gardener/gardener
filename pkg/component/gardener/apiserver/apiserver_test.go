@@ -716,6 +716,49 @@ var _ = Describe("GardenerAPIServer", func() {
 			patch := client.MergeFrom(svcRuntime.DeepCopy())
 			svcRuntime.Spec.ClusterIP = clusterIP
 			Expect(fakeClient.Patch(ctx, svcRuntime, patch)).To(Succeed())
+
+			// Deploy waits on this reader (not fakeClient) until the runtime ManagedResource is healthy and not
+			// progressing before it writes the virtual resources.
+			Expect(fakeAPIReader.Create(ctx, &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       managedResourceNameRuntime,
+					Namespace:  namespace,
+					Generation: 1,
+				},
+				Status: healthyManagedResourceStatus,
+			})).To(Succeed())
+		})
+
+		Context("runtime ManagedResource is still progressing", func() {
+			BeforeEach(func() {
+				runtimeManagedResource := &resourcesv1alpha1.ManagedResource{}
+				Expect(fakeAPIReader.Get(ctx, client.ObjectKey{Name: managedResourceNameRuntime, Namespace: namespace}, runtimeManagedResource)).To(Succeed())
+				runtimeManagedResource.Status.Conditions = []gardencorev1beta1.Condition{
+					{
+						Type:   resourcesv1alpha1.ResourcesApplied,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   resourcesv1alpha1.ResourcesHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   resourcesv1alpha1.ResourcesProgressing,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				}
+				Expect(fakeAPIReader.Update(ctx, runtimeManagedResource)).To(Succeed())
+			})
+
+			It("should fail and leave the virtual ManagedResource secret absent", func() {
+				Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("still progressing")))
+
+				secretList := &corev1.SecretList{}
+				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace))).To(Succeed())
+				for _, secret := range secretList.Items {
+					Expect(secret.Name).NotTo(HavePrefix(managedResourceSecretVirtual.Name))
+				}
+			})
 		})
 
 		Context("deployment", func() {
