@@ -39,7 +39,7 @@ var liveMigrationStepOwners = map[gardencorev1beta1.ConditionType]v1beta1helper.
 	gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined:                 v1beta1helper.LiveMigrationRoleDestination,
 	gardencorev1beta1.ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer: v1beta1helper.LiveMigrationRoleSource,
 	gardencorev1beta1.ShootLiveMigrationDestinationKubeAPIServerReady:              v1beta1helper.LiveMigrationRoleDestination,
-	gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup:                          v1beta1helper.LiveMigrationRoleSource,
+	gardencorev1beta1.ShootLiveMigrationMigrateSourceSeedComponents:                v1beta1helper.LiveMigrationRoleSource,
 	gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete:                      v1beta1helper.LiveMigrationRoleDestination,
 	gardencorev1beta1.ShootLiveMigrationMigrationCompleted:                         v1beta1helper.LiveMigrationRoleDestination,
 	gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown:                    v1beta1helper.LiveMigrationRoleSource,
@@ -53,7 +53,7 @@ var liveMigrationConditionOrder = []gardencorev1beta1.ConditionType{
 	gardencorev1beta1.ShootLiveMigrationDestinationEtcdPeersJoined,
 	gardencorev1beta1.ShootLiveMigrationMigrateExtensionsNeededBeforeKubeAPIServer,
 	gardencorev1beta1.ShootLiveMigrationDestinationKubeAPIServerReady,
-	gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup,
+	gardencorev1beta1.ShootLiveMigrationMigrateSourceSeedComponents,
 	gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete,
 	gardencorev1beta1.ShootLiveMigrationMigrationCompleted,
 	gardencorev1beta1.ShootLiveMigrationSourceSeedFinalTeardown,
@@ -134,16 +134,16 @@ func (r *Reconciler) runLiveMigrateShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(migrateExtensionsNeededBeforeKubeAPIServer),
 		})
 
-		sourceSeedCleanup = g.Add(flow.Task{
-			Name:         "Cleaning up the source seed",
-			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup, migrateSourceSeedComponentsTaskGroup(botanist)),
+		sourceSeedComponentsMigrated = g.Add(flow.Task{
+			Name:         "Migrating components in the source seed",
+			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationMigrateSourceSeedComponents, migrateSourceSeedComponentsTaskGroup(botanist)),
 			Dependencies: flow.NewTaskIDs(destinationKubeAPIServerReady),
 		})
 
 		etcdMigrationComplete = g.Add(flow.Task{
 			Name:         "Migrating etcd cluster to destination seed",
 			Fn:           r.executeStepOrWait(botanist, role, gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete, etcdMigrationCompleteTaskGroup(botanist)),
-			Dependencies: flow.NewTaskIDs(sourceSeedCleanup),
+			Dependencies: flow.NewTaskIDs(sourceSeedComponentsMigrated),
 		})
 
 		migrationCompleted = g.Add(flow.Task{
@@ -274,7 +274,7 @@ const taskGroupSourceEtcdPreparedForPeerJoin flow.TaskID = "TaskGroupSourceEtcdP
 func sourceEtcdPreparedForPeerJoinTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
 		g = flow.NewTaskGroup(taskGroupSourceEtcdPreparedForPeerJoin).
-			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationSourceSeedCleanup) != nil)
+			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationMigrateSourceSeedComponents) != nil)
 
 		deployEtcdPeerExposure = g.Add(flow.Task{
 			Name: "Deploying etcd member exposure",
@@ -479,14 +479,14 @@ func destinationKubeAPIServerReadyTaskGroup(b *botanistpkg.Botanist) flow.TaskGr
 	return g
 }
 
-// taskGroupSourceSeedCleanup is a flow.TaskID for a logical flow.TaskGroup.
-const taskGroupSourceSeedCleanup flow.TaskID = "TaskGroupSourceSeedCleanup"
+// taskGroupMigrateSourceSeedComponents is a flow.TaskID for a logical flow.TaskGroup.
+const taskGroupMigrateSourceSeedComponents flow.TaskID = "TaskGroupMigrateSourceSeedComponents"
 
 // migrateSourceSeedComponentsTaskGroup migrates and tears down the source-side shoot resources (extensions, infrastructure,
 // control plane, managed resources, machines) and persists the migrated state for the destination to restore.
 func migrateSourceSeedComponentsTaskGroup(b *botanistpkg.Botanist) flow.TaskGroup {
 	var (
-		g = flow.NewTaskGroup(taskGroupSourceSeedCleanup).
+		g = flow.NewTaskGroup(taskGroupMigrateSourceSeedComponents).
 			SkipIf(v1beta1helper.GetLiveMigrationCondition(b.Shoot.GetInfo(), gardencorev1beta1.ShootLiveMigrationEtcdMigrationComplete) != nil)
 	)
 

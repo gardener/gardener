@@ -2300,9 +2300,9 @@ const (
 	// ShootLiveMigrationDestinationKubeAPIServerReady indicates that the destination kube-apiserver
 	// is deployed and ready.
 	ShootLiveMigrationDestinationKubeAPIServerReady ConditionType = "DestinationKubeAPIServerReady"
-	// ShootLiveMigrationSourceSeedCleanup indicates that cleanup of resources in the
+	// ShootLiveMigrationMigrateSourceSeedComponents indicates that migration of components in the
 	// source seed has been completed.
-	ShootLiveMigrationSourceSeedCleanup ConditionType = "SourceSeedCleanup"
+	ShootLiveMigrationMigrateSourceSeedComponents ConditionType = "MigrateSourceSeedComponents"
 	// ShootLiveMigrationEtcdMigrationComplete indicates that the etcd cluster has been
 	// fully migrated to the destination seed.
 	ShootLiveMigrationEtcdMigrationComplete ConditionType = "EtcdMigrationComplete"
