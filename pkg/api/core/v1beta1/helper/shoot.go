@@ -165,6 +165,14 @@ func MutateShootCARotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1b
 	f(shoot.Status.Credentials.Rotation.CertificateAuthorities)
 }
 
+// GetShootSSHKeypairRotationPhase returns the specified shoot SSH keypair rotation phase or an empty string.
+func GetShootSSHKeypairRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.SSHKeypair != nil {
+		return credentials.Rotation.SSHKeypair.Phase
+	}
+	return ""
+}
+
 // MutateShootSSHKeypairRotation mutates the .status.credentials.rotation.sshKeypair field based on the provided
 // mutation function. If the field is nil then it is initialized.
 func MutateShootSSHKeypairRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootSSHKeypairRotation)) {

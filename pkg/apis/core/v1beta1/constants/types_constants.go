@@ -433,7 +433,14 @@ const (
 	OperationRotateCredentialsComplete = "rotate-credentials-complete" // #nosec G101 -- No credential.
 	// ShootOperationRotateSSHKeypair is a constant for an annotation on a Shoot indicating that the SSH keypair for the
 	// shoot nodes shall be rotated.
+	//
+	// Deprecated: This annotation will be removed in a future release. Instead use rotate-ssh-keypair-start
+	// and rotate-ssh-keypair-complete.
 	ShootOperationRotateSSHKeypair = "rotate-ssh-keypair"
+	// OperationRotateSSHKeypairStart starts SSH keypair rotation, retaining the old keypair.
+	OperationRotateSSHKeypairStart = "rotate-ssh-keypair-start"
+	// OperationRotateSSHKeypairComplete completes SSH keypair rotation, invalidating the old keypair.
+	OperationRotateSSHKeypairComplete = "rotate-ssh-keypair-complete"
 	// OperationRotateCAStart is a constant for an annotation indicating that the rotation of the certificate
 	// authorities shall be started.
 	OperationRotateCAStart = "rotate-ca-start"

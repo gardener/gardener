@@ -406,12 +406,21 @@ type ShootKubeconfigRotation struct {
 
 // ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
 type ShootSSHKeypairRotation struct {
+	// Phase describes the phase of the ssh-keypair credential rotation.
+	// +optional
+	Phase CredentialsRotationPhase `json:"phase,omitempty" protobuf:"bytes,3,opt,name=phase"`
 	// LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+	// LastInitiationFinishedTime is the most recent time when preparation of the ssh-keypair rotation completed.
+	// +optional
+	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
+	// LastCompletionTriggeredTime is the most recent time when completion of the ssh-keypair rotation was triggered.
+	// +optional
+	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
 }
 
 // ObservabilityRotation contains information about the observability credential rotation.

@@ -28,10 +28,10 @@
 
 	Test:
 		Rotate ssh keypair for a shoot cluster.
-		Annotate Shoot with "gardener.cloud/operation" = "rotate-ssh-keypair".
+		Annotate Shoot with "gardener.cloud/operation" = "rotate-ssh-keypair-start", then "rotate-ssh-keypair-complete".
 	Expected Output
 		- Current ssh-keypair should be rotated.
-		- Current ssh-keypair should be kept in the system post rotation.
+		- Current ssh-keypair should be retained during preparation and removed on completion.
 
  **/
 
@@ -44,6 +44,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -121,7 +122,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		preRotationPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
 		preRotationPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
 		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
-			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateSSHKeypairStart)
 			return nil
 		})
 		gomega.Expect(err).To(gomega.Succeed())
@@ -129,7 +130,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		gomega.Expect(f.GetShoot(ctx, f.Shoot)).To(gomega.Succeed())
 		v, ok := f.Shoot.Annotations[v1beta1constants.GardenerOperation]
 		if ok {
-			gomega.Expect(v).NotTo(gomega.Equal(v1beta1constants.ShootOperationRotateSSHKeypair))
+			gomega.Expect(v).NotTo(gomega.Equal(v1beta1constants.OperationRotateSSHKeypairStart))
 		}
 
 		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
@@ -144,6 +145,16 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		gomega.Expect(preRotationPublicKey).NotTo(gomega.Equal(postRotationPublicKey))
 		gomega.Expect(preRotationPrivateKey).To(gomega.Equal(postRotationOldPrivateKey))
 		gomega.Expect(preRotationPublicKey).To(gomega.Equal(postRotationOldPublicKey))
+
+		err = f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateSSHKeypairComplete)
+			return nil
+		})
+		gomega.Expect(err).To(gomega.Succeed())
+		gomega.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixSSHKeypair)}, secret)).To(gomega.Succeed())
+		gomega.Expect(getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)).To(gomega.Equal(postRotationPrivateKey))
+		gomega.Expect(getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)).To(gomega.Equal(postRotationPublicKey))
+		gomega.Expect(apierrors.IsNotFound(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, gardenerutils.ShootProjectSecretSuffixOldSSHKeypair)}, secret))).To(gomega.BeTrue())
 
 	}, reconcileTimeout)
 })

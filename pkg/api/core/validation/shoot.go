@@ -85,6 +85,8 @@ var (
 		v1beta1constants.OperationRotateCAComplete,
 		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.OperationRotateSSHKeypairStart,
+		v1beta1constants.OperationRotateSSHKeypairComplete,
 		v1beta1constants.OperationRotateRolloutWorkers,
 		v1beta1constants.OperationRolloutWorkers,
 	).Union(forbiddenShootOperationsWhenHibernated)
@@ -131,6 +133,19 @@ var (
 		},
 		v1beta1constants.OperationRotateETCDEncryptionKey: {
 			v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+		},
+		v1beta1constants.OperationRotateCredentialsComplete: {
+			v1beta1constants.OperationRotateSSHKeypairStart,
+		},
+		v1beta1constants.OperationRotateSSHKeypairStart: {
+			v1beta1constants.OperationRotateSSHKeypairComplete,
+			v1beta1constants.ShootOperationRotateSSHKeypair,
+			v1beta1constants.OperationRotateCredentialsComplete,
+		},
+		v1beta1constants.OperationRotateSSHKeypairComplete: {
+			v1beta1constants.ShootOperationRotateSSHKeypair,
+			v1beta1constants.OperationRotateCredentialsStart,
+			v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 		},
 	}
 	availableShootPurposes = sets.New(
@@ -231,7 +246,7 @@ func ValidateShootWithOpts(shoot *core.Shoot, opts shootValidationOptions) field
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
-	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
+	allErrs = append(allErrs, validateShootOperations(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot, opts, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
@@ -3411,7 +3426,7 @@ func ValidateCoreDNSRewritingCommonSuffixes(commonSuffixes []string, fldPath *fi
 	return allErrs
 }
 
-func validateShootOperation(operations, maintenanceOperations []string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+func validateShootOperations(operations, maintenanceOperations []string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	var (
 		fldPathOp          = fldPath.Key(v1beta1constants.GardenerOperation)
 		fldPathMaintOp     = fldPath.Key(v1beta1constants.GardenerMaintenanceOperation)
@@ -3556,6 +3571,9 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
+		if phase := helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials); helper.ShootEnablesSSHAccess(shoot) && len(phase) > 0 && phase != core.RotationCompleted {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.sshKeypair.phase is not 'Completed'"))
+		}
 		allErrs = append(allErrs, validatePendingWorkerUpdates(shoot, fldPath, "rotation of all credentials")...)
 
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -3567,6 +3585,32 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		}
 		if k8sLess134 && helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
+		}
+		if phase := helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials); helper.ShootEnablesSSHAccess(shoot) && len(phase) > 0 && phase != core.RotationPrepared {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.sshKeypair.phase is not 'Prepared'"))
+		}
+
+	case v1beta1constants.ShootOperationRotateSSHKeypair:
+		effectiveOperation := v1beta1constants.OperationRotateSSHKeypairStart
+		if helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials) == core.RotationPrepared {
+			effectiveOperation = v1beta1constants.OperationRotateSSHKeypairComplete
+		}
+		allErrs = append(allErrs, validateShootOperationContext(effectiveOperation, shoot, fldPath)...)
+
+	case v1beta1constants.OperationRotateSSHKeypairStart:
+		if helper.ShootEnablesSSHAccess(shoot) {
+			phase := helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials)
+			if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start SSH keypair rotation if shoot was not yet created successfully or is not ready for reconciliation"))
+			}
+			if len(phase) > 0 && phase != core.RotationCompleted {
+				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start SSH keypair rotation if .status.credentials.rotation.sshKeypair.phase is not 'Completed'"))
+			}
+		}
+
+	case v1beta1constants.OperationRotateSSHKeypairComplete:
+		if helper.ShootEnablesSSHAccess(shoot) && helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete SSH keypair rotation if .status.credentials.rotation.sshKeypair.phase is not 'Prepared'"))
 		}
 
 	case v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout:

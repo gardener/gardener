@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -27,6 +28,7 @@ type SSHKeypairVerifier struct {
 
 	oldKeypairData  map[string][]byte
 	old2KeypairData map[string][]byte
+	newKeypairData  map[string][]byte
 }
 
 // Before is called before the rotation is started.
@@ -76,6 +78,7 @@ func (v *SSHKeypairVerifier) Before(_ context.Context) {
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *SSHKeypairVerifier) ExpectPreparingStatus(g Gomega) {
+	g.Expect(v.Shoot.Status.Credentials.Rotation.SSHKeypair.Phase).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
@@ -89,7 +92,8 @@ func (v *SSHKeypairVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
 func (v *SSHKeypairVerifier) AfterPrepared(_ context.Context) {
 	It("rotation should be prepared", func() {
 		sshKeypairRotation := v.Shoot.Status.Credentials.Rotation.SSHKeypair
-		Expect(sshKeypairRotation.LastCompletionTime.Time.UTC().After(sshKeypairRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
+		Expect(sshKeypairRotation.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
+		Expect(sshKeypairRotation.LastInitiationFinishedTime.Time.UTC().After(sshKeypairRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 	})
 
 	secret := &corev1.Secret{}
@@ -101,6 +105,7 @@ func (v *SSHKeypairVerifier) AfterPrepared(_ context.Context) {
 				HaveKeyWithValue("id_rsa.pub", Not(Equal(v.oldKeypairData["id_rsa.pub"]))),
 			))
 
+			v.newKeypairData = secret.Data
 			g.Expect(v.GardenClient.Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)).To(Succeed())
 			g.Expect(secret.Data).To(Equal(v.oldKeypairData))
 		}).Should(Succeed(), "ssh-keypair secret should have been rotated")
@@ -112,7 +117,7 @@ func (v *SSHKeypairVerifier) AfterPrepared(_ context.Context) {
 			Expect(err).NotTo(HaveOccurred())
 
 			for _, authorizedKeys := range allAuthorizedKeys {
-				Expect(authorizedKeys).To(ContainSubstring(string(secret.Data["id_rsa.pub"])))
+				Expect(authorizedKeys).To(ContainSubstring(string(v.newKeypairData["id_rsa.pub"])))
 				Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
 				if v.old2KeypairData != nil {
 					Expect(authorizedKeys).NotTo(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
@@ -122,14 +127,30 @@ func (v *SSHKeypairVerifier) AfterPrepared(_ context.Context) {
 	}, SpecTimeout(time.Minute))
 }
 
-// ssh-keypair rotation is completed after one reconciliation (there is no second phase)
-// hence, there is nothing to check in the second part of the credentials rotation
-
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *SSHKeypairVerifier) ExpectCompletingStatus(_ Gomega) {}
+func (v *SSHKeypairVerifier) ExpectCompletingStatus(g Gomega) {
+	g.Expect(v.Shoot.Status.Credentials.Rotation.SSHKeypair.Phase).To(Equal(gardencorev1beta1.RotationCompleting))
+}
 
 // AfterCompleted is called when the Shoot is in Completed status.
-func (v *SSHKeypairVerifier) AfterCompleted(_ context.Context) {}
+func (v *SSHKeypairVerifier) AfterCompleted(_ context.Context) {
+	It("Verify SSH rotation completed without generating another keypair", func(ctx SpecContext) {
+		Expect(v.Shoot.Status.Credentials.Rotation.SSHKeypair.Phase).To(Equal(gardencorev1beta1.RotationCompleted))
+		Eventually(ctx, func(g Gomega) {
+			secret := &corev1.Secret{}
+			g.Expect(v.GardenClient.Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
+			g.Expect(secret.Data).To(Equal(v.newKeypairData))
+			g.Expect(apierrors.IsNotFound(v.GardenClient.Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret))).To(BeTrue())
+
+			allAuthorizedKeys, err := v.readAuthorizedKeysFile(ctx)
+			g.Expect(err).NotTo(HaveOccurred())
+			for _, authorizedKeys := range allAuthorizedKeys {
+				g.Expect(authorizedKeys).To(ContainSubstring(string(v.newKeypairData["id_rsa.pub"])))
+				g.Expect(authorizedKeys).NotTo(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
+			}
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
 
 // Since we can't (and do not want ;-)) trying to really SSH into the machine pods from our test environment, we can
 // only check whether the `.ssh/authorized_keys` file on the worker nodes has the expected content.

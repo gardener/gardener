@@ -12583,6 +12583,35 @@ func (m *ShootSSHKeypairRotation) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.LastCompletionTriggeredTime != nil {
+		{
+			size, err := m.LastCompletionTriggeredTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.LastInitiationFinishedTime != nil {
+		{
+			size, err := m.LastInitiationFinishedTime.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	i -= len(m.Phase)
+	copy(dAtA[i:], m.Phase)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Phase)))
+	i--
+	dAtA[i] = 0x1a
 	if m.LastCompletionTime != nil {
 		{
 			size, err := m.LastCompletionTime.MarshalToSizedBuffer(dAtA[:i])
@@ -18956,6 +18985,16 @@ func (m *ShootSSHKeypairRotation) Size() (n int) {
 		l = m.LastCompletionTime.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	l = len(m.Phase)
+	n += 1 + l + sovGenerated(uint64(l))
+	if m.LastInitiationFinishedTime != nil {
+		l = m.LastInitiationFinishedTime.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.LastCompletionTriggeredTime != nil {
+		l = m.LastCompletionTriggeredTime.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -22810,6 +22849,9 @@ func (this *ShootSSHKeypairRotation) String() string {
 	s := strings.Join([]string{`&ShootSSHKeypairRotation{`,
 		`LastInitiationTime:` + strings.Replace(fmt.Sprintf("%v", this.LastInitiationTime), "Time", "v11.Time", 1) + `,`,
 		`LastCompletionTime:` + strings.Replace(fmt.Sprintf("%v", this.LastCompletionTime), "Time", "v11.Time", 1) + `,`,
+		`Phase:` + fmt.Sprintf("%v", this.Phase) + `,`,
+		`LastInitiationFinishedTime:` + strings.Replace(fmt.Sprintf("%v", this.LastInitiationFinishedTime), "Time", "v11.Time", 1) + `,`,
+		`LastCompletionTriggeredTime:` + strings.Replace(fmt.Sprintf("%v", this.LastCompletionTriggeredTime), "Time", "v11.Time", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -58550,6 +58592,110 @@ func (m *ShootSSHKeypairRotation) Unmarshal(dAtA []byte) error {
 				m.LastCompletionTime = &v11.Time{}
 			}
 			if err := m.LastCompletionTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Phase", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Phase = CredentialsRotationPhase(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastInitiationFinishedTime", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LastInitiationFinishedTime == nil {
+				m.LastInitiationFinishedTime = &v11.Time{}
+			}
+			if err := m.LastInitiationFinishedTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastCompletionTriggeredTime", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.LastCompletionTriggeredTime == nil {
+				m.LastCompletionTriggeredTime = &v11.Time{}
+			}
+			if err := m.LastCompletionTriggeredTime.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

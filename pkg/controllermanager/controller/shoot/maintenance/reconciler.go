@@ -668,17 +668,23 @@ func computeCredentialsToRotationResults(log logr.Logger, shoot *gardencorev1bet
 	var (
 		maintenanceResults                    = make(map[string]updateResult)
 		sshKeypairRotationEnabled             = v1beta1helper.IsSSHKeypairAutoRotationEnabled(shoot)
+		sshKeypairRotationPhase               = v1beta1helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials)
 		observabilityPasswordsRotationEnabled = v1beta1helper.IsObservabilityAutoRotationEnabled(shoot)
 		etcdEncryptionKeyRotationEnabled      = v1beta1helper.IsETCDEncryptionKeyAutoRotationEnabled(shoot)
 		etcdEncryptionKeyRotationPhase        = v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)
 	)
 
 	if sshKeypairRotationEnabled && v1beta1helper.ShootEnablesSSHAccess(shoot) &&
+		(sshKeypairRotationPhase == "" || sshKeypairRotationPhase == gardencorev1beta1.RotationCompleted || sshKeypairRotationPhase == gardencorev1beta1.RotationPrepared) &&
 		v1beta1helper.SSHKeypairRotationPassedRotationPeriod(shoot, now.Time, *shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod) {
 		reason := "Automatic rotation of SSH keypair configured"
+		description := "SSH keypair rotation started"
+		if sshKeypairRotationPhase == gardencorev1beta1.RotationPrepared {
+			description = "SSH keypair rotation completion triggered"
+		}
 		log.Info("SSH keypair for workers will be rotated", "reason", reason)
 		maintenanceResults[v1beta1constants.ShootOperationRotateSSHKeypair] = updateResult{
-			description:  "SSH keypair rotation started",
+			description:  description,
 			reason:       reason,
 			isSuccessful: true,
 		}

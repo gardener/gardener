@@ -684,6 +684,9 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 			completeRotationCA(shoot, &now)
 			completeRotationServiceAccountKey(shoot, &now)
+			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
+				completeRotationSSHKeypair(shoot, &now)
+			}
 			if k8sLess134 {
 				completeRotationETCDEncryptionKey(shoot, &now)
 			}
@@ -700,7 +703,21 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		case v1beta1constants.ShootOperationRotateSSHKeypair:
 			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
+				if v1beta1helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationPrepared {
+					completeRotationSSHKeypair(shoot, &now)
+				} else {
+					startRotationSSHKeypair(shoot, &now)
+				}
+			}
+		case v1beta1constants.OperationRotateSSHKeypairStart:
+			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
+			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
 				startRotationSSHKeypair(shoot, &now)
+			}
+		case v1beta1constants.OperationRotateSSHKeypairComplete:
+			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
+			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
+				completeRotationSSHKeypair(shoot, &now)
 			}
 
 		case v1beta1constants.OperationRotateObservabilityCredentials:
@@ -1005,10 +1022,27 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		})
 	}
 
-	if v1beta1helper.IsShootSSHKeypairRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
+	switch v1beta1helper.GetShootSSHKeypairRotationPhase(shoot.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
 		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
-			rotation.LastCompletionTime = &now
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
 		})
+	case gardencorev1beta1.RotationCompleting:
+		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
+		})
+	case "":
+		// Finish rotations initiated before the two-phase lifecycle was introduced.
+		if v1beta1helper.IsShootSSHKeypairRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
+			v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+				rotation.Phase = gardencorev1beta1.RotationPrepared
+				rotation.LastInitiationFinishedTime = &now
+			})
+		}
 	}
 
 	if v1beta1helper.IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
@@ -1327,7 +1361,17 @@ func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *meta
 
 func startRotationSSHKeypair(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
 	v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
 		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
+	})
+}
+
+func completeRotationSSHKeypair(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
 	})
 }
 

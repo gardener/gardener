@@ -3887,6 +3887,10 @@ message ShootNetworks {
 
 // ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
 message ShootSSHKeypairRotation {
+  // Phase describes the phase of the ssh-keypair credential rotation.
+  // +optional
+  optional string phase = 3;
+
   // LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
@@ -3894,6 +3898,14 @@ message ShootSSHKeypairRotation {
   // LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+
+  // LastInitiationFinishedTime is the most recent time when preparation of the ssh-keypair rotation completed.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
+
+  // LastCompletionTriggeredTime is the most recent time when completion of the ssh-keypair rotation was triggered.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
 }
 
 // ShootSpec is the specification of a Shoot.

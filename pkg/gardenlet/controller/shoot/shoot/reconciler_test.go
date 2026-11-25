@@ -152,6 +152,7 @@ var _ = Describe("Reconciler", func() {
 				GardenClient:  gardenClient,
 				SeedClientSet: seedClientSet,
 				Clock:         fakeClock,
+				Identity:      &gardencorev1beta1.Gardener{},
 			}
 
 			Expect(gardenClient.Create(ctx, namespace)).To(Succeed())
@@ -171,6 +172,35 @@ var _ = Describe("Reconciler", func() {
 				Expect(gardenClient.Delete(ctx, namespace)).To(Succeed())
 			})
 		})
+
+		DescribeTable("should persist both phases of SSH keypair rotation",
+			func(start, complete string) {
+				shoot.Annotations = map[string]string{"gardener.cloud/operation": start}
+				Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+				Expect(reconciler.updateShootStatusOperationStart(ctx, shoot, shoot.Status.TechnicalID, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.Phase).To(Equal(gardencorev1beta1.RotationPreparing))
+				initiationTime := shoot.Status.Credentials.Rotation.SSHKeypair.LastInitiationTime.DeepCopy()
+				fakeClock.Step(time.Minute)
+				Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime).To(BeNil())
+
+				shoot.Annotations = map[string]string{"gardener.cloud/operation": complete}
+				Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
+				Expect(reconciler.updateShootStatusOperationStart(ctx, shoot, shoot.Status.TechnicalID, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.Phase).To(Equal(gardencorev1beta1.RotationCompleting))
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.LastInitiationTime).To(Equal(initiationTime))
+				fakeClock.Step(time.Minute)
+				Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
+				Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.Phase).To(Equal(gardencorev1beta1.RotationCompleted))
+				Expect(shoot.Status.Credentials.Rotation.SSHKeypair.LastCompletionTime.UTC()).To(Equal(fakeClock.Now()))
+			},
+			Entry("explicit", "rotate-ssh-keypair-start", "rotate-ssh-keypair-complete"),
+			Entry("legacy", "rotate-ssh-keypair", "rotate-ssh-keypair"),
+			Entry("all credentials", "rotate-credentials-start", "rotate-credentials-complete"),
+		)
 
 		It("should clean the pending workers", func() {
 			shoot.Status.ManualWorkerPoolRollout.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{Name: "worker-1"}}
