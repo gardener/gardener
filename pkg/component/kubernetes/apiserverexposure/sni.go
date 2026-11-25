@@ -176,6 +176,8 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	APIServerClusterIPPrefixLen               int
 	APIServerRequestHeaderUserName            string
 	APIServerRequestHeaderGroup               string
+	APIServerRequestHeaderExtraPrefix         string
+	APIServerRequestHeaderUID                 string
 	APIServerAuthenticationDynamicMetadataKey string
 	IstioTLSSecret                            string
 	TargetClusterAPIServerProxy               string
@@ -253,20 +255,22 @@ func (s *sni) Deploy(ctx context.Context) error {
 		var envoyFilterAPIServerProxy bytes.Buffer
 
 		if err := envoyFilterAPIServerProxyTemplate.Execute(&envoyFilterAPIServerProxy, envoyFilterAPIServerProxyTemplateValues{
-			APIServerProxy:                 values.APIServerProxy,
-			IngressGatewayLabels:           values.IstioIngressGateway.Labels,
-			Name:                           envoyFilter.Name,
-			Namespace:                      envoyFilter.Namespace,
-			ControlPlaneNamespace:          namespace.Name,
-			ControlPlaneNamespaceUID:       string(namespace.UID),
-			Host:                           hostName,
-			MutualTLSHost:                  mTLSHostName,
-			ConnectionUpgradeHost:          connectionUpgradeHostName,
-			ConnectionUpgradeRegex:         istio.ConnectionUpgradeRegex,
-			Port:                           kubeapiserverconstants.Port,
-			APIServerClusterIPPrefixLen:    apiServerClusterIPPrefixLen,
-			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
-			APIServerRequestHeaderGroup:    kubeapiserverconstants.RequestHeaderGroup,
+			APIServerProxy:                    values.APIServerProxy,
+			IngressGatewayLabels:              values.IstioIngressGateway.Labels,
+			Name:                              envoyFilter.Name,
+			Namespace:                         envoyFilter.Namespace,
+			ControlPlaneNamespace:             namespace.Name,
+			ControlPlaneNamespaceUID:          string(namespace.UID),
+			Host:                              hostName,
+			MutualTLSHost:                     mTLSHostName,
+			ConnectionUpgradeHost:             connectionUpgradeHostName,
+			ConnectionUpgradeRegex:            istio.ConnectionUpgradeRegex,
+			Port:                              kubeapiserverconstants.Port,
+			APIServerClusterIPPrefixLen:       apiServerClusterIPPrefixLen,
+			APIServerRequestHeaderUserName:    kubeapiserverconstants.RequestHeaderUserName,
+			APIServerRequestHeaderGroup:       kubeapiserverconstants.RequestHeaderGroup,
+			APIServerRequestHeaderExtraPrefix: kubeapiserverconstants.RequestHeaderExtraPrefix,
+			APIServerRequestHeaderUID:         kubeapiserverconstants.RequestHeaderUID,
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
 			IstioTLSSecret:                   s.emptyIstioTLSSecret().Name,
 			TargetClusterAPIServerProxy:      targetClusterAPIServerProxy,
