@@ -3510,7 +3510,7 @@ string array
 
 
 <p>
-(<em>Appears on:</em><a href="#carotation">CARotation</a>, <a href="#etcdencryptionkeyrotation">ETCDEncryptionKeyRotation</a>, <a href="#serviceaccountkeyrotation">ServiceAccountKeyRotation</a>)
+(<em>Appears on:</em><a href="#carotation">CARotation</a>, <a href="#etcdencryptionkeyrotation">ETCDEncryptionKeyRotation</a>, <a href="#serviceaccountkeyrotation">ServiceAccountKeyRotation</a>, <a href="#shootsshkeypairrotation">ShootSSHKeypairRotation</a>)
 </p>
 
 <p>
