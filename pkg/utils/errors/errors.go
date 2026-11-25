@@ -11,9 +11,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // OperationWillBeRetried is the suffix appended to last operation descriptions for retrying operations.
