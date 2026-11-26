@@ -207,10 +207,15 @@ func (b *Botanist) deployInternalDNSRecord(ctx context.Context) error {
 
 // DestroyExternalDNSRecord destroys the external DNSRecord and waits for the operation to complete.
 func (b *Botanist) DestroyExternalDNSRecord(ctx context.Context) error {
-	if err := b.Shoot.Components.Extensions.ExternalDNSRecord.Destroy(ctx); err != nil {
-		return err
+	return b.destroyDNSRecordWithCredentialsOfItsDomain(ctx, b.Shoot.Components.Extensions.ExternalDNSRecord, b.externalDNSRecordOfPriorDomain())
+}
+
+func (b *Botanist) externalDNSRecordOfPriorDomain() extensionsdnsrecord.Interface {
+	if !b.NeedsPriorExternalDNS() {
+		return nil
 	}
-	return b.Shoot.Components.Extensions.ExternalDNSRecord.WaitCleanup(ctx)
+	values := b.dnsRecordValues(v1beta1constants.DNSRecordExternalName, v1beta1constants.LabelDNSRecordExternal, false)
+	return b.newDNSRecord(values, true, b.Shoot.PriorExternalDomain, apiServerDomain(b.Shoot.PriorExternalClusterDomain))
 }
 
 // DestroyPriorExternalDNSRecord destroys the prior external DNSRecord and waits for the operation to complete.
@@ -223,10 +228,43 @@ func (b *Botanist) DestroyPriorExternalDNSRecord(ctx context.Context) error {
 
 // DestroyInternalDNSRecord destroys the internal DNSRecord and waits for the operation to complete.
 func (b *Botanist) DestroyInternalDNSRecord(ctx context.Context) error {
-	if err := b.Shoot.Components.Extensions.InternalDNSRecord.Destroy(ctx); err != nil {
+	return b.destroyDNSRecordWithCredentialsOfItsDomain(ctx, b.Shoot.Components.Extensions.InternalDNSRecord, b.internalDNSRecordOfPriorDomain())
+}
+
+func (b *Botanist) internalDNSRecordOfPriorDomain() extensionsdnsrecord.Interface {
+	if !b.NeedsPriorInternalDNS() {
+		return nil
+	}
+	values := b.dnsRecordValues(v1beta1constants.DNSRecordInternalName, v1beta1constants.LabelDNSRecordInternal, false)
+	return b.newDNSRecord(values, true, b.Shoot.PriorInternalDomain, apiServerDomain(b.Shoot.PriorInternalClusterDomain))
+}
+
+func (b *Botanist) destroyDNSRecordWithCredentialsOfItsDomain(ctx context.Context, dnsRecord, ofPriorDomain extensionsdnsrecord.Interface) error {
+	// During a domain migration, the record can still have the prior domain, e.g., if the reconciliation failed before
+	// the record was replaced. Destroy deploys the credentials of the component into the secret of the record, and the
+	// DNS extension needs the credentials of the prior domain to delete its DNS entry.
+	if ofPriorDomain != nil {
+		hasPriorDomain, err := b.dnsRecordHasDNSName(ctx, ofPriorDomain.GetValues())
+		if err != nil {
+			return err
+		}
+		if hasPriorDomain {
+			dnsRecord = ofPriorDomain
+		}
+	}
+
+	if err := dnsRecord.Destroy(ctx); err != nil {
 		return err
 	}
-	return b.Shoot.Components.Extensions.InternalDNSRecord.WaitCleanup(ctx)
+	return dnsRecord.WaitCleanup(ctx)
+}
+
+func (b *Botanist) dnsRecordHasDNSName(ctx context.Context, values *extensionsdnsrecord.Values) (bool, error) {
+	dnsRecord := &extensionsv1alpha1.DNSRecord{}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, dnsRecord); err != nil {
+		return false, client.IgnoreNotFound(err)
+	}
+	return dnsRecord.Spec.Name == values.DNSName, nil
 }
 
 // DestroyPriorInternalDNSRecord destroys the prior internal DNSRecord and waits for the operation to complete.
