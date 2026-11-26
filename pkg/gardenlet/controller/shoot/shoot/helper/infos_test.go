@@ -136,6 +136,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 				shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeCreate
 				shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateFailed
+				shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now())
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
@@ -144,8 +145,19 @@ var _ = Describe("CalculateControllerInfos", func() {
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 
-			It("should not requeue the shoot after syncing the cluster resource", func() {
-				Expect(infos.RequeueAfter).To(Equal(reconcile.Result{}))
+			It("should requeue the shoot for the next periodic retry", func() {
+				Expect(infos.RequeueAfter.RequeueAfter).To(Equal(24 * time.Hour))
+			})
+
+			Context("periodic retry interval has elapsed", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-24 * time.Hour))
+				})
+
+				It("should reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Reason).To(Equal("Periodic retry of failed shoot."))
+				})
 			})
 
 			Context("shoot generation was increased", func() {
@@ -395,6 +407,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				shoot.Status.ObservedGeneration = shoot.Generation
 				shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
 				shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateFailed
+				shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now())
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
@@ -403,8 +416,65 @@ var _ = Describe("CalculateControllerInfos", func() {
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 
-			It("should not requeue the shoot after syncing the cluster resource", func() {
-				Expect(infos.RequeueAfter).To(Equal(reconcile.Result{}))
+			It("should requeue the shoot for the next periodic retry", func() {
+				Expect(infos.RequeueAfter.RequeueAfter).To(Equal(24 * time.Hour))
+			})
+
+			Context("periodic retry interval has elapsed", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-24 * time.Hour))
+				})
+
+				It("should reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Reason).To(Equal("Periodic retry of failed shoot."))
+				})
+			})
+
+			Context("periodic retry interval has partially elapsed", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-12 * time.Hour))
+				})
+
+				It("should not reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
+				})
+
+				It("should requeue the shoot for the remaining time", func() {
+					Expect(infos.RequeueAfter.RequeueAfter).To(Equal(12 * time.Hour))
+				})
+			})
+
+			Context("periodic retry interval has elapsed but emergency stop is active", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-24 * time.Hour))
+					seed = &gardencorev1beta1.Seed{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "seed",
+							Annotations: map[string]string{
+								v1beta1constants.AnnotationEmergencyStopShootReconciliations: "true",
+							},
+						},
+					}
+				})
+
+				It("should not reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
+					Expect(infos.ShouldReconcileNow.Reason).To(Equal("Shoot reconciliation blocked by Seed emergency switch"))
+				})
+			})
+
+			Context("periodic retry interval has elapsed but shoot is ignored", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-24 * time.Hour))
+					cfg.RespectSyncPeriodOverwrite = new(true)
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootIgnore, "true")
+				})
+
+				It("should not reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeFalse())
+					Expect(infos.ShouldReconcileNow.Reason).To(Equal("Shoot is ignored."))
+				})
 			})
 
 			Context("shoot generation was increased", func() {
@@ -522,6 +592,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				shoot.Status.ObservedGeneration = shoot.Generation
 				shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeMigrate
 				shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateFailed
+				shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now())
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
@@ -530,8 +601,19 @@ var _ = Describe("CalculateControllerInfos", func() {
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 
-			It("should not requeue the shoot after syncing the cluster resource", func() {
-				Expect(infos.RequeueAfter).To(Equal(reconcile.Result{}))
+			It("should requeue the shoot for the next periodic retry", func() {
+				Expect(infos.RequeueAfter.RequeueAfter).To(Equal(24 * time.Hour))
+			})
+
+			Context("periodic retry interval has elapsed", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-24 * time.Hour))
+				})
+
+				It("should reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Reason).To(Equal("Periodic retry of failed shoot."))
+				})
 			})
 
 			Context("shoot generation was increased", func() {
@@ -615,6 +697,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				shoot.Status.ObservedGeneration = shoot.Generation
 				shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeRestore
 				shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateFailed
+				shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now())
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
@@ -623,8 +706,19 @@ var _ = Describe("CalculateControllerInfos", func() {
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 
-			It("should not requeue the shoot after syncing the cluster resource", func() {
-				Expect(infos.RequeueAfter).To(Equal(reconcile.Result{}))
+			It("should requeue the shoot for the next periodic retry", func() {
+				Expect(infos.RequeueAfter.RequeueAfter).To(Equal(24 * time.Hour))
+			})
+
+			Context("periodic retry interval has elapsed", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-24 * time.Hour))
+				})
+
+				It("should reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Reason).To(Equal("Periodic retry of failed shoot."))
+				})
 			})
 
 			Context("shoot generation was increased", func() {
@@ -706,6 +800,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 				shoot.Status.ObservedGeneration = shoot.Generation
 				shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
 				shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateFailed
+				shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now())
 			})
 
 			It("should not reconcile the shoot but sync the cluster resource", func() {
@@ -714,8 +809,19 @@ var _ = Describe("CalculateControllerInfos", func() {
 				Expect(infos.EnqueueAfter).To(Equal(time.Duration(0)))
 			})
 
-			It("should not requeue the shoot after syncing the cluster resource", func() {
-				Expect(infos.RequeueAfter).To(Equal(reconcile.Result{}))
+			It("should requeue the shoot for the next periodic retry", func() {
+				Expect(infos.RequeueAfter.RequeueAfter).To(Equal(24 * time.Hour))
+			})
+
+			Context("periodic retry interval has elapsed", func() {
+				BeforeEach(func() {
+					shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(cl.Now().Add(-24 * time.Hour))
+				})
+
+				It("should reconcile the shoot", func() {
+					Expect(infos.ShouldReconcileNow.Result).To(BeTrue())
+					Expect(infos.ShouldReconcileNow.Reason).To(Equal("Periodic retry of failed shoot."))
+				})
 			})
 
 			Context("shoot generation was increased", func() {
