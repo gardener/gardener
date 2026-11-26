@@ -100,6 +100,8 @@ spec:
    The old and the new internal domain are served until the rotation is completed.
 3. When no `Shoot` uses the old domain any more, remove it from `internalDomains`.
    A `Shoot` uses a domain if its `.status.advertisedAddresses` contain the domain in the `internal` or `prior-internal` entry.
+   Delete the credentials of the old domain only after you removed the domain from `internalDomains`.
+   The `gardenlet` reads the credentials of all internal domains of the `Seed`, and a missing credential blocks the reconciliation of all `Shoot`s of the `Seed`.
 
 The `gardener-apiserver` protects the internal domains of a `Seed` with `Shoot`s scheduled onto it:
 
@@ -119,7 +121,7 @@ Without an internal domain, the components use the external domain of the `Shoot
    This is refused while a `Shoot` without a managed external domain (`.spec.dns.domain` with a DNS provider that is not `unmanaged`) is scheduled onto the `Seed`.
    New `Shoot`s without such a domain are not scheduled onto the `Seed` any more.
 2. Existing `Shoot`s get the constraint `InternalDomainUpToDate` with status `False` and are migrated with a CA rotation, the same as above.
-3. Remove the internal domains that are no longer used.
+3. Remove the internal domains that are no longer used, and delete their credentials afterwards.
 
 To enable the internal domain again, set `internalDomainEnabled: true` (or remove the field) and migrate the `Shoot`s the same way.
 
