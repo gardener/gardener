@@ -21,6 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
@@ -53,8 +54,63 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			enableVerifier  = &rotation.InternalDomainVerifier{ShootContext: tc}
 		)
 
+		makeOriginalInternalDomainFirst := func(ctx context.Context) {
+			patchGardenletSeedDNS(ctx, tc, gardenlet, map[string]any{
+				"internal":        originalInternalDomain,
+				"internalDomains": []gardencorev1beta1.SeedDNSProviderConfig{*originalInternalDomain, *migrationInternalDomain},
+			})
+		}
+
+		restoreGardenletConfig := func(ctx context.Context) {
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
+				gardenlet.Spec.Config = *originalConfig.DeepCopy()
+				g.Expect(tc.GardenClient.Update(ctx, gardenlet)).To(Succeed())
+			}).Should(Succeed())
+		}
+
+		haveOriginalInternalDomainFirst := func() gomegatypes.GomegaMatcher {
+			return HaveField("InternalDomains", HaveExactElements(
+				HaveField("Domain", Not(Equal(migrationDomain))),
+				HaveField("Domain", migrationDomain),
+			))
+		}
+
+		haveOriginalInternalDomainOnly := func() gomegatypes.GomegaMatcher {
+			return And(
+				HaveField("InternalDomainEnabled", Or(BeNil(), HaveValue(BeTrue()))),
+				HaveField("InternalDomains", HaveExactElements(HaveField("Domain", Not(Equal(migrationDomain))))),
+			)
+		}
+
 		BeforeAll(func() {
 			tc.Init()
+
+			DeferCleanup(func(ctx SpecContext) {
+				if originalConfig.Raw == nil {
+					return
+				}
+				Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
+				if unchanged, err := MatchJSON(originalConfig.Raw).Match(gardenlet.Spec.Config.Raw); err == nil && unchanged {
+					return
+				}
+
+				makeOriginalInternalDomainFirst(ctx)
+				waitForSeedDNS(ctx, tc, haveOriginalInternalDomainFirst())
+				restoreGardenletConfig(ctx)
+				waitForSeedDNS(ctx, tc, haveOriginalInternalDomainOnly())
+			}, NodeTimeout(15*time.Minute))
+
+			DeferCleanup(func(ctx SpecContext) {
+				if existingShootName != "" {
+					return
+				}
+				Eventually(ctx, func(g Gomega) {
+					g.Expect(gardenerutils.ConfirmDeletion(ctx, tc.GardenClient, tc.Shoot)).To(Or(Succeed(), BeNotFoundError()))
+					g.Expect(tc.GardenClient.Delete(ctx, tc.Shoot)).To(Or(Succeed(), BeNotFoundError()))
+				}).Should(Succeed())
+				Eventually(ctx, tc.GardenKomega.Get(tc.Shoot)).WithPolling(30 * time.Second).Should(BeNotFoundError())
+			}, NodeTimeout(20*time.Minute))
 		})
 
 		ItShouldCreateShoot(tc)
@@ -104,29 +160,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			// While a shoot is scheduled onto the seed, the admission refuses to remove the first internal domain in the
 			// update that replaces it. Thus the original domain becomes the first one before the migration domain is removed.
 			It("Make the original internal domain the first one again", func(ctx SpecContext) {
-				patchGardenletSeedDNS(ctx, tc, gardenlet, map[string]any{
-					"internal":        originalInternalDomain,
-					"internalDomains": []gardencorev1beta1.SeedDNSProviderConfig{*originalInternalDomain, *migrationInternalDomain},
-				})
+				makeOriginalInternalDomainFirst(ctx)
 			}, SpecTimeout(time.Minute))
 
-			itShouldWaitForSeedDNS(tc, HaveField("InternalDomains", HaveExactElements(
-				HaveField("Domain", Not(Equal(migrationDomain))),
-				HaveField("Domain", migrationDomain),
-			)))
+			itShouldWaitForSeedDNS(tc, haveOriginalInternalDomainFirst())
 
 			It("Restore the gardenlet configuration", func(ctx SpecContext) {
-				Eventually(ctx, func(g Gomega) {
-					g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
-					gardenlet.Spec.Config = *originalConfig.DeepCopy()
-					g.Expect(tc.GardenClient.Update(ctx, gardenlet)).To(Succeed())
-				}).Should(Succeed())
+				restoreGardenletConfig(ctx)
 			}, SpecTimeout(time.Minute))
 
-			itShouldWaitForSeedDNS(tc, And(
-				HaveField("InternalDomainEnabled", Or(BeNil(), HaveValue(BeTrue()))),
-				HaveField("InternalDomains", HaveExactElements(HaveField("Domain", Not(Equal(migrationDomain))))),
-			))
+			itShouldWaitForSeedDNS(tc, haveOriginalInternalDomainOnly())
 			testInternalDomainMigration(tc, enableVerifier)
 		})
 
@@ -158,13 +201,17 @@ func itShouldWaitForSeedDNS(tc *ShootContext, matcher gomegatypes.GomegaMatcher)
 	GinkgoHelper()
 
 	It("Wait for the DNS configuration of the seed", func(ctx SpecContext) {
-		Eventually(ctx, func(g Gomega) {
-			g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(tc.Seed), tc.Seed)).To(Succeed())
-			g.Expect(tc.Seed.Spec.DNS).To(matcher)
-		}).WithPolling(10 * time.Second).Should(Succeed())
+		waitForSeedDNS(ctx, tc, matcher)
 	}, SpecTimeout(5*time.Minute))
 
 	seed.ItShouldWaitForSeedToBeReady(tc.SeedContext)
+}
+
+func waitForSeedDNS(ctx context.Context, tc *ShootContext, matcher gomegatypes.GomegaMatcher) {
+	Eventually(ctx, func(g Gomega) {
+		g.Expect(tc.GardenClient.Get(ctx, client.ObjectKeyFromObject(tc.Seed), tc.Seed)).To(Succeed())
+		g.Expect(tc.Seed.Spec.DNS).To(matcher)
+	}).WithPolling(10 * time.Second).Should(Succeed())
 }
 
 func internalClusterDomain(shootName, projectName, internalDomain string) string {
