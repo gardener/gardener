@@ -244,12 +244,18 @@ func priorExternalClusterDomain(shoot *gardencorev1beta1.Shoot, currentDomain *s
 	return appliedDomain
 }
 
-func internalClusterDomain(shoot *gardencorev1beta1.Shoot, seedDomain *string) *string {
-	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || len(shoot.Status.AdvertisedAddresses) == 0 {
-		return seedDomain
+func internalClusterDomain(shoot *gardencorev1beta1.Shoot, seedDomain *string) (*string, error) {
+	if len(shoot.Status.AdvertisedAddresses) == 0 {
+		return seedDomain, nil
 	}
 
-	return domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressInternal)
+	appliedDomain := domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressInternal)
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) && !ptr.Equal(appliedDomain, seedDomain) {
+		return nil, fmt.Errorf("changing the internal cluster domain of the shoot from %q to %q requires the %s feature gate",
+			ptr.Deref(appliedDomain, "<none>"), ptr.Deref(seedDomain, "<none>"), features.MutableShootDomains)
+	}
+
+	return appliedDomain, nil
 }
 
 func priorInternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
@@ -343,7 +349,9 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
 	shoot.DesiredInternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots())
-	shoot.InternalClusterDomain = internalClusterDomain(shootObject, shoot.DesiredInternalClusterDomain)
+	if shoot.InternalClusterDomain, err = internalClusterDomain(shootObject, shoot.DesiredInternalClusterDomain); err != nil {
+		return nil, err
+	}
 	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
 	shoot.PriorServiceAccountIssuer = priorServiceAccountIssuer(shootObject)
 	if shoot.InternalDomain, err = b.findInternalDomain(shootObject.Name, shoot.InternalClusterDomain); err != nil {

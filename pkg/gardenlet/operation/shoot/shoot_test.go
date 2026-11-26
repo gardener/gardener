@@ -895,12 +895,6 @@ var _ = Describe("shoot", func() {
 					Expect(s.InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.old.example.com")))
 				})
 
-				It("should take the domain of the seed if the feature gate is disabled", func() {
-					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
-
-					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
-				})
-
 				It("should be nil for a new shoot if the seed disables the internal domain", func() {
 					shootObject.Status.AdvertisedAddresses = nil
 					seedObject.Spec.DNS.InternalDomainEnabled = new(false)
@@ -910,11 +904,48 @@ var _ = Describe("shoot", func() {
 					Expect(s.InternalDomain).To(BeNil())
 				})
 
-				It("should take the domain of the seed although the seed disables the internal domain if the feature gate is disabled", func() {
-					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
-					seedObject.Spec.DNS.InternalDomainEnabled = new(false)
+				Context("without the feature gate", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					})
 
-					Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+					It("should keep the applied domain if it is the domain of the seed", func() {
+						internalDomains = []*gardener.Domain{oldDomain}
+
+						Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.old.example.com")))
+					})
+
+					It("should take the domain of the seed if the shoot has no advertised addresses", func() {
+						shootObject.Status.AdvertisedAddresses = nil
+
+						Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+					})
+
+					It("should take the domain of the seed although the seed disables the internal domain", func() {
+						shootObject.Status.AdvertisedAddresses = nil
+						seedObject.Spec.DNS.InternalDomainEnabled = new(false)
+
+						Expect(buildShoot().InternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
+					})
+
+					It("should fail if the domain of the seed differs from the applied domain", func() {
+						_, err := build()
+						Expect(err).To(MatchError(`changing the internal cluster domain of the shoot from "foo.bar.internal.old.example.com" to "foo.bar.internal.new.example.com" requires the MutableShootDomains feature gate`))
+					})
+
+					It("should fail if the shoot has no internal domain but the seed gives one", func() {
+						shootObject.Status.AdvertisedAddresses = shootObject.Status.AdvertisedAddresses[:1]
+
+						_, err := build()
+						Expect(err).To(MatchError(`changing the internal cluster domain of the shoot from "<none>" to "foo.bar.internal.new.example.com" requires the MutableShootDomains feature gate`))
+					})
+
+					It("should keep no internal domain if the seed gives none", func() {
+						shootObject.Status.AdvertisedAddresses = shootObject.Status.AdvertisedAddresses[:1]
+						internalDomains = nil
+
+						Expect(buildShoot().InternalClusterDomain).To(BeNil())
+					})
 				})
 			})
 
@@ -931,6 +962,7 @@ var _ = Describe("shoot", func() {
 
 				It("should take the first internal domain of the seed although the seed disables the internal domain if the feature gate is disabled", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					shootObject.Status.AdvertisedAddresses = nil
 					seedObject.Spec.DNS.InternalDomainEnabled = new(false)
 
 					Expect(buildShoot().DesiredInternalClusterDomain).To(PointTo(Equal("foo.bar.internal.new.example.com")))
@@ -1014,6 +1046,7 @@ var _ = Describe("shoot", func() {
 
 				It("should be nil if the feature gate is disabled", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					internalDomains = []*gardener.Domain{oldDomain}
 
 					Expect(buildShoot().PriorInternalClusterDomain).To(BeNil())
 				})
@@ -1060,6 +1093,7 @@ var _ = Describe("shoot", func() {
 
 				It("should be nil if the feature gate is disabled", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					internalDomains = []*gardener.Domain{oldDomain}
 					withCARotationPhase(gardencorev1beta1.RotationPrepared)
 
 					Expect(buildShoot().PriorServiceAccountIssuer).To(BeNil())
