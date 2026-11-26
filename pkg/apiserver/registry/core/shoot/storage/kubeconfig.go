@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -104,18 +105,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 		return nil, apierrors.NewInternalError(fmt.Errorf("cannot convert to *core.Shoot object - got type %T", shootObj))
 	}
 
-	// filter only addresses that actually advertise the kube-apiserver
-	// it is possible that the list of addresses also include URLs like the shoot's issuer URL
-	var kubeAPIServerAddresses []core.ShootAdvertisedAddress
-	for _, addr := range shoot.Status.AdvertisedAddresses {
-		if addr.Name == v1beta1constants.AdvertisedAddressExternal ||
-			addr.Name == v1beta1constants.AdvertisedAddressPriorExternal ||
-			addr.Name == v1beta1constants.AdvertisedAddressInternal ||
-			addr.Name == v1beta1constants.AdvertisedAddressWildcardTLSSeedBound ||
-			addr.Name == v1beta1constants.AdvertisedAddressUnmanaged {
-			kubeAPIServerAddresses = append(kubeAPIServerAddresses, addr)
-		}
-	}
+	kubeAPIServerAddresses := filterKubeAPIServerAddresses(shoot.Status.AdvertisedAddresses)
 	if len(kubeAPIServerAddresses) == 0 {
 		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no suitable advertised address for kube-apiserver found in .status.advertisedAddresses")
 		return nil, apierrors.NewInvalid(r.gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
@@ -213,4 +203,31 @@ func (r *KubeconfigREST) GroupVersionKind(schema.GroupVersion) schema.GroupVersi
 
 type getter interface {
 	Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error)
+}
+
+func filterKubeAPIServerAddresses(addresses []core.ShootAdvertisedAddress) []core.ShootAdvertisedAddress {
+	internalDomainMigration := slices.ContainsFunc(addresses, func(address core.ShootAdvertisedAddress) bool {
+		return address.Name == v1beta1constants.AdvertisedAddressPriorInternal ||
+			address.Name == v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer
+	})
+
+	// filter only addresses that actually advertise the kube-apiserver
+	// it is possible that the list of addresses also include URLs like the shoot's issuer URL
+	var result []core.ShootAdvertisedAddress
+	for _, address := range addresses {
+		switch address.Name {
+		case v1beta1constants.AdvertisedAddressExternal,
+			v1beta1constants.AdvertisedAddressPriorExternal,
+			v1beta1constants.AdvertisedAddressWildcardTLSSeedBound,
+			v1beta1constants.AdvertisedAddressUnmanaged:
+			result = append(result, address)
+		case v1beta1constants.AdvertisedAddressInternal:
+			if !internalDomainMigration {
+				result = append(result, address)
+			}
+		case v1beta1constants.AdvertisedAddressPriorInternal:
+			result = append(result, core.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressInternal, URL: address.URL})
+		}
+	}
+	return result
 }
