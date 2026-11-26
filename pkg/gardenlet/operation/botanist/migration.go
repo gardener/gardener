@@ -33,7 +33,7 @@ func (b *Botanist) PersistShootState(ctx context.Context) error {
 // in-memory Shoot.
 func (b *Botanist) RefreshShootStateForLiveMigration(ctx context.Context) error {
 	shootState := &gardencorev1beta1.ShootState{}
-	if err := b.GardenClient.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
+	if err := b.GardenAPIReader.Get(ctx, client.ObjectKeyFromObject(b.Shoot.GetInfo()), shootState); err != nil {
 		return fmt.Errorf("failed to fetch ShootState for live migration: %w", err)
 	}
 	b.Shoot.SetShootState(shootState)

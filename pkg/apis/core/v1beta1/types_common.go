@@ -156,6 +156,8 @@ const (
 	EventMigrationPrepared = "MigrationPrepared"
 	// EventMigrationPreparationFailed indicates that the Migration preparation failed.
 	EventMigrationPreparationFailed = "MigrationPreparationFailed"
+	// EventLiveMigrated indicates that the Live Migration operation was successful.
+	EventLiveMigrated = "LiveMigrated"
 
 	// EventActionReconcile describes an event action for reconciliation.
 	EventActionReconcile = "Reconcile"
@@ -163,6 +165,8 @@ const (
 	EventActionDelete = "Delete"
 	// EventActionMigrate describes an event action for migration.
 	EventActionMigrate = "Migrate"
+	// EventActionLiveMigrate describes an event action for live migration.
+	EventActionLiveMigrate = "LiveMigrate"
 	// EventActionHealthCheck describes an event action for health checks.
 	EventActionHealthCheck = "HealthCheck"
 )
