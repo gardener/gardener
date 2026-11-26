@@ -738,10 +738,22 @@ var _ = Describe("shoot", func() {
 				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
 			})
 
-			It("should be nil if the shoot has no domain", func() {
+			It("should be nil if the shoot has no external domain", func() {
 				shootObject.Spec.DNS = nil
+				shootObject.Status.AdvertisedAddresses = append(shootObject.Status.AdvertisedAddresses,
+					advertisedAddress(v1beta1constants.AdvertisedAddressInternal, "foo.bar.internal.example.com"),
+				)
 
-				Expect(buildShoot().PriorExternalClusterDomain).To(BeNil())
+				s, err := NewBuilder().
+					WithShootObject(shootObject).
+					WithCloudProfileObject(nil).
+					WithoutShootCredentials().
+					WithProjectName("bar").
+					WithInternalDomains([]*gardener.Domain{{Domain: "internal.example.com"}}).
+					Build(ctx, seedClientSet, c)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(s.PriorExternalClusterDomain).To(BeNil())
 			})
 
 			It("should be nil if the builder removes the shoot DNS, even if a prior external address exists", func() {
@@ -902,6 +914,53 @@ var _ = Describe("shoot", func() {
 					s := buildShoot()
 					Expect(s.InternalClusterDomain).To(BeNil())
 					Expect(s.InternalDomain).To(BeNil())
+				})
+
+				Context("without an internal domain", func() {
+					BeforeEach(func() {
+						shootObject.Status.AdvertisedAddresses = nil
+						seedObject.Spec.DNS.InternalDomainEnabled = new(false)
+					})
+
+					It("should succeed with a managed external domain", func() {
+						Expect(buildShoot().ExternalClusterDomain).To(PointTo(Equal("foo.example.com")))
+					})
+
+					It("should succeed with a managed external domain which the builder unsets", func() {
+						s, err := NewBuilder().
+							WithShootObject(shootObject).
+							WithCloudProfileObject(nil).
+							WithoutShootCredentials().
+							WithSeedObject(seedObject).
+							WithoutShootDNS().
+							WithProjectName("bar").
+							WithInternalDomains(internalDomains).
+							Build(ctx, seedClientSet, c)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(s.InternalClusterDomain).To(BeNil())
+					})
+
+					It("should fail without an external domain", func() {
+						shootObject.Spec.DNS = nil
+
+						_, err := build()
+						Expect(err).To(MatchError("the shoot has neither an internal domain nor a managed external domain"))
+					})
+
+					It("should fail with an unmanaged external domain", func() {
+						shootObject.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: new("unmanaged")}}
+
+						_, err := build()
+						Expect(err).To(MatchError("the shoot has neither an internal domain nor a managed external domain"))
+					})
+
+					It("should succeed for a self-hosted shoot without an external domain", func() {
+						shootObject.Spec.DNS = nil
+						shootObject.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "control-plane", ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}}
+
+						Expect(buildShoot().InternalClusterDomain).To(BeNil())
+					})
 				})
 
 				Context("without the feature gate", func() {

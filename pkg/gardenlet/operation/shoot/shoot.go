@@ -327,6 +327,7 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 		return nil, err
 	}
 
+	hasManagedExternalDomain := v1beta1helper.ShootHasManagedExternalDomain(shootObject)
 	if b.shootDNSFunc != nil {
 		shootObject.Spec.DNS = b.shootDNSFunc()
 	}
@@ -351,6 +352,9 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	shoot.DesiredInternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots())
 	if shoot.InternalClusterDomain, err = internalClusterDomain(shootObject, shoot.DesiredInternalClusterDomain); err != nil {
 		return nil, err
+	}
+	if shoot.InternalClusterDomain == nil && !hasManagedExternalDomain && !v1beta1helper.IsShootSelfHosted(shootObject.Spec.Provider.Workers) {
+		return nil, fmt.Errorf("the shoot has neither an internal domain nor a managed external domain")
 	}
 	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
 	shoot.PriorServiceAccountIssuer = priorServiceAccountIssuer(shootObject)
