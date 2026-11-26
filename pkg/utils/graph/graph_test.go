@@ -463,6 +463,18 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, formerInternalDNSCredentialsRef.Namespace, formerInternalDNSCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 	})
 
+	It("should not add an edge for credentials of an internal domain with an unsupported kind", func() {
+		unsupportedCredentialsRef := corev1.ObjectReference{APIVersion: "v1", Kind: "ConfigMap", Namespace: "garden", Name: "unsupported"}
+		seed1.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{
+			{CredentialsRef: seed1InternalDNSSecretCredentialsRef},
+			{CredentialsRef: unsupportedCredentialsRef},
+		}
+
+		Expect(func() { fakeInformerSeed.Add(seed1) }).NotTo(Panic())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seed1InternalDNSSecretCredentialsRef.Namespace, seed1InternalDNSSecretCredentialsRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasVertex(VertexTypeConfigMap, unsupportedCredentialsRef.Namespace, unsupportedCredentialsRef.Name)).To(BeFalse())
+	})
+
 	It("should behave as expected for gardencorev1beta1.Seed", func() {
 		By("Add")
 		fakeInformerSeed.Add(seed1)
