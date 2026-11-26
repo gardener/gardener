@@ -195,16 +195,34 @@ func ItShouldRejectWrongCredentialsVictoriaLogsRequestInGarden(tc *SeedContext) 
 }
 
 const (
-	annotationRestartSystemdServices = "worker.gardener.cloud/restart-systemd-services"
-	invalidToken                     = "invalid-token"
+	annotationRestartSystemdServices       = "worker.gardener.cloud/restart-systemd-services"
+	invalidToken                           = "invalid-token"
+	openTelemetryCollectorAccessSecretName = "shoot-access-opentelemetry-collector"
 )
 
-// ItShouldBreakOpenTelemetryCollectorToken corrupts the opentelemetry-collector auth token by patching the
-// secret in the shoot to an invalid value.
+// ItShouldBreakOpenTelemetryCollectorToken changes the renewal time via the seed-side access Secret,
+// then corrupts the token in the shoot-side target Secret.
 func ItShouldBreakOpenTelemetryCollectorToken(tc *ShootContext) {
 	GinkgoHelper()
 
 	It("Break the opentelemetry-collector auth token", func(ctx SpecContext) {
+		// Postpone scheduled renewal until the restore step makes it due again.
+		accessSecret := &corev1.Secret{}
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(tc.SeedClient.Get(ctx, types.NamespacedName{
+				Namespace: tc.ControlPlaneNamespace,
+				Name:      openTelemetryCollectorAccessSecretName,
+			}, accessSecret)).To(Succeed())
+
+			patch := client.MergeFrom(accessSecret.DeepCopy())
+			if accessSecret.Annotations == nil {
+				accessSecret.Annotations = map[string]string{}
+			}
+
+			accessSecret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp] = "9999-01-01T00:00:00Z"
+			g.Expect(tc.SeedClient.Patch(ctx, accessSecret, patch)).To(Succeed())
+		}).WithPolling(time.Second).Should(Succeed())
+
 		secret := &corev1.Secret{}
 		Eventually(ctx, func(g Gomega) {
 			g.Expect(tc.ShootClient.Get(ctx, types.NamespacedName{
@@ -216,6 +234,7 @@ func ItShouldBreakOpenTelemetryCollectorToken(tc *ShootContext) {
 			if secret.Data == nil {
 				secret.Data = map[string][]byte{}
 			}
+
 			secret.Data["token"] = []byte(invalidToken)
 			g.Expect(tc.ShootClient.Patch(ctx, secret, patch)).To(Succeed())
 		}).WithPolling(1 * time.Second).Should(Succeed())
@@ -268,7 +287,7 @@ func ItShouldRestoreOpenTelemetryCollectorToken(tc *ShootContext) {
 		Eventually(ctx, func(g Gomega) {
 			g.Expect(tc.SeedClient.Get(ctx, types.NamespacedName{
 				Namespace: tc.ControlPlaneNamespace,
-				Name:      "shoot-access-opentelemetry-collector",
+				Name:      openTelemetryCollectorAccessSecretName,
 			}, accessSecret)).To(Succeed())
 
 			patch := client.MergeFrom(accessSecret.DeepCopy())
