@@ -167,7 +167,7 @@ func (c *Constraint) constraintsChecks(
 	status, reason, message = c.checkIfManualInPlaceWorkersUpdated()
 	constraints.manualInPlaceWorkersUpdated = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.manualInPlaceWorkersUpdated, status, reason, message)
 
-	status, reason, message = c.CheckIfInternalDomainUpToDate()
+	status, reason, message = c.checkIfInternalDomainUpToDate()
 	constraints.internalDomainUpToDate = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.internalDomainUpToDate, status, reason, message)
 
 	// Now check constraints depending on the shoot's kube-apiserver to be up and running
@@ -342,8 +342,7 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 		nil
 }
 
-// CheckIfInternalDomainUpToDate checks whether the shoot uses the internal domain that the seed gives to new shoots.
-func (c *Constraint) CheckIfInternalDomainUpToDate() (gardencorev1beta1.ConditionStatus, string, string) {
+func (c *Constraint) checkIfInternalDomainUpToDate() (gardencorev1beta1.ConditionStatus, string, string) {
 	if ptr.Equal(c.shoot.InternalClusterDomain, c.shoot.DesiredInternalClusterDomain) {
 		return gardencorev1beta1.ConditionTrue,
 			"NoInternalDomainMigrationPending",
