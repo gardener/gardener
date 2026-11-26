@@ -462,6 +462,7 @@ There are a few special cases that overwrite or confine how often and under whic
 - In case the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), shoots can be marked as "ignored" by setting the `shoot.gardener.cloud/ignore` annotation. In this case, the gardenlet does not perform any reconciliation for the shoot.
 - In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), the gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). The gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [Shoot Maintenance](../usage/shoot/shoot_maintenance.md#cluster-reconciliation)).
 - In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [Shoot Maintenance](../usage/shoot/shoot_maintenance.md)).
+- Failed shoots are periodically reconciled every 24 hours to ensure that certificate renewals are not blocked indefinitely.
 
 #### ["Care" Reconciler](../../pkg/gardenlet/controller/shoot/care)
 

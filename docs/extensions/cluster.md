@@ -50,7 +50,7 @@ The resource is written by Gardener before it starts the reconciliation flow of 
 There are some fields in the `Shoot` specification that might be interesting to take into account.
 
 * `.spec.hibernation.enabled={true,false}`: Extension controllers might want to behave differently if the shoot is hibernated or not (probably they might want to scale down their control plane components, for example).
-* `.status.lastOperation.state=Failed`: If Gardener sets the shoot's last operation state to `Failed`, it means that Gardener won't automatically retry to finish the reconciliation/deletion flow because an error occurred that could not be resolved within the last `24h` (default). In this case, end-users are expected to manually re-trigger the reconciliation flow in case they want Gardener to try again. Extension controllers are expected to follow the same principle. This means they have to read the shoot state out of the `Cluster` resource.
+* `.status.lastOperation.state=Failed`: If Gardener sets the shoot's last operation state to `Failed`, it means that Gardener won't immediately retry the reconciliation/deletion flow. Gardener will automatically retry every `24h`. End-users can also manually re-trigger the reconciliation flow. Extension controllers are expected to follow the same principle. This means they have to read the shoot state out of the `Cluster` resource.
 
 ## Extension Resources Not Associated with a Shoot
 
