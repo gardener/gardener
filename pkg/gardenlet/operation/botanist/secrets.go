@@ -341,8 +341,7 @@ func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 
 func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
 	options := []secretsmanager.GenerateOption{secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)}
-	phase := v1beta1helper.GetShootSSHKeypairRotationPhase(b.Shoot.GetInfo().Status.Credentials)
-	if phase == gardencorev1beta1.RotationCompleting || phase == gardencorev1beta1.RotationCompleted {
+	if phase := v1beta1helper.GetShootSSHKeypairRotationPhase(b.Shoot.GetInfo().Status.Credentials); phase == gardencorev1beta1.RotationCompleting || phase == gardencorev1beta1.RotationCompleted {
 		options = append(options, secretsmanager.IgnoreOldSecrets())
 	}
 	sshKeypairSecret, err := b.SecretsManager.Generate(ctx, &secretsutils.RSASecretConfig{
