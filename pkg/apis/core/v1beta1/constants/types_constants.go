@@ -436,6 +436,7 @@ const (
 	//
 	// Deprecated: This annotation will be removed in a future release. Instead use rotate-ssh-keypair-start
 	// and rotate-ssh-keypair-complete.
+	// TODO(David Hasselboeck): Remove this annotation and its backward-compatibility handling on 2027-07-01.
 	ShootOperationRotateSSHKeypair = "rotate-ssh-keypair"
 	// OperationRotateSSHKeypairStart starts SSH keypair rotation, retaining the old keypair.
 	OperationRotateSSHKeypairStart = "rotate-ssh-keypair-start"
