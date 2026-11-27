@@ -34,6 +34,8 @@ kubernetesVersion: "1.33.0"
 # Istio Ingress Configuration Resources
 apiServerRequestHeaderUserName: X-Remote-User
 apiServerRequestHeaderGroup: X-Remote-Group
+apiServerRequestHeaderUid: X-Remote-Uid
+apiServerRequestHeaderPrefixExtra: X-Remote-Extra-
 apiServerAuthenticationDynamicMetadataKey: authenticated-kube-apiserver-host
 terminateAPIServerTLS: false
 terminateLoadBalancerProxyProtocol: false
@@ -43,3 +45,6 @@ httpProxy:
     enabled: false
     header: Reversed-VPN
     port: 8132
+
+# TODO(oliver-goetz): Remove when Gardener v1.159 has been released
+luaFilterNotMigrated: true
