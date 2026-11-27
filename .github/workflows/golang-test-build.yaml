@@ -48,7 +48,7 @@ jobs:
       packages: write
       id-token: write
     secrets: inherit
-    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
     strategy:
       matrix: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
     with:

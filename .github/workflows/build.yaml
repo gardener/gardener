@@ -25,7 +25,7 @@ on:
 
 jobs:
   prepare:
-    uses: gardener/cc-utils/.github/workflows/prepare.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/prepare.yaml@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
     with:
       mode: ${{ inputs.mode || 'snapshot' }}
     permissions:
@@ -35,8 +35,8 @@ jobs:
     runs-on: 'ubuntu-latest'
     if: github.event_name != 'pull_request'
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@bce63f62928717a11f610ec8022af9feb497d5df # v1
-      - uses: gardener/cc-utils/.github/actions/setup-git-identity@bce63f62928717a11f610ec8022af9feb497d5df # v1
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
+      - uses: gardener/cc-utils/.github/actions/setup-git-identity@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
         with:
           go-version: '1.27'
@@ -54,7 +54,7 @@ jobs:
             exit 0
           fi
       - name: add-tests-report-to-component-descriptor
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@bce63f62928717a11f610ec8022af9feb497d5df # v1
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |
@@ -69,7 +69,7 @@ jobs:
                   - test
 
   sast-lint:
-    uses: gardener/cc-utils/.github/workflows/sastlint-ocm.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/sastlint-ocm.yaml@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -98,7 +98,7 @@ jobs:
       packages: write
       id-token: write
     secrets: inherit
-    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
     strategy:
       matrix:
         args:
@@ -150,7 +150,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
     strategy:
       matrix:
         args:
@@ -222,13 +222,13 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.args.runner }}
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@bce63f62928717a11f610ec8022af9feb497d5df # v1
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
         with:
           go-version: '1.27'
       - name: import-release-commit
         if: ${{ inputs.commit-objects-artefact != '' }}
-        uses: gardener/cc-utils/.github/actions/import-commit@bce63f62928717a11f610ec8022af9feb497d5df # v1
+        uses: gardener/cc-utils/.github/actions/import-commit@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
         with:
           commit-objects-artefact: ${{ inputs.commit-objects-artefact }}
           after-import: rebase
@@ -273,7 +273,7 @@ jobs:
           fi
 
           unlink ${outpath}
-      - uses: gardener/cc-utils/.github/actions/export-ocm-fragments@bce63f62928717a11f610ec8022af9feb497d5df # v1
+      - uses: gardener/cc-utils/.github/actions/export-ocm-fragments@d478850afa1a7e0f9deb710e4d44eb0a2d8dce07 # 1.2881.0
         if: github.event_name != 'pull_request'
         with:
           blobs-directory: /tmp/blobs.d
