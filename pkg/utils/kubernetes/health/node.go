@@ -64,8 +64,11 @@ func CheckNode(node *corev1.Node) error {
 	return nil
 }
 
-// GetPreservedNodeNames returns the names of nodes that belong to a preserved failed machine —
-// i.e. nodes with NodePreserved == True and NodeReady == False or Unknown.
+// GetPreservedNodeNames returns the names of nodes that belong to a preserved failed machine
+// (NodePreserved == True and NodeReady == False or Unknown) or that are under planned maintenance
+// and unhealthy (MaintenanceInProgress == True and NodeReady == False or Unknown). A Ready node
+// that merely carries the maintenance condition is not included: its workloads still run, so
+// DaemonSets on it are not failing and do not need suppression.
 func GetPreservedNodeNames(ctx context.Context, c client.Client) (sets.Set[string], error) {
 	nodeList := &corev1.NodeList{}
 	if err := c.List(ctx, nodeList); err != nil {
@@ -73,11 +76,35 @@ func GetPreservedNodeNames(ctx context.Context, c client.Client) (sets.Set[strin
 	}
 	preserved := sets.New[string]()
 	for _, node := range nodeList.Items {
-		if IsNodePreservedAndUnhealthy(node) {
+		if IsNodePreservedAndUnhealthy(node) || IsNodeUnderMaintenanceAndNotReady(node) {
 			preserved.Insert(node.Name)
 		}
 	}
 	return preserved, nil
+}
+
+// IsNodeUnderMaintenanceAndNotReady reports whether a node is under planned maintenance and
+// additionally not Ready.
+func IsNodeUnderMaintenanceAndNotReady(node corev1.Node) bool {
+	if !IsNodeUnderMaintenance(node) {
+		return false
+	}
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady && (condition.Status == corev1.ConditionFalse || condition.Status == corev1.ConditionUnknown) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsNodeUnderMaintenance reports whether a node is under planned maintenance.
+func IsNodeUnderMaintenance(node corev1.Node) bool {
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == machinev1alpha1.NodeMaintenanceInProgress && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 // IsNodePreservedAndUnhealthy reports whether a node belongs to a preserved failed machine: it must have

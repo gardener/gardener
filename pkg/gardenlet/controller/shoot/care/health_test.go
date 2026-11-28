@@ -581,6 +581,37 @@ var _ = Describe("health check", func() {
 				int32(0),
 				[]coordinationv1.Lease{},
 				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", "node and backing machine preserved by MCM"))),
+			Entry("only maintenance node is unhealthy — reports False, not True",
+				kubernetesVersion,
+				[]corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "maintenance-node",
+							Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()},
+							Annotations: map[string]string{
+								nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: cloudConfigSecretChecksum1,
+							},
+						},
+						Status: corev1.NodeStatus{
+							NodeInfo: corev1.NodeSystemInfo{KubeletVersion: kubernetesVersion.Original()},
+							Conditions: []corev1.NodeCondition{
+								{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue},
+								{Type: corev1.NodeReady, Status: corev1.ConditionFalse, Reason: "KubeletNotReady"},
+							},
+						},
+					},
+				},
+				[]gardencorev1beta1.Worker{{Name: workerPoolName1, Maximum: 10, Minimum: 1}},
+				map[string]metav1.ObjectMeta{
+					workerPoolName1: {
+						Name:        operatingsystemconfig.Key(kubernetesVersion, nil, &gardencorev1beta1.Worker{Name: workerPoolName1}, false, nil, nil),
+						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
+						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
+					},
+				},
+				int32(0),
+				[]coordinationv1.Lease{},
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", "node and backing machine under planned maintenance by MCM"))),
 			Entry("unpreserved failure takes priority over preserved failure",
 				kubernetesVersion,
 				[]corev1.Node{

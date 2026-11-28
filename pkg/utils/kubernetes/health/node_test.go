@@ -29,6 +29,18 @@ var _ = Describe("Node", func() {
 			Entry("ready condition not indicating true", &corev1.Node{
 				Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}},
 			}, HaveOccurred()),
+			Entry("not ready and under planned maintenance is still unhealthy at the node level", &corev1.Node{
+				Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+					{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue},
+				}},
+			}, HaveOccurred()),
+			Entry("not ready with maintenance condition false", &corev1.Node{
+				Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+					{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionFalse},
+				}},
+			}, HaveOccurred()),
 		)
 	})
 
@@ -69,6 +81,64 @@ var _ = Describe("Node", func() {
 					{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
 				}}},
 				false,
+			),
+			Entry("no conditions",
+				corev1.Node{},
+				false,
+			),
+		)
+	})
+
+	Describe("IsNodeUnderMaintenance", func() {
+		DescribeTable("nodes",
+			func(node corev1.Node, expected bool) {
+				Expect(health.IsNodeUnderMaintenance(node)).To(Equal(expected))
+			},
+			Entry("maintenance in progress (regardless of readiness)",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue},
+				}}},
+				true,
+			),
+			Entry("maintenance in progress and not ready",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+				}}},
+				true,
+			),
+			Entry("no conditions",
+				corev1.Node{},
+				false,
+			),
+		)
+	})
+
+	Describe("IsNodeUnderMaintenanceAndNotReady", func() {
+		DescribeTable("nodes",
+			func(node corev1.Node, expected bool) {
+				Expect(health.IsNodeUnderMaintenanceAndNotReady(node)).To(Equal(expected))
+			},
+			Entry("maintenance in progress and ready",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+				}}},
+				false,
+			),
+			Entry("maintenance in progress and not ready (False)",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+				}}},
+				true,
+			),
+			Entry("maintenance in progress and not ready (Unknown)",
+				corev1.Node{Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{
+					{Type: machinev1alpha1.NodeMaintenanceInProgress, Status: corev1.ConditionTrue},
+					{Type: corev1.NodeReady, Status: corev1.ConditionUnknown},
+				}}},
+				true,
 			),
 			Entry("no conditions",
 				corev1.Node{},
