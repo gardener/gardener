@@ -214,6 +214,15 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	}); err != nil {
 		return fmt.Errorf("failed waiting for service %s to get created by gardener-resource-manager: %w", client.ObjectKeyFromObject(serviceRuntime), err)
 	}
+
+	// Publish the virtual resources only after the runtime rollout is healthy and not progressing. During garden CA
+	// rotation the new server certificate must be serving before the APIService bundles drop the previous CA.
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, g.apiReader, g.namespace, ManagedResourceNameRuntime); err != nil {
+		return err
+	}
+
 	err = virtualRegistry.Add(
 		g.apiService(secretCAGardener, gardencorev1.SchemeGroupVersion.Group, gardencorev1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, gardencorev1beta1.SchemeGroupVersion.Group, gardencorev1beta1.SchemeGroupVersion.Version),
@@ -262,11 +271,8 @@ func (g *gardenerAPIServer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	// Typically, we use managedresources.WaitUntilHealthy by default everywhere/in all components.
-	// However, here we have to wait for the runtime resources to no longer be progressing before we can update the
-	// virtual resources. This is important for credentials rotation since we want all GAPI pods to run with the new
-	// server certificate before we drop the old CA from the bundle in the APIServices (which get deployed via the
-	// virtual resources).
+	// Deploy enforces the runtime-before-virtual order by waiting for the runtime ManagedResource before it writes
+	// the virtual resources. Wait rechecks both ManagedResources for the garden reconcile graph.
 	if err := managedresources.WaitUntilHealthyAndNotProgressing(timeoutCtx, g.apiReader, g.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
