@@ -37,6 +37,13 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			shootClientSet  kubernetes.Interface
 			gardenClientSet kubernetes.Interface
 
+			// priorControlPlaneOrdinal identifies the control plane node that is lost in the simulated disaster
+			// (gind-machine-0). restoreTargetOrdinal identifies the new node the control plane is restored onto
+			// (gind-machine-3). Restoring into a node with a different hostname is a superset of restoring into a
+			// node with the same hostname, so this is the only scenario we cover (see issue #16317).
+			priorControlPlaneOrdinal = 0
+			restoreTargetOrdinal     = 3
+
 			shootNamespace        = "garden"
 			shootName             = "root"
 			controlPlaneNamespace = "kube-system"
@@ -65,15 +72,15 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 
 			By("Copy the garden cluster kubeconfig onto the node")
 			Eventually(ctx, func() error {
-				_, _, err := dockerCommand(ctx, "cp", gardenadm.GardenClusterKubeconfigPathOnHost, machineContainerName(0)+":"+gardenKubeconfigPathOnNode)
+				_, _, err := dockerCommand(ctx, "cp", gardenadm.GardenClusterKubeconfigPathOnHost, machineContainerName(priorControlPlaneOrdinal)+":"+gardenKubeconfigPathOnNode)
 				return err
 			}).Should(Succeed())
 
 			By("Connect the self-hosted shoot to Gardener")
-			stdOut, _, err := RunInMachine(ctx, 0, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenKubeconfigPathOnNode, shootNamespace, shootName))
+			stdOut, _, err := RunInMachine(ctx, priorControlPlaneOrdinal, "sh", "-c", fmt.Sprintf("KUBECONFIG=%s gardenadm token create --print-connect-command --shoot-namespace=%s --shoot-name=%s", gardenKubeconfigPathOnNode, shootNamespace, shootName))
 			Expect(err).NotTo(HaveOccurred())
 			connectCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
-			stdOut, _, err = RunInMachine(ctx, 0, append(connectCommand, "--log-level=debug")...)
+			stdOut, _, err = RunInMachine(ctx, priorControlPlaneOrdinal, append(connectCommand, "--log-level=debug")...)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your self-hosted shoot cluster has successfully been connected to Gardener!"))
 
@@ -125,40 +132,46 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			// static Pod, so the endpoint is reachable via localhost. The request blocks until the delta is uploaded.
 			By("Send an HTTP request for a delta snapshot")
 			Eventually(ctx, func() error {
-				_, _, err := RunInMachine(ctx, 0, "curl", "-sk", "--fail", "https://localhost:8080/snapshot/delta")
+				_, _, err := RunInMachine(ctx, priorControlPlaneOrdinal, "curl", "-sk", "--fail", "https://localhost:8080/snapshot/delta")
 				return err
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("should simulate a disaster by destroying the control plane node", func(ctx SpecContext) {
-			// Stopping and removing the container with its volumes destroys the etcd data. The container is then
-			// recreated (without running gardenadm), leaving the cluster broken until 'gardenadm restore' recovers it.
+			// Stopping and removing the container with its volumes destroys the etcd data. Unlike the same-hostname
+			// scenario, we do not recreate the container: the control plane is restored onto a different, already
+			// running machine (gind-machine-3), leaving the cluster broken until 'gardenadm restore' recovers it there.
 			By("Stop and remove the control plane node container including its volumes")
-			_, _, err := dockerCommand(ctx, "stop", machineContainerName(0))
+			_, _, err := dockerCommand(ctx, "stop", machineContainerName(priorControlPlaneOrdinal))
 			Expect(err).NotTo(HaveOccurred())
-			_, _, err = dockerCommand(ctx, "rm", "--volumes", machineContainerName(0))
+			_, _, err = dockerCommand(ctx, "rm", "--volumes", machineContainerName(priorControlPlaneOrdinal))
 			Expect(err).NotTo(HaveOccurred())
+		}, SpecTimeout(5*time.Minute))
 
-			By("Recreate the control plane node container")
-			cmd := exec.CommandContext(ctx, "make", "gind-up", "SCENARIO=machines") // #nosec G204 -- Used for e2e tests only.
+		It("should re-point the API server load balancer to the restore target node", func(ctx SpecContext) {
+			// In the unmanaged infrastructure scenario the external API server address is managed outside of Gardener.
+			// Restoring onto a node with a different hostname requires repointing that address to the new node. In the
+			// local GinD setup this is the Envoy load balancer (gind-apiserver-lb); the operator action is simulated by
+			// rewriting its upstream to the restore target machine.
+			cmd := exec.CommandContext(ctx, "./dev-setup/gind/set-api-server-upstream.sh", machineContainerName(restoreTargetOrdinal), "dev/gind-lb") // #nosec G204 -- Used for e2e tests only.
 			cmd.Dir = filepath.Join("..", "..", "..")
 			cmd.Stdout = gexec.NewPrefixedWriter("[out] ", GinkgoWriter)
 			cmd.Stderr = gexec.NewPrefixedWriter("[err] ", GinkgoWriter)
 			Expect(cmd.Run()).To(Succeed())
-		}, SpecTimeout(5*time.Minute))
+		}, SpecTimeout(time.Minute))
 
 		It("should discover the Gardener configuration resources from the garden cluster", func(ctx SpecContext) {
-			// The virtual garden survives the node disaster, so we copy its kubeconfig onto the recreated node and run
-			// 'gardenadm discover existing' to download the resources (Shoot, ShootState, BackupBucket, BackupEntry,
+			// The virtual garden survives the node disaster, so we copy its kubeconfig onto the restore target node and
+			// run 'gardenadm discover existing' to download the resources (Shoot, ShootState, BackupBucket, BackupEntry,
 			// CloudProfile, ...) that 'gardenadm restore' consumes.
-			By("Copy the virtual garden kubeconfig onto the recreated node")
-			_, _, err := dockerCommand(ctx, "cp", gardenadm.GardenClusterKubeconfigPathOnHost, machineContainerName(0)+":"+gardenKubeconfigPathOnNode)
+			By("Copy the virtual garden kubeconfig onto the restore target node")
+			_, _, err := dockerCommand(ctx, "cp", gardenadm.GardenClusterKubeconfigPathOnHost, machineContainerName(restoreTargetOrdinal)+":"+gardenKubeconfigPathOnNode)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Run gardenadm discover existing")
-			_, _, err = RunInMachine(ctx, 0, "mkdir", "-p", configDirOnNode)
+			_, _, err = RunInMachine(ctx, restoreTargetOrdinal, "mkdir", "-p", configDirOnNode)
 			Expect(err).NotTo(HaveOccurred())
-			_, _, err = RunInMachine(ctx, 0, "gardenadm", "discover", "existing",
+			_, _, err = RunInMachine(ctx, restoreTargetOrdinal, "gardenadm", "discover", "existing",
 				"--name", shootName,
 				"--namespace", shootNamespace,
 				"--kubeconfig", gardenKubeconfigPathOnNode,
@@ -167,11 +180,11 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Remove the self-hosted shoot lease that must not be restored")
-			_, _, err = RunInMachine(ctx, 0, "rm", "-f", configDirOnNode+"/lease-self-hosted-shoot-"+shootName+".yaml")
+			_, _, err = RunInMachine(ctx, restoreTargetOrdinal, "rm", "-f", configDirOnNode+"/lease-self-hosted-shoot-"+shootName+".yaml")
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Verify 'gardenadm discover existing' exported the resources needed for restore")
-			stdOut, _, err := RunInMachine(ctx, 0, "ls", configDirOnNode)
+			stdOut, _, err := RunInMachine(ctx, restoreTargetOrdinal, "ls", configDirOnNode)
 			Expect(err).NotTo(HaveOccurred())
 			discoveredFiles := string(stdOut.Contents())
 			for _, kind := range []string{"backupbucket", "backupentry", "shoot", "shootstate"} {
@@ -179,7 +192,7 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			}
 		}, SpecTimeout(2*time.Minute))
 
-		It("should copy the local etcd backup onto the recreated node", func(ctx SpecContext) {
+		It("should copy the local etcd backup onto the restore target node", func(ctx SpecContext) {
 			// The etcd backup lives on the host's local disk. Locate the '.../etcd-main/v2' backup directory (excluding
 			// the garden bucket), copy the whole local-backupbuckets directory onto the node, and compute the on-node
 			// --backup-data-path that 'gardenadm restore' reads from.
@@ -199,8 +212,8 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			Expect(backupDataPathOnHost).NotTo(BeEmpty(), "expected to find an etcd-main v2 backup directory under %s", localBackupBucketsOnHost)
 			log.Info("Found etcd backup data on host", "path", backupDataPathOnHost)
 
-			By("Copy the local backup buckets onto the recreated node")
-			_, _, err := dockerCommand(ctx, "cp", localBackupBucketsOnHost, machineContainerName(0)+":/local-backupbuckets")
+			By("Copy the local backup buckets onto the restore target node")
+			_, _, err := dockerCommand(ctx, "cp", localBackupBucketsOnHost, machineContainerName(restoreTargetOrdinal)+":/local-backupbuckets")
 			Expect(err).NotTo(HaveOccurred())
 
 			// Translate the host path to the on-node path: strip the leading "<...>/dev/" and root it at "/", so
@@ -215,9 +228,9 @@ var _ = Describe("gardenadm unmanaged infrastructure control plane restoration t
 			Expect(backupDataPathOnNode).NotTo(BeEmpty(), "backup data must have been copied onto the node")
 
 			By("Run gardenadm restore")
-			stdOut, _, err := RunInMachine(ctx, 0, "gardenadm", "restore",
+			stdOut, _, err := RunInMachine(ctx, restoreTargetOrdinal, "gardenadm", "restore",
 				"-d", configDirOnNode,
-				"--prior-node-name="+machineContainerName(0),
+				"--prior-node-name="+machineContainerName(priorControlPlaneOrdinal),
 				"--backup-data-path="+backupDataPathOnNode,
 				"--log-level=debug",
 			)
