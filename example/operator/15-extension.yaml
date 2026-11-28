@@ -57,3 +57,4 @@ metadata:
 #      policy: OnDemand|Always
 #      seedSelector: {}
 #      injectGardenKubeconfig: true
+#      injectGardenKubeconfigInRuntimeCluster: true

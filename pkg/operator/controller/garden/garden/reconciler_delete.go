@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
+	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension/extension"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -418,9 +419,14 @@ func (r *Reconciler) delete(
 			Fn:           r.resetExtensionRequiredVirtualCondition,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		waitUntilOperatorExtensionsUninstalled = g.Add(flow.Task{
+			Name:         "Waiting until all operator extensions are uninstalled",
+			Fn:           flow.TaskFn(r.checkIfAllExtensionsAreUninstalled).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(resetExtensionRequiredVirtualCondition),
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			waitUntilExtensionResourcesDeleted,
-			resetExtensionRequiredVirtualCondition,
+			waitUntilOperatorExtensionsUninstalled,
 			destroyDNSRecords,
 			destroyMainETCDBackupEntry,
 			destroyMainETCDBackupBucket,
@@ -697,6 +703,29 @@ func (r *Reconciler) resetExtensionRequiredVirtualCondition(ctx context.Context)
 		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, &extension, patch); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) checkIfAllExtensionsAreUninstalled(ctx context.Context) error {
+	extensionList := &operatorv1alpha1.ExtensionList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+		return err
+	}
+
+	var remainingExtensions []string
+	for _, extension := range extensionList.Items {
+		condition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionInstalled)
+		if condition != nil && condition.Status == gardencorev1beta1.ConditionFalse && condition.Reason != extensioncontroller.ReasonReconcileFailed {
+			continue
+		}
+
+		remainingExtensions = append(remainingExtensions, extension.Name)
+	}
+
+	if len(remainingExtensions) > 0 {
+		return fmt.Errorf("extensions %v not yet uninstalled", remainingExtensions)
 	}
 
 	return nil

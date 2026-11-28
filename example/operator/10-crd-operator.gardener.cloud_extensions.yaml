@@ -278,7 +278,13 @@ spec:
                       injectGardenKubeconfig:
                         description: |-
                           InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
-                          resources.
+                          resources of the extension running on seed clusters. The value is propagated to the generated
+                          ControllerDeployment and evaluated by gardenlet when deploying the extension via a ControllerInstallation.
+                        type: boolean
+                      injectGardenKubeconfigInRuntimeCluster:
+                        description: |-
+                          InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+                          resources of the extension running in the garden runtime cluster.
                         type: boolean
                       policy:
                         description: Policy controls how the controller is deployed.

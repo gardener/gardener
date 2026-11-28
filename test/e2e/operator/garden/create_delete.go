@@ -23,7 +23,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	operatorutil "github.com/gardener/gardener/pkg/utils/gardener/operator"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -77,6 +79,45 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			}
 			Eventually(ctx, tc.VirtualClusterKomega.Get(configMap)).Should(Succeed())
 			Expect(configMap.Data).To(HaveKey("gardenerAPIServer"))
+		}, SpecTimeout(time.Minute))
+
+		It("Verify provider-local extension has garden kubeconfig injected in runtime cluster", func(ctx SpecContext) {
+			namespace := operatorutil.ExtensionRuntimeNamespaceName("provider-local")
+
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-extension-provider-local-runtime",
+					Namespace: namespace,
+				},
+			}
+
+			Eventually(ctx, tc.GardenKomega.Object(deployment)).Should(
+				HaveField("Spec.Template.Spec", MatchFields(IgnoreExtras, Fields{
+					"Containers": ContainElement(MatchFields(IgnoreExtras, Fields{
+						"Env": ContainElement(MatchFields(IgnoreExtras, Fields{
+							"Name":  Equal("GARDEN_KUBECONFIG"),
+							"Value": Equal("/var/run/secrets/gardener.cloud/garden/generic-kubeconfig/kubeconfig"),
+						})),
+						"VolumeMounts": ContainElement(MatchFields(IgnoreExtras, Fields{
+							"Name":      Equal("garden-kubeconfig"),
+							"MountPath": Equal("/var/run/secrets/gardener.cloud/garden/generic-kubeconfig"),
+						})),
+					})),
+					"Volumes": ContainElement(MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("garden-kubeconfig"),
+					})),
+				})),
+			)
+
+			accessSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "garden-access-extension",
+					Namespace: namespace,
+				},
+			}
+			Eventually(ctx, tc.GardenKomega.Object(accessSecret)).Should(
+				HaveField("Data", HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(BeEmpty()))),
+			)
 		}, SpecTimeout(time.Minute))
 
 		itShouldVerifyPrometheusHealthCheck(tc, "garden")
