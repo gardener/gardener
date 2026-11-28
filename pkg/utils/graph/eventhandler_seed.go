@@ -102,6 +102,8 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	leaseVertex := g.getOrCreateVertex(VertexTypeLease, gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name)
 	g.addEdge(leaseVertex, seedVertex)
 
+	// The WorkloadIdentity edges below are mirrored by the token request API when binding context objects to workload
+	// identities (pkg/apiserver/registry/security/workloadidentity/storage/jwt.go). Keep both in sync.
 	if seed.Spec.Backup != nil {
 		var (
 			credentialsRef = seed.Spec.Backup.CredentialsRef

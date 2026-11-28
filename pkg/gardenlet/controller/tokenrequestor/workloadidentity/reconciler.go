@@ -14,15 +14,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -37,6 +42,8 @@ type Reconciler struct {
 	Config               *gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration
 	Clock                clock.Clock
 	JitterFunc           func(time.Duration, float64) time.Duration
+	// GardenNamespace is the namespace in the seed cluster in which gardenlet manages seed-level resources.
+	GardenNamespace string
 }
 
 // Reconcile requests and populates tokens.
@@ -72,6 +79,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		contextObject = &securityv1alpha1.ContextObject{}
 		if err := json.Unmarshal([]byte(v), contextObject); err != nil {
 			return reconcile.Result{}, fmt.Errorf("cannot parse context object: %w", err)
+		}
+
+		if err := r.validateContextObject(ctx, secret.Namespace, contextObject); err != nil {
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -141,4 +152,46 @@ func (r *Reconciler) renewDuration(expirationTimestamp time.Time) time.Duration 
 	)
 
 	return r.JitterFunc(expirationDuration*50/100, 0.05)
+}
+
+// validateContextObject ensures that secrets can only request tokens for context objects which belong to the namespace
+// they reside in. Otherwise, any component able to create secrets in the seed cluster could make gardenlet request
+// tokens with arbitrary context claims.
+func (r *Reconciler) validateContextObject(ctx context.Context, secretNamespace string, contextObject *securityv1alpha1.ContextObject) error {
+	gvk := schema.FromAPIVersionAndKind(contextObject.APIVersion, contextObject.Kind)
+
+	if gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group {
+		switch gvk.Kind {
+		case "Seed", "BackupBucket":
+			if secretNamespace == r.GardenNamespace {
+				return nil
+			}
+
+		case "BackupEntry":
+			// The BackupEntry extension secret is managed in the garden namespace, while the etcd backup secret derived
+			// from it is managed in the shoot's control plane namespace.
+			if controlPlaneNamespace, _ := gardenerutils.ExtractShootDetailsFromBackupEntryName(contextObject.Name); secretNamespace == r.GardenNamespace || secretNamespace == controlPlaneNamespace {
+				return nil
+			}
+
+		case "Shoot":
+			if contextObject.Namespace == nil {
+				break
+			}
+
+			shoot := &gardencorev1beta1.Shoot{}
+			if err := r.GardenClient.Get(ctx, client.ObjectKey{Namespace: *contextObject.Namespace, Name: contextObject.Name}, shoot); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed reading shoot of context object: %w", err)
+				}
+				break
+			}
+
+			if shoot.UID == contextObject.UID && v1beta1helper.ControlPlaneNamespaceForShoot(shoot) == secretNamespace {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("context object %s %s is not allowed for secrets in namespace %q", gvk.Kind, client.ObjectKey{Namespace: ptr.Deref(contextObject.Namespace, ""), Name: contextObject.Name}, secretNamespace)
 }
