@@ -200,10 +200,8 @@ var _ = Describe("GardenerControllerManager", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: "gardener-controller-manager",
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("300Mi"),
-							},
+							ContainerName:    "gardener-controller-manager",
+							ControlledValues: new(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
 							ContainerName: "*",
