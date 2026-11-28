@@ -114,6 +114,18 @@ var _ = Describe("Helper", func() {
 			BeTrue()),
 	)
 
+	DescribeTable("#ShootNeedsFastDeletion",
+		func(shoot *core.Shoot, expected bool) {
+			Expect(ShootNeedsFastDeletion(shoot)).To(Equal(expected))
+		},
+		Entry("nil shoot", nil, false),
+		Entry("missing annotation", &core.Shoot{}, false),
+		Entry("false", &core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "false"}}}, false),
+		Entry("invalid value", &core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "yes"}}}, false),
+		Entry("true", &core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "true"}}}, true),
+		Entry("boolean alias", &core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationConfirmationFastDeletion: "1"}}}, true),
+	)
+
 	Describe("#IsHAControlPlaneConfigured", func() {
 		var shoot *core.Shoot
 

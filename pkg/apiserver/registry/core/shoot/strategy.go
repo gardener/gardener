@@ -131,6 +131,11 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		return true
 	}
 
+	// Switching a deleting Shoot to fast deletion must trigger reconciliation even after a failed normal deletion.
+	if newShoot.DeletionTimestamp != nil && !gardencorehelper.ShootNeedsFastDeletion(oldShoot) && gardencorehelper.ShootNeedsFastDeletion(newShoot) {
+		return true
+	}
+
 	if lastOperation := newShoot.Status.LastOperation; lastOperation != nil {
 		var (
 			mustIncrease                  bool

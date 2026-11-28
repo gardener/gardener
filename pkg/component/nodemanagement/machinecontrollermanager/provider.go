@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 
@@ -28,6 +29,10 @@ const (
 // The shoot object can be read from the `Cluster` object, e.g., using the GardenContext.GetCluster method in webhooks.
 func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamespace, providerName, image string) corev1.Container {
 	selfHostedShoot := v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers)
+	runsControlPlane := controlPlaneNamespace == metav1.NamespaceSystem
+	fastDeletion := shoot.DeletionTimestamp != nil && v1beta1helper.ShootNeedsFastDeletion(shoot) && !v1beta1helper.ShootNeedsForceDeletion(shoot)
+	withoutTargetCluster := (selfHostedShoot && !runsControlPlane) || fastDeletion
+	targetClusterIsRuntimeCluster := selfHostedShoot && runsControlPlane
 
 	c := corev1.Container{
 		Name:            providerSidecarContainerName(providerName),
@@ -45,7 +50,7 @@ func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamesp
 			"--machine-safety-orphan-vms-period=30m",
 			"--namespace=" + controlPlaneNamespace,
 			"--port=" + strconv.Itoa(portProviderMetrics),
-			"--target-kubeconfig=" + targetKubeconfig(selfHostedShoot, controlPlaneNamespace),
+			"--target-kubeconfig=" + targetKubeconfig(withoutTargetCluster, targetClusterIsRuntimeCluster),
 			"--v=3",
 		},
 		LivenessProbe: &corev1.Probe{
@@ -78,7 +83,7 @@ func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamesp
 		},
 	}
 
-	if !selfHostedShoot {
+	if !withoutTargetCluster && !targetClusterIsRuntimeCluster {
 		c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{
 			Name:      "kubeconfig",
 			MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,

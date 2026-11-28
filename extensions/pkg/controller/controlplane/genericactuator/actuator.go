@@ -317,7 +317,9 @@ func (a *actuator) Delete(
 		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
 	}
 
-	if err := a.delete(ctx, log, cp, cluster); err != nil {
+	needsForceDelete := cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot)
+	isFastDeleting := cluster != nil && cluster.Shoot.DeletionTimestamp != nil && v1beta1helper.ShootNeedsFastDeletion(cluster.Shoot)
+	if err := a.delete(ctx, log, cp, cluster, needsForceDelete || isFastDeleting); err != nil {
 		return err
 	}
 
@@ -336,9 +338,7 @@ func (a *actuator) ForceDelete(
 
 // deleteControlPlane reconciles the given controlplane and cluster, deleting the additional Shoot
 // control plane components as needed.
-func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
-	forceDelete := cluster != nil && v1beta1helper.ShootNeedsForceDeletion(cluster.Shoot)
-
+func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, skipShootCleanup bool) error {
 	// Apply control plane chart
 	version := cluster.Shoot.Spec.Kubernetes.Version
 	runtimeVersion := a.gardenerClientset.Version()
@@ -372,7 +372,7 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 			return fmt.Errorf("could not delete managed resource containing shoot CRDs chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 
-		if !forceDelete {
+		if !skipShootCleanup {
 			// Wait for shoot CRDs chart ManagedResource deletion before deleting the shoot chart ManagedResource
 			timeoutCtx1, cancel := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancel()
@@ -385,7 +385,7 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 		return fmt.Errorf("could not delete managed resource containing shoot chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 	}
 
-	if !forceDelete {
+	if !skipShootCleanup {
 		timeoutCtx2, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 		if err := managedresources.WaitUntilDeleted(timeoutCtx2, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
@@ -428,7 +428,7 @@ func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1
 			return fmt.Errorf("could not delete managed resource containing shoot webhooks for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
 
-		if !forceDelete {
+		if !skipShootCleanup {
 			timeoutCtx4, cancel := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancel()
 			if err := managedresources.WaitUntilDeleted(timeoutCtx4, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
@@ -511,7 +511,7 @@ func (a *actuator) Migrate(
 		return fmt.Errorf("could not keep objects of managed resource containing storage classes chart for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 	}
 
-	return a.delete(ctx, log, cp, cluster)
+	return a.delete(ctx, log, cp, cluster, false)
 }
 
 func (a *actuator) newSecretsManagerForControlPlane(ctx context.Context, log logr.Logger, cluster *extensionscontroller.Cluster, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {

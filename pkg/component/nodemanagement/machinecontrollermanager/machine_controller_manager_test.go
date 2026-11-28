@@ -567,6 +567,9 @@ subjects:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), actualDeployment)).To(Succeed())
 			deployment.ResourceVersion = "1"
 			Expect(actualDeployment).To(DeepEqual(deployment))
+			if values.WithoutTargetCluster || values.TargetClusterIsRuntimeCluster {
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), &corev1.Secret{})).To(BeNotFoundError())
+			}
 
 			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
@@ -589,7 +592,7 @@ subjects:
 			Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 
 			actualManagedResource := &resourcesv1alpha1.ManagedResource{}
-			if values.SelfHostedShoot && namespace != "kube-system" {
+			if values.WithoutTargetCluster {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(BeNotFoundError())
 			} else {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(Succeed())
@@ -616,7 +619,7 @@ subjects:
 			}
 		}
 
-		When("the shoot is not self-hosted", func() {
+		When("the target cluster is external", func() {
 			JustBeforeEach(func() {
 				Expect(gardenerutils.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", shootAccessSecret.Name)).To(Succeed())
 			})
@@ -631,22 +634,13 @@ subjects:
 			})
 		})
 
-		When("the shoot is self-hosted", func() {
-			BeforeEach(func() {
-				values.SelfHostedShoot = true
-			})
-
-			JustBeforeEach(func() {
-				shootAccessSecret = nil
-			})
-
-			When("running the control plane (gardenadm init)", func() {
+		When("no separate target kubeconfig is needed", func() {
+			When("the target cluster is the runtime cluster", func() {
 				BeforeEach(func() {
-					namespace = "kube-system"
+					values.TargetClusterIsRuntimeCluster = true
 				})
 
 				JustBeforeEach(func() {
-					deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
 					for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
 						if strings.HasPrefix(s, "--target-kubeconfig=") {
 							deployment.Spec.Template.Spec.Containers[0].Command[i] = "--target-kubeconfig="
@@ -657,9 +651,27 @@ subjects:
 				It("should successfully deploy all resources", func() {
 					test()
 				})
+
+				When("deployed in kube-system", func() {
+					BeforeEach(func() {
+						namespace = "kube-system"
+					})
+
+					JustBeforeEach(func() {
+						deployment.Spec.Template.Spec.NodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}
+					})
+
+					It("should schedule only on workers supporting system components", func() {
+						test()
+					})
+				})
 			})
 
-			When("not running the control plane (gardenadm bootstrap)", func() {
+			When("there is no target cluster", func() {
+				BeforeEach(func() {
+					values.WithoutTargetCluster = true
+				})
+
 				JustBeforeEach(func() {
 					for i, s := range deployment.Spec.Template.Spec.Containers[0].Command {
 						if strings.HasPrefix(s, "--target-kubeconfig=") {
@@ -670,6 +682,16 @@ subjects:
 
 				It("should successfully deploy all resources", func() {
 					test()
+				})
+
+				When("the runtime cluster flag is also set", func() {
+					BeforeEach(func() {
+						values.TargetClusterIsRuntimeCluster = true
+					})
+
+					It("should still disable target cluster access", func() {
+						test()
+					})
 				})
 			})
 		})

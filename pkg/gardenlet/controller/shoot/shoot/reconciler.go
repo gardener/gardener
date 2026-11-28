@@ -300,11 +300,19 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 		return result, err
 	}
 
-	r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, "Deleting Shoot cluster")
+	deletionMessage := "Deleting Shoot cluster"
+	if v1beta1helper.ShootNeedsForceDeletion(shoot) {
+		deletionMessage += " with force deletion; infrastructure resources may remain"
+	} else if v1beta1helper.ShootNeedsFastDeletion(shoot) {
+		deletionMessage += " with fast deletion without in-Shoot cleanup; external workload resources may remain"
+	}
+	r.Recorder.Eventf(shoot, nil, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, gardencorev1beta1.EventActionDelete, deletionMessage)
 	var flowErr *v1beta1helper.WrappedLastErrors
 
 	if v1beta1helper.ShootNeedsForceDeletion(shoot) {
 		flowErr = r.runForceDeleteShootFlow(ctx, log, o)
+	} else if v1beta1helper.ShootNeedsFastDeletion(shoot) {
+		flowErr = r.runFastDeleteShootFlow(ctx, o)
 	} else {
 		flowErr = r.runDeleteShootFlow(ctx, o)
 	}
