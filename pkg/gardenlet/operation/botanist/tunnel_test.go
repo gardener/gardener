@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -117,6 +118,39 @@ var _ = Describe("Tunnel", func() {
 					Expect(err).To(HaveOccurred())
 				})
 			})
+		})
+	})
+})
+
+var _ = Describe("VPN client verification", func() {
+	Describe("ParseConnectedVPNClients", func() {
+		It("should extract common names from per-client series", func() {
+			metrics := `# HELP openvpn_server_client_received_bytes_total total
+# TYPE openvpn_server_client_received_bytes_total counter
+openvpn_server_client_received_bytes_total{common_name="vpn-shoot-client-0",real_address="1.2.3.4:5"} 123
+openvpn_server_client_sent_bytes_total{common_name="vpn-shoot-client-0",real_address="1.2.3.4:5"} 456
+openvpn_server_client_received_bytes_total{real_address="5.6.7.8:9",common_name="vpn-shoot-client-temp-0"} 7
+openvpn_up 1
+`
+			Expect(botanist.ParseConnectedVPNClients(metrics)).To(Equal(sets.New("vpn-shoot-client-0", "vpn-shoot-client-temp-0")))
+		})
+
+		It("should return an empty set when there are no per-client series", func() {
+			Expect(botanist.ParseConnectedVPNClients("openvpn_up 1\n# comment line\n")).To(BeEmpty())
+		})
+
+		It("should ignore per-client series without a common_name label", func() {
+			Expect(botanist.ParseConnectedVPNClients(`openvpn_server_client_received_bytes_total{real_address="1.2.3.4:5"} 1`)).To(BeEmpty())
+		})
+	})
+
+	Describe("ExpectedVPNClientCNs", func() {
+		It("should build permanent client common names", func() {
+			Expect(botanist.ExpectedVPNClientCNs("", 2)).To(Equal(sets.New("vpn-shoot-client-0", "vpn-shoot-client-1")))
+		})
+
+		It("should build temporary client common names", func() {
+			Expect(botanist.ExpectedVPNClientCNs("temp", 2)).To(Equal(sets.New("vpn-shoot-client-temp-0", "vpn-shoot-client-temp-1")))
 		})
 	})
 })

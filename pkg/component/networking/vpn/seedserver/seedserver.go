@@ -70,7 +70,8 @@ const (
 	// HighAvailabilityReplicaCount is the replica count used when highly available VPN is configured.
 	HighAvailabilityReplicaCount = 2
 	metricsPortName              = "metrics"
-	metricsPort                  = 15000
+	// MetricsPort is the port on which the openvpn exporter serves /metrics for the vpn-seed-server (HA only).
+	MetricsPort = 15000
 
 	envoyProxyContainerName      = "envoy-proxy"
 	openVPNExporterContainerName = "openvpn-exporter"
@@ -522,21 +523,21 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          metricsPortName,
-					ContainerPort: metricsPort,
+					ContainerPort: MetricsPort,
 					Protocol:      corev1.ProtocolTCP,
 				},
 			},
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(metricsPort),
+						Port: intstr.FromInt32(MetricsPort),
 					},
 				},
 			},
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
-						Port: intstr.FromInt32(metricsPort),
+						Port: intstr.FromInt32(MetricsPort),
 					},
 				},
 			},
@@ -656,7 +657,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(metricsPort)), Protocol: new(corev1.ProtocolTCP)}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(MetricsPort)), Protocol: new(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = []corev1.ServicePort{
@@ -672,8 +673,8 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 			},
 			{
 				Name:       metricsPortName,
-				Port:       metricsPort,
-				TargetPort: intstr.FromInt32(metricsPort),
+				Port:       MetricsPort,
+				TargetPort: intstr.FromInt32(MetricsPort),
 			},
 		}
 

@@ -35,13 +35,37 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 	return nil
 }
 
-// WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot) in the kube-system
-// namespace of the Shoot cluster can be established.
+// WaitUntilTunnelConnectionExists waits until the VPN tunnel to the shoot is established: a port forward to the
+// vpn-shoot pod in the kube-system namespace succeeds and, additionally for HA VPN, the expected clients are connected at the
+// vpn-seed-server.
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
+	return b.waitUntilTunnelConnectionExists(ctx, v1beta1constants.VPNTunnel, "")
+}
+
+func (b *Botanist) waitUntilTunnelConnectionExists(ctx context.Context, tunnelName, clientCNSuffix string) error {
 	const timeout = 15 * time.Minute
 
 	return retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
-		return CheckTunnelConnection(ctx, b.Logger, b.ShootClientSet, v1beta1constants.VPNTunnel)
+		if done, err := CheckTunnelConnection(ctx, b.Logger, b.ShootClientSet, tunnelName); err != nil || !done {
+			return done, err
+		}
+
+		// The exporter that backs this check only exists for HA shoots.
+		if !b.Shoot.VPNHighAvailabilityEnabled {
+			return retry.Ok()
+		}
+
+		expected := expectedVPNClientCNs(clientCNSuffix, b.Shoot.VPNHighAvailabilityNumberOfShootClients)
+		connected, err := CheckVPNSeedServerClientsConnected(ctx, b.SeedClientSet.RESTConfig(), b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace)
+		if err != nil {
+			return retry.MinorError(fmt.Errorf("could not determine connected vpn clients: %w", err))
+		}
+		if missing := expected.Difference(connected); missing.Len() > 0 {
+			b.Logger.Info("Waiting until vpn clients are connected to the vpn-seed-server", "tunnelName", tunnelName, "missingClients", sets.List(missing))
+			return retry.MinorError(fmt.Errorf("vpn clients not connected to the vpn-seed-server yet: %v", sets.List(missing)))
+		}
+
+		return retry.Ok()
 	})
 }
 

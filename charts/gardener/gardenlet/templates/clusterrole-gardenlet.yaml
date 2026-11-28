@@ -89,6 +89,18 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods/portforward
+  # Restricted to the HA vpn-seed-server pods (StatefulSet "vpn-seed-server" with
+  # HighAvailabilityReplicaCount=2); gardenlet port-forwards to their exporter to verify
+  # VPN clients are connected. Keep in sync with the replica count.
+  resourceNames:
+  - vpn-seed-server-0
+  - vpn-seed-server-1
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
   - configmaps
   - namespaces
   - secrets
