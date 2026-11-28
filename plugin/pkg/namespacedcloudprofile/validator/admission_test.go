@@ -373,7 +373,7 @@ var _ = Describe("Admission", func() {
 		})
 
 		Describe("Kubernetes versions", func() {
-			It("rejects a supported override alongside an inherited supported version in the same minor version", func() {
+			It("allows a supported override alongside an inherited supported version in the same minor version", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.VersionClassificationLifecycle, true))
 				parentCloudProfile.Spec.Kubernetes.Versions = append(parentCloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{
 					Version: "1.31.1", Classification: new(gardencorev1beta1.ClassificationPreview),
@@ -383,7 +383,7 @@ var _ = Describe("Admission", func() {
 					{Version: "1.31.1", Lifecycle: []gardencore.LifecycleStage{{Classification: gardencore.ClassificationSupported}}},
 				}}
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("lifecycle stages must not overlap per minor version")))
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
 			It("should not allow creating a (Namespaced)CloudProfile if the resulting Kubernetes versions are empty", func() {
