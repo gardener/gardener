@@ -252,6 +252,31 @@ var _ = Describe("Shoot Care Control", func() {
 			})
 		})
 
+		Context("when the internal domain of the seed changes", func() {
+			It("should read the internal domains in each reconcile", func() {
+				var internalDomains []*gardenerutils.Domain
+				DeferCleanup(test.WithVar(&NewOperation, internalDomainsCapturingOpFunc(&internalDomains)))
+				reconciler = &Reconciler{
+					GardenClient:  gardenClient,
+					SeedClientSet: fakekubernetes.NewClientSet(),
+					Config:        gardenletConf,
+					Clock:         fakeClock,
+					SeedName:      seedName,
+				}
+
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).To(HaveOccurred())
+				Expect(internalDomains).To(ConsistOf(HaveField("Domain", "foo.bar")))
+
+				seed.Spec.DNS.Internal.Domain = "new.bar"
+				Expect(gardenClient.Update(ctx, seed)).To(Succeed())
+
+				_, err = reconciler.Reconcile(ctx, req)
+				Expect(err).To(HaveOccurred())
+				Expect(internalDomains).To(ConsistOf(HaveField("Domain", "new.bar")))
+			})
+		})
+
 		Context("when health check setup is successful", func() {
 			var (
 				shootClientMap clientmap.ClientMap
@@ -608,11 +633,32 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ *gardencorev1beta1.Gardener,
 		_ string,
 		_ map[string]*corev1.Secret,
-		_ *gardenerutils.Domain,
+		_ []*gardenerutils.Domain,
 		_ []*gardenerutils.Domain,
 		_ *gardencorev1beta1.Shoot,
 	) (*operation.Operation, error) {
 		return op, err
+	}
+}
+
+func internalDomainsCapturingOpFunc(internalDomains *[]*gardenerutils.Domain) NewOperationFunc {
+	return func(
+		_ context.Context,
+		_ logr.Logger,
+		_ client.Client,
+		_ client.Reader,
+		_ kubernetes.Interface,
+		_ clientmap.ClientMap,
+		_ *gardenletconfigv1alpha1.GardenletConfiguration,
+		_ *gardencorev1beta1.Gardener,
+		_ string,
+		_ map[string]*corev1.Secret,
+		domains []*gardenerutils.Domain,
+		_ []*gardenerutils.Domain,
+		_ *gardencorev1beta1.Shoot,
+	) (*operation.Operation, error) {
+		*internalDomains = domains
+		return nil, errors.New("operation not needed")
 	}
 }
 
@@ -666,7 +712,7 @@ func containConditionsInUnknownStatus(message string, isWorkerless bool) types.G
 }
 
 func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
-	var expectedLength = 9
+	var expectedLength = 10
 	matcher := And(
 		ContainCondition(
 			OfType(gardencorev1beta1.ShootHibernationPossible),
@@ -700,6 +746,10 @@ func containConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			WithMessage(message),
 		), ContainCondition(
 			OfType(gardencorev1beta1.ShootPreservedFailedMachinesAbsent),
+			WithStatus(gardencorev1beta1.ConditionUnknown),
+			WithMessage(message),
+		), ContainCondition(
+			OfType(gardencorev1beta1.ShootInternalDomainUpToDate),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
 		),

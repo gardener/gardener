@@ -21,11 +21,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("AdvertisedAddresses", func() {
@@ -111,6 +113,48 @@ var _ = Describe("AdvertisedAddresses", func() {
 			}))
 		})
 
+		It("returns the prior internal address directly after the internal address", func() {
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior.baz.foo")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "external",
+					URL:  "https://api.foo.bar",
+				},
+				{
+					Name: "internal",
+					URL:  "https://api.baz.foo",
+				},
+				{
+					Name: "prior-internal",
+					URL:  "https://api.prior.baz.foo",
+				},
+				{
+					Name: "service-account-issuer",
+					URL:  "https://api.baz.foo",
+				},
+			}))
+		})
+
+		It("returns the prior internal address without an internal address if the internal domain is disabled during the migration", func() {
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+			botanist.Shoot.PriorInternalClusterDomain = new("prior.baz.foo")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(ContainElement(gardencorev1beta1.ShootAdvertisedAddress{
+				Name: "prior-internal",
+				URL:  "https://api.prior.baz.foo",
+			}))
+			Expect(addresses).NotTo(ContainElement(HaveField("Name", "internal")))
+		})
+
 		It("returns internal and service-account-issuer addresses", func() {
 			botanist.Shoot.InternalClusterDomain = new("baz.foo")
 
@@ -125,6 +169,49 @@ var _ = Describe("AdvertisedAddresses", func() {
 				{
 					Name: "service-account-issuer",
 					URL:  "https://api.baz.foo",
+				},
+			}))
+		})
+
+		It("returns the service-account-issuer address of the external domain if the shoot has no internal domain", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+			botanist.Shoot.ExternalClusterDomain = new("foo.bar")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "external",
+					URL:  "https://api.foo.bar",
+				},
+				{
+					Name: "service-account-issuer",
+					URL:  "https://api.foo.bar",
+				},
+			}))
+		})
+
+		It("returns the prior service account issuer address directly after the service-account-issuer address", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+			botanist.Shoot.InternalClusterDomain = new("baz.foo")
+			botanist.Shoot.PriorServiceAccountIssuer = new("https://api.foo.bar")
+
+			addresses, err := botanist.ToAdvertisedAddresses(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "internal",
+					URL:  "https://api.baz.foo",
+				},
+				{
+					Name: "service-account-issuer",
+					URL:  "https://api.baz.foo",
+				},
+				{
+					Name: "prior-service-account-issuer",
+					URL:  "https://api.foo.bar",
 				},
 			}))
 		})

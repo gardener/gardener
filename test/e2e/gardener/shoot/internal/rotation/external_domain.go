@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/api/core/v1beta1/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -44,8 +45,8 @@ func (v *ExternalDomainVerifier) Before(_ context.Context) {
 			v.priorDomain = *v.Shoot.Spec.DNS.Domain
 			g.Expect(v.priorDomain).NotTo(Equal(v.NewDomain))
 
-			g.Expect(v.advertisedAddress(v1beta1constants.AdvertisedAddressExternal)).To(Equal(apiServerURL(v.priorDomain)))
-			g.Expect(v.advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal)).To(BeEmpty())
+			g.Expect(advertisedAddress(v.Shoot, v1beta1constants.AdvertisedAddressExternal)).To(Equal(apiServerURL(v.priorDomain)))
+			g.Expect(advertisedAddress(v.Shoot, v1beta1constants.AdvertisedAddressPriorExternal)).To(BeEmpty())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
@@ -70,15 +71,15 @@ func (v *ExternalDomainVerifier) AfterPrepared(_ context.Context) {
 	It("Verify that both external domains are advertised", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
 			g.Expect(v.GardenClient.Get(ctx, client.ObjectKeyFromObject(v.Shoot), v.Shoot)).To(Succeed())
-			g.Expect(v.advertisedAddress(v1beta1constants.AdvertisedAddressExternal)).To(Equal(apiServerURL(v.NewDomain)))
-			g.Expect(v.advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal)).To(Equal(apiServerURL(v.priorDomain)))
+			g.Expect(advertisedAddress(v.Shoot, v1beta1constants.AdvertisedAddressExternal)).To(Equal(apiServerURL(v.NewDomain)))
+			g.Expect(advertisedAddress(v.Shoot, v1beta1constants.AdvertisedAddressPriorExternal)).To(Equal(apiServerURL(v.priorDomain)))
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
 	It("Verify that both external DNSRecords exist", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(v.dnsRecordName(ctx, g, v1beta1constants.LabelDNSRecordExternal)).To(Equal(v1beta1helper.GetAPIServerDomain(v.NewDomain)))
-			g.Expect(v.dnsRecordName(ctx, g, v1beta1constants.LabelDNSRecordPriorExternal)).To(Equal(v1beta1helper.GetAPIServerDomain(v.priorDomain)))
+			g.Expect(dnsRecordName(ctx, g, v.ShootContext, v1beta1constants.LabelDNSRecordExternal)).To(Equal(v1beta1helper.GetAPIServerDomain(v.NewDomain)))
+			g.Expect(dnsRecordName(ctx, g, v.ShootContext, v1beta1constants.LabelDNSRecordPriorExternal)).To(Equal(v1beta1helper.GetAPIServerDomain(v.priorDomain)))
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
@@ -96,7 +97,7 @@ func (v *ExternalDomainVerifier) AfterPrepared(_ context.Context) {
 
 	It("Verify that the server certificate contains both external domains", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
-			dnsNames := v.serverCertificateDNSNames(ctx, g)
+			dnsNames := serverCertificateDNSNames(ctx, g, v.ShootContext)
 			g.Expect(dnsNames).To(ContainElements(v.NewDomain, v1beta1helper.GetAPIServerDomain(v.NewDomain)))
 			g.Expect(dnsNames).To(ContainElements(v.priorDomain, v1beta1helper.GetAPIServerDomain(v.priorDomain)))
 		}).Should(Succeed())
@@ -123,21 +124,21 @@ func (v *ExternalDomainVerifier) AfterCompleted(_ context.Context) {
 	It("Verify that only the new external domain is left", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
 			g.Expect(v.GardenClient.Get(ctx, client.ObjectKeyFromObject(v.Shoot), v.Shoot)).To(Succeed())
-			g.Expect(v.advertisedAddress(v1beta1constants.AdvertisedAddressExternal)).To(Equal(apiServerURL(v.NewDomain)))
-			g.Expect(v.advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal)).To(BeEmpty())
+			g.Expect(advertisedAddress(v.Shoot, v1beta1constants.AdvertisedAddressExternal)).To(Equal(apiServerURL(v.NewDomain)))
+			g.Expect(advertisedAddress(v.Shoot, v1beta1constants.AdvertisedAddressPriorExternal)).To(BeEmpty())
 
-			g.Expect(v.dnsRecordName(ctx, g, v1beta1constants.LabelDNSRecordExternal)).To(Equal(v1beta1helper.GetAPIServerDomain(v.NewDomain)))
-			g.Expect(v.dnsRecordName(ctx, g, v1beta1constants.LabelDNSRecordPriorExternal)).To(BeEmpty())
+			g.Expect(dnsRecordName(ctx, g, v.ShootContext, v1beta1constants.LabelDNSRecordExternal)).To(Equal(v1beta1helper.GetAPIServerDomain(v.NewDomain)))
+			g.Expect(dnsRecordName(ctx, g, v.ShootContext, v1beta1constants.LabelDNSRecordPriorExternal)).To(BeEmpty())
 
-			dnsNames := v.serverCertificateDNSNames(ctx, g)
+			dnsNames := serverCertificateDNSNames(ctx, g, v.ShootContext)
 			g.Expect(dnsNames).To(ContainElements(v.NewDomain, v1beta1helper.GetAPIServerDomain(v.NewDomain)))
 			g.Expect(dnsNames).NotTo(ContainElement(v1beta1helper.GetAPIServerDomain(v.priorDomain)))
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
-func (v *ExternalDomainVerifier) advertisedAddress(name string) string {
-	for _, address := range v.Shoot.Status.AdvertisedAddresses {
+func advertisedAddress(shoot *gardencorev1beta1.Shoot, name string) string {
+	for _, address := range shoot.Status.AdvertisedAddresses {
 		if address.Name == name {
 			return address.URL
 		}
@@ -146,10 +147,10 @@ func (v *ExternalDomainVerifier) advertisedAddress(name string) string {
 	return ""
 }
 
-func (v *ExternalDomainVerifier) dnsRecordName(ctx context.Context, g Gomega, role string) string {
+func dnsRecordName(ctx context.Context, g Gomega, tc *ShootContext, role string) string {
 	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
-	g.Expect(v.SeedClient.List(ctx, dnsRecordList,
-		client.InNamespace(v.Shoot.Status.TechnicalID),
+	g.Expect(tc.SeedClient.List(ctx, dnsRecordList,
+		client.InNamespace(tc.Shoot.Status.TechnicalID),
 		client.MatchingLabels{v1beta1constants.LabelRole: role},
 	)).To(Succeed())
 	g.Expect(len(dnsRecordList.Items)).To(BeNumerically("<=", 1), "there must be at most one DNSRecord per role")
@@ -161,9 +162,9 @@ func (v *ExternalDomainVerifier) dnsRecordName(ctx context.Context, g Gomega, ro
 	return dnsRecordList.Items[0].Spec.Name
 }
 
-func (v *ExternalDomainVerifier) serverCertificateDNSNames(ctx context.Context, g Gomega) []string {
+func serverCertificateDNSNames(ctx context.Context, g Gomega, tc *ShootContext) []string {
 	secretList := &corev1.SecretList{}
-	g.Expect(v.SeedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), ManagedByGardenletSecretsManager)).To(Succeed())
+	g.Expect(tc.SeedClient.List(ctx, secretList, client.InNamespace(tc.Shoot.Status.TechnicalID), ManagedByGardenletSecretsManager)).To(Succeed())
 
 	serverCertificates := rotation.GroupByName(secretList.Items)["kube-apiserver"]
 	g.Expect(serverCertificates).NotTo(BeEmpty(), "the server certificate of the kube-apiserver must exist")

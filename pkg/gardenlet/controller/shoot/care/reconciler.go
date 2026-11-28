@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -58,7 +59,6 @@ type Reconciler struct {
 	SeedName              string
 
 	gardenSecrets        map[string]*corev1.Secret
-	gardenInternalDomain *gardenerutils.Domain
 	gardenDefaultDomains []*gardenerutils.Domain
 }
 
@@ -98,8 +98,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// Initialize constraints based on the current status.
 	shootConstraints := NewShootConstraints(r.Clock, shoot)
 
-	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
-	if r.gardenSecrets == nil && !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
+	var internalDomains []*gardenerutils.Domain
+	if !v1beta1helper.IsShootSelfHosted(shoot.Spec.Provider.Workers) {
 		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{
 			Name: r.SeedName,
 		}}
@@ -108,38 +108,41 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			return reconcile.Result{}, fmt.Errorf("error retrieving seed: %w", err)
 		}
 
-		secrets, err := gardenerutils.ReadGardenSecrets(
-			careCtx,
-			log,
-			r.GardenClient,
-			gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
-		)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reading Garden secrets: %w", err)
-		}
-
-		internalDomain, err := gardenerutils.ReadGardenInternalDomain(
+		var err error
+		internalDomains, err = gardenerutils.ReadGardenInternalDomains(
 			careCtx,
 			r.GardenClient,
-			seed.Spec.DNS.Internal,
+			garden.SeedInternalDomains(seed),
 		)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domain: %w", err)
+			return reconcile.Result{}, fmt.Errorf("error reading Garden internal domains: %w", err)
 		}
 
-		defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
-			careCtx,
-			r.GardenClient,
-			gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
-			seed.Spec.DNS.Defaults,
-		)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reading Garden default domains: %w", err)
-		}
+		// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
+		if r.gardenSecrets == nil {
+			secrets, err := gardenerutils.ReadGardenSecrets(
+				careCtx,
+				log,
+				r.GardenClient,
+				gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
+			)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("error reading Garden secrets: %w", err)
+			}
 
-		r.gardenSecrets = secrets
-		r.gardenInternalDomain = internalDomain
-		r.gardenDefaultDomains = defaultDomains
+			defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
+				careCtx,
+				r.GardenClient,
+				gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName),
+				seed.Spec.DNS.Defaults,
+			)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("error reading Garden default domains: %w", err)
+			}
+
+			r.gardenSecrets = secrets
+			r.gardenDefaultDomains = defaultDomains
+		}
 	}
 
 	o, err := NewOperation(
@@ -153,7 +156,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.Identity,
 		r.GardenClusterIdentity,
 		r.gardenSecrets,
-		r.gardenInternalDomain,
+		internalDomains,
 		r.gardenDefaultDomains,
 		shoot,
 	)

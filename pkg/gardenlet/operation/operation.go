@@ -47,7 +47,7 @@ func NewBuilder() *Builder {
 		configFunc: func() (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
 			return nil, errors.New("config is required but not set")
 		},
-		gardenFunc: func(context.Context, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
+		gardenFunc: func(context.Context, []*gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
 			return nil, errors.New("garden object is required but not set")
 		},
 		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
@@ -62,8 +62,8 @@ func NewBuilder() *Builder {
 		secretsFunc: func() (map[string]*corev1.Secret, error) {
 			return nil, errors.New("secrets map is required but not set")
 		},
-		internalDomainFunc: func() (*gardenerutils.Domain, error) {
-			return nil, errors.New("internal domain is required but not set")
+		internalDomainsFunc: func() ([]*gardenerutils.Domain, error) {
+			return nil, errors.New("internal domains are required but not set")
 		},
 		defaultDomainsFunc: func() ([]*gardenerutils.Domain, error) {
 			return nil, errors.New("default domains are required but not set")
@@ -82,7 +82,7 @@ func (b *Builder) WithConfig(cfg *gardenletconfigv1alpha1.GardenletConfiguration
 
 // WithGarden sets the gardenFunc attribute at the Builder.
 func (b *Builder) WithGarden(g *garden.Garden) *Builder {
-	b.gardenFunc = func(context.Context, *gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
+	b.gardenFunc = func(context.Context, []*gardenerutils.Domain, []*gardenerutils.Domain) (*garden.Garden, error) {
 		return g, nil
 	}
 	return b
@@ -90,11 +90,11 @@ func (b *Builder) WithGarden(g *garden.Garden) *Builder {
 
 // WithGardenFrom sets the gardenFunc attribute at the Builder which will build a new Garden object.
 func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builder {
-	b.gardenFunc = func(ctx context.Context, internalDomain *gardenerutils.Domain, defaultDomains []*gardenerutils.Domain) (*garden.Garden, error) {
+	b.gardenFunc = func(ctx context.Context, internalDomains []*gardenerutils.Domain, defaultDomains []*gardenerutils.Domain) (*garden.Garden, error) {
 		return garden.
 			NewBuilder().
 			WithProjectFrom(reader, namespace).
-			WithInternalDomain(internalDomain).
+			WithInternalDomains(internalDomains).
 			WithDefaultDomains(defaultDomains).
 			Build(ctx)
 	}
@@ -125,9 +125,9 @@ func (b *Builder) WithSecrets(secrets map[string]*corev1.Secret) *Builder {
 	return b
 }
 
-// WithInternalDomain sets the internalDomainFunc attribute at the Builder.
-func (b *Builder) WithInternalDomain(domain *gardenerutils.Domain) *Builder {
-	b.internalDomainFunc = func() (*gardenerutils.Domain, error) { return domain, nil }
+// WithInternalDomains sets the internalDomainsFunc attribute at the Builder.
+func (b *Builder) WithInternalDomains(domains []*gardenerutils.Domain) *Builder {
+	b.internalDomainsFunc = func() ([]*gardenerutils.Domain, error) { return domains, nil }
 	return b
 }
 
@@ -185,7 +185,7 @@ func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, shoot
 			WithSeedObject(seedObj).
 			WithoutShootDNS().
 			WithProjectName(gardenObj.Project.Name).
-			WithInternalDomain(gardenObj.InternalDomain).
+			WithInternalDomains(gardenObj.InternalDomains).
 			WithDefaultDomains(gardenObj.DefaultDomains).
 			WithServiceAccountIssuerHostname(serviceAccountIssuerConfig).
 			Build(ctx, seedClientSet, gardenReader)
@@ -229,7 +229,7 @@ func (b *Builder) Build(
 	var (
 		isSelfHostedShoot = v1beta1helper.IsShootSelfHosted(shootObj.Spec.Provider.Workers)
 		err               error
-		internalDomain    *gardenerutils.Domain
+		internalDomains   []*gardenerutils.Domain
 		defaultDomains    []*gardenerutils.Domain
 		seed              *seed.Seed
 		secrets           map[string]*corev1.Secret
@@ -250,7 +250,7 @@ func (b *Builder) Build(
 		maps.Copy(secrets, secretsMap)
 		operation.secrets = secrets
 
-		internalDomain, err = b.internalDomainFunc()
+		internalDomains, err = b.internalDomainsFunc()
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +270,7 @@ func (b *Builder) Build(
 		operation.ShootClientSet = seedClientSet
 	}
 
-	garden, err := b.gardenFunc(ctx, internalDomain, defaultDomains)
+	garden, err := b.gardenFunc(ctx, internalDomains, defaultDomains)
 	if err != nil {
 		return nil, err
 	}

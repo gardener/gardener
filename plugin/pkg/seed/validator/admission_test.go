@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/user"
 	kubeinformers "k8s.io/client-go/informers"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -141,6 +142,76 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+				})
+
+				Context("with the MutableShootDomains feature gate", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+					})
+
+					It("should allow the removal of an internal domain that the shoots do not use", func() {
+						oldSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}, {Domain: "foo.bar"}}
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}}
+						oldSeed.Spec.DNS.Internal.Domain = "bar.foo"
+						Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should forbid the removal of an internal domain before the gardenlet observed the current generation", func() {
+						oldSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}, {Domain: "foo.bar"}}
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}}
+						oldSeed.Spec.DNS.Internal.Domain = "bar.foo"
+						oldSeed.Generation = 2
+						oldSeed.Status.ObservedGeneration = 1
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("before the gardenlet has observed the current generation")))
+					})
+
+					It("should allow the seed's own gardenlet to remove an internal domain before it observed the current generation", func() {
+						oldSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}, {Domain: "foo.bar"}}
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}}
+						oldSeed.Spec.DNS.Internal.Domain = "bar.foo"
+						oldSeed.Generation = 2
+						oldSeed.Status.ObservedGeneration = 1
+						gardenlet := &user.DefaultInfo{Name: v1beta1constants.SeedUserNamePrefix + seed.Name, Groups: []string{v1beta1constants.SeedsGroup}}
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, gardenlet)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should forbid the gardenlet of another seed to remove an internal domain before the gardenlet observed the current generation", func() {
+						oldSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}, {Domain: "foo.bar"}}
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{{Domain: "bar.foo"}}
+						oldSeed.Spec.DNS.Internal.Domain = "bar.foo"
+						oldSeed.Generation = 2
+						oldSeed.Status.ObservedGeneration = 1
+						gardenlet := &user.DefaultInfo{Name: v1beta1constants.SeedUserNamePrefix + "other-seed", Groups: []string{v1beta1constants.SeedsGroup}}
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, gardenlet)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("before the gardenlet has observed the current generation")))
+					})
+
+					It("should forbid internal domain change when a shoot uses the former internal domain", func() {
+						shoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+							{Name: v1beta1constants.AdvertisedAddressInternal, URL: "https://api.shoot.project.internal.foo.bar"},
+						}
+						Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					})
+
+					It("should forbid the disable of the internal domain when a shoot on the seed has no managed external domain", func() {
+						newSeed.Spec.DNS.Internal.Domain = oldSeed.Spec.DNS.Internal.Domain
+						newSeed.Spec.DNS.InternalDomainEnabled = new(false)
+						Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("cannot disable the internal domain")))
+					})
 				})
 			})
 
@@ -512,6 +583,46 @@ var _ = Describe("validator", func() {
 						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        "dns-internal-secret",
+								Namespace:   namespaceName,
+								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
+							},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				When("spec.dns.internalDomains[].credentialsRef is a Secret", func() {
+					BeforeEach(func() {
+						newSeed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{
+							*newSeed.Spec.DNS.Internal,
+							{
+								CredentialsRef: corev1.ObjectReference{
+									APIVersion: corev1.SchemeGroupVersion.String(),
+									Kind:       "Secret",
+									Namespace:  namespaceName,
+									Name:       "dns-former-internal-secret",
+								},
+							},
+						}
+					})
+
+					It("should forbid when annotation is missing", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "dns-former-internal-secret", Namespace: namespaceName},
+						})).To(Succeed())
+						attrs := admission.NewAttributesRecord(newSeed, seedBase.DeepCopy(), core.Kind("Seed").WithVersion("version"), "", seedName, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Validate(context.TODO(), attrs, nil)
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("spec.dns.internalDomains[1].credentialsRef")))
+					})
+
+					It("should allow when annotation lists the seed name", func() {
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "dns-former-internal-secret",
 								Namespace:   namespaceName,
 								Annotations: map[string]string{v1beta1constants.AnnotationSeedNames: seedName},
 							},

@@ -256,6 +256,16 @@ var _ = Describe("Helper", func() {
 		Entry("zone selection enforce", &gardencorev1beta1.SeedSettings{ZoneSelection: &gardencorev1beta1.SeedSettingZoneSelection{Mode: gardencorev1beta1.ZoneSelectionModeEnforce}}, gardencorev1beta1.ZoneSelectionModeEnforce),
 	)
 
+	DescribeTable("#SeedInternalDomainEnabled",
+		func(internalDomainEnabled *bool, expected bool) {
+			Expect(SeedInternalDomainEnabled(gardencorev1beta1.SeedDNS{InternalDomainEnabled: internalDomainEnabled})).To(Equal(expected))
+		},
+
+		Entry("not set", nil, true),
+		Entry("enabled", new(true), true),
+		Entry("disabled", new(false), false),
+	)
+
 	DescribeTable("#SeedBackupCredentialsRefEqual",
 		func(oldBackup, newBackup *gardencorev1beta1.Backup, matcher gomegatypes.GomegaMatcher) {
 			Expect(SeedBackupCredentialsRefEqual(oldBackup, newBackup)).To(matcher)

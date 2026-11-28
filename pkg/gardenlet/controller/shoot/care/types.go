@@ -137,7 +137,7 @@ type NewOperationFunc func(
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
-	internalDomain *gardenerutils.Domain,
+	internalDomains []*gardenerutils.Domain,
 	defaultDomains []*gardenerutils.Domain,
 	shoot *gardencorev1beta1.Shoot,
 ) (
@@ -156,7 +156,7 @@ var defaultNewOperationFunc NewOperationFunc = func(
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
-	internalDomain *gardenerutils.Domain,
+	internalDomains []*gardenerutils.Domain,
 	defaultDomains []*gardenerutils.Domain,
 	shoot *gardencorev1beta1.Shoot,
 ) (
@@ -181,7 +181,7 @@ var defaultNewOperationFunc NewOperationFunc = func(
 		WithGardenerInfo(gardenerInfo).
 		WithGardenClusterIdentity(gardenClusterIdentity).
 		WithSecrets(secrets).
-		WithInternalDomain(internalDomain).
+		WithInternalDomains(internalDomains).
 		WithDefaultDomains(defaultDomains).
 		WithGardenFrom(gardenClient, shoot.Namespace).
 		WithSeedFrom(gardenClient, *shoot.Status.SeedName).

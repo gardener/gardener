@@ -32,15 +32,27 @@ func (b *Botanist) NeedsPriorExternalDNS() bool {
 
 // NeedsInternalDNS returns true if the Shoot cluster needs internal DNS.
 func (b *Botanist) NeedsInternalDNS() bool {
-	return b.Garden != nil &&
-		b.Garden.InternalDomain != nil &&
-		b.Garden.InternalDomain.Provider != "unmanaged"
+	return b.Shoot.InternalClusterDomain != nil &&
+		b.Shoot.InternalDomain != nil &&
+		b.Shoot.InternalDomain.Provider != "unmanaged"
+}
+
+// NeedsPriorInternalDNS returns true if the Shoot cluster needs the prior internal DNS.
+func (b *Botanist) NeedsPriorInternalDNS() bool {
+	return b.Shoot.PriorInternalClusterDomain != nil &&
+		b.Shoot.PriorInternalDomain != nil &&
+		b.Shoot.PriorInternalDomain.Provider != "unmanaged"
 }
 
 func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 	if b.NeedsInternalDNS() {
 		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(b.APIServerAddress))
 		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{b.APIServerAddress})
+	}
+
+	if b.NeedsPriorInternalDNS() {
+		b.Shoot.Components.Extensions.PriorInternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(b.APIServerAddress))
+		b.Shoot.Components.Extensions.PriorInternalDNSRecord.SetValues([]string{b.APIServerAddress})
 	}
 
 	if b.NeedsExternalDNS() {

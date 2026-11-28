@@ -65,7 +65,7 @@ type Builder struct {
 	seed                         *gardencorev1beta1.Seed
 	exposureClass                *gardencorev1beta1.ExposureClass
 	projectName                  string
-	internalDomain               *gardenerutils.Domain
+	internalDomains              []*gardenerutils.Domain
 	defaultDomains               []*gardenerutils.Domain
 }
 
@@ -96,6 +96,19 @@ type Shoot struct {
 	// service account issuer, the `gardener` kubeconfig, and the advertised addresses. In contrast, the internal domain
 	// of self-hosted shoots points to the internal IPs of the control plane nodes and is only reachable from the nodes.
 	InternalClusterDomain *string
+	// PriorInternalClusterDomain is the internal domain which is replaced during a running domain migration.
+	// It is nil if no domain migration is running.
+	PriorInternalClusterDomain *string
+	// DesiredInternalClusterDomain is the internal domain which the seed gives to new shoots.
+	DesiredInternalClusterDomain *string
+	// InternalDomain holds the domain information of InternalClusterDomain. It is nil if InternalClusterDomain is nil.
+	InternalDomain *gardenerutils.Domain
+	// PriorInternalDomain holds the domain information of PriorInternalClusterDomain, which can differ from
+	// InternalDomain in provider, zone and credentials. It is nil if PriorInternalClusterDomain is nil.
+	PriorInternalDomain *gardenerutils.Domain
+	// PriorServiceAccountIssuer is the default service account issuer before a domain migration which enables the
+	// internal domain. It is nil in all other cases.
+	PriorServiceAccountIssuer *string
 	// ExternalClusterDomain is nil if Shoot.Spec.DNS.Domain is unset.
 	ExternalClusterDomain *string
 	// PriorExternalClusterDomain is the external domain which is replaced during a running domain migration.
@@ -193,6 +206,7 @@ type Extensions struct {
 	ExternalDNSRecord               dnsrecord.Interface
 	PriorExternalDNSRecord          dnsrecord.Interface
 	InternalDNSRecord               dnsrecord.Interface
+	PriorInternalDNSRecord          dnsrecord.Interface
 	IngressDNSRecord                dnsrecord.Interface
 	SelfHostedShootIngressDNSRecord dnsrecord.Interface
 	Extension                       extension.Interface

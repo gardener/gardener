@@ -137,6 +137,11 @@ func refsFromSeedSpec(spec *gardencorev1beta1.SeedSpec) []Request {
 		refs = append(refs, Request{Namespace: c.Namespace, Name: c.Name, APIVersion: c.APIVersion, Kind: c.Kind})
 	}
 
+	for _, dns := range spec.DNS.InternalDomains {
+		c := dns.CredentialsRef
+		refs = append(refs, Request{Namespace: c.Namespace, Name: c.Name, APIVersion: c.APIVersion, Kind: c.Kind})
+	}
+
 	for _, dns := range spec.DNS.Defaults {
 		c := dns.CredentialsRef
 		refs = append(refs, Request{Namespace: c.Namespace, Name: c.Name, APIVersion: c.APIVersion, Kind: c.Kind})

@@ -291,13 +291,14 @@ func computeKindTypesForHostedShoots(
 		return nil, fmt.Errorf("cannot convert object of type %T to *gardencorev1beta1.Seed", obj)
 	}
 
-	internalDomain, err := gardenerutils.ReadGardenInternalDomain(
-		ctx,
-		reader,
-		seed.Spec.DNS.Internal,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read internal domain from garden cluster: %w", err)
+	// If a seed has more than one internal domain, a shoot can use any of them as its current or prior internal domain.
+	// Thus, require the DNS provider type of each one.
+	var internalDNSProviderTypes []string
+	if seed.Spec.DNS.Internal != nil {
+		internalDNSProviderTypes = append(internalDNSProviderTypes, seed.Spec.DNS.Internal.Type)
+	}
+	for _, internalDomain := range seed.Spec.DNS.InternalDomains {
+		internalDNSProviderTypes = append(internalDNSProviderTypes, internalDomain.Type)
 	}
 
 	defaultDomains, err := gardenerutils.ReadGardenDefaultDomains(
@@ -320,7 +321,7 @@ func computeKindTypesForHostedShoots(
 				log.Info("Could not determine external domain for shoot", "err", err, "shoot", client.ObjectKeyFromObject(shoot))
 			}
 
-			out <- gardenerutils.ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			out <- gardenerutils.ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDNSProviderTypes, externalDomain)
 		}(shoot.DeepCopy())
 	}
 

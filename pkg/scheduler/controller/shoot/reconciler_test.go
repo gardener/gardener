@@ -1123,6 +1123,65 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(result[1].Name).To(Equal(seedWithSameDomain.Name))
 		})
 	})
+
+	Context("filterSeedsWithInternalDomainForShootWithoutManagedDomain", func() {
+		var (
+			seedWithInternalDomain    *gardencorev1beta1.Seed
+			seedWithoutInternalDomain *gardencorev1beta1.Seed
+			testShoot                 *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			seedWithInternalDomain = seedBase.DeepCopy()
+			seedWithInternalDomain.Name = "seed-with-internal-domain"
+
+			seedWithoutInternalDomain = seedBase.DeepCopy()
+			seedWithoutInternalDomain.Name = "seed-without-internal-domain"
+			seedWithoutInternalDomain.Spec.DNS.InternalDomainEnabled = new(false)
+
+			testShoot = shootBase.DeepCopy()
+		})
+
+		It("should return all seeds when the shoot has a managed domain", func() {
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{
+				Domain:    new("shoot.example.com"),
+				Providers: []gardencorev1beta1.DNSProvider{{Type: new("some-provider"), Primary: new(true)}},
+			}
+
+			result, err := filterSeedsWithInternalDomainForShootWithoutManagedDomain([]gardencorev1beta1.Seed{*seedWithInternalDomain, *seedWithoutInternalDomain}, testShoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveLen(2))
+		})
+
+		It("should return only seeds with an internal domain when the shoot has no domain", func() {
+			testShoot.Spec.DNS = nil
+
+			result, err := filterSeedsWithInternalDomainForShootWithoutManagedDomain([]gardencorev1beta1.Seed{*seedWithInternalDomain, *seedWithoutInternalDomain}, testShoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Name).To(Equal(seedWithInternalDomain.Name))
+		})
+
+		It("should return only seeds with an internal domain when the shoot has an unmanaged domain", func() {
+			testShoot.Spec.DNS = &gardencorev1beta1.DNS{
+				Domain:    new("shoot.example.com"),
+				Providers: []gardencorev1beta1.DNSProvider{{Type: new("unmanaged")}},
+			}
+
+			result, err := filterSeedsWithInternalDomainForShootWithoutManagedDomain([]gardencorev1beta1.Seed{*seedWithInternalDomain, *seedWithoutInternalDomain}, testShoot)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(HaveLen(1))
+			Expect(result[0].Name).To(Equal(seedWithInternalDomain.Name))
+		})
+
+		It("should fail when no seed has an internal domain and the shoot has no domain", func() {
+			testShoot.Spec.DNS = nil
+
+			result, err := filterSeedsWithInternalDomainForShootWithoutManagedDomain([]gardencorev1beta1.Seed{*seedWithoutInternalDomain}, testShoot)
+			Expect(err).To(MatchError("none of the 1 seeds has an internal domain for new shoots, thus the shoot needs a domain in spec.dns.domain whose DNS provider is not unmanaged"))
+			Expect(result).To(BeNil())
+		})
+	})
 })
 
 var _ = DescribeTable("condition is false",

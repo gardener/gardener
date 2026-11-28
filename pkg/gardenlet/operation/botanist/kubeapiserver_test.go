@@ -290,6 +290,36 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 	})
 
+	Describe("#DefaultServiceAccountIssuerChanges", func() {
+		DescribeTable("should return whether a domain migration changes the default issuer",
+			func(prepTest func(), expected bool) {
+				prepTest()
+				Expect(botanist.DefaultServiceAccountIssuerChanges()).To(Equal(expected))
+			},
+			Entry("no domain migration", func() {}, false),
+			Entry("no domain migration without internal domain", func() {
+				botanist.Shoot.InternalClusterDomain = nil
+			}, false),
+			Entry("internal domain migration", func() {
+				botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+			}, true),
+			Entry("internal domain disabled during the migration", func() {
+				botanist.Shoot.InternalClusterDomain = nil
+				botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+			}, true),
+			Entry("external domain migration with internal domain", func() {
+				botanist.Shoot.PriorExternalClusterDomain = new("prior-external.foo.bar.com")
+			}, false),
+			Entry("external domain migration without internal domain", func() {
+				botanist.Shoot.InternalClusterDomain = nil
+				botanist.Shoot.PriorExternalClusterDomain = new("prior-external.foo.bar.com")
+			}, true),
+			Entry("internal domain enabled during the migration", func() {
+				botanist.Shoot.PriorServiceAccountIssuer = new("https://api.external.foo.bar.com")
+			}, true),
+		)
+	})
+
 	Describe("#DeployKubeAPIServer", func() {
 		Describe("ServerCertificateConfig", func() {
 			priorExternalClusterDomain := "prior.foo.bar.com"
@@ -345,6 +375,36 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
+				Entry("internal domain migration in progress",
+					func() {
+						botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: apiServerNetwork,
+						ExtraDNSNames: []string{
+							controlPlaneNamespace,
+							"api." + internalClusterDomain,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+							"api.prior-internal.foo.bar.com",
+						},
+					},
+				),
+				Entry("internal domain disabled during the migration",
+					func() {
+						botanist.Shoot.InternalClusterDomain = nil
+						botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: apiServerNetwork,
+						ExtraDNSNames: []string{
+							controlPlaneNamespace,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+							"api.prior-internal.foo.bar.com",
+						},
+					},
+				),
 			)
 		})
 
@@ -392,7 +452,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: new("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
-						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
+						botanist.Shoot.InternalDomain = &gardenerutils.Domain{}
 					},
 					kubeapiserver.SNIConfig{
 						Enabled: false,
@@ -400,7 +460,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("both DNS needed",
 					func() {
-						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
+						botanist.Shoot.InternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalClusterDomain = new("some-domain")
 						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
@@ -458,6 +518,79 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer: "https://api.internal.foo.bar.com",
+					},
+				),
+				Entry("should accept the prior internal issuer during an internal domain migration",
+					func() {
+						botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://api.internal.foo.bar.com",
+						AcceptedIssuers: []string{"https://api.prior-internal.foo.bar.com"},
+					},
+				),
+				Entry("should accept the prior internal issuer if the internal domain is disabled during the migration",
+					func() {
+						botanist.Shoot.InternalClusterDomain = nil
+						botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://api.external.foo.bar.com",
+						AcceptedIssuers: []string{"https://api.prior-internal.foo.bar.com"},
+					},
+				),
+				Entry("should accept the prior external issuer if the internal domain is disabled and the external domain changes",
+					func() {
+						botanist.Shoot.InternalClusterDomain = nil
+						botanist.Shoot.PriorExternalClusterDomain = new("prior-external.foo.bar.com")
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://api.external.foo.bar.com",
+						AcceptedIssuers: []string{"https://api.prior-external.foo.bar.com"},
+					},
+				),
+				Entry("should accept the prior service account issuer if the internal domain is enabled during the migration",
+					func() {
+						botanist.Shoot.PriorServiceAccountIssuer = new("https://api.external.foo.bar.com")
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://api.internal.foo.bar.com",
+						AcceptedIssuers: []string{"https://api.external.foo.bar.com"},
+					},
+				),
+				Entry("should not accept another issuer if only the external domain changes",
+					func() {
+						botanist.Shoot.PriorExternalClusterDomain = new("prior-external.foo.bar.com")
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer: "https://api.internal.foo.bar.com",
+					},
+				),
+				Entry("should accept the prior internal issuer only once besides a custom issuer",
+					func() {
+						botanist.Shoot.PriorInternalClusterDomain = new("prior-internal.foo.bar.com")
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+								Issuer:          new("foo"),
+								AcceptedIssuers: []string{"https://api.prior-internal.foo.bar.com"},
+							},
+						}
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "foo",
+						AcceptedIssuers: []string{"https://api.prior-internal.foo.bar.com", "https://api.internal.foo.bar.com"},
+					},
+				),
+				Entry("should accept the prior service account issuer besides a custom issuer if the internal domain is enabled during the migration",
+					func() {
+						botanist.Shoot.PriorServiceAccountIssuer = new("https://api.external.foo.bar.com")
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{Issuer: new("foo")},
+						}
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "foo",
+						AcceptedIssuers: []string{"https://api.internal.foo.bar.com", "https://api.external.foo.bar.com"},
 					},
 				),
 				Entry("should set configuration correctly",

@@ -207,6 +207,18 @@ var _ = Describe("Helper", func() {
 		Entry("dns providers and unmanaged type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
 
+	DescribeTable("#ShootHasManagedExternalDomain",
+		func(dns *gardencorev1beta1.DNS, expectation bool) {
+			Expect(ShootHasManagedExternalDomain(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{DNS: dns}})).To(Equal(expectation))
+		},
+
+		Entry("no dns", nil, false),
+		Entry("no domain", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &differentType}}}, false),
+		Entry("domain without providers", &gardencorev1beta1.DNS{Domain: new("shoot.example.com")}, true),
+		Entry("domain and managed provider", &gardencorev1beta1.DNS{Domain: new("shoot.example.com"), Providers: []gardencorev1beta1.DNSProvider{{Type: &differentType}}}, true),
+		Entry("domain and unmanaged provider", &gardencorev1beta1.DNS{Domain: new("shoot.example.com"), Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, false),
+	)
+
 	DescribeTable("#ShootNeedsForceDeletion",
 		func(shoot *gardencorev1beta1.Shoot, match gomegatypes.GomegaMatcher) {
 			Expect(ShootNeedsForceDeletion(shoot)).To(match)

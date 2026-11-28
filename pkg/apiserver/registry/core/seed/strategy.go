@@ -51,6 +51,7 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
 	newSeed.Status = oldSeed.Status
+	syncInternalDomains(&newSeed.Spec.DNS, oldSeed.Spec.DNS)
 
 	if mustIncreaseGeneration(oldSeed, newSeed) {
 		newSeed.Generation = oldSeed.Generation + 1
@@ -62,6 +63,24 @@ func (Strategy) Canonicalize(obj runtime.Object) {
 	seed := obj.(*core.Seed)
 	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedProvider, seed.Spec.Provider.Type)
 	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelSeedRegion, seed.Spec.Provider.Region)
+}
+
+func syncInternalDomains(newDNS *core.SeedDNS, oldDNS core.SeedDNS) {
+	// If a client changes only one of the fields internal and internalDomains[0], for example with a patch, the
+	// other field keeps its old value. Thus, copy the changed field to the other field.
+	if newDNS.Internal == nil || len(newDNS.InternalDomains) == 0 || apiequality.Semantic.DeepEqual(*newDNS.Internal, newDNS.InternalDomains[0]) {
+		return
+	}
+
+	internalChanged := !apiequality.Semantic.DeepEqual(newDNS.Internal, oldDNS.Internal)
+	internalDomainsChanged := !apiequality.Semantic.DeepEqual(newDNS.InternalDomains, oldDNS.InternalDomains)
+
+	switch {
+	case internalChanged && !internalDomainsChanged:
+		newDNS.InternalDomains[0] = *newDNS.Internal.DeepCopy()
+	case !internalChanged && internalDomainsChanged:
+		newDNS.Internal = newDNS.InternalDomains[0].DeepCopy()
+	}
 }
 
 func mustIncreaseGeneration(oldSeed, newSeed *core.Seed) bool {

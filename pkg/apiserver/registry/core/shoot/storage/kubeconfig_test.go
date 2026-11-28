@@ -9,6 +9,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"maps"
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -358,6 +360,71 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		},
 			Entry("gardener system user", fakeSubjectAccessReviewer{allowed: true}, systemOrganizationMatcher),
 			Entry("gardener project user", fakeSubjectAccessReviewer{allowed: false}, projectOrganizationMatcher),
+		)
+
+		DescribeTable("should use the prior internal domain for the internal context during an internal domain migration",
+			func(migrationAddresses []gardencore.ShootAdvertisedAddress, expectedServers map[string]string) {
+				shoot.Status.AdvertisedAddresses = append([]gardencore.ShootAdvertisedAddress{
+					{Name: "external", URL: "https://foo.bar.external:9443"},
+					{Name: "service-account-issuer", URL: "https://foo.bar.issuer:9443"},
+				}, migrationAddresses...)
+
+				actual, err := kcREST.Create(ctx, name, obj, nil, nil)
+				Expect(err).ToNot(HaveOccurred())
+
+				config := &clientcmdv1.Config{}
+				Expect(runtime.DecodeInto(clientcmdlatest.Codec, getKubeconfig(actual), config)).To(Succeed())
+
+				servers := map[string]string{}
+				for _, cluster := range config.Clusters {
+					servers[cluster.Name] = cluster.Cluster.Server
+				}
+				Expect(servers).To(Equal(expectedServers))
+
+				contextNames := make([]string, 0, len(config.Contexts))
+				for _, namedContext := range config.Contexts {
+					contextNames = append(contextNames, namedContext.Name)
+				}
+				Expect(contextNames).To(ConsistOf(slices.Collect(maps.Keys(expectedServers))))
+			},
+
+			Entry("no migration",
+				[]gardencore.ShootAdvertisedAddress{
+					{Name: "internal", URL: "https://foo.bar.internal:9443"},
+				},
+				map[string]string{
+					"baz--test-external": "https://foo.bar.external:9443",
+					"baz--test-internal": "https://foo.bar.internal:9443",
+				},
+			),
+			Entry("migration to a new internal domain",
+				[]gardencore.ShootAdvertisedAddress{
+					{Name: "internal", URL: "https://foo.bar.internal-new:9443"},
+					{Name: "prior-internal", URL: "https://foo.bar.internal:9443"},
+				},
+				map[string]string{
+					"baz--test-external": "https://foo.bar.external:9443",
+					"baz--test-internal": "https://foo.bar.internal:9443",
+				},
+			),
+			Entry("migration which disables the internal domain",
+				[]gardencore.ShootAdvertisedAddress{
+					{Name: "prior-internal", URL: "https://foo.bar.internal:9443"},
+				},
+				map[string]string{
+					"baz--test-external": "https://foo.bar.external:9443",
+					"baz--test-internal": "https://foo.bar.internal:9443",
+				},
+			),
+			Entry("migration which enables the internal domain",
+				[]gardencore.ShootAdvertisedAddress{
+					{Name: "internal", URL: "https://foo.bar.internal-new:9443"},
+					{Name: "prior-service-account-issuer", URL: "https://foo.bar.external:9443"},
+				},
+				map[string]string{
+					"baz--test-external": "https://foo.bar.external:9443",
+				},
+			),
 		)
 	})
 }

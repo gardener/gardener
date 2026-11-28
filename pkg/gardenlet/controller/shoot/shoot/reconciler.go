@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/tools/events"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,10 +40,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	gardenletmetrics "github.com/gardener/gardener/pkg/gardenlet/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -389,7 +392,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 	}
 
 	technicalID := gardenerutils.ComputeTechnicalID(project.Name, shoot)
-	if err := r.updateShootStatusOperationStart(ctx, shoot, technicalID, i.OperationType); err != nil {
+	if err := r.updateShootStatusOperationStart(ctx, shoot, seed, project.Name, technicalID, i.OperationType); err != nil {
 		return nil, reconcile.Result{}, err
 	}
 
@@ -602,6 +605,8 @@ func (r *Reconciler) newProgressReporter(reporterFn flow.ProgressReporterFn) flo
 func (r *Reconciler) updateShootStatusOperationStart(
 	ctx context.Context,
 	shoot *gardencorev1beta1.Shoot,
+	seed *gardencorev1beta1.Seed,
+	projectName string,
 	technicalID string,
 	operationType gardencorev1beta1.LastOperationType,
 ) error {
@@ -681,6 +686,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	var (
 		operations        = v1beta1helper.GetShootGardenerOperations(shoot.Annotations)
 		updatedOperations = slices.Clone(operations)
+		caRotationStarted bool
 	)
 
 	for _, operation := range operations {
@@ -688,6 +694,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		case v1beta1constants.OperationRotateCredentialsStart:
 			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 			startRotationCA(shoot, &now)
+			caRotationStarted = true
 			startRotationServiceAccountKey(shoot, &now)
 			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
 				startRotationSSHKeypair(shoot, &now)
@@ -697,6 +704,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 			startRotationCAWithoutWorkersRollout(shoot, &now)
+			caRotationStarted = true
 			startRotationServiceAccountKeyWithoutWorkersRollout(shoot, &now)
 			if v1beta1helper.ShootEnablesSSHAccess(shoot) {
 				startRotationSSHKeypair(shoot, &now)
@@ -713,9 +721,11 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		case v1beta1constants.OperationRotateCAStart:
 			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 			startRotationCA(shoot, &now)
+			caRotationStarted = true
 		case v1beta1constants.OperationRotateCAStartWithoutWorkersRollout:
 			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 			startRotationCAWithoutWorkersRollout(shoot, &now)
+			caRotationStarted = true
 		case v1beta1constants.OperationRotateCAComplete:
 			updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)
 			completeRotationCA(shoot, &now)
@@ -822,6 +832,10 @@ func (r *Reconciler) updateShootStatusOperationStart(
 
 	removeNonExistentPoolsFromPendingWorkersRollouts(shoot, v1beta1helper.HibernationIsEnabled(shoot))
 
+	if caRotationStarted && shoot.Annotations[v1beta1constants.AnnotationConfirmationMigrateInternalDomain] == "true" && seed != nil && features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		startInternalDomainMigration(shoot, desiredInternalClusterDomain(shoot, seed, projectName))
+	}
+
 	etcdEncryptionRotationPhase := v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials)
 
 	// TODO(AleksandarSavchev): Remove the k8s version check in a future release after support for Kubernetes v1.33 is dropped.
@@ -850,6 +864,9 @@ func (r *Reconciler) updateShootStatusOperationStart(
 			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 		} else {
 			shoot.Annotations[v1beta1constants.GardenerOperation] = strings.Join(updatedOperations, v1beta1constants.GardenerOperationsSeparator)
+		}
+		if caRotationStarted {
+			delete(shoot.Annotations, v1beta1constants.AnnotationConfirmationMigrateInternalDomain)
 		}
 		return r.GardenClient.Patch(ctx, shoot, patch)
 	}
@@ -1265,6 +1282,63 @@ func checkIfSeedNamespaceExists(ctx context.Context, o *operation.Operation, bot
 		return err
 	}
 	return nil
+}
+
+func desiredInternalClusterDomain(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, projectName string) *string {
+	seedDomains := garden.SeedInternalDomains(seed)
+	if len(seedDomains) == 0 || garden.SeedInternalDomainDisabled(seed) {
+		return nil
+	}
+
+	return gardenerutils.ConstructInternalClusterDomain(shoot.Name, projectName, &gardenerutils.Domain{Domain: seedDomains[0].Domain})
+}
+
+func startInternalDomainMigration(shoot *gardencorev1beta1.Shoot, desiredDomain *string) {
+	var appliedAddress *gardencorev1beta1.ShootAdvertisedAddress
+	if i := slices.IndexFunc(shoot.Status.AdvertisedAddresses, isInternalAddress); i >= 0 {
+		appliedAddress = &shoot.Status.AdvertisedAddresses[i]
+	}
+
+	var appliedDomain *string
+	if appliedAddress != nil {
+		appliedDomain = new(v1beta1helper.GetDomainFromAPIServerURL(appliedAddress.URL))
+	}
+	if len(shoot.Status.AdvertisedAddresses) == 0 || ptr.Equal(appliedDomain, desiredDomain) {
+		return
+	}
+
+	var (
+		addresses       []gardencorev1beta1.ShootAdvertisedAddress
+		externalAddress *gardencorev1beta1.ShootAdvertisedAddress
+	)
+	for _, address := range shoot.Status.AdvertisedAddresses {
+		switch address.Name {
+		case v1beta1constants.AdvertisedAddressInternal, v1beta1constants.AdvertisedAddressPriorInternal, v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer:
+		case v1beta1constants.AdvertisedAddressExternal:
+			externalAddress = &address
+			addresses = append(addresses, address)
+		default:
+			addresses = append(addresses, address)
+		}
+	}
+	if desiredDomain != nil {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: v1beta1constants.AdvertisedAddressInternal,
+			URL:  "https://" + v1beta1helper.GetAPIServerDomain(*desiredDomain),
+		})
+	}
+	if appliedAddress != nil {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressPriorInternal, URL: appliedAddress.URL})
+	} else if externalAddress != nil {
+		// Without a prior internal domain, the domains do not contain the default issuer that the new internal domain
+		// replaces. It is derived from the external domain, also if the shoot uses a custom or managed issuer.
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{Name: v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer, URL: externalAddress.URL})
+	}
+	shoot.Status.AdvertisedAddresses = addresses
+}
+
+func isInternalAddress(address gardencorev1beta1.ShootAdvertisedAddress) bool {
+	return address.Name == v1beta1constants.AdvertisedAddressInternal
 }
 
 func startRotationCA(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenlethelper "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
@@ -32,6 +34,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -179,9 +182,10 @@ func (b *Builder) WithProjectName(projectName string) *Builder {
 	return b
 }
 
-// WithInternalDomain sets the internalDomain attribute at the Builder.
-func (b *Builder) WithInternalDomain(internalDomain *gardenerutils.Domain) *Builder {
-	b.internalDomain = internalDomain
+// WithInternalDomains sets the internalDomains attribute at the Builder. The first internal domain is the one for new
+// shoots.
+func (b *Builder) WithInternalDomains(internalDomains []*gardenerutils.Domain) *Builder {
+	b.internalDomains = internalDomains
 	return b
 }
 
@@ -218,13 +222,13 @@ var domainMigrationPhases = sets.New(
 	gardencorev1beta1.RotationPrepared,
 )
 
-func priorClusterDomain(shoot *gardencorev1beta1.Shoot, priorAddressName, currentAddressName string, currentDomain *string) *string {
+func priorExternalClusterDomain(shoot *gardencorev1beta1.Shoot, currentDomain *string) *string {
 	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) || currentDomain == nil ||
 		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
 		return nil
 	}
 
-	if priorDomain := domainFromAdvertisedAddress(shoot, priorAddressName); priorDomain != nil {
+	if priorDomain := domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressPriorExternal); priorDomain != nil {
 		return priorDomain
 	}
 
@@ -232,12 +236,76 @@ func priorClusterDomain(shoot *gardencorev1beta1.Shoot, priorAddressName, curren
 	// differs from the spec in the first reconciliation of a migration, which is the single chance to capture the old
 	// domain. Afterwards the prior address above takes over. The comparison also separates a plain CA rotation, where
 	// both domains are equal, from a CA rotation which migrates the domain.
-	appliedDomain := domainFromAdvertisedAddress(shoot, currentAddressName)
+	appliedDomain := domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressExternal)
 	if appliedDomain == nil || *appliedDomain == *currentDomain {
 		return nil
 	}
 
 	return appliedDomain
+}
+
+func internalClusterDomain(shoot *gardencorev1beta1.Shoot, seedDomain *string) (*string, error) {
+	if len(shoot.Status.AdvertisedAddresses) == 0 {
+		return seedDomain, nil
+	}
+
+	appliedDomain := domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressInternal)
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) && !ptr.Equal(appliedDomain, seedDomain) {
+		return nil, fmt.Errorf("changing the internal cluster domain of the shoot from %q to %q requires the %s feature gate",
+			ptr.Deref(appliedDomain, "<none>"), ptr.Deref(seedDomain, "<none>"), features.MutableShootDomains)
+	}
+
+	return appliedDomain, nil
+}
+
+func priorInternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) ||
+		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
+		return nil
+	}
+
+	return domainFromAdvertisedAddress(shoot, v1beta1constants.AdvertisedAddressPriorInternal)
+}
+
+func priorServiceAccountIssuer(shoot *gardencorev1beta1.Shoot) *string {
+	if !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) ||
+		!domainMigrationPhases.Has(v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials)) {
+		return nil
+	}
+
+	i := slices.IndexFunc(shoot.Status.AdvertisedAddresses, func(address gardencorev1beta1.ShootAdvertisedAddress) bool {
+		return address.Name == v1beta1constants.AdvertisedAddressPriorServiceAccountIssuer
+	})
+	if i < 0 {
+		return nil
+	}
+	return new(shoot.Status.AdvertisedAddresses[i].URL)
+}
+
+func (b *Builder) internalDomainForNewShoots() *gardenerutils.Domain {
+	if len(b.internalDomains) == 0 {
+		return nil
+	}
+	if b.seed != nil && garden.SeedInternalDomainDisabled(b.seed) {
+		return nil
+	}
+	return b.internalDomains[0]
+}
+
+func (b *Builder) findInternalDomain(shootName string, clusterDomain *string) (*gardenerutils.Domain, error) {
+	if clusterDomain == nil {
+		return nil, nil
+	}
+
+	for _, internalDomain := range b.internalDomains {
+		if ptr.Equal(gardenerutils.ConstructInternalClusterDomain(shootName, b.projectName, internalDomain), clusterDomain) {
+			return internalDomain, nil
+		}
+	}
+
+	// A gardenlet with an outdated seed can assign an internal domain which is removed from the seed at the same time.
+	// The operator must add the internal domain to the seed again.
+	return nil, fmt.Errorf("the internal cluster domain %q does not belong to an internal domain of the seed", *clusterDomain)
 }
 
 func domainFromAdvertisedAddress(shoot *gardencorev1beta1.Shoot, name string) *string {
@@ -259,6 +327,7 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 		return nil, err
 	}
 
+	hasManagedExternalDomain := v1beta1helper.ShootHasManagedExternalDomain(shootObject)
 	if b.shootDNSFunc != nil {
 		shootObject.Spec.DNS = b.shootDNSFunc()
 	}
@@ -280,9 +349,23 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
-	shoot.InternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
+	shoot.DesiredInternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomainForNewShoots())
+	if shoot.InternalClusterDomain, err = internalClusterDomain(shootObject, shoot.DesiredInternalClusterDomain); err != nil {
+		return nil, err
+	}
+	if shoot.InternalClusterDomain == nil && !hasManagedExternalDomain && !v1beta1helper.IsShootSelfHosted(shootObject.Spec.Provider.Workers) {
+		return nil, fmt.Errorf("the shoot has neither an internal domain nor a managed external domain")
+	}
+	shoot.PriorInternalClusterDomain = priorInternalClusterDomain(shootObject)
+	shoot.PriorServiceAccountIssuer = priorServiceAccountIssuer(shootObject)
+	if shoot.InternalDomain, err = b.findInternalDomain(shootObject.Name, shoot.InternalClusterDomain); err != nil {
+		return nil, err
+	}
+	if shoot.PriorInternalDomain, err = b.findInternalDomain(shootObject.Name, shoot.PriorInternalClusterDomain); err != nil {
+		return nil, err
+	}
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
-	shoot.PriorExternalClusterDomain = priorClusterDomain(shootObject, v1beta1constants.AdvertisedAddressPriorExternal, v1beta1constants.AdvertisedAddressExternal, shoot.ExternalClusterDomain)
+	shoot.PriorExternalClusterDomain = priorExternalClusterDomain(shootObject, shoot.ExternalClusterDomain)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
 	shoot.WantsAlertmanager = v1beta1helper.ShootWantsAlertManager(shootObject)
 	shoot.WantsVerticalPodAutoscaler = v1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
@@ -546,6 +629,7 @@ func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWa
 		s.Components.Extensions.ExternalDNSRecord,
 		s.Components.Extensions.PriorExternalDNSRecord,
 		s.Components.Extensions.InternalDNSRecord,
+		s.Components.Extensions.PriorInternalDNSRecord,
 	}
 }
 

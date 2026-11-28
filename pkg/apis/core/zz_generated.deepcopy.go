@@ -5354,6 +5354,18 @@ func (in *SeedDNS) DeepCopyInto(out *SeedDNS) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.InternalDomains != nil {
+		in, out := &in.InternalDomains, &out.InternalDomains
+		*out = make([]SeedDNSProviderConfig, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.InternalDomainEnabled != nil {
+		in, out := &in.InternalDomainEnabled, &out.InternalDomainEnabled
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

@@ -128,10 +128,21 @@ type SeedDNS struct {
 	// Provider configures a DNSProvider
 	Provider *SeedDNSProvider
 	// Internal configures DNS settings related to seed internal domain.
+	//
+	// Deprecated: Use InternalDomains instead. If both fields are set, Internal must be equal to the first entry of
+	// InternalDomains.
 	Internal *SeedDNSProviderConfig
 	// Defaults configures DNS settings related to seed default domains.
 	// When determining the DNS settings for a Shoot, the first matching entry in this list will take precedence.
 	Defaults []SeedDNSProviderConfig
+	// InternalDomains configures DNS settings related to the internal domains of the seed.
+	// The first entry is the internal domain for new shoots, all other entries are former internal domains which may
+	// still be in use by shoots.
+	InternalDomains []SeedDNSProviderConfig
+	// InternalDomainEnabled indicates whether the shoots on this seed use an internal domain.
+	// Defaults to true, i.e. if the field is not set, the shoots on this seed use an internal domain.
+	// Setting it to false requires the MutableShootDomains feature gate.
+	InternalDomainEnabled *bool
 }
 
 // SeedDNSProvider configures a DNS provider

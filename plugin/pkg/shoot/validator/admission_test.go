@@ -1750,6 +1750,73 @@ var _ = Describe("validator", func() {
 			})
 		})
 
+		Context("seed without internal domain for new shoots", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+				seed.Spec.DNS.InternalDomainEnabled = new(false)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+			})
+
+			It("should refuse a shoot with an unmanaged external domain", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(And(
+					BeForbiddenError(),
+					MatchError(ContainSubstring(`seed "seed" has no internal domain for new shoots`)),
+				))
+			})
+
+			It("should refuse a shoot without external domain", func() {
+				shoot.Spec.DNS = nil
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(BeForbiddenError())
+			})
+
+			It("should allow a shoot with a managed external domain", func() {
+				shoot.Spec.DNS.Providers = []core.DNSProvider{{Type: new("some-provider"), Primary: new(true)}}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow a shoot with an unmanaged external domain if the feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should refuse the scheduling of a shoot with an unmanaged external domain", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = nil
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(BeForbiddenError())
+			})
+
+			It("should refuse the change to an unmanaged external domain", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.DNS.Providers = []core.DNSProvider{{Type: new("some-provider"), Primary: new(true)}}
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(BeForbiddenError())
+			})
+
+			It("should allow an update of an existing shoot which changes neither the seed nor the DNS", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Labels = map[string]string{"foo": "bar"}
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+		})
+
 		Context("scheduling checks for Create operation", func() {
 			var (
 				oldShoot *core.Shoot
@@ -2865,6 +2932,67 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("another shoot migrates away from the specified domain", func() {
+				var anotherShoot *gardencorev1beta1.Shoot
+
+				validateCreate := func() error {
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(anotherShoot)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					return admissionHandler.Validate(ctx, attrs, nil)
+				}
+
+				advertisedAddress := func(name, domain string) gardencorev1beta1.ShootAdvertisedAddress {
+					return gardencorev1beta1.ShootAdvertisedAddress{Name: name, URL: "https://api." + domain}
+				}
+
+				BeforeEach(func() {
+					anotherShoot = versionedShoot.DeepCopy()
+					anotherShoot.Name = "another-shoot"
+					anotherShoot.Spec.DNS.Domain = new("moved.example.org")
+				})
+
+				It("should reject the domain while the gardenlet has not set up the new domain yet", func() {
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, *shoot.Spec.DNS.Domain),
+					}
+
+					Expect(validateCreate()).To(BeInvalidError())
+				})
+
+				It("should reject the domain while the other shoot still serves it as prior domain", func() {
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, *anotherShoot.Spec.DNS.Domain),
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal, *shoot.Spec.DNS.Domain),
+					}
+
+					Expect(validateCreate()).To(BeInvalidError())
+				})
+
+				It("should reject a subdomain of the prior domain of the other shoot", func() {
+					anotherShoot.Spec.DNS.Domain = new("other.example.com")
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressPriorExternal, "prior.example.com"),
+					}
+					shoot.Spec.DNS.Domain = new("sub.prior.example.com")
+
+					Expect(validateCreate()).To(MatchError(ContainSubstring("the domain is already used by another shoot or it is a subdomain of an already used domain")))
+				})
+
+				It("should allow the domain after the other shoot completed the migration", func() {
+					anotherShoot.Status.AdvertisedAddresses = []gardencorev1beta1.ShootAdvertisedAddress{
+						advertisedAddress(v1beta1constants.AdvertisedAddressExternal, *anotherShoot.Spec.DNS.Domain),
+					}
+
+					Expect(validateCreate()).To(Succeed())
+				})
 			})
 		})
 
@@ -5958,6 +6086,68 @@ var _ = Describe("validator", func() {
 				Entry("should pass networking status if it is not disjoint with seed network (non-HA control plane)", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, false, Not(HaveOccurred())),
 				Entry("should allow networking status with only egressCIDRs filled", &core.NetworkingStatus{EgressCIDRs: []string{"1.2.3.4/5"}}, false, Not(HaveOccurred())),
 			)
+
+			Context("with the MutableShootDomains feature gate", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+					oldSeed.Spec.DNS.Internal = &internalDNS1
+					oldSeed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS1}
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(oldSeed)).To(Succeed())
+
+					shoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+						{Name: v1beta1constants.AdvertisedAddressInternal, URL: "https://api." + shoot.Name + "." + projectName + ".test1.internal"},
+					}
+				})
+
+				validateBinding := func() error {
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					return admissionHandler.Validate(ctx, attrs, nil)
+				}
+
+				It("should allow the migration if the target seed lists the internal domain of the shoot", func() {
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2, internalDNS1}
+
+					Expect(validateBinding()).To(Succeed())
+				})
+
+				It("should reject the migration if the target seed does not list the internal domain of the shoot", func() {
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2}
+
+					Expect(validateBinding()).To(MatchError(ContainSubstring(`has no internal domain for the internal cluster domain "` + shoot.Name + "." + projectName + `.test1.internal"`)))
+				})
+
+				It("should reject the migration if the target seed does not list the prior internal domain of the shoot", func() {
+					shoot.Status.AdvertisedAddresses = append(shoot.Status.AdvertisedAddresses, core.ShootAdvertisedAddress{
+						Name: v1beta1constants.AdvertisedAddressPriorInternal, URL: "https://api." + shoot.Name + "." + projectName + ".test2.internal",
+					})
+					seed.Spec.DNS.Internal = &internalDNS1
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS1}
+
+					Expect(validateBinding()).To(MatchError(ContainSubstring(`internal cluster domain "` + shoot.Name + "." + projectName + `.test2.internal"`)))
+				})
+
+				It("should allow the migration if the shoot has no internal domain", func() {
+					shoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+						{Name: v1beta1constants.AdvertisedAddressExternal, URL: "https://api.shoot.example.com"},
+					}
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2}
+
+					Expect(validateBinding()).To(Succeed())
+				})
+
+				It("should allow the migration if the shoot has no advertised addresses and the seeds have different internal domains", func() {
+					shoot.Status.AdvertisedAddresses = nil
+					seed.Spec.DNS.Internal = &internalDNS2
+					seed.Spec.DNS.InternalDomains = []gardencorev1beta1.SeedDNSProviderConfig{internalDNS2}
+
+					Expect(validateBinding()).To(Succeed())
+				})
+			})
 
 			DescribeTable("Validating internal dns secret reference change by migration",
 				func(oldDNSInternalRef, newDNSInternalRef *gardencorev1beta1.SeedDNSProviderConfig, matcher types.GomegaMatcher) {

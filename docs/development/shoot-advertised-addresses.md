@@ -30,6 +30,12 @@ While the external domain of the shoot is migrated (see [Changing the External D
 It is only present while the CA rotation is in the phases `Preparing` to `Prepared`. The `kubeconfig`s handed out by Gardener contain it as an additional context, while the current context stays on the `external` endpoint.
 During the migration, the gardenlet updates the list only after the DNS records of both domains are ready and the `kube-apiserver` serves both domains. Until then, the list still holds the old external domain as `external`.
 
+While the internal domain of the shoot is migrated (see [Migrating the Internal Domain](../usage/shoot-operations/shoot_credentials_rotation.md#migrating-the-internal-domain)), the list additionally contains a `prior-internal` endpoint with the old internal domain, directly after the `internal` endpoint.
+If the migration changes the default service account issuer, the list also contains a `prior-service-account-issuer` endpoint with the old default issuer, directly after the `service-account-issuer` endpoint.
+Both are only present while the CA rotation is in the phases `Preparing` to `Prepared`.
+Unlike for the external domain, the gardenlet changes the `internal` and `prior-internal` entries when the CA rotation starts, and it reads the internal domain that the shoot uses from these entries.
+If the seed has disabled the internal domain, the `internal` endpoint is missing.
+
 > [!NOTE]
 > As of now, only `Ingress` and `VirtualService` resources support to be advertised using this label.
 > In the future, support for `Gateway` resources will be added as well.

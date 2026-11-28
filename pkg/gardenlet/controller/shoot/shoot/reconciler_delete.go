@@ -674,6 +674,12 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !nonTerminatingNamespace,
 			Dependencies: flow.NewTaskIDs(syncPointObservabilityDown),
 		})
+		destroyPriorInternalDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Destroying prior internal domain DNS record",
+			Fn:           botanist.DestroyPriorInternalDNSRecord,
+			SkipIf:       !nonTerminatingNamespace,
+			Dependencies: flow.NewTaskIDs(syncPointObservabilityDown),
+		})
 		destroyReferencedResources = g.Add(flow.Task{
 			Name:         "Deleting referenced resources",
 			Fn:           flow.TaskFn(botanist.DestroyReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -692,7 +698,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPointObservabilityDown, destroyInternalDomainDNSRecord, destroyReferencedResources, waitUntilEtcdDeleted),
+			Dependencies: flow.NewTaskIDs(syncPointObservabilityDown, destroyInternalDomainDNSRecord, destroyPriorInternalDomainDNSRecord, destroyReferencedResources, waitUntilEtcdDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",

@@ -65,15 +65,14 @@ var _ = Describe("APIServerProxy", func() {
 				Clock:              clock.RealClock{},
 				GardenClient:       gardenClient,
 				APIServerClusterIP: advertiseIPAddress,
-				Garden: &garden.Garden{
-					InternalDomain: &gardenerutils.Domain{Provider: "some-provider"},
-				},
-				SeedClientSet: seedClientSet,
+				Garden:             &garden.Garden{},
+				SeedClientSet:      seedClientSet,
 				Shoot: &shootpkg.Shoot{
 					Components: &shootpkg.Components{
 						SystemComponents: &shootpkg.SystemComponents{},
 					},
 					InternalClusterDomain: &internalClusterDomain,
+					InternalDomain:        &gardenerutils.Domain{Provider: "some-provider"},
 					ExternalClusterDomain: &externalClusterDomain,
 					ExternalDomain:        &gardenerutils.Domain{Provider: "some-external-provider"},
 				},

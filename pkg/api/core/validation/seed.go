@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
@@ -41,6 +42,13 @@ var (
 
 // ValidateSeed validates a Seed object.
 func ValidateSeed(seed *core.Seed) field.ErrorList {
+	allErrs := validateSeed(seed)
+	allErrs = append(allErrs, validateSeedInternalDomainDisabling(seed.Spec.DNS, nil, field.NewPath("spec", "dns"))...)
+
+	return allErrs
+}
+
+func validateSeed(seed *core.Seed) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&seed.ObjectMeta, false, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
@@ -57,9 +65,8 @@ func ValidateSeedUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateSeedOperationUpdate(newSeed.Annotations[v1beta1constants.GardenerOperation], oldSeed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
-
 	allErrs = append(allErrs, ValidateEmbeddedBackupBucketUpdate(newSeed.Spec.Backup, oldSeed.Spec.Backup, newSeed.Annotations, field.NewPath("spec"))...)
-	allErrs = append(allErrs, ValidateSeed(newSeed)...)
+	allErrs = append(allErrs, validateSeed(newSeed)...)
 
 	return allErrs
 }
@@ -248,10 +255,14 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		}
 	}
 
-	if internalDNS := seedSpec.DNS.Internal; internalDNS == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("dns", "internal"), "internal DNS configuration is required"))
-	} else {
-		allErrs = append(allErrs, validateSeedDNSProviderConfig(*internalDNS, fldPath.Child("dns", "internal"))...)
+	allErrs = append(allErrs, validateSeedInternalDomains(seedSpec.DNS, fldPath.Child("dns"))...)
+
+	internalDomains := sets.New[string]()
+	if seedSpec.DNS.Internal != nil {
+		internalDomains.Insert(seedSpec.DNS.Internal.Domain)
+	}
+	for _, internalDNS := range seedSpec.DNS.InternalDomains {
+		internalDomains.Insert(internalDNS.Domain)
 	}
 
 	defaultDomains := sets.New[string]()
@@ -264,8 +275,8 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		defaultDomains.Insert(defaultDNS.Domain)
 
 		// External DNS names point at the internal domain, so the two identities must stay distinct.
-		if internalDNS := seedSpec.DNS.Internal; internalDNS != nil && len(internalDNS.Domain) > 0 && len(defaultDNS.Domain) > 0 && defaultDNS.Domain == internalDNS.Domain {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain, "must differ from the internal domain"))
+		if len(defaultDNS.Domain) > 0 && internalDomains.Has(defaultDNS.Domain) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "defaults").Index(i).Child("domain"), defaultDNS.Domain, "must differ from the internal domains"))
 		}
 	}
 
@@ -418,6 +429,8 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "defaults"), "removing defaults DNS configuration is not allowed"))
 	}
 
+	allErrs = append(allErrs, validateSeedInternalDomainDisabling(newSeedSpec.DNS, &oldSeedSpec.DNS, fldPath.Child("dns"))...)
+
 	return allErrs
 }
 
@@ -479,7 +492,53 @@ func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *fie
 	return allErrs
 }
 
-// validateSeedDNSProviderConfig validates a SeedDNSProviderConfig.
+func validateSeedInternalDomainDisabling(newDNS core.SeedDNS, oldDNS *core.SeedDNS, fldPath *field.Path) field.ErrorList {
+	if helper.SeedInternalDomainEnabled(newDNS) {
+		return nil
+	}
+	// A stored disabled internal domain stays valid when the feature gate is turned off again.
+	if oldDNS != nil && !helper.SeedInternalDomainEnabled(*oldDNS) {
+		return nil
+	}
+	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return nil
+	}
+
+	return field.ErrorList{field.Forbidden(fldPath.Child("internalDomainEnabled"), fmt.Sprintf("disabling the internal domain requires the %s feature gate", features.MutableShootDomains))}
+}
+
+func validateSeedInternalDomains(dns core.SeedDNS, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if dns.Internal == nil && len(dns.InternalDomains) == 0 {
+		if helper.SeedInternalDomainEnabled(dns) {
+			allErrs = append(allErrs, field.Required(fldPath.Child("internal"), "internal DNS configuration is required"))
+		}
+		return allErrs
+	}
+
+	if dns.Internal != nil {
+		allErrs = append(allErrs, validateSeedDNSProviderConfig(*dns.Internal, fldPath.Child("internal"))...)
+	}
+
+	domains := sets.New[string]()
+	for i, internalDNS := range dns.InternalDomains {
+		idxPath := fldPath.Child("internalDomains").Index(i)
+		allErrs = append(allErrs, validateSeedDNSProviderConfig(internalDNS, idxPath)...)
+
+		if domains.Has(internalDNS.Domain) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("domain"), internalDNS.Domain))
+		}
+		domains.Insert(internalDNS.Domain)
+	}
+
+	if dns.Internal != nil && len(dns.InternalDomains) > 0 && !apiequality.Semantic.DeepEqual(*dns.Internal, dns.InternalDomains[0]) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("internal"), *dns.Internal, "must be equal to the first entry of internalDomains"))
+	}
+
+	return allErrs
+}
+
 func validateSeedDNSProviderConfig(dnsConfig core.SeedDNSProviderConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

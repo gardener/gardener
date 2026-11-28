@@ -32,6 +32,7 @@ spec:
         kind: Secret
         name: ingress-secret
         namespace: garden
+    # Deprecated, use `internalDomains` instead.
     internal:
       credentialsRef:
         apiVersion: v1
@@ -40,6 +41,17 @@ spec:
         namespace: garden
       type: aws-route53
       domain: internal.dev.example.com
+    # The first entry is the internal domain for new shoots, all other entries are former internal domains which may still
+    # be used by shoots.
+    internalDomains:
+    - credentialsRef:
+        apiVersion: v1
+        kind: Secret
+        name: internal-domain-secret
+        namespace: garden
+      type: aws-route53
+      domain: internal.dev.example.com
+    # internalDomainEnabled: false # disables the internal domain, requires the `MutableShootDomains` feature gate
   extensions:
   - type: foobar
   # providerConfig:

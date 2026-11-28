@@ -1725,7 +1725,7 @@ var _ = Describe("Shoot", func() {
 			shoot                      *gardencorev1beta1.Shoot
 			seed                       *gardencorev1beta1.Seed
 			controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList
-			internalDomain             *Domain
+			internalDNSProviderTypes   []string
 			externalDomain             *Domain
 		)
 
@@ -1765,7 +1765,7 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			}
-			internalDomain = &Domain{Provider: dnsProviderType1}
+			internalDNSProviderTypes = []string{dnsProviderType1}
 			externalDomain = &Domain{Provider: dnsProviderType2}
 			seed = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
@@ -1812,7 +1812,7 @@ var _ = Describe("Shoot", func() {
 		})
 
 		It("should compute the correct list of required extensions", func() {
-			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1829,10 +1829,19 @@ var _ = Describe("Shoot", func() {
 			)))
 		})
 
+		It("should require the DNS provider of each internal domain", func() {
+			internalDNSProviderTypes = []string{"current-internal-provider", "prior-internal-provider"}
+
+			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(And(
+				HaveKey(ExtensionsID(extensionsv1alpha1.DNSRecordResource, "current-internal-provider")),
+				HaveKey(ExtensionsID(extensionsv1alpha1.DNSRecordResource, "prior-internal-provider")),
+			))
+		})
+
 		It("should compute the correct list of required extensions (no seed backup)", func() {
 			seed.Spec.Backup = nil
 
-			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
@@ -1853,7 +1862,7 @@ var _ = Describe("Shoot", func() {
 				Disabled: new(true),
 			})
 
-			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1872,7 +1881,7 @@ var _ = Describe("Shoot", func() {
 		It("should compute the correct list of required extensions (workerless Shoot)", func() {
 			shoot.Spec.Provider.Workers = nil
 
-			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1883,7 +1892,7 @@ var _ = Describe("Shoot", func() {
 		})
 
 		It("should compute the correct list of required extensions (no seed)", func() {
-			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
@@ -1899,7 +1908,7 @@ var _ = Describe("Shoot", func() {
 
 		It("should compute the correct list of required extensions and omit the externalDomain with an empty provider", func() {
 			externalDomain = &Domain{}
-			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
@@ -1955,7 +1964,7 @@ var _ = Describe("Shoot", func() {
 				},
 			}
 
-			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -1970,7 +1979,7 @@ var _ = Describe("Shoot", func() {
 				ControlPlane: &gardencorev1beta1.WorkerControlPlane{Backup: &gardencorev1beta1.Backup{Provider: backupProvider}},
 			})
 
-			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
@@ -1998,7 +2007,7 @@ var _ = Describe("Shoot", func() {
 				},
 			})
 
-			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDNSProviderTypes, externalDomain)).To(Equal(sets.New(
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),

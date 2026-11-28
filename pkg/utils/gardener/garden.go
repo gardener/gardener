@@ -96,6 +96,27 @@ func ReadGardenInternalDomain(
 	}, nil
 }
 
+// ReadGardenInternalDomains reads the information of each given internal domain from the Garden cluster.
+func ReadGardenInternalDomains(
+	ctx context.Context,
+	c client.Reader,
+	seedDNSProviders []gardencorev1beta1.SeedDNSProviderConfig,
+) (
+	[]*Domain,
+	error,
+) {
+	domains := make([]*Domain, 0, len(seedDNSProviders))
+	for i := range seedDNSProviders {
+		domain, err := ReadGardenInternalDomain(ctx, c, &seedDNSProviders[i])
+		if err != nil {
+			return nil, err
+		}
+		domains = append(domains, domain)
+	}
+
+	return domains, nil
+}
+
 // ReadGardenDefaultDomains reads the default domain information from the Garden cluster.
 func ReadGardenDefaultDomains(
 	ctx context.Context,

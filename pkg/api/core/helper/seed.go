@@ -75,6 +75,11 @@ func SeedSettingTopologyAwareRoutingEnabled(settings *core.SeedSettings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
 }
 
+// SeedInternalDomainEnabled returns true unless the given seed DNS sets internalDomainEnabled to false.
+func SeedInternalDomainEnabled(dns core.SeedDNS) bool {
+	return ptr.Deref(dns.InternalDomainEnabled, true)
+}
+
 // CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
 // It takes both spec.seedName and status.seedName into account.
 func CalculateSeedUsage(shootList []*core.Shoot) map[string]int {

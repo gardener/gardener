@@ -10358,6 +10358,30 @@ func (m *SeedDNS) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.InternalDomainEnabled != nil {
+		i--
+		if *m.InternalDomainEnabled {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x30
+	}
+	if len(m.InternalDomains) > 0 {
+		for iNdEx := len(m.InternalDomains) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.InternalDomains[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
 	if len(m.Defaults) > 0 {
 		for iNdEx := len(m.Defaults) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -18136,6 +18160,15 @@ func (m *SeedDNS) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	if len(m.InternalDomains) > 0 {
+		for _, e := range m.InternalDomains {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	if m.InternalDomainEnabled != nil {
+		n += 2
+	}
 	return n
 }
 
@@ -22197,10 +22230,17 @@ func (this *SeedDNS) String() string {
 		repeatedStringForDefaults += strings.Replace(strings.Replace(f.String(), "SeedDNSProviderConfig", "SeedDNSProviderConfig", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForDefaults += "}"
+	repeatedStringForInternalDomains := "[]SeedDNSProviderConfig{"
+	for _, f := range this.InternalDomains {
+		repeatedStringForInternalDomains += strings.Replace(strings.Replace(f.String(), "SeedDNSProviderConfig", "SeedDNSProviderConfig", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForInternalDomains += "}"
 	s := strings.Join([]string{`&SeedDNS{`,
 		`Provider:` + strings.Replace(this.Provider.String(), "SeedDNSProvider", "SeedDNSProvider", 1) + `,`,
 		`Internal:` + strings.Replace(this.Internal.String(), "SeedDNSProviderConfig", "SeedDNSProviderConfig", 1) + `,`,
 		`Defaults:` + repeatedStringForDefaults + `,`,
+		`InternalDomains:` + repeatedStringForInternalDomains + `,`,
+		`InternalDomainEnabled:` + valueToStringGenerated(this.InternalDomainEnabled) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -51890,6 +51930,61 @@ func (m *SeedDNS) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InternalDomains", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InternalDomains = append(m.InternalDomains, SeedDNSProviderConfig{})
+			if err := m.InternalDomains[len(m.InternalDomains)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InternalDomainEnabled", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.InternalDomainEnabled = &b
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])

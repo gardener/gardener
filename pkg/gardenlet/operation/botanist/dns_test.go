@@ -26,11 +26,13 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("dns", func() {
@@ -132,18 +134,55 @@ var _ = Describe("dns", func() {
 
 	Context("NeedsInternalDNS", func() {
 		It("should be false when the internal domain is nil", func() {
-			b.Garden.InternalDomain = nil
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = nil
 			Expect(b.NeedsInternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when the internal domain provider is unmanaged", func() {
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "unmanaged"}
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "unmanaged"}
 			Expect(b.NeedsInternalDNS()).To(BeFalse())
 		})
 
 		It("should be true when the internal domain provider is not unmanaged", func() {
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 			Expect(b.NeedsInternalDNS()).To(BeTrue())
+		})
+
+		It("should be false when the shoot has no internal cluster domain", func() {
+			b.Shoot.InternalClusterDomain = nil
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			Expect(b.NeedsInternalDNS()).To(BeFalse())
+		})
+	})
+
+	Context("NeedsPriorInternalDNS", func() {
+		It("should be false when there is no prior internal domain", func() {
+			b.Shoot.PriorInternalClusterDomain = nil
+			b.Shoot.PriorInternalDomain = nil
+			Expect(b.NeedsPriorInternalDNS()).To(BeFalse())
+		})
+
+		It("should be false when the prior internal domain provider is unmanaged", func() {
+			b.Shoot.PriorInternalClusterDomain = new("bar")
+			b.Shoot.PriorInternalDomain = &gardenerutils.Domain{Provider: "unmanaged"}
+			Expect(b.NeedsPriorInternalDNS()).To(BeFalse())
+		})
+
+		It("should be true when the prior internal domain provider is not unmanaged", func() {
+			b.Shoot.PriorInternalClusterDomain = new("bar")
+			b.Shoot.PriorInternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			Expect(b.NeedsPriorInternalDNS()).To(BeTrue())
+		})
+
+		It("should be true when the internal domain is disabled during the migration", func() {
+			b.Shoot.InternalClusterDomain = nil
+			b.Shoot.InternalDomain = nil
+			b.Shoot.PriorInternalClusterDomain = new("bar")
+			b.Shoot.PriorInternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			Expect(b.NeedsPriorInternalDNS()).To(BeTrue())
 		})
 	})
 
@@ -153,12 +192,34 @@ var _ = Describe("dns", func() {
 		})
 
 		It("returns true when DNS is used", func() {
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
+			b.Shoot.InternalClusterDomain = new("bar")
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: new("foo")}
 			b.Shoot.ExternalClusterDomain = new("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 
 			Expect(b.ShootUsesDNS()).To(BeTrue())
+		})
+	})
+
+	Context("ShootUsesDNS without internal domain", func() {
+		BeforeEach(func() {
+			b.Shoot.InternalClusterDomain = nil
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: new("foo")}
+			b.Shoot.ExternalClusterDomain = new("baz")
+			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
+		})
+
+		It("returns true if the seed disables the internal domain", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+			Expect(b.ShootUsesDNS()).To(BeTrue())
+		})
+
+		It("returns false if the feature gate is disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+			Expect(b.ShootUsesDNS()).To(BeFalse())
 		})
 	})
 
@@ -189,7 +250,7 @@ var _ = Describe("dns", func() {
 			b.Shoot.InternalClusterDomain = new("bar")
 			b.Shoot.ExternalClusterDomain = new("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
-			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
+			b.Shoot.InternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 
 			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			externalDNSRecord.EXPECT().SetValues([]string{"1.2.3.4"})

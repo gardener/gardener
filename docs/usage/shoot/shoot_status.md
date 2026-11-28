@@ -131,6 +131,13 @@ If it's visible, operators should be aware that the annotated resources may dive
 This constraint indicates that one or more machines in `Failed` phase are currently being preserved (i.e., not terminated) to allow for debugging and analysis. The constraint is not added to `.status.constraints` when no failed machines are currently preserved.
 See [Machine Preservation](shoot_machine_preservation.md) for more details.
 
+**`InternalDomainUpToDate`**:
+
+This optional constraint indicates whether the Shoot uses the internal domain that its Seed gives to new Shoots.
+It is added with status `False` when the operator has changed or disabled the internal domain of the Seed (see [Internal Domains of a Seed](../../operations/seed_domains.md#internal-domains)), and it disappears when the Shoot is migrated.
+To migrate, set the annotation `confirmation.gardener.cloud/migrate-internal-domain=true` and start a CA rotation, see [Migrating the Internal Domain](../shoot-operations/shoot_credentials_rotation.md#migrating-the-internal-domain).
+It requires the `MutableShootDomains` feature gate and is not shown while the Shoot is hibernated.
+
 **`AutomaticCredentialsRotationPossible`**:
 
 This optional constraint indicates whether an overdue automatic ETCD encryption key rotation can run during the next maintenance window.

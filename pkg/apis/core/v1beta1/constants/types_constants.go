@@ -682,6 +682,8 @@ const (
 	LabelDNSRecordPriorExternal = "prior-external"
 	// LabelDNSRecordInternal is a constant for a label value for internal DNSRecord.
 	LabelDNSRecordInternal = "internal"
+	// LabelDNSRecordPriorInternal is a constant for a label value for the prior internal DNSRecord.
+	LabelDNSRecordPriorInternal = "prior-internal"
 	// LabelDNSRecordIngress is a constant for a label value for ingress DNSRecord.
 	LabelDNSRecordIngress = "ingress"
 
@@ -776,6 +778,9 @@ const (
 	// AnnotationConfirmationForceDeletion is a constant for an annotation on a Shoot resource whose value must be set to "true" in order to
 	// trigger force-deletion of the cluster. It can only be set if the Shoot has a deletion timestamp and contains an ErrorCode in the Shoot Status.
 	AnnotationConfirmationForceDeletion = "confirmation.gardener.cloud/force-deletion"
+	// AnnotationConfirmationMigrateInternalDomain is a constant for an annotation on a Shoot resource whose value must be
+	// set to "true" in order to migrate the internal domain with the next start of a CA rotation.
+	AnnotationConfirmationMigrateInternalDomain = "confirmation.gardener.cloud/migrate-internal-domain"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
 	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"
@@ -1005,6 +1010,8 @@ const (
 
 	// DNSRecordInternalName is a constant for DNSRecord objects used for the internal domain name.
 	DNSRecordInternalName = "internal"
+	// DNSRecordPriorInternalName is a constant for DNSRecord objects used for the prior internal domain name.
+	DNSRecordPriorInternalName = "prior-internal"
 	// DNSRecordExternalName is a constant for DNSRecord objects used for the external domain name.
 	DNSRecordExternalName = "external"
 	// DNSRecordPriorExternalName is a constant for DNSRecord objects used for the prior external domain name.
@@ -1044,11 +1051,18 @@ const (
 	AdvertisedAddressPriorExternal = "prior-external"
 	// AdvertisedAddressInternal is a constant that represents the name of the internal kube-apiserver address.
 	AdvertisedAddressInternal = "internal"
+	// AdvertisedAddressPriorInternal is a constant that represents the name of the internal kube-apiserver address
+	// which is replaced by a domain migration and stays valid until the migration is completed.
+	AdvertisedAddressPriorInternal = "prior-internal"
 	// AdvertisedAddressUnmanaged is a constant that represents the name of the unmanaged kube-apiserver address.
 	AdvertisedAddressUnmanaged = "unmanaged"
 	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address that is used as a
 	// service account issuer for the kube-apiserver.
 	AdvertisedAddressServiceAccountIssuer = "service-account-issuer"
+	// AdvertisedAddressPriorServiceAccountIssuer is a constant that represents the name of the address of the service
+	// account issuer which is replaced when a domain migration adds an internal domain to a shoot without one. It stays
+	// valid until the migration is completed.
+	AdvertisedAddressPriorServiceAccountIssuer = "prior-service-account-issuer"
 	// AdvertisedAddressWildcardTLSSeedBound is a constant that represents the name of the address that is
 	// seed-specific (i.e., changes when the Seed changes) and backed by a central wildcard TLS certificate.
 	AdvertisedAddressWildcardTLSSeedBound = "wildcard-tls-seed-bound"

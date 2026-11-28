@@ -232,6 +232,7 @@ func ValidateShootWithOpts(shoot *core.Shoot, opts shootValidationOptions) field
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(v1beta1helper.GetShootGardenerOperations(shoot.Annotations), v1beta1helper.GetShootMaintenanceOperations(shoot.Annotations), shoot, field.NewPath("metadata", "annotations"))...)
+	allErrs = append(allErrs, validateMigrateInternalDomainConfirmation(shoot.Annotations, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot, opts, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
 
@@ -930,7 +931,10 @@ func validateDomainChange(newDNS, oldDNS *core.DNS, annotations map[string]strin
 	switch {
 	case newDNS.Domain == nil:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "the domain cannot be unset"))
-	// TODO(ftl): Remove this check once the selfhostedshootexposure controller patches all external DNSRecords.
+	// The gardenlet does not migrate the DNSRecords of a self-hosted shoot: the external and the internal domain
+	// (`api.internal.<domain>`, used by the nodes) are both derived from the domain, but the shoot flow does not deploy
+	// DNSRecords for self-hosted shoots.
+	// TODO(ftl): Remove this check once the domain migration supports self-hosted shoots.
 	case isSelfHosted:
 		allErrs = append(allErrs, field.Forbidden(domainPath, "changing the domain is not supported for self-hosted shoots"))
 	// The nginx-ingress addon has its own DNSRecord. The name of this record is derived from the domain, and the name of a
@@ -3696,6 +3700,15 @@ func validatePendingWorkerUpdates(shoot *core.Shoot, fldPath *field.Path, operat
 	}
 
 	return allErrs
+}
+
+func validateMigrateInternalDomainConfirmation(annotations map[string]string, fldPath *field.Path) field.ErrorList {
+	value, ok := annotations[v1beta1constants.AnnotationConfirmationMigrateInternalDomain]
+	if !ok || value == "true" || !features.DefaultFeatureGate.Enabled(features.MutableShootDomains) {
+		return nil
+	}
+
+	return field.ErrorList{field.NotSupported(fldPath.Key(v1beta1constants.AnnotationConfirmationMigrateInternalDomain), value, []string{"true"})}
 }
 
 // ValidateForceDeletion validates the addition of force-deletion annotation on the Shoot.

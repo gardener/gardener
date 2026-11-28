@@ -20,6 +20,8 @@ import (
 
 	. "github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -442,6 +444,155 @@ var _ = Describe("Seed Validation Tests", func() {
 			})
 		})
 
+		Context("internal domains", func() {
+			var formerDomain core.SeedDNSProviderConfig
+
+			BeforeEach(func() {
+				formerDomain = *seed.Spec.DNS.Internal.DeepCopy()
+				formerDomain.Domain = "internal.former.example.com"
+			})
+
+			It("should accept the internal domain as the first entry of the internal domains", func() {
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{*seed.Spec.DNS.Internal, formerDomain}
+
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			It("should accept internal domains without an internal domain", func() {
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{*seed.Spec.DNS.Internal}
+				seed.Spec.DNS.Internal = nil
+
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			It("should refuse an internal domain that differs from the first entry of the internal domains", func() {
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{formerDomain, *seed.Spec.DNS.Internal}
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.internal"),
+					"Detail": Equal("must be equal to the first entry of internalDomains"),
+				}))))
+			})
+
+			It("should refuse an internal domain that differs from the first entry of the internal domains only in the credentials", func() {
+				otherCredentials := *seed.Spec.DNS.Internal.DeepCopy()
+				otherCredentials.CredentialsRef.Name = "other-secret"
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{otherCredentials}
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.internal"),
+				}))))
+			})
+
+			It("should refuse duplicate domains in the internal domains", func() {
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{*seed.Spec.DNS.Internal, formerDomain, formerDomain}
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.dns.internalDomains[2].domain"),
+				}))))
+			})
+
+			It("should require valid fields in each entry of the internal domains", func() {
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{*seed.Spec.DNS.Internal, {Domain: "internal.former.example.com", CredentialsRef: formerDomain.CredentialsRef}}
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.internalDomains[1].type"),
+				}))))
+			})
+
+			Context("without an internal domain", func() {
+				BeforeEach(func() {
+					seed.Spec.DNS.Internal = nil
+					seed.Spec.DNS.InternalDomainEnabled = new(false)
+				})
+
+				It("should forbid a disabled internal domain if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+
+					Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.internalDomainEnabled"),
+					}))))
+				})
+
+				It("should forbid a disabled internal domain with internal domains if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{formerDomain}
+
+					Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.internalDomainEnabled"),
+					}))))
+				})
+
+				It("should forbid disabling the internal domain on update if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					seed.Spec.DNS.InternalDomainEnabled = nil
+					newSeed := prepareSeedForUpdate(seed)
+					newSeed.Spec.DNS.InternalDomainEnabled = new(false)
+
+					Expect(ValidateSeedUpdate(newSeed, seed)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.dns.internalDomainEnabled"),
+					}))))
+				})
+
+				It("should accept a stored disabled internal domain on update if the feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					newSeed := prepareSeedForUpdate(seed)
+
+					Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+				})
+
+				It("should require an internal domain if the feature gate is disabled and the internal domain is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, false))
+					seed.Spec.DNS.InternalDomainEnabled = new(true)
+
+					Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal"),
+					}))))
+				})
+
+				It("should require an internal domain if the internal domain is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+					seed.Spec.DNS.InternalDomainEnabled = new(true)
+
+					Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal"),
+					}))))
+				})
+
+				It("should require an internal domain if the internal domain flag is not set", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+					seed.Spec.DNS.InternalDomainEnabled = nil
+
+					Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.dns.internal"),
+					}))))
+				})
+
+				It("should accept a disabled internal domain if the feature gate is enabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+
+					Expect(ValidateSeed(seed)).To(BeEmpty())
+				})
+
+				It("should accept former internal domains with a disabled internal domain", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.MutableShootDomains, true))
+					seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{formerDomain}
+
+					Expect(ValidateSeed(seed)).To(BeEmpty())
+				})
+			})
+		})
+
 		Context("defaults DNS", func() {
 			It("should require valid fields if defaults DNS is set", func() {
 				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{}}
@@ -556,7 +707,23 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.dns.defaults[0].domain"),
-					"Detail": Equal("must differ from the internal domain"),
+					"Detail": Equal("must differ from the internal domains"),
+				}))))
+			})
+
+			It("should reject a default domain equal to a former internal domain", func() {
+				formerDomain := *seed.Spec.DNS.Internal.DeepCopy()
+				formerDomain.Domain = "internal.former.example.com"
+				seed.Spec.DNS.InternalDomains = []core.SeedDNSProviderConfig{*seed.Spec.DNS.Internal, formerDomain}
+				seed.Spec.DNS.Defaults = []core.SeedDNSProviderConfig{{
+					Type:   "foo",
+					Domain: formerDomain.Domain,
+				}}
+				errorList := ValidateSeed(seed)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.defaults[0].domain"),
+					"Detail": Equal("must differ from the internal domains"),
 				}))))
 			})
 

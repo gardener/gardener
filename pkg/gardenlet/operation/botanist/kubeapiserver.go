@@ -5,10 +5,12 @@
 package botanist
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -146,6 +148,10 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 		dnsNames = append(dnsNames, *b.Shoot.PriorExternalClusterDomain, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorExternalClusterDomain))
 	}
 
+	if b.Shoot.PriorInternalClusterDomain != nil {
+		dnsNames = append(dnsNames, v1beta1helper.GetAPIServerDomain(*b.Shoot.PriorInternalClusterDomain))
+	}
+
 	return kubeapiserver.ServerCertificateConfig{
 		ExtraIPAddresses: ipAddresses,
 		ExtraDNSNames:    dnsNames,
@@ -278,7 +284,38 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname str
 	)
 	serviceAccountConfig.JWKSURI = jwksURI
 
+	// Tokens issued before a domain migration carry the default issuer of the prior domain. Without a domain migration,
+	// this is the current default issuer, which is already the issuer or an accepted issuer.
+	if priorIssuer := b.priorDefaultServiceAccountIssuer(); priorIssuer != "" &&
+		priorIssuer != serviceAccountConfig.Issuer &&
+		!slices.Contains(serviceAccountConfig.AcceptedIssuers, priorIssuer) {
+		serviceAccountConfig.AcceptedIssuers = append(serviceAccountConfig.AcceptedIssuers, priorIssuer)
+	}
+
 	return serviceAccountConfig, nil
+}
+
+// DefaultServiceAccountIssuerChanges returns true while a domain migration changes the default ServiceAccount issuer.
+func (b *Botanist) DefaultServiceAccountIssuerChanges() bool {
+	return defaultServiceAccountIssuer(cmp.Or(b.Shoot.InternalClusterDomain, b.Shoot.ExternalClusterDomain)) != b.priorDefaultServiceAccountIssuer()
+}
+
+func (b *Botanist) priorDefaultServiceAccountIssuer() string {
+	if b.Shoot.PriorServiceAccountIssuer != nil {
+		return *b.Shoot.PriorServiceAccountIssuer
+	}
+	return defaultServiceAccountIssuer(b.priorDefaultIssuerDomain())
+}
+
+func defaultServiceAccountIssuer(domain *string) string {
+	if domain == nil {
+		return ""
+	}
+	return "https://" + v1beta1helper.GetAPIServerDomain(*domain)
+}
+
+func (b *Botanist) priorDefaultIssuerDomain() *string {
+	return cmp.Or(b.Shoot.PriorInternalClusterDomain, b.Shoot.InternalClusterDomain, b.Shoot.PriorExternalClusterDomain, b.Shoot.ExternalClusterDomain)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.

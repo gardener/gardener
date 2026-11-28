@@ -20,6 +20,8 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity"
+	seedidentity "github.com/gardener/gardener/pkg/admissioncontroller/gardenletidentity/seed"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -178,6 +180,19 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 		return err
 	}
 
+	if err := admissionutils.ValidateInternalDomainDisableForSeed(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed"); err != nil {
+		return err
+	}
+
+	// A gardenlet which has not observed the current generation can still assign a removed internal domain to a shoot.
+	// The seed's own gardenlet is exempt, because it registers its seed spec on startup before it can observe it.
+	if features.DefaultFeatureGate.Enabled(features.MutableShootDomains) &&
+		oldSeed.Status.ObservedGeneration != oldSeed.Generation &&
+		!isGardenletOfSeed(a, newSeed.Name) &&
+		admissionutils.RemovedInternalDomains(&oldSeed.Spec, &newSeed.Spec).Len() > 0 {
+		return admission.NewForbidden(a, fmt.Errorf("cannot remove internal domains before the gardenlet has observed the current generation of the Seed, ensure the gardenlet of seed %q is running and has reconciled the Seed", newSeed.Name))
+	}
+
 	if err := admissionutils.ValidateDefaultDomainsChangeForSeed(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, v.secretLister, "Seed"); err != nil {
 		return err
 	}
@@ -191,6 +206,11 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 	}
 
 	return v.validateReferenceAllowlist(a, newSeed)
+}
+
+func isGardenletOfSeed(a admission.Attributes, seedName string) bool {
+	name, isSeed, userType := seedidentity.FromUserInfoInterface(a.GetUserInfo())
+	return isSeed && userType == gardenletidentity.UserTypeGardenlet && name == seedName
 }
 
 func (v *ValidateSeed) validateSeedCreate(a admission.Attributes) error {
@@ -282,6 +302,13 @@ func (v *ValidateSeed) validateReferenceAllowlist(attrs admission.Attributes, se
 	if seed.Spec.DNS.Internal != nil {
 		ref := seed.Spec.DNS.Internal.CredentialsRef
 		if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, "spec.dns.internal.credentialsRef"); err != nil {
+			return err
+		}
+	}
+
+	for i, internalDNS := range seed.Spec.DNS.InternalDomains {
+		ref := internalDNS.CredentialsRef
+		if err := v.checkAllowlistAnnotation(attrs, seed.Name, ref.Namespace, ref.Name, ref.APIVersion, ref.Kind, fmt.Sprintf("spec.dns.internalDomains[%d].credentialsRef", i)); err != nil {
 			return err
 		}
 	}
