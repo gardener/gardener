@@ -22,11 +22,11 @@ tool (
 
 // This separate Go module decouples development-tool dependencies from Gardener's production binaries.
 require (
-	golang.org/x/exp v0.0.0-20261120182113-8801fbdfac81
+	golang.org/x/exp v0.0.0-20261128033645-f63ec7c7eed0
 	// this has to be kept in sync with the used golangci-lint version
 	// use go version -m hack/tools/bin/<<architecture>>/golangci-lint to detect the dependency versions
 	// or, with `go work` enabled, use `go work sync`
-	golang.org/x/tools v0.53.0
+	golang.org/x/tools v0.53.1-0.20261126161324-9b1bd87ef490
 	sigs.k8s.io/kube-api-linter v0.0.0-20261030144752-d90122c89087
 )
 
