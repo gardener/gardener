@@ -1254,7 +1254,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "changes(node_boot_time_seconds{node=~\"$Node\"}[$__rate_interval])",
+          "expr": "abs(last_over_time(node_boot_time_seconds{node=~\"$Node\"}[$__rate_interval]) - last_over_time(node_boot_time_seconds{node=~\"$Node\"}[$__rate_interval] offset $__rate_interval)) > bool 30",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 1,
