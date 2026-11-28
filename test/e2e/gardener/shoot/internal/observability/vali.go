@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/utils/shoots/logging"
+	"github.com/gardener/gardener/test/utils/logging"
 )
 
 // ItShouldWaitForLogsCountWithLabelToBeInVali waits for a specific number of logs with a given label to be present in Vali.

@@ -334,68 +334,6 @@ func ItShouldCompareMachinePodNamesAfter(tc *ShootContext, clientFn func() clien
 	}, SpecTimeout(time.Minute))
 }
 
-// ItShouldRenderAndDeployTemplateToShoot finds a template via the given template name. Afterwards, it renders is via the
-// given values and deploys the resources to the shoot.
-func ItShouldRenderAndDeployTemplateToShoot(tc *ShootContext, templateName string, values any) {
-	GinkgoHelper()
-
-	It("Render and deploy template to shoot", func(ctx SpecContext) {
-		Eventually(ctx, func() error {
-			templatesDirAbs, err := filepath.Abs(templatesDir)
-			if err != nil {
-				return err
-			}
-
-			templateFilepath := filepath.Join(templatesDirAbs, templateName)
-			if _, err := os.Stat(templateFilepath); err != nil {
-				return err
-			}
-
-			tpl, err := template.
-				New(templateName).
-				Funcs(sprig.HtmlFuncMap()).
-				ParseFiles(templateFilepath)
-			if err != nil {
-				return err
-			}
-
-			var writer bytes.Buffer
-			if err = tpl.Execute(&writer, values); err != nil {
-				return err
-			}
-
-			manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-			return tc.ShootClientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
-		}).Should(Succeed())
-	}, SpecTimeout(time.Minute))
-}
-
-// ItShouldWaitForPodsInShootToBeReady waits for all pods matching the namespace and labels to be in a Ready state.
-func ItShouldWaitForPodsInShootToBeReady(tc *ShootContext, namespace string, podLabels labels.Selector) {
-	GinkgoHelper()
-
-	It("Wait for pods in Shoot to be ready", func(ctx SpecContext) {
-		Eventually(ctx, func() error {
-			podList := &corev1.PodList{}
-			if err := tc.ShootClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: podLabels}); err != nil {
-				return err
-			}
-
-			if len(podList.Items) == 0 {
-				return fmt.Errorf("no pods found in %s with labels %s", namespace, podLabels)
-			}
-
-			for _, pod := range podList.Items {
-				if !health.IsPodReady(&pod) {
-					return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
-				}
-			}
-
-			return nil
-		}).Should(Succeed())
-	}, SpecTimeout(time.Minute))
-}
-
 // ItShouldCreatePrometheusRuleForShoot creates a PrometheusRule and makes sure it is created.
 func ItShouldCreatePrometheusRuleForShoot(tc *ShootContext, rule *monitoringv1.PrometheusRule) {
 	GinkgoHelper()
@@ -416,4 +354,105 @@ func ItShouldDeletePrometheusRuleForShoot(tc *ShootContext, rule *monitoringv1.P
 			g.Expect(tc.ShootClient.Delete(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldWaitForPodsInShootControlPlaneToBeReady waits for all pods matching the labels to be ready
+// in the shoot's control-plane namespace on the seed.
+func ItShouldWaitForPodsInShootControlPlaneToBeReady(tc *ShootContext, podLabels labels.Selector) {
+	GinkgoHelper()
+
+	It("Wait for pods in shoot control plane to be ready", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			return verifyPodsAreReady(ctx, tc.SeedClientSet, podLabels, tc.ControlPlaneNamespace)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldWaitForPodsInShootToBeReady waits for all pods matching the namespace and labels to be in a Ready state.
+func ItShouldWaitForPodsInShootToBeReady(tc *ShootContext, namespace string, podLabels labels.Selector) {
+	GinkgoHelper()
+
+	It("Wait for pods in Shoot to be ready", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			return verifyPodsAreReady(ctx, tc.ShootClientSet, podLabels, namespace)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldRenderAndDeployTemplateToShootDataPlane renders a template with the given values
+// and deploys its resources to the given namespace in the shoot.
+func ItShouldRenderAndDeployTemplateToShootDataPlane(tc *ShootContext, namespace, templateName string, values map[string]any) {
+	GinkgoHelper()
+
+	It("Render and deploy template to shoot", func(ctx SpecContext) {
+		values["HelmDeployNamespace"] = namespace
+
+		Eventually(ctx, func() error {
+			return applyManifest(ctx, tc.ShootClientSet, templateName, values)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldRenderAndDeployTemplateToShootControlPlane renders a template and deploys its
+// resources to the shoot's control-plane namespace on the seed.
+func ItShouldRenderAndDeployTemplateToShootControlPlane(tc *ShootContext, templateName string, values map[string]any) {
+	GinkgoHelper()
+
+	It("Render and deploy template to shoot control plane", func(ctx SpecContext) {
+		// Read the namespace during test execution, after the setup step has populated it.
+		values["HelmDeployNamespace"] = tc.ControlPlaneNamespace
+
+		Eventually(ctx, func() error {
+			return applyManifest(ctx, tc.SeedClientSet, templateName, values)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+func applyManifest(ctx SpecContext, clientSet kubernetes.Interface, templateName string, params map[string]any) error {
+	templatesDirAbs, err := filepath.Abs(templatesDir)
+	if err != nil {
+		return err
+	}
+
+	templateFilepath := filepath.Join(templatesDirAbs, templateName)
+	if _, err := os.Stat(templateFilepath); err != nil {
+		return err
+	}
+
+	tpl, err := template.
+		New(templateName).
+		Funcs(sprig.HtmlFuncMap()).
+		ParseFiles(templateFilepath)
+	if err != nil {
+		return err
+	}
+
+	var writer bytes.Buffer
+	if err = tpl.Execute(&writer, params); err != nil {
+		return err
+	}
+
+	manifestReader := kubernetes.NewManifestReader(writer.Bytes())
+	return clientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
+}
+
+func verifyPodsAreReady(ctx SpecContext, clientSet kubernetes.Interface, podLabels labels.Selector, namespace string) error {
+	podList := &corev1.PodList{}
+	if err := clientSet.Client().List(ctx, podList,
+		client.InNamespace(namespace),
+		client.MatchingLabelsSelector{Selector: podLabels},
+	); err != nil {
+		return err
+	}
+
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("no pods found in %s with labels %s", namespace, podLabels)
+	}
+
+	for _, pod := range podList.Items {
+		if !health.IsPodReady(&pod) {
+			return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
+		}
+	}
+	return nil
 }

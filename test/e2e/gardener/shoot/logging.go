@@ -5,8 +5,15 @@
 package shoot
 
 import (
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/seed"
@@ -23,61 +30,186 @@ var (
 	loggerAppName  = "logger-app.yaml.tpl"
 )
 
-// ShootLogging checks that the logging stack for shoots works as expected.
+// ShootLoggingVali checks that the logging stack for shoots works as expected using Vali.
 // It deploys two logger applications: one with Gardener labels and one without.
 // It's expected that the one with Gardener labels has its logs collected in Vali by
 // the log shipper (valitail). While the one without label does not.
 // Function is exposed so that it can be called from the context of another
 // e2e test. This is done so that we can minimize the number of shoot clusters
 // that we create.
-func ShootLogging(tc *ShootContext) {
+func ShootLoggingVali(tc *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc)
+
+	gardenerLoggerName := "gardener-logger" + "-" + utilrand.String(randomLength)
+	nonGardenerLoggerName := "non-gardener-logger" + "-" + utilrand.String(randomLength)
+
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, gardenerLoggerParams(gardenerLoggerName))
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": gardenerLoggerName}))
+
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, nonGardenerLoggerParams(nonGardenerLoggerName))
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": nonGardenerLoggerName}))
+
+	ItShouldWaitForLogsCountWithLabelToBeInVali(tc, valiLabels, "pod_name", gardenerLoggerName+".*", shootLogsCount)
+	ItShouldWaitForLogsWithLabelToNotBeInVali(tc, valiLabels, "pod_name", nonGardenerLoggerName+".*")
+
+	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "containerd.service")
+	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "kubelet.service")
+}
+
+// ShootLoggingVl checks the shoot logging stack of VictoriaLogs. It deploys two loggers
+// to the shoot's kube-system namespace: one with Gardener labels (expects logs in shoot
+// VictoriaLogs) and one without (expects no logs in shoot VictoriaLogs). It also verifies
+// shoot VictoriaLogs ingress auth and systemd unit log ingestion.
+func ShootLoggingVl(tc *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc)
+
+	ItShouldHaveShootVictoriaLogsReady(tc)
+
+	gardenerLoggerName := "gardener-logger" + "-" + utilrand.String(randomLength)
+	nonGardenerLoggerName := "non-gardener-logger" + "-" + utilrand.String(randomLength)
+
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, gardenerLoggerParams(gardenerLoggerName))
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": gardenerLoggerName}))
+
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, nonGardenerLoggerParams(nonGardenerLoggerName))
+
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": nonGardenerLoggerName}))
+
+	ItShouldRejectUnauthenticatedVictoriaLogsRequestInShoot(tc)
+	ItShouldRejectWrongCredentialsVictoriaLogsRequestInShoot(tc)
+
+	ItShouldWaitForLogsCountByKeyToBeInShootVictoriaLogs(tc, "k8s.pod.name", gardenerLoggerName+".*", time.Hour, shootLogsCount)
+	ItShouldWaitForLogsByKeyNotToBeInShootVictoriaLogs(tc, "k8s.pod.name", nonGardenerLoggerName+".*", time.Hour)
+
+	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "unit", "containerd.service", time.Hour)
+	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "unit", "kubelet.service", time.Hour)
+	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "k8s.pod.name", "event-logger"+".*", time.Hour)
+}
+
+// SeedLoggingVl checks the seed-side routing of the shoot logging stack of VictoriaLogs.
+// It deploys two logger applications. One in the shoot's control-plane namespace on the
+// seed, and another in the seed's garden namespace. Both loggers are asserted to appear
+// only in their respective VictoriaLogs instance and not in the other.
+// Garden VictoriaLogs ingress auth is also verified.
+func SeedLoggingVl(tc *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc)
+
+	ItShouldHaveShootVictoriaLogsReady(tc)
+	ItShouldHaveGardenVictoriaLogsReady(tc.SeedContext)
+
+	controlPlaneLoggerName := "seed-cp-logger" + "-" + utilrand.String(randomLength)
+	gardenNamespaceLoggerName := "seed-garden-ns-logger" + "-" + utilrand.String(randomLength)
+
+	AfterAll(func(ctx SpecContext) {
+		if tc.SeedClient == nil {
+			return
+		}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Name:      gardenNamespaceLoggerName,
+			Namespace: "garden",
+		}}
+		Eventually(ctx, func() error {
+			return client.IgnoreNotFound(tc.SeedClient.Delete(ctx, deployment))
+		}).Should(Succeed())
+	}, NodeTimeout(time.Minute))
+
+	ItShouldRenderAndDeployTemplateToShootControlPlane(tc, loggerAppName, nonGardenerLoggerParams(controlPlaneLoggerName))
+	ItShouldWaitForPodsInShootControlPlaneToBeReady(tc, labels.SelectorFromSet(map[string]string{"app": controlPlaneLoggerName}))
+
+	seed.ItShouldRenderAndDeployTemplateToSeed(tc.SeedContext, "garden", loggerAppName, nonGardenerLoggerParams(gardenNamespaceLoggerName))
+	seed.ItShouldWaitForPodsInGardenNamespaceToBeReady(tc.SeedContext, labels.SelectorFromSet(map[string]string{"app": gardenNamespaceLoggerName}))
+
+	ItShouldRejectUnauthenticatedVictoriaLogsRequestInGarden(tc.SeedContext)
+	ItShouldRejectWrongCredentialsVictoriaLogsRequestInGarden(tc.SeedContext)
+
+	ItShouldWaitForLogsCountByKeyToBeInShootVictoriaLogs(tc, "k8s.pod.name", controlPlaneLoggerName+".*", time.Hour, shootLogsCount)
+	ItShouldWaitForLogsByKeyNotToBeInShootVictoriaLogs(tc, "k8s.pod.name", gardenNamespaceLoggerName+".*", time.Hour)
+
+	ItShouldWaitForLogsCountByKeyToBeInGardenVictoriaLogs(tc.SeedContext, "k8s.pod.name", gardenNamespaceLoggerName+".*", time.Hour, shootLogsCount)
+	ItShouldWaitForLogsByKeyNotToBeInGardenVictoriaLogs(tc.SeedContext, "k8s.pod.name", controlPlaneLoggerName+".*", time.Hour)
+}
+
+// ShootLogShipper verifies that the shoot's running systemd OpenTelemetry collector recovers after its
+// auth token is broken and restored, without explicitly restarting the collector.
+// Recovery is verified by fresh node journal or managed pod logs.
+func ShootLogShipper(tc *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc)
+
+	ItShouldHaveShootVictoriaLogsReady(tc)
+
+	brokenLoggerName := "broken-logger" + "-" + utilrand.String(randomLength)
+
+	// Corrupt the shoot-side target Secret to simulate invalid credentials.
+	// Restore it below by forcing renewal through the seed-side access Secret.
+	ItShouldBreakOpenTelemetryCollectorToken(tc)
+	ItShouldRestartGNA(tc)
+	ItShouldWaitForInvalidTokenOnNodes(tc)
+
+	// Create the logger after the invalid token reaches the nodes to exclude earlier logs.
+	ItShouldRenderAndDeployTemplateToShootDataPlane(tc, "kube-system", loggerAppName, gardenerLoggerParams(brokenLoggerName))
+	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", labels.SelectorFromSet(map[string]string{"app": brokenLoggerName}))
+	ItShouldWaitForLogsByKeyNotToBeInShootVictoriaLogs(tc, "k8s.pod.name", brokenLoggerName+".*", time.Hour)
+
+	ItShouldRestoreOpenTelemetryCollectorToken(tc)
+	ItShouldRestartGNA(tc)
+	ItShouldWaitForValidTokenOnNodes(tc)
+
+	ItShouldWaitForLogsByKeyToBeInShootVictoriaLogs(tc, "origin", "^(systemd_journal|shoot_system)$", 0)
+}
+
+// PerShootLoggingIsolation verifies Fluent Bit routing for two shoots' control-plane namespaces.
+// It deploys a logger in each namespace and checks that its logs appear only in the
+// corresponding VictoriaLogs instance.
+func PerShootLoggingIsolation(tc1 *ShootContext, tc2 *ShootContext) {
+	itShouldSetUpShootAndSeedContext(tc1)
+	itShouldSetUpShootAndSeedContext(tc2)
+
+	ItShouldHaveShootVictoriaLogsReady(tc1)
+	ItShouldHaveShootVictoriaLogsReady(tc2)
+
+	controlPlane1LoggerName := "seed-cp1-logger" + "-" + utilrand.String(randomLength)
+	controlPlane2LoggerName := "seed-cp2-logger" + "-" + utilrand.String(randomLength)
+
+	ItShouldRenderAndDeployTemplateToShootControlPlane(tc1, loggerAppName, nonGardenerLoggerParams(controlPlane1LoggerName))
+	ItShouldWaitForPodsInShootControlPlaneToBeReady(tc1, labels.SelectorFromSet(map[string]string{"app": controlPlane1LoggerName}))
+
+	ItShouldRenderAndDeployTemplateToShootControlPlane(tc2, loggerAppName, nonGardenerLoggerParams(controlPlane2LoggerName))
+	ItShouldWaitForPodsInShootControlPlaneToBeReady(tc2, labels.SelectorFromSet(map[string]string{"app": controlPlane2LoggerName}))
+
+	ItShouldWaitForLogsCountByKeyToBeInShootVictoriaLogs(tc1, "k8s.pod.name", controlPlane1LoggerName+".*", time.Hour, shootLogsCount)
+	ItShouldWaitForLogsByKeyNotToBeInShootVictoriaLogs(tc1, "k8s.pod.name", controlPlane2LoggerName+".*", time.Hour)
+
+	ItShouldWaitForLogsCountByKeyToBeInShootVictoriaLogs(tc2, "k8s.pod.name", controlPlane2LoggerName+".*", time.Hour, shootLogsCount)
+	ItShouldWaitForLogsByKeyNotToBeInShootVictoriaLogs(tc2, "k8s.pod.name", controlPlane1LoggerName+".*", time.Hour)
+}
+
+func itShouldSetUpShootAndSeedContext(tc *ShootContext) {
 	ItShouldWaitForShootToBeReconciledAndHealthy(tc)
 	ItShouldInitializeShootClient(tc)
 	ItShouldGetResponsibleSeed(tc)
 	seed.ItShouldInitializeSeedClient(tc.SeedContext)
 	ItShouldComputeControlPlaneNamespace(tc)
+}
 
-	gardenerLoggerAppLabel := "gardener-logger"
-	gardenerLoggerName := "gardener-logger" + "-" + utilrand.String(randomLength)
-	nonGardenerLoggerAppLabel := "non-gardener-logger"
-	nonGardenerLoggerName := nonGardenerLoggerAppLabel + "-" + utilrand.String(randomLength)
-
-	loggerParams := map[string]any{
-		"LoggerName":          gardenerLoggerName,
-		"HelmDeployNamespace": "kube-system",
-		"AppLabel":            gardenerLoggerAppLabel,
-		"LogsCount":           shootLogsCount,
-		"LogsDuration":        "20s",
+func gardenerLoggerParams(name string) map[string]any {
+	return map[string]any{
+		"LoggerName":   name,
+		"AppLabel":     name,
+		"LogsCount":    shootLogsCount,
+		"LogsDuration": "5s",
 		"AdditionalLabels": map[string]string{
 			"origin":                              "gardener",
 			"gardener.cloud/role":                 "system-component",
 			"resources.gardener.cloud/managed-by": "gardener",
 		},
 	}
-	ItShouldRenderAndDeployTemplateToShoot(tc, loggerAppName, loggerParams)
+}
 
-	loggerParams = map[string]any{
-		"LoggerName":          nonGardenerLoggerName,
-		"HelmDeployNamespace": "kube-system",
-		"AppLabel":            nonGardenerLoggerAppLabel,
-		"LogsCount":           shootLogsCount,
-		"LogsDuration":        "20s",
+func nonGardenerLoggerParams(name string) map[string]any {
+	return map[string]any{
+		"LoggerName":   name,
+		"AppLabel":     name,
+		"LogsCount":    shootLogsCount,
+		"LogsDuration": "5s",
 	}
-	ItShouldRenderAndDeployTemplateToShoot(tc, loggerAppName, loggerParams)
-
-	gardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
-		"app": gardenerLoggerAppLabel,
-	})
-	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", gardenerLoggerLabels)
-
-	nonGardenerLoggerLabels := labels.SelectorFromSet(map[string]string{
-		"app": nonGardenerLoggerAppLabel,
-	})
-	ItShouldWaitForPodsInShootToBeReady(tc, "kube-system", nonGardenerLoggerLabels)
-
-	ItShouldWaitForLogsCountWithLabelToBeInVali(tc, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", shootLogsCount)
-	ItShouldWaitForLogsWithLabelToNotBeInVali(tc, valiLabels, "pod_name", nonGardenerLoggerAppLabel+".*")
-
-	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "containerd.service")
-	ItShouldWaitForLogsWithLabelToBeInVali(tc, valiLabels, "unit", "kubelet.service")
 }

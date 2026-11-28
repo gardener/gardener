@@ -5,13 +5,20 @@
 package seed
 
 import (
+	"bytes"
+	"fmt"
+	"html/template"
+	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -19,6 +26,8 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
+
+var seedTemplatesDir = filepath.Join("..", "..", "framework", "resources", "templates")
 
 // ItShouldInitializeSeedClient initializes the context's seed clients from the garden/seed-<name> kubeconfig secret.
 // Requires ItShouldGetResponsibleSeed to be called first.
@@ -115,4 +124,77 @@ func ItShouldDeletePrometheusRuleForSeed(tc *SeedContext, rule *monitoringv1.Pro
 			g.Expect(tc.SeedClient.Delete(ctx, rule)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldRenderAndDeployTemplateToSeed renders the given template and deploys it to the given namespace on the seed.
+func ItShouldRenderAndDeployTemplateToSeed(tc *SeedContext, namespace, templateName string, values map[string]any) {
+	GinkgoHelper()
+
+	It("Render and deploy template to the seed", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			values["HelmDeployNamespace"] = namespace
+
+			return applyManifest(ctx, tc.SeedClientSet, templateName, values)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldWaitForPodsInGardenNamespaceToBeReady waits for all pods matching the labels to be ready in the garden namespace on the seed.
+func ItShouldWaitForPodsInGardenNamespaceToBeReady(tc *SeedContext, podLabels labels.Selector) {
+	GinkgoHelper()
+
+	It("Wait for pods in the seed garden namespace to be ready", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			return verifyPodsAreReady(ctx, tc.SeedClientSet, podLabels, "garden")
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+func applyManifest(ctx SpecContext, clientSet kubernetes.Interface, templateName string, params map[string]any) error {
+	templatesDirAbs, err := filepath.Abs(seedTemplatesDir)
+	if err != nil {
+		return err
+	}
+
+	templateFilepath := filepath.Join(templatesDirAbs, templateName)
+	if _, err := os.Stat(templateFilepath); err != nil {
+		return err
+	}
+
+	tpl, err := template.
+		New(templateName).
+		Funcs(sprig.HtmlFuncMap()).
+		ParseFiles(templateFilepath)
+	if err != nil {
+		return err
+	}
+
+	var writer bytes.Buffer
+	if err = tpl.Execute(&writer, params); err != nil {
+		return err
+	}
+
+	manifestReader := kubernetes.NewManifestReader(writer.Bytes())
+	return clientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
+}
+
+func verifyPodsAreReady(ctx SpecContext, clientSet kubernetes.Interface, podLabels labels.Selector, namespace string) error {
+	podList := &corev1.PodList{}
+	if err := clientSet.Client().List(ctx, podList,
+		client.InNamespace(namespace),
+		client.MatchingLabelsSelector{Selector: podLabels},
+	); err != nil {
+		return err
+	}
+
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("no pods found in %s with labels %s", namespace, podLabels)
+	}
+
+	for _, pod := range podList.Items {
+		if !health.IsPodReady(&pod) {
+			return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
+		}
+	}
+	return nil
 }
