@@ -82,16 +82,6 @@ var _ = Describe("Validation Tests", func() {
 		})
 
 		Context("Resources", func() {
-			test := func(oldPrimary, newPrimary *bool, matcher gomegatypes.GomegaMatcher) {
-				GinkgoHelper()
-
-				newExtension := extension.DeepCopy()
-				extension.Spec.Resources[0].Primary = oldPrimary
-				newExtension.Spec.Resources[0].Primary = newPrimary
-
-				Expect(ValidateExtensionUpdate(extension, newExtension)).To(matcher)
-			}
-
 			BeforeEach(func() {
 				extension.Spec = operatorv1alpha1.ExtensionSpec{
 					Deployment: &operatorv1alpha1.Deployment{
@@ -111,34 +101,30 @@ var _ = Describe("Validation Tests", func() {
 				}
 			})
 
-			It("should return no errors when field is unchanged", func() {
-				test(new(true), new(true), BeEmpty())
-			})
+			DescribeTable("primary field update",
+				func(oldPrimary, newPrimary *bool, matcher gomegatypes.GomegaMatcher) {
+					newExtension := extension.DeepCopy()
+					extension.Spec.Resources[0].Primary = oldPrimary
+					newExtension.Spec.Resources[0].Primary = newPrimary
 
-			It("should return no errors when field is set from nil to true", func() {
-				test(nil, new(true), BeEmpty())
-			})
+					Expect(ValidateExtensionUpdate(extension, newExtension)).To(matcher)
+				},
 
-			It("should return an error because the primary field is changed to false", func() {
-				test(new(true), new(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("should return no errors when field is unchanged", new(true), new(true), BeEmpty()),
+				Entry("should return no errors when field is set from nil to true", nil, new(true), BeEmpty()),
+				Entry("should return an error because the primary field is changed to false", new(true), new(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.resources[0].primary"),
-				}))))
-			})
-
-			It("should return an error because the primary field is changed to nil", func() {
-				test(new(false), nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				})))),
+				Entry("should return an error because the primary field is changed to nil", new(false), nil, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.resources[0].primary"),
-				}))))
-			})
-
-			It("should return an error because the primary field is changed to true", func() {
-				test(new(false), new(true), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				})))),
+				Entry("should return an error because the primary field is changed to true", new(false), new(true), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.resources[0].primary"),
-				}))))
-			})
+				})))),
+			)
 		})
 	})
 })
