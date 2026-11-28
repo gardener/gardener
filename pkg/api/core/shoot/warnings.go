@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api/core/helper"
+	"github.com/gardener/gardener/pkg/api/core/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -76,22 +77,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, GetDNSProviderWarnings(shoot.Spec.DNS, field.NewPath("spec", "dns"), ignoreWarningsForDNSIndexes)...)
 	}
 
-	for i, worker := range shoot.Spec.Provider.Workers {
-		if worker.MachineControllerManagerSettings != nil {
-			if autoPreserveFailedMachineMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0); autoPreserveFailedMachineMax > 0 {
-				numZones := len(sets.New(worker.Zones...))
-				if int(autoPreserveFailedMachineMax) < numZones {
-					fldPath := field.NewPath("spec", "provider", "workers").Index(i).Child("machineControllerManagerSettings", "autoPreserveFailedMachineMax")
-					warnings = append(warnings,
-						fmt.Sprintf("you are setting the %s field to a value (%d) less than the number of zones for worker %q (%d) . This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.",
-							fldPath.String(),
-							autoPreserveFailedMachineMax,
-							worker.Name,
-							numZones))
-				}
-			}
-		}
-	}
+	warnings = append(warnings, GetProviderWarnings(shoot.Spec.Provider, shoot.Spec.Kubernetes.Version, field.NewPath("spec", "provider"))...)
 
 	return warnings
 }
@@ -128,6 +114,35 @@ func GetKubeAPIServerWarnings(kubeAPIServer *core.KubeAPIServerConfig, fldPath *
 	}
 	if kubeAPIServer.WatchCacheSizes != nil && kubeAPIServer.WatchCacheSizes.Default != nil {
 		warnings = append(warnings, fmt.Sprintf("you are setting the %s field. The field has been deprecated and is forbidden to be set starting from Kubernetes 1.35. The cache size is automatically sized by the kube-apiserver.", fldPath.Child("watchCacheSizes", "default").String()))
+	}
+
+	return warnings
+}
+
+// GetProviderWarnings returns warnings for the given Provider.
+func GetProviderWarnings(provider core.Provider, kubernetesVersion string, fldPath *field.Path) []string {
+	var warnings []string
+
+	// TODO(ialidzhikov): Remove this warning once support for Kubernetes < 1.38 is dropped.
+	if len(provider.Workers) > validation.MaxWorkerPoolsCount && versionutils.ConstraintK8sLess138.CheckVersion(kubernetesVersion) {
+		warnings = append(warnings, fmt.Sprintf("you are setting the %s field to an invalid value. Invalid value: %d worker pools, valid values: at most %d worker pools. Invalid values will no longer be allowed for Kubernetes versions >= 1.38. See: https://github.com/gardener/gardener/issues/16107", fldPath.Child("workers").String(), len(provider.Workers), validation.MaxWorkerPoolsCount))
+	}
+
+	for i, worker := range provider.Workers {
+		if worker.MachineControllerManagerSettings != nil {
+			if autoPreserveFailedMachineMax := ptr.Deref(worker.MachineControllerManagerSettings.AutoPreserveFailedMachineMax, 0); autoPreserveFailedMachineMax > 0 {
+				numZones := len(sets.New(worker.Zones...))
+				if int(autoPreserveFailedMachineMax) < numZones {
+					fldPath := fldPath.Child("workers").Index(i).Child("machineControllerManagerSettings", "autoPreserveFailedMachineMax")
+					warnings = append(warnings,
+						fmt.Sprintf("you are setting the %s field to a value (%d) less than the number of zones for worker %q (%d) . This could cause some zones to have an effective autoPreserveFailedMachineMax of 0.",
+							fldPath.String(),
+							autoPreserveFailedMachineMax,
+							worker.Name,
+							numZones))
+				}
+			}
+		}
 	}
 
 	return warnings
