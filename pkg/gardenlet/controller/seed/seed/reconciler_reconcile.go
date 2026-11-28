@@ -482,7 +482,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying Fluent Operator custom resources",
 			Fn:           c.fluentOperatorCustomResources.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
-			SkipIf:       seedIsGarden,
 		})
 		deployPlutono = g.Add(flow.Task{
 			Name:         "Deploying Plutono",
