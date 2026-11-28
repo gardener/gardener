@@ -594,6 +594,8 @@ type ClusterAutoscaler struct {
 	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
 	Expander *ExpanderMode
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+	//
+	// Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
 	MaxNodeProvisionTime *metav1.Duration
 	// InitialNodeGroupBackoffDuration is the duration of first backoff after a new node failed to start (default: 5m).
 	InitialNodeGroupBackoffDuration *metav1.Duration
@@ -1488,6 +1490,8 @@ type ClusterAutoscalerOptions struct {
 	// ScaleDownUnreadyTime defines how long an unready node should be unneeded before it is eligible for scale down.
 	ScaleDownUnreadyTime *metav1.Duration
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	//
+	// Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
 	MaxNodeProvisionTime *metav1.Duration
 }
 

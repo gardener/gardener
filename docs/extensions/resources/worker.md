@@ -110,7 +110,7 @@ spec:
       scaleDownGpuUtilizationThreshold: 0.5
       scaleDownUnneededTime: 30m
       scaleDownUnreadyTime: 1h
-      maxNodeProvisionTime: 15m
+      maxNodeProvisionTime: 15m # This field is now deprecated. Specify only machineControllerManager.machineCreationTimeout instead 
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed virtual machines.

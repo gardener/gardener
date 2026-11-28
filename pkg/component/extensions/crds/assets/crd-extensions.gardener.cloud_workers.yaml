@@ -93,8 +93,10 @@ spec:
                         configurations for the worker pool.
                       properties:
                         maxNodeProvisionTime:
-                          description: MaxNodeProvisionTime defines how long cluster
-                            autoscaler should wait for a node to be provisioned.
+                          description: |-
+                            MaxNodeProvisionTime defines how long cluster autoscaler should wait for a node to be provisioned.
+
+                            Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
                           type: string
                         scaleDownGpuUtilizationThreshold:
                           description: ScaleDownGpuUtilizationThreshold defines the

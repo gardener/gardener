@@ -768,6 +768,8 @@ type ClusterAutoscaler struct {
 	// +optional
 	Expander *ExpanderMode `json:"expander,omitempty" protobuf:"bytes,7,opt,name=expander"`
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+	//
+	// Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
 	// +optional
 	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,8,opt,name=maxNodeProvisionTime"`
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
@@ -1980,6 +1982,8 @@ type ClusterAutoscalerOptions struct {
 	// +optional
 	ScaleDownUnreadyTime *metav1.Duration `json:"scaleDownUnreadyTime,omitempty" protobuf:"bytes,4,opt,name=scaleDownUnreadyTime"`
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned.
+	//
+	// Deprecated: This field is deprecated. Use machineControllerManager.machineCreationTimeout instead.
 	// +optional
 	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,5,opt,name=maxNodeProvisionTime"`
 }
