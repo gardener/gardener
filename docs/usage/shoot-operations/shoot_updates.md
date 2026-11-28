@@ -204,7 +204,12 @@ kubectl -n kube-system delete lease <osc-secret-name>
 
 After deletion, the next waiting control-plane node will acquire the lease and proceed with its update.
 
-> ⚠️ Changing the update strategy from `AutoRollingUpdate` to `AutoInPlaceUpdate`/`ManualInPlaceUpdate` (and vice versa) is not allowed. However, switching between `AutoInPlaceUpdate` and `ManualInPlaceUpdate` is permitted.
+> Switching between `AutoRollingUpdate` and `AutoInPlaceUpdate`/`ManualInPlaceUpdate` is supported in both directions. Switching between `AutoInPlaceUpdate` and `ManualInPlaceUpdate` is also permitted.
+>
+> **Pre-conditions and behavior when switching:**
+>
+> * **In-place → Rolling**: No pre-conditions. Switching triggers a one-time rolling replacement of all nodes using the new rolling MachineClass, which supersedes any pending in-place update on the pool.
+> * **Rolling → In-place**: The `InPlaceNodeUpdates` feature gate must be enabled and the machine image version must support in-place updates (as declared in the CloudProfile). Note that the switch itself replaces all nodes once via a rolling update with the new in-place `MachineClass`; in-place updates apply only to subsequent changes.
 
 #### Automatic In-Place Updates
 
