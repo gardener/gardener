@@ -845,36 +845,6 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 	})
 
-	Describe("WorkerSettings defaulting", func() {
-		It("should default the workers settings field for shoot with workers", func() {
-			obj.Spec.Provider.WorkersSettings = nil
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: true}}))
-		})
-
-		It("should not default the workers settings field for workerless Shoot", func() {
-			obj.Spec.Provider.Workers = nil
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Provider.WorkersSettings).To(BeNil())
-		})
-
-		It("should not overwrite the already set values for ssh access field in workers settings", func() {
-			obj.Spec.Provider.WorkersSettings = &WorkersSettings{
-				SSHAccess: &SSHAccess{
-					Enabled: false,
-				},
-			}
-
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: false}}))
-		})
-	})
-
 	It("should default worker cri.name to containerd", func() {
 		obj.Spec.Provider.Workers = []Worker{
 			{Name: "DefaultWorker"},

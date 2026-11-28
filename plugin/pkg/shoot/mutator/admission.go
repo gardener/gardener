@@ -249,10 +249,9 @@ func (c *mutationContext) addMetadataAnnotations(a admission.Attributes) {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 
-	// We rely that SSHAccess is defaulted in the shoot creation, that is why we do not check for nils for the new shoot object.
-	if c.oldShoot.Spec.Provider.WorkersSettings != nil &&
-		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess != nil &&
-		c.oldShoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled != c.shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled {
+	// Toggling SSH access to the worker nodes requires an infrastructure reconciliation so that the
+	// SSH public key is added to / removed from the provider. ShootEnablesSSHAccess is nil-safe.
+	if helper.ShootEnablesSSHAccess(c.oldShoot) != helper.ShootEnablesSSHAccess(c.shoot) {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 

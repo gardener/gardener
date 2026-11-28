@@ -10778,7 +10778,7 @@ boolean
 </em>
 </td>
 <td>
-<p>Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.<br />Defaults to true.</p>
+<p>Enabled indicates whether the SSH access to the worker nodes is ensured to be enabled or disabled in systemd.<br />Defaults to:<br />- true, for Shoots created with Kubernetes version < 1.38<br />- false, for Shoots created with Kubernetes version >= 1.38</p>
 </td>
 </tr>
 

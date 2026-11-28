@@ -9,6 +9,10 @@ Breaking changes may be introduced with new Kubernetes versions.
 This documentation describes the Gardener specific differences and requirements for upgrading to a supported Kubernetes version.
 For Kubernetes specific upgrade notes the upstream Kubernetes release notes, [changelogs](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) and release blogs should be considered before upgrade.
 
+## Upgrading to Kubernetes `v1.38`
+
+- The default value of the `Shoot`'s `.spec.provider.workersSettings.sshAccess.enabled` field changed from `true` to `false`, i.e. SSH access to the worker nodes is now disabled by default. This new default only applies to `Shoot`s created with Kubernetes `v1.38` or higher. Existing `Shoot`s are not affected when upgrading to Kubernetes `v1.38` and keep their current value. To enable SSH access to the worker nodes, set `.spec.provider.workersSettings.sshAccess.enabled` to `true` explicitly. For more information, see [Shoot Worker Nodes Settings](shoot_workers_settings.md#ssh-access).
+
 ## Upgrading to Kubernetes `v1.37`
 
 No Gardener-specific upgrade notes for this version.
