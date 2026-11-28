@@ -19,7 +19,7 @@ jobs:
 
   component-descriptor:
     if: ${{ github.repository == 'gardener/gardener' }}
-    uses: gardener/cc-utils/.github/workflows/post-build.yaml@bce63f62928717a11f610ec8022af9feb497d5df # v1
+    uses: gardener/cc-utils/.github/workflows/post-build.yaml@00522ef3e8504bc7be46394a239a390f112336f6 # 1.2883.0
     needs:
       - build
     permissions:
