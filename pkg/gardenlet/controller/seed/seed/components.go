@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
@@ -626,8 +627,8 @@ func (r *Reconciler) newVali(seed *seedpkg.Seed, istioIngressGatewayLabels map[s
 		return nil, err
 	}
 
-	// Destroy Vali if logging is disabled in config
-	if !gardenlethelper.IsLoggingEnabled(&r.Config) {
+	// Destroy Vali if logging or Vali is disabled in config
+	if !gardenlethelper.IsLoggingEnabled(&r.Config) || !gardenlethelper.IsValiEnabled(&r.Config) {
 		return component.OpDestroy(deployer), err
 	}
 
@@ -692,7 +693,7 @@ func (r *Reconciler) newVictoriaLogs(
 		return nil, err
 	}
 
-	if !gardenlethelper.IsLoggingEnabled(&r.Config) || !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+	if !gardenlethelper.IsLoggingEnabled(&r.Config) || !gardenlethelper.IsVictoriaLogsEnabled(&r.Config) {
 		return component.OpDestroyAndWait(deployer), err
 	}
 
@@ -905,16 +906,21 @@ func (r *Reconciler) newFluentCustomResources(seedIsGarden bool) (deployer compo
 		centralLoggingConfigurations = append(centralLoggingConfigurations, eventlogger.CentralLoggingConfiguration)
 	}
 
-	var outputs []*fluentbitv1alpha2.ClusterOutput
-	if gardenlethelper.IsValiEnabled(&r.Config) || features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}))
-		outputs = append(outputs, fluentcustomresources.GetDefaultClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}))
+	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
+
+	// Vali is removed if the RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well).
+	valiIsRunning := gardenlethelper.IsValiEnabled(&r.Config) &&
+		!(features.DefaultFeatureGate.Enabled(features.RemoveVali) && features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend)) //nolint:staticcheck // this is easier to read
+
+	outputs := []*fluentbitv1alpha2.ClusterOutput{
+		fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels, valiIsRunning),
+		fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels, valiIsRunning),
 	}
+	outputs = slices.DeleteFunc(outputs, func(o *fluentbitv1alpha2.ClusterOutput) bool { return o == nil })
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		gardenlethelper.IsLoggingEnabled(&r.Config),
 		"",
 		centralLoggingConfigurations,
 		outputs,
@@ -1049,7 +1055,6 @@ func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentOperator(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		gardenlethelper.IsLoggingEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
 }
@@ -1058,7 +1063,6 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentBit(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		gardenlethelper.IsLoggingEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		false,
 	)

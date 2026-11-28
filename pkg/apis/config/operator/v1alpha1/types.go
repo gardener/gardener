@@ -51,6 +51,10 @@ type OperatorConfiguration struct {
 	// NodeToleration contains optional settings for default tolerations.
 	// +optional
 	NodeToleration *NodeTolerationConfiguration `json:"nodeToleration,omitempty"`
+	// Logging contains an optional configuration for the logging stack deployed by the gardener-operator in the
+	// runtime cluster.
+	// +optional
+	Logging *Logging `json:"logging,omitempty"`
 }
 
 // ConditionThreshold defines the threshold of the given condition type.
@@ -232,6 +236,38 @@ type NodeTolerationConfiguration struct {
 	// should be added to pods not already tolerating this taint.
 	// +optional
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty"`
+}
+
+// Logging contains configuration for the logging stack.
+type Logging struct {
+	// Enabled is used to enable or disable the logging stack in the runtime cluster.
+	// If not set, by default the logging stack is enabled.
+	// If the runtime cluster is a seed cluster at the same time, this should be aligned with the gardenlet's logging
+	// configuration, see docs/concepts/operator.md#using-garden-runtime-cluster-as-seed-cluster.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+	// Vali contains configuration for Vali.
+	// +optional
+	Vali *Vali `json:"vali,omitempty"`
+	// VictoriaLogs contains configuration for VictoriaLogs.
+	// +optional
+	VictoriaLogs *VictoriaLogs `json:"victoriaLogs,omitempty"`
+}
+
+// Vali contains configuration for Vali.
+type Vali struct {
+	// Enabled is used to enable or disable Vali in the runtime cluster.
+	// If not set, by default Vali is enabled.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// VictoriaLogs contains configuration for VictoriaLogs.
+type VictoriaLogs struct {
+	// Enabled is used to enable or disable VictoriaLogs in the runtime cluster.
+	// If not set, by default VictoriaLogs is enabled when the VictoriaLogsBackend feature gate is enabled.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 const (

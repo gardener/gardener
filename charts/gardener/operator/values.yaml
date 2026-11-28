@@ -102,6 +102,12 @@ config:
       concurrentSyncs: 5
     tokenRequestor:
       concurrentSyncs: 5
+  # logging:
+  #   enabled: true
+  #   vali:
+  #     enabled: true
+  #   victoriaLogs:
+  #     enabled: true
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60

@@ -16,7 +16,6 @@ import (
 func NewFluentOperator(
 	c client.Client,
 	gardenNamespaceName string,
-	enabled bool,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
@@ -35,10 +34,6 @@ func NewFluentOperator(
 			PriorityClassName: priorityClassName,
 		},
 	)
-
-	if !enabled {
-		deployer = component.OpDestroyWithoutWait(deployer)
-	}
 
 	return deployer, nil
 }

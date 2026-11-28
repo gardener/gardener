@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	gardenlethelper "github.com/gardener/gardener/pkg/api/config/gardenlet/v1alpha1/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -466,24 +467,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
 		})
-		deployFluentOperator = g.Add(flow.Task{
-			Name:         "Deploying Fluent Operator",
-			Fn:           c.fluentOperator.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-			SkipIf:       seedIsGarden,
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Fluent Bit",
-			Fn:           c.fluentBit.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
-			SkipIf:       seedIsGarden,
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Fluent Operator custom resources",
-			Fn:           c.fluentOperatorCustomResources.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents, deployFluentOperator),
-			SkipIf:       seedIsGarden,
-		})
+		_ = g.AddGroup(reconcileFluentTaskGroup(c, gardenlethelper.IsLoggingEnabled(&r.Config)).
+			WithDependencies(syncPointReadyForSystemComponents).
+			SkipIf(seedIsGarden))
 		deployPlutono = g.Add(flow.Task{
 			Name:         "Deploying Plutono",
 			Fn:           c.plutono.Deploy,
@@ -812,4 +798,44 @@ func (r *Reconciler) destroyReferencedResources(ctx context.Context, seed *seedp
 	}
 
 	return nil
+}
+
+// reconcileFluentTaskGroup returns the flow.TaskGroup for reconciling the Fluent Operator, Fluent Bit and the Fluent
+// Operator custom resources. They are deployed if the logging stack is enabled and destroyed otherwise.
+func reconcileFluentTaskGroup(c components, loggingEnabled bool) flow.TaskGroup {
+	group := flow.NewTaskGroup("TaskGroupReconcileFluent")
+
+	if loggingEnabled {
+		deployFluentOperator := group.Add(flow.Task{
+			Name: "Deploying Fluent Operator",
+			Fn:   c.fluentOperator.Deploy,
+		})
+		group.Add(flow.Task{
+			Name:         "Deploying Fluent Bit",
+			Fn:           c.fluentBit.Deploy,
+			Dependencies: flow.NewTaskIDs(deployFluentOperator),
+		})
+		group.Add(flow.Task{
+			Name:         "Deploying Fluent Operator custom resources",
+			Fn:           c.fluentOperatorCustomResources.Deploy,
+			Dependencies: flow.NewTaskIDs(deployFluentOperator),
+		})
+		return group
+	}
+
+	destroyFluentBit := group.Add(flow.Task{
+		Name: "Destroying Fluent Bit",
+		Fn:   component.OpDestroyAndWait(c.fluentBit).Destroy,
+	})
+	destroyFluentOperatorCustomResources := group.Add(flow.Task{
+		Name: "Destroying Fluent Operator custom resources",
+		Fn:   component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
+	})
+	group.Add(flow.Task{
+		Name: "Destroying Fluent Operator",
+		Fn:   component.OpDestroyAndWait(c.fluentOperator).Destroy,
+		// The Fluent Operator is needed to cleanup potentially existing custom resources, hence it must only be destroyed after they are gone.
+		Dependencies: flow.NewTaskIDs(destroyFluentBit, destroyFluentOperatorCustomResources),
+	})
+	return group
 }

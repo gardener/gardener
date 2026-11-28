@@ -37,6 +37,7 @@ import (
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/api/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/api/operator/v1alpha1/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/controllermanager/v1alpha1"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/operator/v1alpha1"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/scheduler/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -68,7 +69,7 @@ import (
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
-	"github.com/gardener/gardener/pkg/component/observability/logging"
+	observabilitylogging "github.com/gardener/gardener/pkg/component/observability/logging"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
@@ -85,7 +86,6 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/collector"
 	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -148,7 +148,7 @@ type components struct {
 	fluentOperatorCustomResources component.DeployWaiter
 	plutono                       plutono.Interface
 	vali                          component.Deployer
-	openTelemetryCollector        collector.Interface
+	openTelemetryCollector        component.DeployWaiter
 	prometheusOperator            component.DeployWaiter
 	openTelemetryOperator         component.DeployWaiter
 	alertManager                  alertmanager.Interface
@@ -345,11 +345,11 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.fluentOperatorCustomResources, err = r.newFluentCustomResources()
+	c.fluentOperatorCustomResources, err = r.newFluentCustomResources(r.Config.Logging)
 	if err != nil {
 		return
 	}
-	c.vali, err = r.newVali(garden.Spec.RuntimeCluster.Settings, c.istio.GetValues().IngressGateway)
+	c.vali, err = r.newVali(garden.Spec.RuntimeCluster.Settings, r.Config.Logging, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -365,7 +365,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.openTelemetryOperator, err = r.newOpenTelemetryOperator()
+	c.openTelemetryOperator, err = r.newOpenTelemetryOperator(r.Config.Logging)
 	if err != nil {
 		return
 	}
@@ -397,7 +397,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
+	c.victoriaLogs, err = r.newVictoriaLogs(garden.Spec.RuntimeCluster.Settings, r.Config.Logging, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -1437,7 +1437,6 @@ func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentOperator(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }
@@ -1446,35 +1445,34 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 	return sharedcomponent.NewFluentBit(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		true,
 	)
 }
 
-func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
+func (r *Reconciler) newFluentCustomResources(logging *operatorconfigv1alpha1.Logging) (component.DeployWaiter, error) {
 	customResourcesLabels := map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}
 
-	// The gardener-operator has no option to disable logging, so the default output is always included.
-	outputs := []*fluentbitv1alpha2.ClusterOutput{fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels)}
+	isValiRunning := isValiEnabled(logging)
+	outputs := []*fluentbitv1alpha2.ClusterOutput{fluentcustomresources.GetDefaultClusterOutput(customResourcesLabels, isValiRunning)}
 
 	if features.DefaultFeatureGate.Enabled(features.OpenTelemetryCollector) {
-		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels))
+		outputs = append(outputs, fluentcustomresources.GetDynamicClusterOutput(customResourcesLabels, isValiRunning))
 	} else {
-		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels))
+		outputs = append(outputs, fluentcustomresources.GetStaticClusterOutput(customResourcesLabels, isValiRunning))
 	}
+	outputs = slices.DeleteFunc(outputs, func(o *fluentbitv1alpha2.ClusterOutput) bool { return o == nil })
 
 	return sharedcomponent.NewFluentOperatorCustomResources(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
 		"-garden",
-		logging.GardenCentralLoggingConfigurations,
+		observabilitylogging.GardenCentralLoggingConfigurations,
 		outputs,
 	)
 }
 
-func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, logging *operatorconfigv1alpha1.Logging, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the vali config")
 	}
@@ -1501,9 +1499,7 @@ func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGateway
 		return nil, err
 	}
 
-	// Destroy Vali if RemoveVali feature gate is enabled (requires VictoriaLogsBackend as well)
-	if features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) &&
-		features.DefaultFeatureGate.Enabled(features.RemoveVali) {
+	if !isValiEnabled(logging) {
 		return component.OpDestroy(deployer), nil
 	}
 
@@ -1512,6 +1508,7 @@ func (r *Reconciler) newVali(settings *operatorv1alpha1.Settings, ingressGateway
 
 func (r *Reconciler) newVictoriaLogs(
 	settings *operatorv1alpha1.Settings,
+	logging *operatorconfigv1alpha1.Logging,
 	secretsManager secretsmanager.Interface,
 	ingressDomain string,
 	wildcardCertSecretName *string,
@@ -1548,7 +1545,7 @@ func (r *Reconciler) newVictoriaLogs(
 		return nil, err
 	}
 
-	if !features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend) {
+	if !isVictoriaLogsEnabled(logging) {
 		return component.OpDestroyAndWait(deployer), nil
 	}
 
@@ -1774,7 +1771,7 @@ func (r *Reconciler) newPerses(garden *operatorv1alpha1.Garden, secretsManager s
 			// configuring a pod priority class on the Perses resource (see github.com/perses/perses-operator/pull/456).
 			IsGardenCluster:     true,
 			VPAEnabled:          vpaEnabled(garden.Spec.RuntimeCluster.Settings),
-			VictoriaLogsEnabled: features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
+			VictoriaLogsEnabled: isVictoriaLogsEnabled(r.Config.Logging),
 			// The garden runtime cluster runs istio, so include its dashboards.
 			IncludeIstioDashboards: true,
 			ExternalExposure: &perses.ExposureValues{
@@ -1830,17 +1827,17 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 	), nil
 }
 
-func (r *Reconciler) newOpenTelemetryOperator() (component.DeployWaiter, error) {
+func (r *Reconciler) newOpenTelemetryOperator(logging *operatorconfigv1alpha1.Logging) (component.DeployWaiter, error) {
 	return sharedcomponent.NewOpenTelemetryOperator(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		true,
+		isLoggingEnabled(logging),
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }
 
-func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface) (collector.Interface, error) {
-	return sharedcomponent.NewOpenTelemetryCollector(r.RuntimeClientSet.Client(),
+func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	deployer, err := sharedcomponent.NewOpenTelemetryCollector(r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		secretsManager,
@@ -1850,6 +1847,15 @@ func (r *Reconciler) newOpenTelemetryCollector(secretsManager secretsmanager.Int
 		features.DefaultFeatureGate.Enabled(features.VictoriaLogsBackend),
 		features.DefaultFeatureGate.Enabled(features.RemoveVali),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isLoggingEnabled(r.Config.Logging) {
+		return component.OpDestroyAndWait(deployer), nil
+	}
+
+	return deployer, nil
 }
 
 func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Garden, extensionList *operatorv1alpha1.ExtensionList) extension.Interface {

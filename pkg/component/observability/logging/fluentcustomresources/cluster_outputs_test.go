@@ -12,16 +12,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Logging", func() {
-	Describe("#GetDefaultClusterOutputs", func() {
-		var (
-			labels = map[string]string{"some-key": "some-value"}
-		)
+	var (
+		labels = map[string]string{"some-key": "some-value"}
+	)
 
+	Describe("#GetDefaultClusterOutput", func() {
 		It("should return the expected DefaultClusterOutput custom resources", func() {
-			fluentBitClusterOutputs := GetDefaultClusterOutput(labels)
+			fluentBitClusterOutputs := GetDefaultClusterOutput(labels, true)
 
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
@@ -47,15 +49,28 @@ FallbackToTagWhenMetadataIsMissing false`,
 				},
 			))
 		})
+		DescribeTable("should return the ClusterOutput with the expected name depending on the feature gate state and whether vali is running",
+			func(openTelemetryCollectorEnabled, isValiRunning bool, expectedName *string) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, openTelemetryCollectorEnabled))
+
+				clusterOutput := GetDefaultClusterOutput(labels, isValiRunning)
+
+				if expectedName == nil {
+					Expect(clusterOutput).To(BeNil())
+					return
+				}
+				Expect(clusterOutput.Name).To(Equal(*expectedName))
+			},
+			Entry("OpenTelemetryCollector feature gate active, vali running", true, true, new("systemd-default")),
+			Entry("OpenTelemetryCollector feature gate active, vali not running", true, false, new("systemd-default")),
+			Entry("OpenTelemetryCollector feature gate inactive, vali running", false, true, new("journald-default")),
+			Entry("OpenTelemetryCollector feature gate inactive, vali not running", false, false, nil),
+		)
 	})
 
 	Describe("#GetDynamicClusterOutput", func() {
-		var (
-			labels = map[string]string{"some-key": "some-value"}
-		)
-
 		It("should return the expected DynamicClusterOutput custom resources", func() {
-			fluentBitClusterOutputs := GetDynamicClusterOutput(labels)
+			fluentBitClusterOutputs := GetDynamicClusterOutput(labels, true)
 
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
@@ -104,15 +119,29 @@ TagKey                    tag`,
 				},
 			))
 		})
+
+		DescribeTable("should return the ClusterOutput with the expected name depending on the feature gate state and whether vali is running",
+			func(openTelemetryCollectorEnabled, isValiRunning bool, expectedName *string) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, openTelemetryCollectorEnabled))
+
+				clusterOutput := GetDynamicClusterOutput(labels, isValiRunning)
+
+				if expectedName == nil {
+					Expect(clusterOutput).To(BeNil())
+					return
+				}
+				Expect(clusterOutput.Name).To(Equal(*expectedName))
+			},
+			Entry("OpenTelemetryCollector feature gate active, vali running", true, true, new("opentelemetry")),
+			Entry("OpenTelemetryCollector feature gate active, vali not running", true, false, new("opentelemetry")),
+			Entry("OpenTelemetryCollector feature gate inactive, vali running", false, true, new("gardener-vali")),
+			Entry("OpenTelemetryCollector feature gate inactive, vali not running", false, false, nil),
+		)
 	})
 
 	Describe("#GetStaticClusterOutput", func() {
-		var (
-			labels = map[string]string{"some-key": "some-value"}
-		)
-
 		It("should return the expected DynamicClusterOutput custom resources", func() {
-			fluentBitClusterOutputs := GetStaticClusterOutput(labels)
+			fluentBitClusterOutputs := GetStaticClusterOutput(labels, true)
 
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
@@ -138,5 +167,23 @@ FallbackToTagWhenMetadataIsMissing true`,
 				},
 			))
 		})
+
+		DescribeTable("should return the ClusterOutput with the expected name depending on the feature gate state and whether vali is running",
+			func(openTelemetryCollectorEnabled, isValiRunning bool, expectedName *string) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.OpenTelemetryCollector, openTelemetryCollectorEnabled))
+
+				clusterOutput := GetStaticClusterOutput(labels, isValiRunning)
+
+				if expectedName == nil {
+					Expect(clusterOutput).To(BeNil())
+					return
+				}
+				Expect(clusterOutput.Name).To(Equal(*expectedName))
+			},
+			Entry("OpenTelemetryCollector feature gate active, vali running", true, true, new("opentelemetry-static")),
+			Entry("OpenTelemetryCollector feature gate active, vali not running", true, false, new("opentelemetry-static")),
+			Entry("OpenTelemetryCollector feature gate inactive, vali running", false, true, new("static-vali")),
+			Entry("OpenTelemetryCollector feature gate inactive, vali not running", false, false, nil),
+		)
 	})
 })
