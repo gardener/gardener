@@ -50,9 +50,10 @@ type ControllerInfos struct {
 	// This is supposed to be used in the add event handler only.
 	EnqueueAfter time.Duration
 	// RequeueAfter is the reconciliation result that should be returned by the reconciler for scheduling the next
-	// regular sync in the following two situations only:
+	// regular sync in the following situations:
 	// - after finishing a shoot Create/Reconcile/Restore operation successfully
 	// - when handling a reconciliation request for a shoot that should not be reconciled right now (ShouldReconcileNow == false)
+	// - when a failed shoot is waiting for its next periodic retry
 	RequeueAfter reconcile.Result
 
 	// internal fields, these are not supposed to be exposed or returned to the controller
@@ -66,6 +67,7 @@ type ControllerInfos struct {
 	// based on shoot object
 	isIgnored                             bool
 	isFailed                              bool
+	nextPeriodicRetry                     time.Time
 	isUpToDate                            bool
 	confineSpecUpdateRollout              bool
 	maintenanceTimeWindow                 *timewindow.MaintenanceTimeWindow
@@ -114,6 +116,10 @@ func CalculateControllerInfos(seed *gardencorev1beta1.Seed, shoot *gardencorev1b
 		syncPeriod: gardenerutils.SyncPeriodOfShoot(respectSyncPeriodOverwrite, cfg.SyncPeriod.Duration, shoot),
 	}
 
+	if i.isFailed {
+		i.nextPeriodicRetry = shoot.Status.LastOperation.LastUpdateTime.Add(24 * time.Hour)
+	}
+
 	i.ShouldReconcileNow = i.shouldReconcileNow()
 	i.ShouldOnlySyncClusterResource = i.shouldOnlySyncClusterResource()
 	i.EnqueueAfter = i.enqueueAfter()
@@ -131,11 +137,25 @@ func (i ControllerInfos) shouldReconcileNow() ReconcileNowDecision {
 		}
 	}
 
-	// if the shoot is failed or ignored, it doesn't matter which operation is triggered
-	if i.isFailed || i.isIgnored {
+	// if the shoot is ignored, it doesn't matter which operation is triggered
+	if i.isIgnored {
 		return ReconcileNowDecision{
 			Result: false,
-			Reason: "Shoot is failed or ignored.",
+			Reason: "Shoot is ignored.",
+		}
+	}
+
+	// if the shoot is failed, periodically retry to ensure certificate renewals and other critical operations
+	if i.isFailed {
+		if !i.clock.Now().Before(i.nextPeriodicRetry) {
+			return ReconcileNowDecision{
+				Result: true,
+				Reason: "Periodic retry of failed shoot.",
+			}
+		}
+		return ReconcileNowDecision{
+			Result: false,
+			Reason: "Shoot is failed.",
 		}
 	}
 
@@ -226,8 +246,16 @@ func (i ControllerInfos) enqueueAfter() time.Duration {
 }
 
 func (i ControllerInfos) requeueAfter() reconcile.Result {
-	// if the shoot is failed or ignored, we don't want to requeue the shoot
-	if i.isFailed || i.isIgnored {
+	// if the shoot is ignored, we don't want to requeue the shoot
+	if i.isIgnored {
+		return reconcile.Result{}
+	}
+
+	// if the shoot is failed, requeue it for the next periodic retry
+	if i.isFailed {
+		if remaining := i.nextPeriodicRetry.Sub(i.clock.Now()); remaining > 0 {
+			return reconcile.Result{RequeueAfter: remaining}
+		}
 		return reconcile.Result{}
 	}
 

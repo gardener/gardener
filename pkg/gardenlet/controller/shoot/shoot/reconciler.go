@@ -377,7 +377,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 				updateErr := r.patchShootStatusOperationError(ctx, shoot, syncErr.Error(), i.OperationType, false, shoot.Status.LastErrors...)
 				return nil, reconcile.Result{}, errorsutils.WithSuppressed(syncErr, updateErr)
 			}
-			return nil, reconcile.Result{}, nil
+			return nil, i.RequeueAfter, nil
 		}
 
 		return nil, i.RequeueAfter, nil

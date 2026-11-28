@@ -31,7 +31,7 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 ## Retry Failed Reconciliation
 
 Annotate the shoot with `gardener.cloud/operation=retry` to make the `gardenlet` start a new reconciliation loop on a failed shoot.
-Failed shoots are only reconciled again if a new Gardener version is deployed, the shoot specification is changed or this annotation is set:
+There are four ways a failed shoot is reconciled again: a new Gardener version is deployed, the shoot specification is changed, a periodic reconciliation every `24h` or this annotation is set:
 
 ```bash
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=retry
