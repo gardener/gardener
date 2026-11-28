@@ -15,15 +15,18 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
 
 	gardencorehelper "github.com/gardener/gardener/pkg/api/core/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/config/gardenlet/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -119,7 +122,7 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 	}
 
 	switch a.GetKind().GroupKind() {
-	case core.Kind("BackupBucket"), core.Kind("BackupEntry"), core.Kind("Seed"), core.Kind("Shoot"):
+	case core.Kind("BackupBucket"), core.Kind("BackupEntry"), core.Kind("Seed"), core.Kind("Shoot"), seedmanagement.Kind("ManagedSeed"), seedmanagement.Kind("Gardenlet"):
 	default:
 		return nil
 	}
@@ -190,7 +193,53 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 		}
 
 		if !apiequality.Semantic.DeepEqual(seed.Spec, oldSeed.Spec) {
-			validationError = e.validateSeed(kindToExtensions, seed.Spec)
+			validationError = e.validateSeed(kindToExtensions, seed.Spec, "Seed", field.NewPath("spec"))
+		}
+
+	case seedmanagement.Kind("ManagedSeed"):
+		managedSeed, ok := a.GetObject().(*seedmanagement.ManagedSeed)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert object into ManagedSeed object")
+		}
+
+		oldManagedSeed := &seedmanagement.ManagedSeed{}
+		if oldObj := a.GetOldObject(); oldObj != nil {
+			oldManagedSeed, ok = oldObj.(*seedmanagement.ManagedSeed)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old object into ManagedSeed object")
+			}
+		}
+
+		seedSpec, err := changedSeedSpec(managedSeed.Spec.Gardenlet.Config, oldManagedSeed.Spec.Gardenlet.Config)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		if seedSpec != nil {
+			validationError = e.validateSeed(kindToExtensions, *seedSpec, "ManagedSeed", field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec"))
+		}
+
+	case seedmanagement.Kind("Gardenlet"):
+		gardenlet, ok := a.GetObject().(*seedmanagement.Gardenlet)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert object into Gardenlet object")
+		}
+
+		oldGardenlet := &seedmanagement.Gardenlet{}
+		if oldObj := a.GetOldObject(); oldObj != nil {
+			oldGardenlet, ok = oldObj.(*seedmanagement.Gardenlet)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old object into Gardenlet object")
+			}
+		}
+
+		seedSpec, err := changedSeedSpec(gardenlet.Spec.Config, oldGardenlet.Spec.Config)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		if seedSpec != nil {
+			validationError = e.validateSeed(kindToExtensions, *seedSpec, "Gardenlet", field.NewPath("spec", "config", "seedConfig", "spec"))
 		}
 
 	case core.Kind("Shoot"):
@@ -241,12 +290,14 @@ func (e *ExtensionValidator) validateBackupEntry(kindToExtensions map[string][]e
 	)
 }
 
-func (e *ExtensionValidator) validateSeed(kindToExtensions map[string][]extension, spec core.SeedSpec) error {
+// validateSeed validates the extension types used by the given seed spec, which belongs to an object of the given kind
+// and is found at the given field path within it.
+func (e *ExtensionValidator) validateSeed(kindToExtensions map[string][]extension, spec core.SeedSpec, kind string, fldPath *field.Path) error {
 	var (
-		message = "given Seed uses non-registered"
+		message = fmt.Sprintf("given %s uses non-registered", kind)
 
 		requiredExtensions = requiredExtensions{
-			{extensionsv1alpha1.ControlPlaneResource, spec.Provider.Type, fmt.Sprintf("%s provider type", message), field.NewPath("spec", "provider", "type")},
+			{extensionsv1alpha1.ControlPlaneResource, spec.Provider.Type, fmt.Sprintf("%s provider type", message), fldPath.Child("provider", "type")},
 		}
 	)
 
@@ -254,18 +305,18 @@ func (e *ExtensionValidator) validateSeed(kindToExtensions map[string][]extensio
 		msg := fmt.Sprintf("%s backup provider type", message)
 		requiredExtensions = append(
 			requiredExtensions,
-			requiredExtension{extensionsv1alpha1.BackupBucketResource, spec.Backup.Provider, msg, field.NewPath("spec", "backup", "provider")},
-			requiredExtension{extensionsv1alpha1.BackupEntryResource, spec.Backup.Provider, msg, field.NewPath("spec", "backup", "provider")},
+			requiredExtension{extensionsv1alpha1.BackupBucketResource, spec.Backup.Provider, msg, fldPath.Child("backup", "provider")},
+			requiredExtension{extensionsv1alpha1.BackupEntryResource, spec.Backup.Provider, msg, fldPath.Child("backup", "provider")},
 		)
 	}
 
 	if spec.Ingress != nil && spec.DNS.Provider != nil {
 		provider := spec.DNS.Provider
-		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, provider.Type, fmt.Sprintf("%s extension type", message), field.NewPath("spec", "dns", "provider").Child("type")})
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, provider.Type, fmt.Sprintf("%s extension type", message), fldPath.Child("dns", "provider", "type")})
 	}
 
 	for i, ext := range spec.Extensions {
-		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ExtensionResource, ext.Type, fmt.Sprintf("%s extension type", message), field.NewPath("spec", "extensions").Index(i).Child("type")})
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ExtensionResource, ext.Type, fmt.Sprintf("%s extension type", message), fldPath.Child("extensions").Index(i).Child("type")})
 	}
 
 	return requiredExtensions.areRegistered(kindToExtensions, gardencorev1beta1.ClusterTypeSeed)
@@ -339,6 +390,42 @@ func (e *ExtensionValidator) validateShoot(kindToExtensions map[string][]extensi
 }
 
 // Helper functions
+
+// changedSeedSpec returns the seed spec of the given gardenlet configuration if it differs from the one of the old
+// configuration, or nil if it is unchanged or the configuration has no seed config.
+func changedSeedSpec(config, oldConfig runtime.Object) (*core.SeedSpec, error) {
+	seedSpec, err := seedSpecFromGardenletConfig(config)
+	if err != nil || seedSpec == nil {
+		return nil, err
+	}
+
+	oldSeedSpec, err := seedSpecFromGardenletConfig(oldConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if apiequality.Semantic.DeepEqual(seedSpec, oldSeedSpec) {
+		return nil, nil
+	}
+
+	return seedSpec, nil
+}
+
+// seedSpecFromGardenletConfig returns the seed spec of the given gardenlet configuration, or nil if it is not a
+// GardenletConfiguration or has no seed config.
+func seedSpecFromGardenletConfig(config runtime.Object) (*core.SeedSpec, error) {
+	gardenletConfig, ok := config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+	if !ok || gardenletConfig.SeedConfig == nil {
+		return nil, nil
+	}
+
+	seedTemplate, err := gardencorehelper.ConvertSeedTemplate(&gardenletConfig.SeedConfig.SeedTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert seed template to internal version: %w", err)
+	}
+
+	return &seedTemplate.Spec, nil
+}
 
 type requiredExtension struct {
 	extensionKind string
