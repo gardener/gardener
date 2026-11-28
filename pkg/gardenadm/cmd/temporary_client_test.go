@@ -8,6 +8,8 @@ import (
 	"context"
 	"crypto/x509/pkix"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -101,7 +103,7 @@ apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    certificate-authority-data: some-ca
+    certificate-authority-data: c29tZS1jYQ==
     server: https://test-api-server
   name: test-cluster
 contexts:
@@ -113,8 +115,8 @@ current-context: test-context
 users:
 - name: test-user
   user:
-    client-certificate-data: some-cert
-    client-key-data: some-key
+    client-certificate-data: c29tZS1jZXJ0
+    client-key-data: c29tZS1rZXk=
 `
 
 			DeferCleanup(test.WithVar(&NewClientFromBytes, func([]byte, ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
@@ -122,7 +124,7 @@ users:
 			}))
 		})
 
-		Context("when no cached kubeconfig exists", func() {
+		When("no cached kubeconfig exists", func() {
 			It("should successfully create a new client and cache the kubeconfig", func() {
 				fakeKubernetesClientset.PrependReactor("create", "certificatesigningrequests", func(testing.Action) (bool, runtime.Object, error) {
 					return true, csr, nil
@@ -139,6 +141,11 @@ users:
 				exists, err := fakeFS.Exists(cachedPath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exists).To(BeTrue())
+
+				// Verify the cache directory is only accessible to the owner.
+				dirInfo, err := fakeFS.Stat(filepath.Dir(cachedPath))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dirInfo.Mode().Perm()).To(Equal(os.FileMode(0700)))
 			})
 
 			It("should fail when CSR creation fails", func() {
@@ -178,7 +185,7 @@ users:
 			})
 		})
 
-		Context("when cached kubeconfig exists and is valid", func() {
+		When("cached kubeconfig exists and is valid", func() {
 			BeforeEach(func() {
 				Expect(fakeFS.WriteFile(cachedPath, []byte(kubeconfig), 0600)).NotTo(HaveOccurred())
 			})
@@ -198,7 +205,7 @@ users:
 			})
 		})
 
-		Context("when cached kubeconfig exists but is expired", func() {
+		When("cached kubeconfig exists but is expired", func() {
 			BeforeEach(func() {
 				expiredTime := time.Now().Add(-15 * time.Minute)
 				Expect(fakeFS.WriteFile(cachedPath, []byte(kubeconfig), 0600)).NotTo(HaveOccurred())
@@ -235,24 +242,49 @@ users:
 			})
 		})
 
-		Context("when cached kubeconfig is corrupted", func() {
+		When("cached kubeconfig is corrupted", func() {
 			BeforeEach(func() {
 				Expect(fakeFS.WriteFile(cachedPath, []byte("corrupted kubeconfig content"), 0600)).NotTo(HaveOccurred())
 			})
 
-			It("should fail to create client with corrupted kubeconfig", func() {
-				fakeErr := fmt.Errorf("corrupt")
-
-				DeferCleanup(test.WithVar(&NewClientFromBytes, func([]byte, ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-					return nil, fakeErr
-				}))
-
+			It("should fail to load the corrupted kubeconfig", func() {
 				_, err := InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
-				Expect(err).To(MatchError(fakeErr))
+				Expect(err).To(MatchError(ContainSubstring("failed loading bootstrap kubeconfig")))
 			})
 		})
 
-		Context("when filesystem operations fail", func() {
+		When("cached kubeconfig contains a disallowed exec credential plugin", func() {
+			BeforeEach(func() {
+				Expect(fakeFS.WriteFile(cachedPath, []byte(`
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    certificate-authority-data: c29tZS1jYQ==
+    server: https://test-api-server
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1
+      command: /tmp/evil
+`), 0600)).NotTo(HaveOccurred())
+			})
+
+			It("should reject the planted kubeconfig before building a client", func() {
+				_, err := InitializeTemporaryClientSet(ctx, b, bootstrapClientSet)
+				Expect(err).To(MatchError(ContainSubstring("bootstrap kubeconfig failed validation")))
+			})
+		})
+
+		When("filesystem operations fail", func() {
 			It("should fail when unable to write kubeconfig to cache", func() {
 				// Make filesystem read-only to simulate write failure
 				b.FS = afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewMemMapFs())}
@@ -270,7 +302,7 @@ users:
 			})
 		})
 
-		Context("when shoot info is nil", func() {
+		When("shoot info is nil", func() {
 			BeforeEach(func() {
 				b.Shoot.SetInfo(nil)
 				b.HostName = "test-hostname"
@@ -341,8 +373,8 @@ users:
 
 		It("should return a stable path in the temp dir", func() {
 			path := CachedBootstrapKubeconfigPath(fakeFS, "https://garden", "user")
-			Expect(path).To(HavePrefix(fakeFS.GetTempDir("")))
-			Expect(path).To(ContainSubstring("gardenadm-bootstrap-kubeconfig-"))
+			Expect(path).To(HavePrefix(filepath.Join(fakeFS.GetTempDir(""), "gardenadm")))
+			Expect(path).To(ContainSubstring("bootstrap-kubeconfig-"))
 			Expect(CachedBootstrapKubeconfigPath(fakeFS, "https://garden", "user")).To(Equal(path))
 		})
 
