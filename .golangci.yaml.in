@@ -341,17 +341,85 @@ linters:
       - linters:
           - kubeapilinter
         path-except: '^pkg/apis/[^/]+(/[^/]+)?/v[0-9]+((alpha|beta)[0-9]+)?/[^/]+$'
-      # optionalfields: Spec/Status and other struct fields on top-level API objects have established non-pointer
-      # conventions in Kubernetes APIs. Similarly, scalar fields (int64, string) with incomplete validation
-      # are intentionally kept as value types. Converting these to pointers would be API-breaking.
-      # This is a temporary, repo-wide suppression; the flagged fields will be evaluated individually in #12756.
+      # optionalfields (Kubernetes conventions, no adaptation needed): The fields below have a valid zero
+      # value, so the linter suggests making them pointers. They follow established Kubernetes API
+      # conventions where a value type is correct, so the suggestion does not apply. These are scoped to
+      # the exact API packages/files that hold them (rather than suppressing the whole message category
+      # repo-wide) so the linter still flags newly added value-typed optional fields elsewhere.
+      #
+      # Top-level .Spec / .Status (and *Template.Spec) fields are never pointers in Kubernetes APIs.
       - linters:
           - kubeapilinter
-        text: 'optionalfields: field \S+ has a valid zero value \(.*\).* should be a pointer'
+        path: 'pkg/apis/(core/v1beta1|operator/v1alpha1|seedmanagement/v1alpha1)/types_\S+\.go'
+        text: 'optionalfields: field \S*\.(Spec|Status) has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/(extensions|operations)/v1alpha1/types_\S+\.go'
+        text: 'optionalfields: field \S*\.Status has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/resources/v1alpha1/types\.go'
+        text: 'optionalfields: field \S*\.(Spec|Status) has a valid zero value \(.*\).* should be a pointer'
+      # ObservedGeneration is a standard Kubernetes status field; 0 means "not yet reconciled".
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/(core/v1beta1|extensions/v1alpha1|operator/v1alpha1|resources/v1alpha1|seedmanagement/v1alpha1)/types_?\S*\.go'
+        text: 'optionalfields: field \S*\.ObservedGeneration has a valid zero value \(.*\).* should be a pointer'
+      # ManagedSeedSet status replica counters and revision strings follow the Kubernetes
+      # replica-set status convention; 0 / "" are meaningful values.
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/seedmanagement/v1alpha1/types_managedseedset\.go'
+        text: 'optionalfields: field ManagedSeedSetStatus\.(ReadyReplicas|NextReplicaNumber|CurrentReplicas|UpdatedReplicas|CurrentRevision|UpdateRevision) has a valid zero value \(.*\).* should be a pointer'
+      # optionalfields (TEMPORARY - grandfather, pending investigation in #16357): The fields below do NOT
+      # fall under a clear Kubernetes convention. Each needs to be evaluated individually before deciding
+      # whether to fix the type, add a validation marker, or suppress. They are grandfathered here (scoped
+      # to the exact field) so the linter stays green while they are resolved one-by-one in a follow-up PR.
+      # Remove each entry as the corresponding field is addressed.
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/config/resourcemanager/v1alpha1/types\.go'
+        text: 'optionalfields: field ResourceManagerConfiguration\.SourceClientConnection has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/config/scheduler/v1alpha1/types\.go'
+        text: 'optionalfields: field SchedulerConfiguration\.(ClientConnection|LogLevel|LogFormat) has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/core/v1beta1/types_cloudprofile\.go'
+        text: 'optionalfields: field CloudProfileControlPlane\.AllowZonePinning has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/core/v1beta1/types_internalsecret\.go'
+        text: 'optionalfields: field InternalSecret\.Type has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/core/v1beta1/types_namespacedcloudprofile\.go'
+        text: 'optionalfields: field NamespacedCloudProfileStatus\.CloudProfileSpec has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/core/v1beta1/types_project\.go'
+        text: 'optionalfields: field ProjectStatus\.Phase has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/core/v1beta1/types_shoot\.go'
+        text: 'optionalfields: field Kubernetes\.Version has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/extensions/v1alpha1/types_worker\.go'
+        text: 'optionalfields: field WorkerPool\.MachineImage has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/seedmanagement/v1alpha1/types_gardenlet\.go'
+        text: 'optionalfields: field GardenletSpec\.Config has a valid zero value \(.*\).* should be a pointer'
+      - linters:
+          - kubeapilinter
+        path: 'pkg/apis/seedmanagement/v1alpha1/types_managedseed\.go'
+        text: 'optionalfields: field GardenletConfig\.Config has a valid zero value \(.*\).* should be a pointer'
       # optionalfields: These optional fields are intentionally pointers even though their validation makes
       # the zero value invalid (e.g. Enum constraints, MinLength). The pointer allows callers to detect
       # whether the field was explicitly set. Removing the pointer would break downstream callers.
-      # This is a temporary, repo-wide suppression; the flagged fields will be evaluated individually in #12756.
+      # This is a temporary, repo-wide suppression; the flagged fields will be evaluated individually in #16357.
       - linters:
           - kubeapilinter
         text: 'optionalfields: field .* does not allow the zero value\. The field does not need to be a pointer\.'
