@@ -255,7 +255,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 			return fmt.Errorf("failed reconciling OperatingSystemConfig %s for worker %s: %w", client.ObjectKeyFromObject(osc), worker.Name, err)
 		}
 
-		oscKey, err := calculateKeyForValues(o.values, &worker)
+		oscKey, err := KeyForWorker(o.values, &worker)
 		if err != nil {
 			return err
 		}
@@ -521,7 +521,7 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscKey, err := calculateKeyForValues(o.values, &worker)
+			oscKey, err := KeyForWorker(o.values, &worker)
 			if err != nil {
 				return nil, err
 			}
@@ -538,7 +538,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscKey, err := calculateKeyForValues(o.values, &worker)
+			oscKey, err := KeyForWorker(o.values, &worker)
 			if err != nil {
 				return err
 			}
@@ -659,7 +659,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		return deployer{}, fmt.Errorf("failed finding hyperkube image for version %s: %w", kubernetesVersion.String(), err)
 	}
 
-	oscKey, err := calculateKeyForValues(o.values, &worker)
+	oscKey, err := KeyForWorker(o.values, &worker)
 	if err != nil {
 		return deployer{}, err
 	}
@@ -937,7 +937,9 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	return d.osc, err
 }
 
-func calculateKeyForValues(values *Values, worker *gardencorev1beta1.Worker) (string, error) {
+// KeyForWorker returns the name of the secret storing the gardener-node-agent configuration of the given worker pool
+// (see Data.GardenerNodeAgentSecretName).
+func KeyForWorker(values *Values, worker *gardencorev1beta1.Worker) (string, error) {
 	if v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
 		return fmt.Sprintf("gardener-node-agent-%s", worker.Name), nil
 	}

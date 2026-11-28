@@ -76,7 +76,7 @@ func NewControlPlaneBootstrap(
 }
 
 func (c *controlPlaneBootstrap) Deploy(ctx context.Context) error {
-	oscKey, err := calculateKeyForValues(c.values.Values, c.values.Worker)
+	oscKey, err := KeyForWorker(c.values.Values, c.values.Worker)
 	if err != nil {
 		return err
 	}

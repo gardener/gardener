@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/connect"
+	"github.com/gardener/gardener/pkg/gardenadm/cmd/destroy"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/discover"
 	initcmd "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/join"
@@ -110,6 +111,7 @@ func prepareCleanUpGroup(cmd *cobra.Command, opts *cmd.Options) {
 
 	for _, subcommand := range []*cobra.Command{
 		reset.NewCommand(opts),
+		destroy.NewCommand(opts),
 	} {
 		subcommand.GroupID = group.ID
 		cmd.AddCommand(subcommand)
