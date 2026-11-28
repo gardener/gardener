@@ -153,7 +153,7 @@ EOF
           --config /dev/stdin
     fi
 
-    nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
+    nodes=$(docker container ls --filter label=io.x-k8s.kind.cluster="$CLUSTER_NAME" --format "{{.Names}}")
 
     # Configure the default StorageClass in the kind cluster
     setup_kind_sc_default_volume_type
