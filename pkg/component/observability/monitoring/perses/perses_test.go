@@ -44,6 +44,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -61,6 +64,8 @@ var _ = Describe("Perses", func() {
 		deployer   Interface
 		values     Values
 
+		fakeSecretsManager secretsmanager.Interface
+
 		fakeOps      *retryfake.Ops
 		containsObjs func(...client.Object) gomegatypes.GomegaMatcher
 		// expectDashboards asserts the deployed dashboard set is exactly expected, naming any missing or extra entry.
@@ -76,7 +81,8 @@ var _ = Describe("Perses", func() {
 		dsLongterm         *persesv1alpha2.PersesDatasource
 		seedServiceMonitor *monitoringv1.ServiceMonitor
 
-		newExpectedDatasource func(string, string, string, bool, string) *persesv1alpha2.PersesDatasource
+		newExpectedDatasource       func(string, string, string, bool, string) *persesv1alpha2.PersesDatasource
+		newExpectedDatasourceWithCA func(string, string, string, bool, string, string, string, string) *persesv1alpha2.PersesDatasource
 	)
 
 	BeforeEach(func() {
@@ -85,12 +91,19 @@ var _ = Describe("Perses", func() {
 		managedResourceName = "perses"
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
 		values = Values{
-			Image:       image,
-			ClusterType: component.ClusterTypeSeed,
-			Replicas:    1,
+			Image:              image,
+			ClusterType:        component.ClusterTypeSeed,
+			Replicas:           1,
+			SecretNameServerCA: "ca",
 		}
+
+		Expect(fakeClient.Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace},
+			Data:       map[string][]byte{secrets.DataKeyCertificateBundle: []byte("ca-bundle")},
+		})).To(Succeed())
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -199,7 +212,7 @@ var _ = Describe("Perses", func() {
 			},
 		}
 
-		newExpectedDatasource = func(dsName, pluginKind, url string, isDefault bool, instanceName string) *persesv1alpha2.PersesDatasource {
+		newExpectedDatasourceWithCA = func(dsName, pluginKind, url string, isDefault bool, instanceName string, secretName string, caName string, caNamespace string) *persesv1alpha2.PersesDatasource {
 			var allowedEndpoints []any
 			switch pluginKind {
 			case "PrometheusDatasource":
@@ -230,6 +243,14 @@ var _ = Describe("Perses", func() {
 				}
 			}
 
+			proxySpec := map[string]any{
+				"url":              url,
+				"allowedEndpoints": allowedEndpoints,
+			}
+			if secretName != "" {
+				proxySpec["secret"] = secretName
+			}
+
 			return &persesv1alpha2.PersesDatasource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      dsName,
@@ -251,15 +272,30 @@ var _ = Describe("Perses", func() {
 								Spec: map[string]any{
 									"proxy": map[string]any{
 										"kind": "HTTPProxy",
-										"spec": map[string]any{
-											"url":              url,
-											"allowedEndpoints": allowedEndpoints,
-										},
+										"spec": proxySpec,
 									},
 								},
 							},
 						},
 					},
+					Client: func() *persesv1alpha2.Client {
+						if caName == "" {
+							return nil
+						}
+						return &persesv1alpha2.Client{
+							TLS: &persesv1alpha2.TLS{
+								Enable: new(true),
+								CaCert: &persesv1alpha2.Certificate{
+									SecretSource: persesv1alpha2.SecretSource{
+										Type:      persesv1alpha2.SecretSourceTypeSecret,
+										Name:      &caName,
+										Namespace: &caNamespace,
+									},
+									CertPath: secrets.DataKeyCertificateBundle,
+								},
+							},
+						}
+					}(),
 					InstanceSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
 							Key:      "app.kubernetes.io/instance",
@@ -269,6 +305,10 @@ var _ = Describe("Perses", func() {
 					},
 				},
 			}
+		}
+
+		newExpectedDatasource = func(dsName, pluginKind, url string, isDefault bool, instanceName string) *persesv1alpha2.PersesDatasource {
+			return newExpectedDatasourceWithCA(dsName, pluginKind, url, isDefault, instanceName, "", "", "")
 		}
 
 		dsAggregate = newExpectedDatasource("prometheus-aggregate", "PrometheusDatasource", "http://prometheus-aggregate:80", true, "perses-seed")
@@ -290,7 +330,7 @@ var _ = Describe("Perses", func() {
 	})
 
 	JustBeforeEach(func() {
-		deployer = New(fakeClient, namespace, values)
+		deployer = New(fakeClient, namespace, fakeSecretsManager, values)
 	})
 
 	Describe("#Deploy", func() {
@@ -572,15 +612,16 @@ var _ = Describe("Perses", func() {
 				BeforeEach(func() {
 					values.VictoriaLogsEnabled = true
 
-					persesCR.Spec.Metadata.Labels[gardenerutils.NetworkPolicyLabel("logging-vl", 9428)] = v1beta1constants.LabelNetworkPolicyAllowed
+					persesCR.Spec.Metadata.Labels[gardenerutils.NetworkPolicyLabel("logging-vl", 9429)] = v1beta1constants.LabelNetworkPolicyAllowed
 				})
 
 				It("should include VictoriaLogs datasource", func() {
+					dsVL := newExpectedDatasourceWithCA("victorialogs", "VictoriaLogsDatasource", "https://logging-vl."+namespace+".svc:9429", false, "perses-seed", "victorialogs-secret", "ca", namespace)
 					Expect(managedResource).To(containsObjs(
 						persesCR,
 						dsAggregate,
 						dsSeed,
-						newExpectedDatasource("victorialogs", "VictoriaLogsDatasource", "http://logging-vl."+namespace+".svc:9428", false, "perses-seed"),
+						dsVL,
 						seedServiceMonitor,
 					))
 				})

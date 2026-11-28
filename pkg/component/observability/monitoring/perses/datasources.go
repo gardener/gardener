@@ -17,6 +17,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/component"
 	victorialogsconstants "github.com/gardener/gardener/pkg/component/observability/logging/victorialogs/constants"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -24,7 +25,7 @@ const (
 	pluginKindVictoriaLogs = "VictoriaLogsDatasource"
 )
 
-func (p *perses) datasources() []client.Object {
+func (p *perses) datasources() ([]client.Object, error) {
 	var datasources []client.Object
 
 	if p.values.IsGardenCluster {
@@ -40,13 +41,33 @@ func (p *perses) datasources() []client.Object {
 	}
 
 	if p.values.VictoriaLogsEnabled && !p.values.OnlyDeployDatasourcesAndDashboards {
-		datasources = append(datasources,
-			// TODO(teodordichev): switch to HTTPS once the following PR is resolved - https://github.com/perses/perses-operator/pull/495
-			p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("http://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsHttpPort), false),
-		)
+		caBundle, found := p.secretsManager.Get(p.values.SecretNameServerCA)
+		if !found {
+			return nil, fmt.Errorf("the CA trust bundle for %q was not found", p.values.SecretNameServerCA)
+		}
+
+		vlDs := p.newDatasource("victorialogs", pluginKindVictoriaLogs, fmt.Sprintf("https://%s.%s.svc:%d", victorialogsconstants.ServiceName, p.namespace, victorialogsconstants.VictoriaLogsPort), false)
+
+		// The operator names the Perses Secret after the datasource and appends "-secret".
+		vlDs.Spec.Config.Plugin.Spec.(map[string]any)["proxy"].(map[string]any)["spec"].(map[string]any)["secret"] = "victorialogs-secret"
+
+		vlDs.Spec.Client = &persesv1alpha2.Client{
+			TLS: &persesv1alpha2.TLS{
+				Enable: new(true),
+				CaCert: &persesv1alpha2.Certificate{
+					SecretSource: persesv1alpha2.SecretSource{
+						Type:      persesv1alpha2.SecretSourceTypeSecret,
+						Name:      &caBundle.Name,
+						Namespace: &caBundle.Namespace,
+					},
+					CertPath: secrets.DataKeyCertificateBundle,
+				},
+			},
+		}
+		datasources = append(datasources, vlDs)
 	}
 
-	return datasources
+	return datasources, nil
 }
 
 // newDatasource returns a project-scoped PersesDatasource. The perses-operator maps the resource's namespace to a

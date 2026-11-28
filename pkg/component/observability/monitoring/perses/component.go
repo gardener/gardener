@@ -52,6 +52,8 @@ type Values struct {
 	// This is relevant when the Perses instance is already deployed by another component (e.g., gardener-operator),
 	// and the gardenlet wants to contribute seed-specific configuration.
 	OnlyDeployDatasourcesAndDashboards bool
+	// SecretNameServerCA is the name of the server CA secret.
+	SecretNameServerCA string
 }
 
 // ExposureValues contains configuration for exposing this Perses instance via a VirtualService resource.
@@ -85,19 +87,22 @@ type ExposureValues struct {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
 	return &perses{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type perses struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 func (p *perses) Deploy(ctx context.Context) error {
@@ -119,7 +124,13 @@ func (p *perses) Deploy(ctx context.Context) error {
 
 		objs = append(objs, p.serviceMonitor())
 	}
-	objs = append(objs, p.datasources()...)
+
+	datasources, err := p.datasources()
+	if err != nil {
+		return err
+	}
+
+	objs = append(objs, datasources...)
 
 	dashboards, err := p.dashboards()
 	if err != nil {

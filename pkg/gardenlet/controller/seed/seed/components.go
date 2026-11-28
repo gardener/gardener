@@ -1013,6 +1013,7 @@ func (r *Reconciler) newPerses(seed *seedpkg.Seed, secretsManager secretsmanager
 		VPAEnabled:                         v1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 		VictoriaLogsEnabled:                gardenlethelper.IsVictoriaLogsEnabled(&r.Config),
 		IncludeIstioDashboards:             true,
+		SecretNameServerCA:                 v1beta1constants.SecretNameCASeed,
 		OnlyDeployDatasourcesAndDashboards: seedIsGarden,
 	}
 
@@ -1034,7 +1035,7 @@ func (r *Reconciler) newPerses(seed *seedpkg.Seed, secretsManager secretsmanager
 		}
 	}
 
-	return sharedcomponent.NewPerses(r.SeedClientSet.Client(), r.GardenNamespace, values)
+	return sharedcomponent.NewPerses(r.SeedClientSet.Client(), r.GardenNamespace, secretsManager, values)
 }
 
 func (r *Reconciler) newVictoriaOperator() (component.DeployWaiter, error) {
