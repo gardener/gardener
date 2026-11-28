@@ -744,6 +744,7 @@ var _ = Describe("OpenTelemetry Collector", func() {
 
 		It("should remove the logs/vali pipeline when RemoveVali is enabled", func() {
 			values.RemoveVali = true
+			values.VictoriaLogsBackend = true
 			component = New(c, namespace, fakeSecretManager, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())
@@ -758,6 +759,47 @@ var _ = Describe("OpenTelemetry Collector", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret)).To(Succeed())
 
 			delete(openTelemetryCollector.Spec.Config.Service.Pipelines, "logs/vali")
+			openTelemetryCollector.Spec.Config.Service.Pipelines["logs/victorialogs"] = &otelv1beta1.Pipeline{
+				Exporters:  []string{"otlphttp/victorialogs"},
+				Receivers:  []string{"otlp"},
+				Processors: []string{"memory_limiter", "batch"},
+			}
+			Expect(customResourcesManagedResource).To(consistOf(
+				openTelemetryCollector,
+				getGateway(),
+				getVirtualService(),
+				getDestinationRule(),
+				getTLSSecret(tlsSecret),
+				getCaBundleSecret(),
+				vpa,
+				serviceMonitor,
+				serviceAccount,
+			))
+		})
+
+		It("should configure the nop exporter when neither Vali nor VictoriaLogs backend is enabled", func() {
+			values.RemoveVali = true
+			values.VictoriaLogsBackend = false
+			component = New(c, namespace, fakeSecretManager, values)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResource), customResourcesManagedResource)).To(Succeed())
+
+			tlsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "logging-tls",
+					Namespace: namespace,
+				},
+			}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(tlsSecret), tlsSecret)).To(Succeed())
+
+			delete(openTelemetryCollector.Spec.Config.Service.Pipelines, "logs/vali")
+			openTelemetryCollector.Spec.Config.Exporters.Object["nop"] = map[string]any{}
+			openTelemetryCollector.Spec.Config.Service.Pipelines["logs/nop"] = &otelv1beta1.Pipeline{
+				Exporters: []string{"nop"},
+				Receivers: []string{"otlp"},
+			}
+
 			Expect(customResourcesManagedResource).To(consistOf(
 				openTelemetryCollector,
 				getGateway(),
