@@ -6,7 +6,9 @@ package botanist_test
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -17,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -30,8 +33,10 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	shootstate "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -360,6 +365,49 @@ var _ = Describe("Secrets", func() {
 				gardenSecret := &corev1.Secret{}
 				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ssh-keypair.old"}, gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
+			})
+
+			It("should retain the current SSH keypair and delete the old keypair on completion", func() {
+				DeferCleanup(test.WithVar(&secretsutils.GenerateKey, rsa.GenerateKey))
+				fakeClock := testclock.NewFakeClock(time.Now())
+				rotationTime := metav1.NewTime(fakeClock.Now().Add(time.Minute))
+				initialize := func() {
+					var err error
+					botanist.SecretsManager, err = secretsmanager.New(ctx, logr.Discard(), fakeClock, seedClient, "test", secretsmanager.WithNamespaces(controlPlaneNamespace), secretsmanager.WithSecretNamesToTimes(map[string]time.Time{"ssh-keypair": rotationTime.Time}))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+				}
+				initialize()
+				oldSecret := &corev1.Secret{}
+				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ssh-keypair"}, oldSecret)).To(Succeed())
+
+				rotationTime = metav1.NewTime(rotationTime.Add(time.Minute))
+				shoot := botanist.Shoot.GetInfo()
+				shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{Phase: gardencorev1beta1.RotationPreparing, LastInitiationTime: &rotationTime}}}
+				botanist.Shoot.SetInfo(shoot)
+				initialize()
+				newSecret := &corev1.Secret{}
+				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ssh-keypair"}, newSecret)).To(Succeed())
+				Expect(newSecret.Data).NotTo(Equal(oldSecret.Data))
+				retainedSecret := &corev1.Secret{}
+				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ssh-keypair.old"}, retainedSecret)).To(Succeed())
+				Expect(retainedSecret.Data).To(Equal(oldSecret.Data))
+
+				for _, phase := range []gardencorev1beta1.CredentialsRotationPhase{gardencorev1beta1.RotationCompleting, gardencorev1beta1.RotationCompleted} {
+					shoot.Status.Credentials.Rotation.SSHKeypair.Phase = phase
+					botanist.Shoot.SetInfo(shoot)
+					initialize()
+					currentSecret := &corev1.Secret{}
+					Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ssh-keypair"}, currentSecret)).To(Succeed())
+					Expect(currentSecret.Data).To(Equal(newSecret.Data))
+					Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ssh-keypair.old"}, retainedSecret)).To(BeNotFoundError())
+					_, found := botanist.SecretsManager.Get("ssh-keypair", secretsmanager.Old)
+					Expect(found).To(BeFalse())
+					Expect(botanist.SecretsManager.Cleanup(ctx)).To(Succeed())
+					secretList := &corev1.SecretList{}
+					Expect(seedClient.List(ctx, secretList, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"name": "ssh-keypair"})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(1))
+				}
 			})
 
 			It("should delete ssh-keypair secrets when ssh access is set to false in workers settings", func() {

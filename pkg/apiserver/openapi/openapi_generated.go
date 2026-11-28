@@ -10626,6 +10626,13 @@ func schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref common.ReferenceCa
 				Description: "ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the ssh-keypair credential rotation.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.",
@@ -10635,6 +10642,18 @@ func schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref common.ReferenceCa
 					"lastCompletionTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.",
+							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
+						},
+					},
+					"lastInitiationFinishedTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationFinishedTime is the most recent time when preparation of the ssh-keypair rotation completed.",
+							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
+						},
+					},
+					"lastCompletionTriggeredTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTriggeredTime is the most recent time when completion of the ssh-keypair rotation was triggered.",
 							Ref:         ref(metav1.Time{}.OpenAPIModelName()),
 						},
 					},

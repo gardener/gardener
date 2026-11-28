@@ -1554,6 +1554,22 @@ var _ = Describe("Shoot Maintenance", func() {
 			}
 		})
 
+		DescribeTable("should only trigger SSH rotation between phases",
+			func(phase gardencorev1beta1.CredentialsRotationPhase, expected bool) {
+				shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{Phase: phase}}}
+				results := computeCredentialsToRotationResults(log, shoot, metav1.Time{Time: now})
+				result, ok := results["rotate-ssh-keypair"]
+				Expect(ok).To(Equal(expected))
+				if phase == gardencorev1beta1.RotationPrepared {
+					Expect(result.description).To(Equal("SSH keypair rotation completion triggered"))
+				}
+			},
+			Entry("preparing", gardencorev1beta1.RotationPreparing, false),
+			Entry("prepared", gardencorev1beta1.RotationPrepared, true),
+			Entry("completing", gardencorev1beta1.RotationCompleting, false),
+			Entry("completed", gardencorev1beta1.RotationCompleted, true),
+		)
+
 		It("should return empty results if no credentials rotation is required", func() {
 			shoot.Spec.Maintenance.AutoRotation.Credentials.SSHKeypair.RotationPeriod.Duration = 0
 			shoot.Spec.Maintenance.AutoRotation.Credentials.Observability.RotationPeriod.Duration = 0

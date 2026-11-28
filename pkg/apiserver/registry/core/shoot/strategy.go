@@ -176,6 +176,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 						v1beta1constants.OperationRotateObservabilityCredentials,
 						v1beta1constants.ShootOperationRotateSSHKeypair,
+						v1beta1constants.OperationRotateSSHKeypairStart,
 					)
 				case v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 					// We remove operations that are covered by rotate-credentials-start-without-workers-rollout
@@ -186,6 +187,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 						v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 						v1beta1constants.OperationRotateObservabilityCredentials,
 						v1beta1constants.ShootOperationRotateSSHKeypair,
+						v1beta1constants.OperationRotateSSHKeypairStart,
 					)
 				case v1beta1constants.OperationRotateCredentialsComplete:
 					// We remove operations that are covered by rotate-credentials-complete
@@ -193,9 +195,13 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 					updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, v1beta1constants.OperationRotateCAComplete,
 						v1beta1constants.OperationRotateServiceAccountKeyComplete,
 						v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
+						v1beta1constants.OperationRotateSSHKeypairComplete,
+						v1beta1constants.ShootOperationRotateSSHKeypair,
 					)
 
-				case v1beta1constants.ShootOperationRotateSSHKeypair:
+				case v1beta1constants.ShootOperationRotateSSHKeypair,
+					v1beta1constants.OperationRotateSSHKeypairStart,
+					v1beta1constants.OperationRotateSSHKeypairComplete:
 					if !gardencorehelper.ShootEnablesSSHAccess(newShoot) {
 						// If SSH is not enabled for the Shoot, don't increase generation, just remove the annotation
 						updatedOperations = v1beta1helper.RemoveOperation(updatedOperations, operation)

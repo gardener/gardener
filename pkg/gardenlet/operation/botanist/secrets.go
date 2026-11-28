@@ -323,11 +323,15 @@ func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 }
 
 func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
+	options := []secretsmanager.GenerateOption{secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)}
+	if phase := v1beta1helper.GetShootSSHKeypairRotationPhase(b.Shoot.GetInfo().Status.Credentials); phase == gardencorev1beta1.RotationCompleting || phase == gardencorev1beta1.RotationCompleted {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
+	}
 	sshKeypairSecret, err := b.SecretsManager.Generate(ctx, &secretsutils.RSASecretConfig{
 		Name:       v1beta1constants.SecretNameSSHKeyPair,
 		Bits:       4096,
 		UsedForSSH: true,
-	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+	}, options...)
 	if err != nil {
 		return err
 	}
@@ -342,19 +346,18 @@ func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
 		return err
 	}
 
-	if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
-		if err := b.syncShootCredentialToGarden(
-			ctx,
-			gardenerutils.ShootProjectSecretSuffixOldSSHKeypair,
-			map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
-			nil,
-			sshKeypairSecretOld.Data,
-		); err != nil {
-			return err
-		}
+	sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old)
+	if !found {
+		return b.deleteShootCredentialFromGarden(ctx, gardenerutils.ShootProjectSecretSuffixOldSSHKeypair)
 	}
 
-	return nil
+	return b.syncShootCredentialToGarden(
+		ctx,
+		gardenerutils.ShootProjectSecretSuffixOldSSHKeypair,
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
+		nil,
+		sshKeypairSecretOld.Data,
+	)
 }
 
 func (b *Botanist) generateObservabilityIngressPassword(ctx context.Context) error {

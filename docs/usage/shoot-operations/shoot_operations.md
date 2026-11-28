@@ -70,8 +70,11 @@ It will also be removed even if the restart of one or more services failed.
 
 Specific `Shoot` operations can run in parallel by using `;` as separator.
 
+> [!NOTE]
+> Not every combination of the operations listed below is permitted.
+
 ``` bash
-kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation="rotate-ssh-keypair;rotate-ca-start"
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation="rotate-ssh-keypair-start;rotate-ca-start"
 ```
 
 List of operations that can run in parallel:
@@ -81,6 +84,8 @@ List of operations that can run in parallel:
 - `rotate-ca-complete`
 - `rotate-observability-credentials`
 - `rotate-ssh-keypair`
+- `rotate-ssh-keypair-start`
+- `rotate-ssh-keypair-complete`
 - `rotate-rollout-workers`
 - `rotate-credentials-start`
 - `rotate-credentials-start-without-workers-rollout`

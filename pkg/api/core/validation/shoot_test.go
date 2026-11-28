@@ -7500,6 +7500,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}),
 			)
 
+			DescribeTable("SSH keypair rotation lifecycle",
+				func(operation string, phase core.CredentialsRotationPhase, allowed bool) {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
+					shoot.Status.LastOperation = &core.LastOperation{}
+					shoot.Status.Credentials = &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{SSHKeypair: &core.ShootSSHKeypairRotation{Phase: phase}}}
+					if allowed {
+						Expect(ValidateShoot(shoot)).To(BeEmpty())
+					} else {
+						Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{"Type": Equal(field.ErrorTypeForbidden), "Field": Equal("metadata.annotations[gardener.cloud/operation]")}))))
+					}
+				},
+				Entry("start initially", "rotate-ssh-keypair-start", core.CredentialsRotationPhase(""), true),
+				Entry("start after completion", "rotate-ssh-keypair-start", core.RotationCompleted, true),
+				Entry("cannot restart prepared rotation", "rotate-ssh-keypair-start", core.RotationPrepared, false),
+				Entry("cannot complete before preparation", "rotate-ssh-keypair-complete", core.RotationPreparing, false),
+				Entry("complete prepared rotation", "rotate-ssh-keypair-complete", core.RotationPrepared, true),
+				Entry("cannot complete twice", "rotate-ssh-keypair-complete", core.RotationCompleted, false),
+				Entry("legacy starts initially", "rotate-ssh-keypair", core.CredentialsRotationPhase(""), true),
+				Entry("legacy completes prepared rotation", "rotate-ssh-keypair", core.RotationPrepared, true),
+				Entry("legacy cannot interrupt preparing", "rotate-ssh-keypair", core.RotationPreparing, false),
+				Entry("legacy cannot interrupt completing", "rotate-ssh-keypair", core.RotationCompleting, false),
+				Entry("conflicting phases", "rotate-ssh-keypair-start;rotate-ssh-keypair-complete", core.RotationPrepared, false),
+			)
+
 			DescribeTable("completing ETCD encryption key rotation",
 				func(allowed bool, status core.ShootStatus) {
 					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-complete")

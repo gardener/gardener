@@ -344,7 +344,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			// isolated test for ssh key rotation (does not trigger node rolling update)
 			if !v1beta1helper.IsWorkerless(tc.Shoot) && !withoutWorkersRollout {
-				testCredentialRotation(tc, rotationutils.Verifiers{&rotation.SSHKeypairVerifier{ShootContext: tc}}, nil, v1beta1constants.ShootOperationRotateSSHKeypair, "", false)
+				testCredentialRotation(tc, rotationutils.Verifiers{&rotation.SSHKeypairVerifier{ShootContext: tc}}, nil, v1beta1constants.OperationRotateSSHKeypairStart, v1beta1constants.OperationRotateSSHKeypairComplete, false)
 			}
 
 			// because of the ongoing refactoring efforts, we currently have two sorts of verifiers

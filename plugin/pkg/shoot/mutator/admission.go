@@ -262,6 +262,7 @@ func (c *mutationContext) addMetadataAnnotations(a admission.Attributes) {
 
 	if sets.New(
 		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.OperationRotateSSHKeypairStart,
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 	).HasAny(v1beta1helper.GetShootGardenerOperations(c.shoot.Annotations)...) {

@@ -299,17 +299,34 @@ The private key is stored in a `Secret` with the name `<shoot-name>.ssh-keypair`
 
 **Unless automatic credentials rotation is enabled, it is the responsibility of the end-user to regularly rotate those credentials.**
 Refer to [Automatic Credentials Rotation](../shoot/shoot_maintenance.md#automatic-credentials-rotation) for instructions on enabling automatic rotation for ssh keypair.
-Manual rotation can be requested by annotating the `Shoot` with`gardener.cloud/operation=rotate-ssh-keypair`.
-This will propagate a new key to all worker nodes while keeping the old key active and valid as well (it will only be invalidated/removed with the next rotation).
-This operation is not allowed for `Shoot`s that are already marked for deletion.
+Manual rotation uses two phases. Start it with `rotate-ssh-keypair-start`:
 
 ```bash
-kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ssh-keypair
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ssh-keypair-start
 ```
 
-> You can check the `.status.credentials.rotation.sshKeypair` field in the `Shoot` to see when the rotation was last initiated or last completed.
+This creates a new key pair and distributes its public key alongside the old key to all worker nodes without rolling them.
+Once `.status.credentials.rotation.sshKeypair.phase` is `Prepared`, both keys are valid and both key pairs are accessible in the garden cluster.
+When started as part of `rotate-credentials-start`, worker nodes are rolled out: nodes being replaced accept only the old key until their replacements are ready with the new key.
 
 The old key is stored in a `Secret` with the name `<shoot-name>.ssh-keypair.old` in the project namespace in the garden cluster and has the same data keys as the regular `Secret`.
+
+After switching SSH clients to the new key, complete the rotation:
+
+```bash
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ssh-keypair-complete
+```
+
+This removes the old key pair and invalidates it on all worker nodes. Once the phase is `Completed`, only the new key pair remains; completion does not generate another key pair.
+`rotate-credentials-complete` also completes SSH key pair rotation.
+The `.status.credentials.rotation.sshKeypair` field records the phase and initiation/completion timestamps.
+These operations are not allowed for `Shoot`s marked for deletion and have no effect when SSH access is disabled.
+
+> [!WARNING]
+> The `rotate-ssh-keypair` operation is deprecated. Use `rotate-ssh-keypair-start` and `rotate-ssh-keypair-complete` instead.
+> The deprecated operation remains supported: its first invocation starts rotation, and its second invocation completes it without creating another key pair. As a result, at most one SSH key-pair exists in the cluster at any point in time.
+
+Automatic SSH key pair rotation uses the same alternating lifecycle during maintenance windows, skipping rotations still being prepared or completed. 
 
 ### ETCD Encryption Key
 

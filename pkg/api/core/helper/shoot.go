@@ -118,6 +118,14 @@ func GetShootCARotationPhase(credentials *core.ShootCredentials) core.Credential
 	return ""
 }
 
+// GetShootSSHKeypairRotationPhase returns the specified shoot SSH keypair rotation phase or an empty string.
+func GetShootSSHKeypairRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.SSHKeypair != nil {
+		return credentials.Rotation.SSHKeypair.Phase
+	}
+	return ""
+}
+
 // GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
 // string.
 func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
