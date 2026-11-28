@@ -125,13 +125,20 @@ func (r *Reconciler) reconcile(
 	status := gardenlet.Status.DeepCopy()
 	status.ObservedGeneration = gardenlet.Generation
 
+	status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, true, "", "")
+	if err := r.updateStatus(ctx, gardenlet, status); err != nil {
+		log.Error(err, "Could not update status")
+	}
+
 	log.V(1).Info("Reconciling")
 	if !hasForceRedeployOperationAnnotation(gardenlet) && !r.seedDoesNotExist(ctx, gardenlet) {
 		if err := r.cleanupKubeconfigSecret(ctx, log, gardenlet); err != nil {
 			status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
+			status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, false, gardencorev1beta1.EventReconcileError, err.Error())
 		} else {
 			log.Info("Gardenlet deployment handling completed successfully")
 			status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, fmt.Sprintf("Gardenlet deployed and Seed %q registered", gardenlet.Name))
+			status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, false, "", "")
 		}
 
 		return result, r.updateStatus(ctx, gardenlet, status)
@@ -139,18 +146,25 @@ func (r *Reconciler) reconcile(
 
 	gardenlet.Spec.Config, err = gardenletutils.SetDefaultGardenClusterAddress(log, gardenlet.Spec.Config, r.DefaultGardenClusterAddress)
 	if err != nil {
+		status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, false, gardencorev1beta1.EventReconcileError, err.Error())
+		if err := r.updateStatus(ctx, gardenlet, status); err != nil {
+			log.Error(err, "Could not update status")
+		}
 		return result, fmt.Errorf("failed to set default garden cluster address: %w", err)
 	}
 
 	status.Conditions, err = actuator.Reconcile(ctx, log, gardenlet, status.Conditions, &gardenlet.Spec.Deployment.GardenletDeployment, &gardenlet.Spec.Config, seedmanagementv1alpha1.BootstrapToken, false)
 	if err != nil {
+		status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, false, gardencorev1beta1.EventReconcileError, err.Error())
 		if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
 			log.Error(updateErr, "Could not update status", "status", status)
 		}
 		return result, fmt.Errorf("could not reconcile Gardenlet %s creation: %w", client.ObjectKeyFromObject(gardenlet), err)
 	}
 
-	status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconcileError, "Waiting for seed registration")
+	message := "Waiting for seed registration"
+	status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconcileError, message)
+	status.Conditions = v1beta1helper.MergeConditionsKStatus(r.Clock, status.Conditions, false, gardencorev1beta1.EventReconcileError, message)
 	if err := r.updateStatus(ctx, gardenlet, status); err != nil {
 		return result, fmt.Errorf("failed updating Gardenlet status after successful deployment: %w", err)
 	}

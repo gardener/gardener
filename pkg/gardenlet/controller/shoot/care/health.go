@@ -1195,7 +1195,7 @@ var unstableLastOperationTypes = sets.New(
 	gardencorev1beta1.LastOperationTypeDelete,
 )
 
-// ShootConditions contains all shoot related conditions of the shoot status subresource.
+// ShootConditions contains conditions relevant to the care controller of the shoot status subresource.
 type ShootConditions struct {
 	apiServerAvailable             gardencorev1beta1.Condition
 	controlPlaneHealthy            gardencorev1beta1.Condition

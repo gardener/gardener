@@ -29,6 +29,11 @@ func (r *Reconciler) delete(
 	reconcile.Result,
 	error,
 ) {
+	conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, true, "", "")
+	if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to update extension status: %w", err)
+	}
+
 	var (
 		reconcileResult reconcile.Result
 		g               = flow.NewGraph("Extension deletion")
@@ -61,6 +66,7 @@ func (r *Reconciler) delete(
 		Log: log,
 	}); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionProgressing, ReasonDeleteFailed, err.Error())
+		conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, false, ReasonDeleteFailed, err.Error())
 		if updateErr := r.updateExtensionStatus(ctx, log, extension, conditions); updateErr != nil {
 			return reconcile.Result{}, errors.Join(err, fmt.Errorf("failed to update extension status: %w", updateErr))
 		}
@@ -72,10 +78,12 @@ func (r *Reconciler) delete(
 
 	if operator.IsExtensionInRuntimeRequired(extension) {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionTrue, ReasonInstalledInRuntime, "Extension is still required in runtime cluster")
+		conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, false, "", "")
 		return reconcile.Result{}, r.updateExtensionStatus(ctx, log, extension, conditions)
 	}
 
 	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonDeleteSuccessful, "Extension has been deleted successfully")
+	conditions.kStatus = v1beta1helper.MergeConditionsKStatus(r.Clock, conditions.kStatus, false, "", "")
 	if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
 		return reconcile.Result{}, err
 	}
