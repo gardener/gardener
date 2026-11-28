@@ -20,35 +20,43 @@ type CloudProfileConfig struct {
 
 	// MachineImages is the list of machine images that are understood by the controller. It maps
 	// logical names and versions to provider-specific identifiers.
+	// +required
 	MachineImages []MachineImages `json:"machineImages"`
 	// LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
+	// +required
 	LoadBalancer LoadBalancer `json:"loadBalancer"`
 }
 
 // MachineImages is a mapping from logical names and versions to provider-specific identifiers.
 type MachineImages struct {
 	// Name is the logical name of the machine image.
+	// +required
 	Name string `json:"name"`
 	// Versions contains versions and a provider-specific identifier.
+	// +required
 	Versions []MachineImageVersion `json:"versions"`
 }
 
 // MachineImageVersion contains a version and a provider-specific identifier.
 type MachineImageVersion struct {
 	// Version is the version of the image.
+	// +required
 	Version string `json:"version"`
 	// Image is the image for the machine image.
 	// +optional
 	Image string `json:"image,omitempty"`
 	// CapabilityFlavors contains provider-specific image identifiers of this version with their capabilities.
+	// +required
 	CapabilityFlavors []MachineImageFlavor `json:"capabilityFlavors"`
 }
 
 // MachineImageFlavor is a provider-specific image identifier with its supported capabilities.
 type MachineImageFlavor struct {
 	// Image is the image for the machine image.
+	// +required
 	Image string `json:"image"`
 	// Capabilities that are supported by the identifier in this set.
+	// +optional
 	Capabilities gardencorev1beta1.Capabilities `json:"capabilities,omitempty"`
 }
 
@@ -60,5 +68,6 @@ func (cs MachineImageFlavor) GetCapabilities() gardencorev1beta1.Capabilities {
 // LoadBalancer contains the configuration for the service controller of cloud-controller-manager-local.
 type LoadBalancer struct {
 	// Image is the envoy container image used for starting load balancer containers.
+	// +required
 	Image string `json:"image"`
 }

@@ -12,10 +12,11 @@ import (
 
 // Configuration provides configuration for the ShootResourceReservation admission controller.
 type Configuration struct {
-	metav1.TypeMeta
+	metav1.TypeMeta `json:",inline"`
 
 	// UseGKEFormula enables the calculation of resource reservations based on
 	// the CPU and memory resources available for a machine type.
+	// +required
 	UseGKEFormula bool `json:"useGKEFormula"`
 	// Selector optionally defines a label selector for which the GKE formula should be applied.
 	// Defaults to empty LabelSelector, which matches everything.
