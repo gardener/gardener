@@ -1,0 +1,79 @@
+rule_files:
+- auditlog.prometheusrule.yaml
+
+evaluation_interval: 1m
+
+tests:
+
+  # Webhook delivery failures are reported under plugin="webhook" and must fire
+  # the alert.
+  - name: TooManyAuditlogFailures:WebhookBackendFailing
+    interval: 1m
+    input_series:
+      - series: apiserver_audit_error_total{plugin="webhook", job="gardener-apiserver"}
+        values: "0+10x20"
+      - series: apiserver_audit_event_total{job="gardener-apiserver"}
+        values: "0+100x20"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: TooManyAuditlogFailures
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              topology: garden
+              job: gardener-apiserver
+            exp_annotations:
+              summary: >-
+                The gardener-apiserver server in landscape landscape-unit-tests
+                has too many failed attempts to log audit events.
+              description: >-
+                The API server's cumulative failure rate in logging audit events is
+                greater than 2%.
+
+  # When the audit webhook backend runs in the default batch mode it is wrapped
+  # by the buffered backend. Events that cannot be enqueued (buffer full /
+  # dropped / backend shut down) are reported under plugin="buffered". The alert
+  # must catch them.
+  - name: TooManyAuditlogFailures:BufferedBackendFailing
+    interval: 1m
+    input_series:
+      - series: apiserver_audit_error_total{plugin="buffered", job="gardener-apiserver"}
+        values: "0+10x20"
+      - series: apiserver_audit_event_total{job="gardener-apiserver"}
+        values: "0+100x20"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: TooManyAuditlogFailures
+        eval_time: 15m
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              topology: garden
+              job: gardener-apiserver
+            exp_annotations:
+              summary: >-
+                The gardener-apiserver server in landscape landscape-unit-tests
+                has too many failed attempts to log audit events.
+              description: >-
+                The API server's cumulative failure rate in logging audit events is
+                greater than 2%.
+
+  # Failures of the local log backend (plugin="log") must NOT contribute to the
+  # alert: they are excluded via plugin!="log". A high log-backend error rate on
+  # its own must not fire the alert.
+  - name: TooManyAuditlogFailures:LogBackendExcluded
+    interval: 1m
+    input_series:
+      - series: apiserver_audit_error_total{plugin="log", job="gardener-apiserver"}
+        values: "0+50x20"
+      - series: apiserver_audit_event_total{job="gardener-apiserver"}
+        values: "0+100x20"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: TooManyAuditlogFailures
+        eval_time: 15m
+        exp_alerts: []
