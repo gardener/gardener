@@ -8,9 +8,17 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
+	"unicode/utf8"
 
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
+
+// OperationWillBeRetried is the suffix appended to last operation descriptions for retrying operations.
+const OperationWillBeRetried = " Operation will be retried."
 
 type withSuppressed struct {
 	cause      error
@@ -228,4 +236,52 @@ func Errors(err error) []error {
 		return errs.Errors
 	}
 	return []error{err}
+}
+
+// TruncateLastErrors limits each description to 4 kB, appending "[...]" when it is truncated.
+func TruncateLastErrors(lastErrors []gardencorev1beta1.LastError, log logr.Logger) []gardencorev1beta1.LastError {
+	const maxDescriptionLen = 4096
+
+	result := slices.Clone(lastErrors)
+	for i := range result {
+		if len(result[i].Description) <= maxDescriptionLen {
+			continue
+		}
+		log.Error(nil, "Failed to reconcile shoot", "lastError", result[i])
+		result[i].Description = truncateString(result[i].Description, maxDescriptionLen)
+	}
+	return result
+}
+
+// TruncateOperationDescription limits description to 4 kB, appending "[...]" when it is truncated.
+func TruncateOperationDescription(description string) string {
+	const maxDescriptionLen = 4096
+
+	if len(description) <= maxDescriptionLen {
+		return description
+	}
+
+	var retrySuffix string
+	if strings.HasSuffix(description, OperationWillBeRetried) {
+		retrySuffix = OperationWillBeRetried
+	}
+
+	truncatedDescription := truncateString(strings.TrimSuffix(description, retrySuffix), maxDescriptionLen-len(retrySuffix))
+	return truncatedDescription + retrySuffix
+}
+
+func truncateString(s string, maxLen int) string {
+	const suffix = "[...]"
+
+	if len(s) <= maxLen {
+		return s
+	}
+
+	end := maxLen - len(suffix)
+	for end > 0 && !utf8.RuneStart(s[end]) {
+		end--
+	}
+
+	newStr := s[:end] + suffix
+	return newStr
 }
